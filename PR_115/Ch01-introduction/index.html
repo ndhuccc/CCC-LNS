@@ -1,0 +1,2623 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>導論（Introduction）</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="setTimeout(function(){if(window.renderMath)renderMath();},200);"></script>
+<style>
+:root { --accent:#0891b2; --accent2:#0e7490; --bg:#f4f9fa; --card:#fff; --ink:#1f2430; --muted:#6b7280; --line:#e5e7eb; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; background:var(--bg); color:var(--ink); line-height:1.75; }
+header { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; padding:30px 20px; text-align:center; }
+header h1 { margin:0 0 8px; font-size:1.55rem; }
+header p { margin:0; opacity:.92; font-size:.92rem; }
+.wrap { max-width:1120px; margin:0 auto; display:flex; gap:24px; padding:22px; }
+nav { width:270px; position:sticky; top:16px; align-self:flex-start; max-height:90vh; overflow:auto; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; }
+nav h2 { font-size:.8rem; color:var(--muted); margin:0 0 10px; text-transform:uppercase; letter-spacing:.5px; }
+nav .toc-item { display:block; padding:6px 10px; border-radius:8px; color:var(--ink); text-decoration:none; font-size:.86rem; }
+nav .toc-item:hover { background:#e6f6fa; color:var(--accent); }
+main { flex:1; min-width:0; }
+.progress { position:sticky; top:0; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin-bottom:18px; display:flex; align-items:center; gap:12px; z-index:10; }
+.progress .bar { flex:1; height:8px; background:#eee; border-radius:99px; overflow:hidden; }
+.progress .fill { height:100%; width:0; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .3s; }
+.progress .txt { font-size:.85rem; color:var(--muted); white-space:nowrap; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:14px; margin-bottom:18px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04); scroll-margin-top:90px; }
+.card-head { display:flex; align-items:center; gap:12px; padding:14px 18px; cursor:pointer; background:#fafafd; border-bottom:1px solid var(--line); }
+.card-head:hover { background:#eefaff; }
+.card-head .badge { background:var(--accent); color:#fff; font-size:.75rem; font-weight:700; padding:3px 9px; border-radius:99px; }
+.card-head h3 { margin:0; font-size:1.05rem; flex:1; }
+.card-head .toggle { transition:transform .2s; color:var(--muted); }
+.card.collapsed .toggle { transform:rotate(-90deg); }
+.card-body { padding:16px 18px; }
+.card.collapsed .card-body { display:none; }
+.card-body h4 { margin:.9em 0 .4em; color:var(--accent2); }
+.card-body p { margin:.6em 0; }
+.card-body strong { color:var(--accent2); }
+.orig-fig { margin:16px 0; text-align:center; }
+.orig-fig img { max-width:100%; border:1px solid var(--line); border-radius:10px; }
+.orig-fig figcaption { font-size:.82rem; color:var(--muted); margin-top:6px; }
+.quiz { margin-top:18px; border:1px dashed var(--line); border-radius:12px; padding:14px; background:#fdfdff; }
+.quiz .q { font-weight:600; margin-bottom:10px; }
+.quiz .opts { display:grid; gap:8px; margin-bottom:10px; }
+.quiz .opt { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--line); border-radius:9px; cursor:pointer; background:#fff; }
+.quiz .opt:hover { border-color:var(--accent); }
+.quiz .check { background:var(--accent); color:#fff; border:none; padding:7px 16px; border-radius:8px; cursor:pointer; font-weight:600; }
+.quiz .check:hover { background:var(--accent2); }
+.quiz .fb { margin-top:8px; font-size:.9rem; display:none; }
+.quiz .fb.ok { display:block; color:#059669; }
+.quiz .fb.wrong { display:block; color:#dc2626; }
+footer { text-align:center; color:var(--muted); font-size:.8rem; padding:24px; }
+@media (max-width:760px) { .wrap { flex-direction:column; } nav { width:auto; position:static; max-height:none; } }
+
+/* Phase B 圖解 + AI 生圖佔位符 */
+.diagram-figure{margin:0 0 18px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;text-align:center}
+.diagram-figure svg{max-width:100%;height:auto}
+.diagram-figure img{max-width:100%;height:auto;border-radius:8px}
+.diagram-figure figcaption{font-size:.85rem;color:#6b7280;margin-top:8px;text-align:center}
+.ai-illustration{margin:0 0 18px;border:1px dashed #cbd5e1;border-radius:10px;padding:6px 12px;background:#fafafd}
+.ai-illustration summary{cursor:pointer;font-size:.82rem;color:#6b7280}
+.ai-illustration-prompt{white-space:pre-wrap;font-size:.78rem;color:#475569;background:#f8fafc;border-radius:8px;padding:10px;margin:8px 0 4px}
+
+
+/* Phase D 教授祕笈 CSS */
+.guide-btn{display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;padding:12px 22px;
+  border-radius:12px;font-size:1.02rem;font-weight:700;cursor:pointer;margin:10px 0;
+  box-shadow:0 4px 14px rgba(217,119,6,.35);transition:transform .15s,background .2s}
+.guide-btn:hover{background:linear-gradient(135deg,#d97706,#b45309);transform:translateY(-2px)}
+#guide-modal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(20,10,40,.6);
+  align-items:center;justify-content:center;padding:20px}
+#guide-modal.open{display:flex}
+#guide-modal .modal-box{background:#fff;max-width:720px;width:100%;max-height:85vh;overflow-y:auto;
+  border-radius:16px;padding:26px 30px;box-shadow:0 20px 60px rgba(0,0,0,.4);position:relative}
+#guide-modal .modal-close{position:sticky;top:0;float:right;background:#fef3e2;border:1px solid #fde3b8;
+  color:#92400e;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1.1rem;line-height:1}
+#guide-modal h1{color:#b45309;font-size:1.4rem;margin:0 0 14px;padding-right:40px}
+#guide-modal .modal-body{color:#1f2430;line-height:1.8;font-size:.98rem}
+#guide-modal .modal-body table{border-collapse:collapse;margin:10px 0;width:100%}
+#guide-modal .modal-body td,#guide-modal .modal-body th{border:1px solid #e5e7eb;padding:6px 10px;font-size:.92rem}
+#guide-modal .modal-body th{background:#fef3e2}
+/* END Phase D */
+
+</style>
+</head>
+<body>
+<header>
+  <h1>導論（Introduction）</h1>
+  <p>Chapter 1 · PR 115 · 互動式自學講義</p>
+</header>
+<div class="wrap">
+  <nav><h2>目錄</h2><a class="toc-item" href="#kp1">1.1 為什麼要學樣式識別？（五大應用領域）</a><a class="toc-item" href="#kp2">1.2 特徵、特徵向量與分類器</a><a class="toc-item" href="#kp3">1.2 分類系統設計的四個階段</a><a class="toc-item" href="#kp4">1.3 監督式、非監督式與半監督式學習</a><a class="toc-item" href="#kp5">1.5 全書地圖：從監督式到非監督式的旅程</a></nav>
+  <main>
+    <div class="progress"><div class="bar"><div class="fill" id="pf"></div></div><div class="txt" id="ptxt"></div></div>
+    <section id="kp1" class="card" data-kp="1">
+  <div class="card-head"><span class="badge">1.1</span><h3>為什麼要學樣式識別？（五大應用領域）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="1">📖 偷看教授祕笈</button>
+
+<!-- == Phase B 圖解 kp-1 == -->
+<figure class="diagram-figure"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">五種樣式識別應用匯流到共同分類管線</title>
+  <desc id="desc">機器視覺、文字辨識、醫學影像、語音與資料探勘五種不同輸入，先經特徵擷取轉成共同的數值表示，再進入帶有決策線的分類器。</desc>
+  <style>
+    :root { --accent: #0891b2; }
+    text { font-family: sans-serif; fill: #1f2937; }
+    .title { font-size: 28px; font-weight: 700; }
+    .subtitle { font-size: 15px; fill: #64748b; }
+    .section { font-size: 17px; font-weight: 700; }
+    .small { font-size: 12px; fill: #64748b; }
+    .label { font-size: 14px; font-weight: 700; }
+    .detail { font-size: 12px; fill: #475569; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .soft { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.2; }
+    .accent-fill { fill: #ecfeff; }
+    .accent-stroke { stroke: var(--accent); }
+    .muted-stroke { stroke: #64748b; }
+    .thin { fill: none; stroke-width: 1.5; }
+  </style>
+  <defs>
+    <marker id="arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="700" fill="#f8fafc"/>
+  <text class="title" x="48" y="48">五種輸入，同一條分類管線</text>
+  <text class="subtitle" x="50" y="77">看似無關的應用，真正共用的是：先把樣式量成可分辨的數字，再做同一種決策。</text>
+
+  <text class="section" x="48" y="103">不同型態的原始輸入</text>
+  <text class="small" x="318" y="121">五條資料流匯入同一個轉換</text>
+
+  <g aria-label="機器視覺輸入">
+    <rect class="panel" x="40" y="112" width="250" height="66" rx="14"/>
+    <g transform="translate(55 126)">
+      <rect x="0" y="20" width="48" height="15" rx="3" fill="#cbd5e1"/>
+      <line x1="0" y1="39" x2="54" y2="39" stroke="#475569" stroke-width="2"/>
+      <rect x="13" y="2" width="21" height="16" rx="3" fill="#94a3b8"/>
+      <circle cx="24" cy="10" r="4" fill="var(--accent)"/>
+      <rect x="39" y="22" width="9" height="11" fill="#64748b"/>
+      <circle cx="43" cy="24" r="2" fill="#f8fafc"/>
+    </g>
+    <text class="label" x="116" y="140">機器視覺</text>
+    <text class="detail" x="116" y="160">瑕疵檢測／裝配線</text>
+    <path class="thin accent-stroke" d="M290 145 C338 145 364 250 410 325" marker-end="url(#arrow-accent)" opacity=".7"/>
+  </g>
+
+  <g aria-label="文字辨識輸入">
+    <rect class="panel" x="40" y="202" width="250" height="66" rx="14"/>
+    <g transform="translate(55 214)">
+      <rect x="3" y="0" width="44" height="41" rx="3" fill="#ffffff" stroke="#64748b" stroke-width="1.5"/>
+      <path d="M10 10 H38 M10 18 H23 M27 18 H40 M10 27 H40 M10 35 H20" fill="none" stroke="#94a3b8" stroke-width="2"/>
+      <path d="M26 25 l3 -7 l3 7 M28 22 h4" fill="none" stroke="var(--accent)" stroke-width="2"/>
+    </g>
+    <text class="label" x="116" y="230">文字辨識（OCR）</text>
+    <text class="detail" x="116" y="250">手寫／支票／郵遞區號</text>
+    <path class="thin accent-stroke" d="M290 235 C342 235 368 280 410 325" marker-end="url(#arrow-accent)" opacity=".7"/>
+  </g>
+
+  <g aria-label="電腦輔助診斷輸入">
+    <rect class="panel" x="40" y="292" width="250" height="66" rx="14"/>
+    <g transform="translate(55 306)">
+      <circle cx="25" cy="23" r="21" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5"/>
+      <path d="M15 22 C18 12 28 13 31 20 C34 26 26 33 21 29 C18 27 17 24 15 22Z" fill="#94a3b8"/>
+      <circle cx="25" cy="22" r="5" fill="var(--accent)"/>
+      <circle cx="42" cy="36" r="9" fill="#ffffff" stroke="#475569" stroke-width="2"/>
+      <line x1="48" y1="42" x2="55" y2="49" stroke="#475569" stroke-width="3"/>
+    </g>
+    <text class="label" x="116" y="320">電腦輔助診斷</text>
+    <text class="detail" x="116" y="340">X 光篩檢／病灶判斷</text>
+    <path class="thin accent-stroke" d="M290 325 H410" marker-end="url(#arrow-accent)" opacity=".7"/>
+  </g>
+
+  <g aria-label="語音辨識輸入">
+    <rect class="panel" x="40" y="382" width="250" height="66" rx="14"/>
+    <g transform="translate(55 396)">
+      <path d="M0 22 C7 22 7 7 14 7 S21 37 28 37 S35 12 42 12 S49 28 56 28" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+      <line x1="0" y1="22" x2="56" y2="22" stroke="#cbd5e1" stroke-width="1"/>
+    </g>
+    <text class="label" x="116" y="410">語音辨識</text>
+    <text class="detail" x="116" y="430">聲音波形 → 文字</text>
+    <path class="thin accent-stroke" d="M290 415 C342 415 368 370 410 325" marker-end="url(#arrow-accent)" opacity=".7"/>
+  </g>
+
+  <g aria-label="資料探勘輸入">
+    <rect class="panel" x="40" y="472" width="250" height="66" rx="14"/>
+    <g transform="translate(55 484)">
+      <path d="M9 5 C38 13 16 28 45 36 M9 36 C38 28 16 13 45 5" fill="none" stroke="#64748b" stroke-width="2"/>
+      <line x1="15" y1="10" x2="39" y2="10" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="16" y1="18" x2="38" y2="18" stroke="#94a3b8" stroke-width="2"/>
+      <line x1="16" y1="26" x2="38" y2="26" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="15" y1="34" x2="39" y2="34" stroke="#94a3b8" stroke-width="2"/>
+    </g>
+    <text class="label" x="116" y="500">資料探勘／知識發掘</text>
+    <text class="detail" x="116" y="520">相似影像／DNA 序列</text>
+    <path class="thin accent-stroke" d="M290 505 C338 505 364 400 410 325" marker-end="url(#arrow-accent)" opacity=".7"/>
+  </g>
+
+  <g aria-label="共同的特徵擷取">
+    <path d="M410 180 H523 L575 325 L523 470 H410 L458 325 Z" fill="#ecfeff" stroke="var(--accent)" stroke-width="2.5"/>
+    <path d="M432 224 C456 250 479 278 505 298 C523 312 523 338 505 352 C479 372 456 401 432 426" fill="none" stroke="#67e8f9" stroke-width="3" opacity=".9"/>
+    <circle cx="432" cy="224" r="4" fill="var(--accent)"/>
+    <circle cx="432" cy="426" r="4" fill="var(--accent)"/>
+    <circle cx="505" cy="298" r="4" fill="var(--accent)"/>
+    <circle cx="505" cy="352" r="4" fill="var(--accent)"/>
+    <text class="section" x="472" y="300" text-anchor="middle">特徵擷取</text>
+    <text class="detail" x="472" y="324" text-anchor="middle">捨掉形式差異</text>
+    <text class="detail" x="472" y="344" text-anchor="middle">保留可分辨的差異</text>
+    <text class="small" x="472" y="388" text-anchor="middle">影像、波形、紀錄</text>
+    <text class="small" x="472" y="406" text-anchor="middle">都壓成數字</text>
+  </g>
+
+  <path d="M575 325 H620" class="thin accent-stroke" stroke-width="2.5" marker-end="url(#arrow-accent)"/>
+  <g aria-label="共同特徵向量表示">
+    <rect class="panel" x="620" y="204" width="178" height="242" rx="16"/>
+    <text class="section" x="709" y="238" text-anchor="middle">共同表示法</text>
+    <text class="small" x="709" y="258" text-anchor="middle">每筆輸入 → 一組數字</text>
+    <rect x="644" y="279" width="130" height="120" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+    <line x1="660" y1="381" x2="756" y2="381" stroke="#64748b" stroke-width="1.5"/>
+    <line x1="660" y1="381" x2="660" y2="294" stroke="#64748b" stroke-width="1.5"/>
+    <text class="small" x="752" y="396" text-anchor="end">特徵 1</text>
+    <text class="small" x="654" y="296" text-anchor="end">特徵 2</text>
+    <circle cx="681" cy="350" r="5" fill="#94a3b8"/>
+    <circle cx="696" cy="337" r="5" fill="#94a3b8"/>
+    <circle cx="710" cy="357" r="5" fill="var(--accent)"/>
+    <circle cx="724" cy="324" r="5" fill="var(--accent)"/>
+    <circle cx="740" cy="335" r="5" fill="#64748b"/>
+    <path d="M666 421 H752" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="684" cy="421" r="5" fill="var(--accent)"/>
+    <circle cx="718" cy="421" r="5" fill="#64748b"/>
+    <circle cx="744" cy="421" r="5" fill="#94a3b8"/>
+    <text class="small" x="709" y="438" text-anchor="middle">可比較、可分群</text>
+  </g>
+
+  <path d="M798 325 H830" class="thin accent-stroke" stroke-width="2.5" marker-end="url(#arrow-accent)"/>
+  <g aria-label="分類決策">
+    <rect class="panel" x="830" y="170" width="330" height="320" rx="16"/>
+    <text class="section" x="850" y="205">分類決策</text>
+    <text class="small" x="850" y="226">特徵空間中，用一條規則切出類別</text>
+    <rect x="850" y="246" width="170" height="174" rx="7" fill="#f8fafc" stroke="#cbd5e1"/>
+    <polygon points="850,420 850,246 1020,246" fill="#ecfeff"/>
+    <polygon points="850,420 1020,246 1020,420" fill="#f1f5f9"/>
+    <line x1="850" y1="420" x2="1020" y2="246" stroke="var(--accent)" stroke-width="3.5"/>
+    <line x1="860" y1="407" x2="1007" y2="407" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="860" y1="407" x2="860" y2="258" stroke="#94a3b8" stroke-width="1"/>
+    <circle cx="883" cy="342" r="6" fill="var(--accent)"/>
+    <circle cx="901" cy="316" r="6" fill="var(--accent)"/>
+    <circle cx="918" cy="296" r="6" fill="var(--accent)"/>
+    <circle cx="940" cy="328" r="6" fill="var(--accent)"/>
+    <circle cx="972" cy="359" r="6" fill="#64748b"/>
+    <circle cx="991" cy="379" r="6" fill="#64748b"/>
+    <circle cx="957" cy="388" r="6" fill="#64748b"/>
+    <circle cx="949" cy="337" r="6" fill="#ffffff" stroke="#475569" stroke-width="2"/>
+    <circle cx="949" cy="337" r="12" fill="none" stroke="#475569" stroke-width="1.5" stroke-dasharray="3 3"/>
+    <text class="small" x="942" y="438">決策線</text>
+    <text class="small" x="855" y="259">A 側</text>
+    <text class="small" x="986" y="412">B 側</text>
+    <path d="M1024 283 C1040 260 1047 254 1060 254" class="thin accent-stroke" marker-end="url(#arrow-accent)"/>
+    <path d="M1024 383 C1040 393 1048 399 1060 399" class="thin muted-stroke" marker-end="url(#arrow-muted)"/>
+    <rect x="1062" y="235" width="78" height="38" rx="19" fill="var(--accent)"/>
+    <text x="1101" y="260" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700">類別 A</text>
+    <rect x="1062" y="380" width="78" height="38" rx="19" fill="#475569"/>
+    <text x="1101" y="405" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700">類別 B</text>
+    <text class="detail" x="1040" y="449" text-anchor="middle">邊界附近可能誤判</text>
+  </g>
+
+  <g aria-label="共同因果結論">
+    <rect x="40" y="585" width="1120" height="76" rx="18" fill="#ecfeff" stroke="var(--accent)" stroke-width="1.5"/>
+    <circle cx="72" cy="623" r="18" fill="var(--accent)"/>
+    <text x="72" y="630" text-anchor="middle" fill="#ffffff" font-size="20" font-weight="700">→</text>
+    <text class="label" x="105" y="616">反直覺的共通點</text>
+    <text class="detail" x="105" y="639">乳房 X 光、語音波形、DNA 序列看起來完全不同；但只要能被量成「可分辨的特徵」，就能接上同一個分類決策機制。</text>
+  </g>
+</svg><figcaption>📊 知識點 1 示意圖（手繪 SVG）</figcaption></figure>
+<div class="ai-illustration" data-diagram-id="kp-1" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT:
+Draw a wide, self-contained educational SVG infographic. Five visibly different raw
+inputs enter from the left: a factory camera inspecting parts, a scanned document
+with handwriting/OCR strokes, an X-ray or lesion image, a speech waveform, and a
+data/DNA similarity record. These five streams must physically converge through one
+funnel-like feature-extraction stage, become the same kind of compact numeric
+representation, and then enter one shared classifier shown as a 2-D feature plane
+with a visible decision line and two output classes. Include a point near the
+decision boundary to show that a classification rule can be uncertain or wrong.
+
+WHY:
+The causal mechanism is not that five applications happen to share vocabulary.
+Their different-looking inputs become comparable only after feature extraction;
+those measured features are the input that makes a common classification decision
+possible. The counter-intuitive turn is that the common intelligence is hidden
+in the middle conversion, not in the surface modality. Even after conversion,
+the decision line is a rule rather than a guarantee, so a boundary-near sample
+can be misclassified.
+
+MUST show:
+- Five distinct geometric input glyphs and labels, with arrows that visibly
+  converge rather than five isolated boxes.
+- A central funnel, compression, or merging geometry labelled feature extraction,
+  with several raw streams narrowing into a shared numeric representation.
+- A shared feature-vector or feature-plane representation with points/axes, not
+  only a text label.
+- One downstream classifier decision line that divides two regions and sends
+  them to two class outputs.
+- A boundary-near point with a ring or warning cue for possible misclassification.
+- A strong visual hierarchy: the shared middle pipeline must be more prominent
+  than the five application examples.
+
+AVOID:
+Do not make five unrelated icon cards with no physical convergence. Do not use a
+noun-to-box flowchart, decorative stock medical imagery, or a generic AI brain.
+Do not imply that raw images, waveforms, or records are classified directly
+without feature extraction. Do not hide the decision geometry behind paragraphs,
+use external images/fonts/resources, or imply perfect accuracy.
+
+STYLE:
+Clean offline SVG scientific infographic, logical viewBox coordinates, white and
+light-gray background, #0891b2 accent with grayscale, crisp arrows and geometric
+icons, restrained typography, generous whitespace, and textbook-level clarity.</pre></details></div>
+<!-- END Phase B 圖解 -->
+<p><strong>一句話</strong>：樣式識別（pattern recognition）是「把物件分類到某個類別」的科學，1960 年代前多半是統計學的理論研究，電腦普及後才變成今天工程界的當紅學科。</p>
+<p><strong>為什麼重要</strong>：社會從工業時代走向後工業時代，自動化與資訊檢索的需求爆炸性成長，樣式識別因此變成幾乎所有「機器智慧決策系統」的核心零件。</p>
+<p><strong>五個代表性戰場</strong>：</p>
+<ul>
+<li><strong>機器視覺</strong>：相機拍下影像 → 判斷「有沒有瑕疵」（產線檢測）或「這是什麼零件」（自動組裝）。</li>
+<li><strong>文字辨識（OCR）</strong>：光學掃描 → 影像處理切字 → 分類成「字母/數字/標點」。存成 ASCII 比存整張掃描影像更省空間、也更方便後續編輯；手寫辨識更進一步應用在支票金額辨識、郵遞區號分類、筆式電腦輸入。</li>
+<li><strong>電腦輔助診斷</strong>：例如乳房 X 光攝影，10–30% 罹病患者會被誤判為陰性，其中三分之二事後回看其實影像上已有跡象——這正是「找第二意見」的樣式識別系統存在的理由。</li>
+<li><strong>語音辨識</strong>：把麥克風收到的聲音樣式轉成 ASCII 文字，用說話輸入資料比熟練打字快兩倍，也能幫助聽語障人士。</li>
+<li><strong>資料探勘與知識發掘</strong>：從「用關鍵字比對」的傳統檢索，走向「用相似度比對」的 content-based retrieval（例如 CBIR 影像檢索、音樂旋律比對、DNA 序列相似性搜尋）。</li>
+</ul>
+<p><strong>怎麼記</strong>：這五個例子背後其實只有一件事——<strong>先想辦法量出一些能區分類別的數字（特徵），再交給分類器判斷</strong>。這就是後面每一節要拆解的主題。</p><div class="quiz" data-ans="C">
+      <p class="q"><p>以下哪一項不是本節提到的樣式識別應用？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q1-0" value="A"><span>A. <p>OCR 光學字元辨識</p></span></label><label class="opt"><input type="radio" name="q1-0" value="B"><span>B. <p>乳房 X 光電腦輔助診斷</p></span></label><label class="opt"><input type="radio" name="q1-0" value="C"><span>C. <p>用關鍵字比對的傳統資料庫檢索</p></span></label><label class="opt"><input type="radio" name="q1-0" value="D"><span>D. <p>多光譜衛星影像的地表分類</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="本節特別對比：傳統資料庫檢索靠人工關鍵字標註與比對，樣式識別／content-based retrieval 走的是「相似度」路線，兩者不同；地表分類則屬於後面 1.3 節的非監督式例子。"></div>
+    </div><div class="quiz" data-ans="B">
+      <p class="q"><p>為什麼 OCR 系統把辨識結果存成 ASCII 文字、而不是直接存掃描影像？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q1-1" value="A"><span>A. <p>因為法律規定</p></span></label><label class="opt"><input type="radio" name="q1-1" value="B"><span>B. <p>因為 ASCII 檔案較省空間，也方便後續文書處理</p></span></label><label class="opt"><input type="radio" name="q1-1" value="C"><span>C. <p>因為影像檔案無法被壓縮</p></span></label><label class="opt"><input type="radio" name="q1-1" value="D"><span>D. <p>因為掃描器不支援存影像</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="原文明確指出兩個優點：後續用文書處理器編輯更容易；儲存 ASCII 字元比儲存整張影像有效率得多。"></div>
+    </div></div>
+</section>
+<section id="kp2" class="card" data-kp="2">
+  <div class="card-head"><span class="badge">1.2</span><h3>特徵、特徵向量與分類器</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<!-- == Phase B 圖解 kp-2 == -->
+<figure class="diagram-figure"><img src="assets/diagram-kp2.png" alt="知識點 2 示意圖"><figcaption>📊 知識點 2 示意圖（matplotlib）</figcaption></figure>
+<div class="ai-illustration" data-diagram-id="kp-2" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT:
+Create a two-panel quantitative scatter plot for medical-image classification.
+Use the same deterministic set of feature vectors in both panels. The x-axis is
+mean gray-level value and the y-axis is gray-level standard deviation; each image
+is one point x = [mean, standard deviation]^T. In the left panel, show benign
+class A as blue circles and malignant class B as red crosses, then draw a solid
+decision line learned from the true labels. In the right panel, remove all class
+colors so every training point is gray, and draw a dashed orange line that follows
+the visually dominant diagonal of the unlabeled cloud as a plausible but wrong
+guess. Put the same gold-star unknown sample in both panels so its predicted class
+can visibly change with the boundary.
+
+WHY:
+The true class labels are the causal input that lets a classifier discover a
+boundary between classes. Without labels, a person can mistake the long axis of
+the point cloud for the separating boundary: the line may look geometrically
+reasonable while cutting through many points from both hidden classes. The
+counter-intuitive lesson is that a decision line is not revealed by appearance
+alone, and even a label-aware line is a rule with possible misclassification,
+not a guarantee of truth.
+
+MUST show:
+- Exactly the same point coordinates in both panels; only the left panel reveals
+  class colors and markers.
+- Quantitative axes labelled mean gray level and gray-level standard deviation.
+- A visible feature-vector notation such as x = [x1, x2]^T.
+- A solid label-aware decision line on the left, with lightly tinted predicted
+  regions and a small accuracy count for this sample set.
+- A dashed unlabeled guess on the right that follows the cloud's long diagonal,
+  with many error points circled after the hidden labels are revealed.
+- The same gold-star new sample in both panels, with the two boundary-based
+  predictions called out.
+- A visual distinction between overlapping points that can still be
+  misclassified and the larger failure caused by the unlabeled guess.
+
+AVOID:
+Do not make a noun-to-box flowchart, generic neural-network diagram, or
+decorative medical illustration. Do not change the data between panels, hide
+the axes, use an arbitrary line with no visible consequences, or imply that
+classification is always correct. Do not use only text labels to explain the
+cause; the point geometry, line orientations, tinted sides, and circled errors
+must carry the argument even when labels are covered.
+
+STYLE:
+Clean flat scientific matplotlib-style infographic, white background, restrained
+blue/red/orange/purple palette, high-contrast markers, precise geometry, readable
+Chinese typography, and enough whitespace for an undergraduate self-study
+textbook figure.</pre></details></div>
+<!-- END Phase B 圖解 -->
+<p><strong>一句話</strong>：把「量測到的可分辨數字」叫做<strong>特徵（feature）</strong>，把 $l$ 個特徵排成一支向量 $\boldsymbol{x}=[x_1,x_2,\dots,x_l]^T$ 就是<strong>特徵向量</strong>，而負責把特徵空間切成不同類別區域的規則，叫做<strong>分類器（classifier）</strong>。</p>
+<figure class="orig-fig">
+<img src="assets/1f607add-71ac-4b76-9587-f077f9e3839f-04_512_1060_1477_508.jpg" alt="良性與惡性病灶影像區域範例">
+<figcaption>FIGURE 1.1　類別 A（良性病灶）與類別 B（惡性病灶）的影像區域範例。</figcaption>
+</figure>
+
+<p><strong>動手做一次（醫學影像簡化範例）</strong>：假設兩張影像裡各有一塊感興趣區域，一塊來自良性病灶（類別 A），一塊來自惡性病灶（類別 B）。第一步不是直接比對影像，而是先找「量得出來、又能分辨兩類」的數字——這裡選用區域內的<strong>平均灰階值</strong>與<strong>灰階標準差</strong>兩個特徵。</p>
+<figure class="orig-fig">
+<img src="assets/1f607add-71ac-4b76-9587-f077f9e3839f-05_476_577_276_548.jpg" alt="平均值與標準差散布圖，一條直線分開兩類">
+<figcaption>FIGURE 1.2　把資料庫裡每張影像的（平均值, 標準差）畫成一個點，○ 是類別 A、+ 是類別 B；一條直線就能大致分開兩類；星號 * 是一個未知類別的新樣本，落在偏 A 的一側。</figcaption>
+</figure>
+
+<p><strong>分類器怎麼來的</strong>：圖中那條直線叫<strong>決策線（decision line）</strong>，它就是分類器本體——把特徵空間切成「屬於 A」與「屬於 B」兩塊區域。畫這條線時我們其實<strong>偷看了答案</strong>：每個點的真實類別（A 或 B）事先已知，這種「類別標籤已知、拿來設計分類器」的樣本叫<strong>訓練樣本（training pattern）</strong>。新來的星號樣本落在哪一區，就被判給哪一類——但這只是「判斷」，不保證正確，判錯了就叫<strong>誤判（misclassification）</strong>。</p>
+<p><strong>四個接下來要面對的問題</strong>（本例只是最簡化的示範，真實情況要嚴肅回答）：</p>
+<ol>
+<li>特徵要<strong>怎麼生成</strong>？本例投機取巧地用了平均值/標準差，實務上往往不知道該量什麼——這是「特徵生成」階段的工作。</li>
+<li>該用<strong>幾個</strong>特徵最好？通常會先生成一大把候選特徵，再挑出「最好用」的子集合——這是「特徵選擇」階段。</li>
+<li>分類器的邊界該怎麼<strong>畫</strong>？本例是憑感覺目測畫的直線，實務上要依某個最優準則計算出來，而且大多數問題的分界面根本不是直線（超平面），而是非線性曲面——這是「分類器設計」階段。</li>
+<li>設計完之後，<strong>準不準</strong>？要有系統性方法評估錯誤率——這是「系統評估」階段。</li>
+</ol>
+<!-- == Phase C demo kp-2 == -->
+<div class="demo" data-demo-id="kp-2">
+  <style>
+    .demo[data-demo-id="kp-2"] {
+      --demo-accent: #0891b2;
+      --demo-ink: #1f2937;
+      --demo-muted: #64748b;
+      --demo-line: #dbe4ea;
+      border: 1px solid #b6dce5;
+      border-radius: 14px;
+      background: #fbfeff;
+      margin: 18px 0;
+      overflow: hidden;
+    }
+    .demo[data-demo-id="kp-2"] .demo-head {
+      padding: 13px 17px;
+      color: #ffffff;
+      background: linear-gradient(135deg, #0891b2, #0e7490);
+      font-weight: 700;
+    }
+    .demo[data-demo-id="kp-2"] .demo-panel {
+      padding: 15px 18px 13px;
+      border-bottom: 1px solid #e5eef1;
+      background: #ffffff;
+    }
+    .demo[data-demo-id="kp-2"] .demo-panel h5 {
+      margin: 0 0 8px;
+      color: var(--demo-ink);
+      font-size: 0.96rem;
+    }
+    .demo[data-demo-id="kp-2"] .demo-panel ul {
+      margin: 0;
+      padding-left: 21px;
+    }
+    .demo[data-demo-id="kp-2"] .demo-panel li {
+      margin: 4px 0;
+      color: var(--demo-muted);
+      font-size: 0.88rem;
+      line-height: 1.65;
+    }
+    .demo[data-demo-id="kp-2"] .demo-panel strong {
+      color: var(--demo-ink);
+    }
+    .demo[data-demo-id="kp-2"] .demo-theory {
+      margin-top: 10px;
+      padding: 9px 12px;
+      border-left: 4px solid var(--demo-accent);
+      border-radius: 7px;
+      background: #ecfeff;
+      color: #155e75;
+      font-size: 0.86rem;
+      line-height: 1.65;
+    }
+    .demo[data-demo-id="kp-2"] .demo-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 17px;
+      border-bottom: 1px solid #e5eef1;
+      background: #f8fcfd;
+    }
+    .demo[data-demo-id="kp-2"] .demo-controls button {
+      padding: 7px 15px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--demo-accent);
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+    .demo[data-demo-id="kp-2"] .demo-controls button:hover {
+      background: #0e7490;
+    }
+    .demo[data-demo-id="kp-2"] .demo-controls .demo-hint {
+      color: var(--demo-muted);
+      font-size: 0.84rem;
+    }
+    .demo[data-demo-id="kp-2"] .demo-stage {
+      padding: 12px 16px 8px;
+      background: #ffffff;
+      text-align: center;
+    }
+    .demo[data-demo-id="kp-2"] #demo-canvas-kp2 {
+      display: block;
+      width: 100%;
+      max-width: 760px;
+      height: auto;
+      margin: 0 auto;
+      border: 1px solid var(--demo-line);
+      border-radius: 9px;
+      background: #ffffff;
+      cursor: grab;
+      touch-action: none;
+    }
+    .demo[data-demo-id="kp-2"] #demo-canvas-kp2:active {
+      cursor: grabbing;
+    }
+    .demo[data-demo-id="kp-2"] .demo-readout {
+      min-height: 7.2em;
+      padding: 11px 17px 14px;
+      border-top: 1px solid #e5eef1;
+      background: #f8fcfd;
+      color: var(--demo-ink);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+  </style>
+
+  <div class="demo-head">互動 Demo｜特徵向量與分類器：拖曳資料點，讓兩條線即時重算</div>
+
+  <div class="demo-panel">
+    <h5>操作說明與正確結果基準</h5>
+    <ul>
+      <li><strong>這在做什麼</strong>：把每張醫學影像化成「平均灰階值、灰階標準差」兩個特徵，觀察 LDA 決策線與無標籤主軸猜測線如何切分同一批資料。</li>
+      <li><strong>怎麼操作</strong>：拖曳藍色圓點（A 類）或紅色叉號（B 類）；每個點移動後，兩條線與各自準確率都會即時重算。</li>
+      <li><strong>觀察什麼</strong>：把某個點拖到另一類附近，觀察兩條線的判斷是否不一致，以及「用真實標籤」與「只看資料外觀」的準確率如何改變。</li>
+      <li><strong>正確結果基準</strong>：LDA 使用標籤計算共用類內共變異數；PCA 主軸只使用全部點的位置，不讀取類別標籤。</li>
+    </ul>
+    <div class="demo-theory">
+      LDA：$w = S_w^{-1}(\mu_A - \mu_B)$（$S_w$ 是兩類離差平方和除以 $n_A+n_B-2$ 的共用類內共變異數），
+      $\text{bias} = -0.5(\mu_A+\mu_B)\cdot w$；分數 $(x-\text{mid})\cdot w \ge 0$ 時判為 A 類。<br>
+      無標籤猜測：$C=\dfrac{1}{N-1}\sum_i (x_i-c)(x_i-c)^T$ 是全部點的共變異數矩陣，
+      $u_1$ 是其最大特徵值 $\lambda_1$ 對應的特徵向量；猜測線通過 $c$、方向為 $u_1$，依點落在線的哪一側分類。
+    </div>
+  </div>
+
+  <div class="demo-controls">
+    <button id="demo-reset-kp2" type="button">↺ 重置資料點</button>
+    <span class="demo-hint">拖曳點時，綠色實線是標籤 LDA，灰色虛線是無標籤主軸猜測。</span>
+  </div>
+
+  <div class="demo-stage">
+    <canvas id="demo-canvas-kp2" width="760" height="440" aria-label="特徵空間中的 LDA 與 PCA 主軸互動圖"></canvas>
+  </div>
+
+  <div class="demo-readout" id="demo-readout-kp2" aria-live="polite"></div>
+</div>
+<!-- END Phase C demo -->
+<button class="guide-btn" data-kp="2">📖 偷看教授祕笈</button>
+<div class="quiz" data-ans="B">
+      <p class="q"><p>特徵向量 $\boldsymbol{x}=[x_1,x_2,\dots,x_l]^T$ 裡的上標 $T$ 代表什麼？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q2-0" value="A"><span>A. <p>訓練（Training）</p></span></label><label class="opt"><input type="radio" name="q2-0" value="B"><span>B. <p>轉置（Transpose）</p></span></label><label class="opt"><input type="radio" name="q2-0" value="C"><span>C. <p>真（True）</p></span></label><label class="opt"><input type="radio" name="q2-0" value="D"><span>D. <p>第 T 個特徵</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="$T$ 表示矩陣/向量轉置，把橫列寫法轉成直行的行向量。"></div>
+    </div><div class="quiz" data-ans="B">
+      <p class="q"><p>圖 1.2 中的決策線是依據什麼資訊畫出來的？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q2-1" value="A"><span>A. <p>隨機猜測</p></span></label><label class="opt"><input type="radio" name="q2-1" value="B"><span>B. <p>每個點事先已知的真實類別標籤（訓練樣本）</p></span></label><label class="opt"><input type="radio" name="q2-1" value="C"><span>C. <p>星號那個未知樣本的位置</p></span></label><label class="opt"><input type="radio" name="q2-1" value="D"><span>D. <p>影像的檔案大小</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="原文明言：畫這條線時利用了「已知每個點屬於 A 類或 B 類」這項資訊，這正是訓練樣本的定義。"></div>
+    </div></div>
+</section>
+<section id="kp3" class="card" data-kp="3">
+  <div class="card-head"><span class="badge">1.2</span><h3>分類系統設計的四個階段</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="3">📖 偷看教授祕笈</button>
+
+<!-- == Phase B 圖解 kp-3 == -->
+<figure class="diagram-figure"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 820" width="100%" role="img" aria-labelledby="diagram-title diagram-desc">
+  <title id="diagram-title">分類系統設計的四階段迭代回圈</title>
+  <desc id="diagram-desc">特徵生成、特徵選擇、分類器設計、系統評估依序前進；當錯誤率或泛化表現不理想時，系統評估沿著虛線回饋弧線返回特徵選擇，必要時更早返回特徵生成。特徵選擇與分類器設計以虛線框標示可合併成共同最佳化問題。</desc>
+  <defs>
+    <style>
+      :root { --accent: #0891b2; --ink: #0f172a; --feedback: #475569; }
+      .title { font: 700 30px "Noto Sans TC", "Microsoft JhengHei", sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 16px "Noto Sans TC", "Microsoft JhengHei", sans-serif; fill: #475569; }
+      .stage-title { font: 700 22px "Noto Sans TC", "Microsoft JhengHei", sans-serif; fill: #0f172a; }
+      .question { font: 400 14px "Noto Sans TC", "Microsoft JhengHei", sans-serif; fill: #475569; }
+      .micro { font: 400 12px "Noto Sans TC", "Microsoft JhengHei", sans-serif; fill: #64748b; }
+      .label { font: 600 13px "Noto Sans TC", "Microsoft JhengHei", sans-serif; fill: #334155; }
+      .feedback-label { font: 700 15px "Noto Sans TC", "Microsoft JhengHei", sans-serif; fill: #334155; }
+      .stage-card { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 2; }
+      .grid { stroke: #e2e8f0; stroke-width: 1; }
+      .muted { stroke: #64748b; fill: #64748b; }
+      .accent { stroke: var(--accent); fill: var(--accent); }
+      .feedback { stroke: #475569; fill: none; }
+    </style>
+    <marker id="arrow-accent" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0,0 10,5 0,10" fill="var(--accent)" />
+    </marker>
+    <marker id="arrow-feedback" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0,0 10,5 0,10" fill="#475569" />
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1360" height="820" fill="#ffffff" />
+
+  <text x="60" y="52" class="title">分類系統設計：迭代回圈，而非單向流水線</text>
+  <text x="60" y="82" class="subtitle">先形成可量測的表徵，再建立決策規則；真正的終點是「在新資料上表現足夠好」</text>
+
+  <g aria-label="圖例">
+    <line x1="1020" y1="48" x2="1070" y2="48" stroke="var(--accent)" stroke-width="4" marker-end="url(#arrow-accent)" />
+    <text x="1080" y="53" class="micro">主要前進路徑</text>
+    <line x1="1190" y1="48" x2="1240" y2="48" stroke="#475569" stroke-width="3" stroke-dasharray="9 7" marker-end="url(#arrow-feedback)" />
+    <text x="1250" y="53" class="micro">結果回饋</text>
+  </g>
+
+  <!-- The dashed enclosure makes the coupling between selection and classifier design visible. -->
+  <rect x="365" y="96" width="680" height="270" rx="24" fill="#f8fafc" fill-opacity="0.45" stroke="#64748b" stroke-width="2" stroke-dasharray="10 8" />
+  <rect x="392" y="78" width="270" height="36" rx="18" fill="#ffffff" stroke="#64748b" stroke-width="1.5" />
+  <text x="527" y="102" text-anchor="middle" class="label">可合併為單一最佳化問題</text>
+  <path d="M 680 122 C 698 110, 718 110, 736 122" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 5" marker-start="url(#arrow-accent)" marker-end="url(#arrow-accent)" />
+  <text x="858" y="119" text-anchor="middle" class="micro">一起調整</text>
+
+  <!-- Forward path: it is curved and visually distinct from the return path. -->
+  <path d="M 340 304 C 360 252, 366 238, 385 235" fill="none" stroke="var(--accent)" stroke-width="4" marker-end="url(#arrow-accent)" />
+  <path d="M 670 235 C 688 235, 706 235, 725 235" fill="none" stroke="var(--accent)" stroke-width="4" marker-end="url(#arrow-accent)" />
+  <path d="M 1010 250 C 1028 265, 1032 290, 1040 305" fill="none" stroke="var(--accent)" stroke-width="4" marker-end="url(#arrow-accent)" />
+  <text x="354" y="224" text-anchor="middle" class="micro">候選特徵</text>
+  <text x="698" y="216" text-anchor="middle" class="micro">可用子集</text>
+  <text x="1035" y="128" text-anchor="end" class="micro">選定分類器</text>
+
+  <!-- Stage 1: many raw signal cues become measurable candidate features. -->
+  <g aria-label="特徵生成階段">
+    <rect x="80" y="220" width="260" height="190" rx="18" class="stage-card" />
+    <rect x="80" y="220" width="260" height="8" rx="4" fill="var(--accent)" />
+    <text x="105" y="267" class="stage-title">特徵生成</text>
+    <text x="105" y="291" class="question">把資料變成可量測的線索</text>
+    <g transform="translate(104 311)">
+      <path d="M 0 39 C 13 8, 26 56, 39 27 S 64 25, 78 41" fill="none" stroke="#64748b" stroke-width="2.5" />
+      <circle cx="10" cy="31" r="3.5" fill="#94a3b8" />
+      <circle cx="32" cy="35" r="3.5" fill="#94a3b8" />
+      <circle cx="56" cy="20" r="3.5" fill="#94a3b8" />
+      <path d="M 92 35 L 119 35" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#arrow-accent)" />
+      <rect x="137" y="19" width="10" height="36" rx="2" fill="#94a3b8" />
+      <rect x="157" y="7" width="10" height="48" rx="2" fill="var(--accent)" opacity="0.78" />
+      <rect x="177" y="28" width="10" height="27" rx="2" fill="#64748b" />
+      <line x1="130" y1="58" x2="198" y2="58" stroke="#cbd5e1" stroke-width="1.5" />
+    </g>
+    <text x="105" y="392" class="micro">原始訊號 → 候選特徵</text>
+  </g>
+
+  <!-- Stage 2: a large candidate set is narrowed to a discriminative subset. -->
+  <g aria-label="特徵選擇階段">
+    <rect x="385" y="135" width="285" height="210" rx="18" class="stage-card" />
+    <rect x="385" y="135" width="285" height="8" rx="4" fill="var(--accent)" />
+    <text x="410" y="190" class="stage-title">特徵選擇</text>
+    <text x="410" y="214" class="question">候選很多，保留有區辨力的子集</text>
+    <g transform="translate(414 244)">
+      <line x1="0" y1="72" x2="66" y2="72" stroke="#cbd5e1" stroke-width="1.5" />
+      <rect x="7" y="31" width="9" height="41" rx="2" fill="#94a3b8" />
+      <rect x="21" y="12" width="9" height="60" rx="2" fill="var(--accent)" />
+      <rect x="35" y="42" width="9" height="30" rx="2" fill="#94a3b8" />
+      <rect x="49" y="23" width="9" height="49" rx="2" fill="#94a3b8" />
+      <path d="M 76 26 L 116 26 L 136 72 L 56 72 Z" fill="#ffffff" stroke="#64748b" stroke-width="1.5" />
+      <path d="M 145 49 L 169 49" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#arrow-accent)" />
+      <rect x="184" y="25" width="11" height="47" rx="2" fill="var(--accent)" />
+      <rect x="204" y="41" width="11" height="31" rx="2" fill="var(--accent)" opacity="0.72" />
+      <line x1="177" y1="76" x2="226" y2="76" stroke="#cbd5e1" stroke-width="1.5" />
+    </g>
+    <text x="410" y="328" class="micro">多 → 少，但更容易分開類別</text>
+  </g>
+
+  <!-- Stage 3: the classifier is a learned decision boundary, not merely a box. -->
+  <g aria-label="分類器設計階段">
+    <rect x="725" y="135" width="285" height="210" rx="18" class="stage-card" />
+    <rect x="725" y="135" width="285" height="8" rx="4" fill="var(--accent)" />
+    <text x="750" y="190" class="stage-title">分類器設計</text>
+    <text x="750" y="214" class="question">找出能分開類別的決策邊界</text>
+    <g transform="translate(752 244)">
+      <rect x="0" y="0" width="224" height="78" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+      <line x1="56" y1="0" x2="56" y2="78" class="grid" />
+      <line x1="112" y1="0" x2="112" y2="78" class="grid" />
+      <line x1="168" y1="0" x2="168" y2="78" class="grid" />
+      <line x1="0" y1="26" x2="224" y2="26" class="grid" />
+      <line x1="0" y1="52" x2="224" y2="52" class="grid" />
+      <circle cx="32" cy="23" r="4.5" fill="#64748b" />
+      <circle cx="48" cy="34" r="4.5" fill="#64748b" />
+      <circle cx="67" cy="17" r="4.5" fill="#64748b" />
+      <circle cx="77" cy="42" r="4.5" fill="#64748b" />
+      <circle cx="154" cy="55" r="4.5" fill="var(--accent)" />
+      <circle cx="171" cy="43" r="4.5" fill="var(--accent)" />
+      <circle cx="188" cy="62" r="4.5" fill="var(--accent)" />
+      <circle cx="202" cy="48" r="4.5" fill="var(--accent)" />
+      <path d="M 98 4 C 127 21, 112 42, 144 74" fill="none" stroke="#0f172a" stroke-width="2.5" stroke-dasharray="5 4" />
+    </g>
+    <text x="750" y="328" class="micro">分界規則可能是彎的，不是憑感覺畫直線</text>
+  </g>
+
+  <!-- Stage 4: evaluation exposes the failure that drives the return path. -->
+  <g aria-label="系統評估階段">
+    <rect x="1040" y="220" width="250" height="190" rx="18" class="stage-card" />
+    <rect x="1040" y="220" width="250" height="8" rx="4" fill="var(--accent)" />
+    <text x="1065" y="267" class="stage-title">系統評估</text>
+    <text x="1065" y="291" class="question">在新資料上量化錯誤與泛化</text>
+    <g transform="translate(1068 300)">
+      <line x1="0" y1="56" x2="144" y2="56" stroke="#94a3b8" stroke-width="1.5" />
+      <line x1="0" y1="7" x2="0" y2="56" stroke="#94a3b8" stroke-width="1.5" />
+      <rect x="18" y="17" width="22" height="39" rx="2" fill="var(--accent)" opacity="0.78" />
+      <rect x="58" y="31" width="22" height="25" rx="2" fill="#64748b" />
+      <circle cx="113" cy="22" r="7" fill="#ffffff" stroke="#475569" stroke-width="2" />
+      <path d="M 109 18 L 117 26 M 117 18 L 109 26" stroke="#475569" stroke-width="2" />
+      <text x="16" y="73" class="micro">訓練</text>
+      <text x="55" y="73" class="micro">新資料</text>
+      <text x="99" y="73" class="micro">錯分</text>
+    </g>
+    <text x="1065" y="388" class="micro">表現不理想</text>
+    <text x="1065" y="404" class="micro">→ 啟動回頭修正</text>
+  </g>
+
+  <!-- The non-intuitive causal loop: evaluation is a trigger, not the end. -->
+  <path d="M 1165 410 C 1165 535, 1060 635, 895 675 C 675 728, 385 700, 300 545 C 252 458, 320 374, 430 345" fill="none" stroke="#475569" stroke-width="4" stroke-dasharray="11 8" marker-end="url(#arrow-feedback)" />
+  <path d="M 355 575 C 260 535, 194 475, 210 410" fill="none" stroke="#94a3b8" stroke-width="3" stroke-dasharray="5 8" marker-end="url(#arrow-feedback)" />
+  <rect x="1020" y="462" width="242" height="58" rx="14" fill="#ffffff" stroke="var(--accent)" stroke-width="2" />
+  <circle cx="1044" cy="491" r="12" fill="#475569" />
+  <text x="1044" y="496" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">!</text>
+  <text x="1066" y="488" class="feedback-label">錯誤率不理想</text>
+  <text x="1066" y="507" class="micro">評估結果成為回饋訊號</text>
+  <text x="285" y="572" text-anchor="middle" class="feedback-label">回頭修正特徵選擇</text>
+  <text x="205" y="548" text-anchor="middle" class="micro">必要時更早回到特徵生成</text>
+
+  <g transform="translate(680 475)" aria-label="迭代修正提示">
+    <circle cx="0" cy="0" r="47" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2" />
+    <path d="M -19 -9 A 23 23 0 1 1 5 21" fill="none" stroke="var(--accent)" stroke-width="3" marker-end="url(#arrow-accent)" />
+    <text x="0" y="0" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">迭代</text>
+    <text x="0" y="20" text-anchor="middle" class="micro">修正</text>
+  </g>
+  <text x="680" y="548" text-anchor="middle" class="subtitle">評估不是終點，而是下一輪設計的起點</text>
+</svg><figcaption>📊 知識點 3 示意圖（手繪 SVG）</figcaption></figure>
+<div class="ai-illustration" data-diagram-id="kp-3" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT:
+以一個大型、非直線的迭代流程圖呈現分類系統設計：四個階段「特徵生成 → 特徵選擇 → 分類器設計 → 系統評估」沿著弧形主要路徑前進；系統評估位於右側，從它拉出粗虛線回饋弧，繞回特徵選擇，另以較淡的支線表示必要時回到特徵生成。特徵選擇與分類器設計被同一個虛線框包住，框內有雙向連動箭頭，表示可合併成共同最佳化問題。每個階段都要有小型幾何示意：原始訊號變成候選特徵、很多候選被篩成少數、有兩群資料與彎曲決策邊界、測試資料出現錯分與泛化落差。
+
+WHY:
+必須傳達「四階段不是獨立的流水線，而是由評估結果驅動的修正迴圈」。反直覺轉折是：系統評估不是終點；當新資料上的錯誤率不理想時，評估結果會成為回饋訊號，迫使設計者回頭改特徵選擇，甚至重新生成特徵。另一個因果重點是，特徵選擇與分類器設計可能互相牽制，因此可被放進同一個最佳化任務。
+
+MUST show:
+- 四個階段仍依序可讀，主要前進箭頭使用實線。
+- 從「系統評估」返回「特徵選擇」的粗虛線回饋弧，旁邊明確標出「錯誤率不理想」與「回頭修正」。
+- 一條較淡的回饋支線指向「特徵生成」，表示問題可能必須回到更早階段。
+- 特徵生成的波形／候選量測、特徵選擇的多到少篩選、分類器設計的兩群點與彎曲邊界、系統評估的訓練／新資料對照與錯分標記。
+- 特徵選擇與分類器設計外有虛線共同框，並標示「可合併為單一最佳化問題」。
+- 中央有循環箭頭或迭代符號，強化評估會啟動下一輪設計，而非流程結束。
+
+AVOID:
+- 禁止只畫四個名詞方框加一條由左至右的單向箭頭。
+- 禁止把回饋箭頭畫成細小、裝飾性或難以辨認的線；回饋必須是主視覺之一。
+- 禁止用直線分隔線取代分類器的決策邊界，也不要暗示分類器永遠是線性的。
+- 禁止把特徵選擇與分類器設計畫成完全獨立、沒有互相影響的步驟。
+- 禁止使用公式、外部圖片、外部字體、過度寫實的 AI 場景或無法離線渲染的素材。
+
+STYLE: 扁平、清楚、教科書式的向量資訊圖；白底，以 #0891b2 青色作為主要強調色，搭配深灰與淺灰，線條俐落、留白充足，讓遮住所有文字後仍能看出「篩選 → 建界 → 測試 → 回頭修正」的因果迴圈。</pre></details></div>
+<!-- END Phase B 圖解 -->
+<p><strong>一句話</strong>：一個完整的分類系統設計，會依序（但常常互相回頭修正）走過<strong>特徵生成 → 特徵選擇 → 分類器設計 → 系統評估</strong>四個階段。</p>
+<figure class="orig-fig">
+<img src="assets/1f607add-71ac-4b76-9587-f077f9e3839f-07_225_1205_273_234.jpg" alt="分類系統設計四階段流程圖，含回饋箭頭">
+<figcaption>FIGURE 1.3　分類系統設計的基本階段；箭頭顯示各階段並非各自獨立，會依結果回頭修正前面的階段。</figcaption>
+</figure>
+
+<p><strong>四階段各自在問什麼</strong>：</p>
+<ul>
+<li><strong>特徵生成</strong>：這個問題該量測什麼數字？（上一節的平均值/標準差就是特徵生成的產物）</li>
+<li><strong>特徵選擇</strong>：候選特徵一大堆，哪幾個才是「精華」？多數情況會先生出比需要更多的候選特徵，再挑最好的子集合。</li>
+<li><strong>分類器設計</strong>：拿到選定的特徵後，怎麼找出「最優」的分界規則？上一節的直線是憑感覺畫的，但真實世界裡多數問題<strong>無法</strong>用直線（或超平面）漂亮分開，必須考慮非線性分界面——用什麼形式的非線性、用什麼準則去優化，都是這階段要回答的。</li>
+<li><strong>系統評估</strong>：分類器做出來之後，錯誤率到底多少？要用有系統的方法量化效能，而不是憑印象。</li>
+</ul>
+<p><strong>反直覺之處：這四階段不是流水線，是迴圈</strong>。實務上常常做到某一階段發現效果不好，就要回頭修正更早的階段——甚至有些方法乾脆把「特徵選擇」和「分類器設計」合併成同一個最佳化問題一起解。把它想成線性流程反而會誤導。</p><div class="quiz" data-ans="B">
+      <p class="q"><p>分類系統設計四階段的正確順序是？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q3-0" value="A"><span>A. <p>分類器設計→特徵選擇→特徵生成→系統評估</p></span></label><label class="opt"><input type="radio" name="q3-0" value="B"><span>B. <p>特徵生成→特徵選擇→分類器設計→系統評估</p></span></label><label class="opt"><input type="radio" name="q3-0" value="C"><span>C. <p>系統評估→特徵生成→特徵選擇→分類器設計</p></span></label><label class="opt"><input type="radio" name="q3-0" value="D"><span>D. <p>特徵選擇→系統評估→特徵生成→分類器設計</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="正確順序是特徵生成→特徵選擇→分類器設計→系統評估，且圖 1.3 顯示這些階段間有回饋、並非嚴格單向。"></div>
+    </div><div class="quiz" data-ans="B">
+      <p class="q"><p>為什麼說這四個階段「不是各自獨立」？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q3-1" value="A"><span>A. <p>因為它們必須同時執行</p></span></label><label class="opt"><input type="radio" name="q3-1" value="B"><span>B. <p>因為評估結果不佳時常需要回頭修正更早的階段，某些方法甚至把兩階段合併最佳化</p></span></label><label class="opt"><input type="radio" name="q3-1" value="C"><span>C. <p>因為特徵生成階段其實不需要</p></span></label><label class="opt"><input type="radio" name="q3-1" value="D"><span>D. <p>因為分類器設計階段可以跳過</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="原文強調 Figure 1.3 的回饋箭頭：階段間會互相影響、需要回頭調整，甚至有方法把特徵選擇與分類器設計合併成一個共同的最佳化任務。"></div>
+    </div></div>
+</section>
+<section id="kp4" class="card" data-kp="4">
+  <div class="card-head"><span class="badge">1.3</span><h3>監督式、非監督式與半監督式學習</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<!-- == Phase B 圖解 kp-4 == -->
+<figure class="diagram-figure"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 1260 790" role="img" aria-labelledby="title desc">
+  <title id="title">監督式、非監督式與半監督式學習的同批資料點對照</title>
+  <desc id="desc">三個並排面板使用完全相同的特徵點：監督式用完整標籤畫分界線，非監督式只看距離形成可能混群的灰色群，半監督式用少量標籤與 must-link、cannot-link 限制修正群集。</desc>
+  <style>
+    :root { --accent: #0891b2; }
+    text { font-family: sans-serif; fill: #1f2937; }
+    .title { font-size: 28px; font-weight: 700; }
+    .subtitle { font-size: 15px; fill: #64748b; }
+    .panel-title { font-size: 21px; font-weight: 700; }
+    .section { font-size: 15px; font-weight: 700; }
+    .small { font-size: 12px; fill: #64748b; }
+    .detail { font-size: 12px; fill: #475569; }
+    .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+    .plot { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.2; }
+    .grid { stroke: #e2e8f0; stroke-width: 1; }
+    .axis { stroke: #64748b; stroke-width: 1.4; }
+    .accent-line { stroke: var(--accent); fill: none; }
+    .muted-line { stroke: #64748b; fill: none; }
+  </style>
+  <defs>
+    <marker id="arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect width="1260" height="790" fill="#f8fafc"/>
+  <text class="title" x="48" y="48">同一批特徵點，訓練資訊不同就會走出不同結果</text>
+  <text class="subtitle" x="50" y="77">位置不變；改變的是模型能看到的「答案」與限制。比較三種學習方式如何處理同一批資料。</text>
+  <g aria-label="同一批資料點提示">
+    <text class="section" x="630" y="103" text-anchor="middle">同一批資料點（每欄位置完全相同）</text>
+  </g>
+
+  <g transform="translate(0 0)" aria-label="監督式學習面板">
+    <rect class="panel" x="25" y="120" width="390" height="590" rx="18"/>
+    <text class="panel-title" x="50" y="157" fill="var(--accent)">監督式</text>
+    <text class="small" x="50" y="180">每個訓練點都有真實類別標籤</text>
+    <rect x="55" y="192" width="13" height="13" rx="6.5" fill="var(--accent)"/>
+    <text class="small" x="75" y="203">A 類</text>
+    <rect x="120" y="192" width="13" height="13" fill="#475569"/>
+    <text class="small" x="141" y="203">B 類</text>
+    <rect class="plot" x="55" y="220" width="320" height="290" rx="10"/>
+    <line class="grid" x1="135" y1="220" x2="135" y2="510"/>
+    <line class="grid" x1="215" y1="220" x2="215" y2="510"/>
+    <line class="grid" x1="295" y1="220" x2="295" y2="510"/>
+    <line class="grid" x1="55" y1="292" x2="375" y2="292"/>
+    <line class="grid" x1="55" y1="365" x2="375" y2="365"/>
+    <line class="grid" x1="55" y1="438" x2="375" y2="438"/>
+    <line class="axis" x1="55" y1="510" x2="375" y2="510"/>
+    <line class="axis" x1="55" y1="510" x2="55" y2="220"/>
+    <text class="small" x="371" y="529" text-anchor="end">特徵 x₁</text>
+    <text class="small" x="49" y="229" text-anchor="end">x₂</text>
+    <line x1="155" y1="260" x2="310" y2="485" stroke="var(--accent)" stroke-width="3.5"/>
+    <text class="detail" x="280" y="301" fill="var(--accent)" transform="rotate(55 280 301)">決策線</text>
+    <circle cx="75" cy="400" r="8" fill="var(--accent)" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="100" cy="430" r="8" fill="var(--accent)" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="120" cy="380" r="8" fill="var(--accent)" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="140" cy="445" r="8" fill="var(--accent)" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="160" cy="355" r="8" fill="var(--accent)" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="185" cy="370" r="8" fill="var(--accent)" stroke="#ffffff" stroke-width="2"/>
+    <rect x="227" y="262" width="16" height="16" rx="3" fill="#475569" stroke="#ffffff" stroke-width="2"/>
+    <rect x="247" y="297" width="16" height="16" rx="3" fill="#475569" stroke="#ffffff" stroke-width="2"/>
+    <rect x="272" y="242" width="16" height="16" rx="3" fill="#475569" stroke="#ffffff" stroke-width="2"/>
+    <rect x="297" y="317" width="16" height="16" rx="3" fill="#475569" stroke="#ffffff" stroke-width="2"/>
+    <rect x="190" y="342" width="16" height="16" rx="3" fill="#475569" stroke="#ffffff" stroke-width="2"/>
+    <rect x="212" y="342" width="16" height="16" rx="3" fill="#475569" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="198" cy="350" r="18" fill="none" stroke="#475569" stroke-width="1.5" stroke-dasharray="3 3"/>
+    <text class="detail" x="241" y="372">標籤直接告訴模型</text>
+    <path d="M236 363 C225 350 218 342 214 337" class="muted-line" stroke-width="1.2" marker-end="url(#arrow-muted)"/>
+    <rect x="55" y="550" width="330" height="119" rx="12" fill="#ecfeff" stroke="var(--accent)" stroke-width="1.2"/>
+    <text class="section" x="72" y="576" fill="var(--accent)">有答案 → 能直接學邊界</text>
+    <text class="detail" x="72" y="601">每個點的 A/B 身分可用來</text>
+    <text class="detail" x="72" y="620">校準一條分界線；靠近線的</text>
+    <text class="detail" x="72" y="639">點仍可能成為誤判。</text>
+  </g>
+
+  <g transform="translate(410 0)" aria-label="非監督式學習面板">
+    <rect class="panel" x="25" y="120" width="390" height="590" rx="18"/>
+    <text class="panel-title" x="50" y="157">非監督式／分群</text>
+    <text class="small" x="50" y="180">所有點同樣灰色，模型只知道距離</text>
+    <circle cx="62" cy="198" r="7" fill="#94a3b8"/>
+    <text class="small" x="77" y="203">未標籤</text>
+    <rect class="plot" x="55" y="220" width="320" height="290" rx="10"/>
+    <line class="grid" x1="135" y1="220" x2="135" y2="510"/>
+    <line class="grid" x1="215" y1="220" x2="215" y2="510"/>
+    <line class="grid" x1="295" y1="220" x2="295" y2="510"/>
+    <line class="grid" x1="55" y1="292" x2="375" y2="292"/>
+    <line class="grid" x1="55" y1="365" x2="375" y2="365"/>
+    <line class="grid" x1="55" y1="438" x2="375" y2="438"/>
+    <line class="axis" x1="55" y1="510" x2="375" y2="510"/>
+    <line class="axis" x1="55" y1="510" x2="55" y2="220"/>
+    <text class="small" x="371" y="529" text-anchor="end">特徵 x₁</text>
+    <text class="small" x="49" y="229" text-anchor="end">x₂</text>
+    <path d="M58 365 C74 318 128 321 194 307 C218 302 232 322 222 360 C209 411 151 467 87 459 C59 454 47 414 58 365Z" fill="#e2e8f0" fill-opacity=".72" stroke="#64748b" stroke-width="2" stroke-dasharray="7 5"/>
+    <path d="M191 285 C218 237 285 226 342 258 C378 278 366 335 330 363 C297 388 237 378 206 354 C188 339 179 311 191 285Z" fill="#cbd5e1" fill-opacity=".55" stroke="#64748b" stroke-width="2" stroke-dasharray="7 5"/>
+    <circle cx="185" cy="370" r="15" fill="none" stroke="#475569" stroke-width="1.6"/>
+    <circle cx="198" cy="350" r="15" fill="none" stroke="#475569" stroke-width="1.6"/>
+    <path d="M191 360 C209 370 231 380 252 388" class="muted-line" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
+    <text class="section" x="254" y="397" fill="#475569">距離近 ≠ 概念相同</text>
+    <text class="detail" x="254" y="417">可能把不同概念混進一群</text>
+    <polygon points="249,427 260,447 238,447" fill="#64748b"/>
+    <text x="249" y="443" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="700">?</text>
+    <circle cx="75" cy="400" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="100" cy="430" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="120" cy="380" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="140" cy="445" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="160" cy="355" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="185" cy="370" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="235" cy="270" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="255" cy="305" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="280" cy="250" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="305" cy="325" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="198" cy="350" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="220" cy="350" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <rect x="55" y="550" width="330" height="119" rx="12" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+    <text class="section" x="72" y="576" fill="#475569">沒答案 → 只能按距離分堆</text>
+    <text class="detail" x="72" y="601">灰色群集看起來很整齊，</text>
+    <text class="detail" x="72" y="620">但靠近的點可能只是幾何</text>
+    <text class="detail" x="72" y="639">相似，未必是同一個概念。</text>
+  </g>
+
+  <g transform="translate(820 0)" aria-label="半監督式學習面板">
+    <rect class="panel" x="25" y="120" width="390" height="590" rx="18"/>
+    <text class="panel-title" x="50" y="157" fill="var(--accent)">半監督式</text>
+    <text class="small" x="50" y="180">少數標籤 + must-link / cannot-link</text>
+    <circle cx="62" cy="198" r="7" fill="var(--accent)" stroke="#ffffff" stroke-width="1"/>
+    <text class="small" x="77" y="203">少量 A/B 錨點</text>
+    <rect class="plot" x="55" y="220" width="320" height="290" rx="10"/>
+    <line class="grid" x1="135" y1="220" x2="135" y2="510"/>
+    <line class="grid" x1="215" y1="220" x2="215" y2="510"/>
+    <line class="grid" x1="295" y1="220" x2="295" y2="510"/>
+    <line class="grid" x1="55" y1="292" x2="375" y2="292"/>
+    <line class="grid" x1="55" y1="365" x2="375" y2="365"/>
+    <line class="grid" x1="55" y1="438" x2="375" y2="438"/>
+    <line class="axis" x1="55" y1="510" x2="375" y2="510"/>
+    <line class="axis" x1="55" y1="510" x2="55" y2="220"/>
+    <text class="small" x="371" y="529" text-anchor="end">特徵 x₁</text>
+    <text class="small" x="49" y="229" text-anchor="end">x₂</text>
+    <path d="M58 365 C74 318 128 321 194 307 C218 302 232 322 222 360 C209 411 151 467 87 459 C59 454 47 414 58 365Z" fill="#ecfeff" fill-opacity=".58" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6 5"/>
+    <path d="M191 285 C218 237 285 226 342 258 C378 278 366 335 330 363 C297 388 237 378 206 354 C188 339 179 311 191 285Z" fill="#f1f5f9" fill-opacity=".9" stroke="#475569" stroke-width="2" stroke-dasharray="6 5"/>
+    <circle cx="75" cy="400" r="10" fill="var(--accent)" stroke="#ffffff" stroke-width="2"/>
+    <text x="75" y="405" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">A</text>
+    <rect x="225" y="260" width="20" height="20" rx="4" fill="#475569" stroke="#ffffff" stroke-width="2"/>
+    <text x="235" y="275" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">B</text>
+    <circle cx="100" cy="430" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="120" cy="380" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="140" cy="445" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="160" cy="355" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="185" cy="370" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="255" cy="305" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="280" cy="250" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="305" cy="325" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="198" cy="350" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="220" cy="350" r="8" fill="#94a3b8" stroke="#ffffff" stroke-width="2"/>
+    <path d="M96 425 Q83 407 77 402" class="accent-line" stroke-width="2.2" marker-end="url(#arrow-accent)"/>
+    <path d="M116 383 Q96 389 80 398" class="accent-line" stroke-width="2.2" marker-end="url(#arrow-accent)"/>
+    <path d="M136 440 Q105 431 81 405" class="accent-line" stroke-width="2.2" marker-end="url(#arrow-accent)"/>
+    <path d="M156 358 Q122 365 82 397" class="accent-line" stroke-width="2.2" marker-end="url(#arrow-accent)"/>
+    <text class="section" x="78" y="476" fill="var(--accent)">must-link：拉近、同群</text>
+    <line x1="185" y1="370" x2="198" y2="350" stroke="#475569" stroke-width="2" stroke-dasharray="5 4"/>
+    <line x1="191" y1="360" x2="184" y2="371" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
+    <line x1="191" y1="360" x2="199" y2="349" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
+    <path d="M187 356 L201 366 M201 356 L187 366" stroke="#475569" stroke-width="2.2"/>
+    <text class="section" x="226" y="383" fill="#475569">cannot-link</text>
+    <text class="detail" x="226" y="401">禁止這對被併成同群</text>
+    <rect x="55" y="550" width="330" height="119" rx="12" fill="#ecfeff" stroke="var(--accent)" stroke-width="1.2"/>
+    <text class="section" x="72" y="576" fill="var(--accent)">少量答案 → 大幅修正群集</text>
+    <text class="detail" x="72" y="601">幾個有標籤的錨點，搭配</text>
+    <text class="detail" x="72" y="620">拉近／推開限制，就能把</text>
+    <text class="detail" x="72" y="639">純距離造成的混群扭回來。</text>
+  </g>
+
+  <g aria-label="結論">
+    <path d="M410 722 H850" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow-accent)"/>
+    <text class="section" x="630" y="748" text-anchor="middle">反直覺：不是非黑即白；少量標籤轉成限制，就能改寫「距離看起來合理」的錯誤分群。</text>
+  </g>
+</svg><figcaption>📊 知識點 4 示意圖（手繪 SVG）</figcaption></figure>
+<div class="ai-illustration" data-diagram-id="kp-4" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT:
+Create a three-panel SVG infographic using exactly the same two-dimensional point
+coordinates in every panel. Panel 1 is supervised learning: every point has a
+visible class marker/color and a solid decision boundary separates the two
+classes. Panel 2 is unsupervised clustering: every point is the same gray,
+distance-based cluster contours and proximity links form groups, and a close
+pair is visibly flagged as a possible concept mix-up. Panel 3 is semi-supervised
+learning: only a few anchor points have class labels, the remaining points are
+gray, cyan solid must-link arrows pull compatible points toward one group, and a
+cannot-link pair has an explicit crossed connection plus outward push arrows.
+
+WHY:
+The causal variable is not the point geometry; it is the information available
+during training. With complete labels, the model can learn a class boundary.
+With no labels, similarity alone can merge points that are close but conceptually
+different. The counter-intuitive turn is that a small amount of supervision is
+enough to redirect the distance-based process: must-link and cannot-link
+constraints inject just enough semantic information to repair a bad grouping
+without labelling every point.
+
+MUST show:
+- The same point coordinates, axes, and feature-plane layout in all three panels.
+- Supervised panel: all points labelled with two visibly different markers,
+  plus a clear decision line and two sides/classes.
+- Unsupervised panel: all points gray, no hidden class colors, geometric cluster
+  contours or proximity links, and a highlighted near pair labelled as a
+  possible mixed concept.
+- Semi-supervised panel: only a small number of labelled anchor points; all
+  other points remain gray.
+- Solid must-link lines/arrows that visibly pull points into the same cluster.
+- A cannot-link relation drawn as a crossed or forbidden connection with
+  outward push arrows, not merely a text label.
+- A final visual cue that few constraints can substantially change the grouping.
+
+AVOID:
+Do not draw three unrelated point clouds, change point locations between modes,
+or replace the point geometry with a generic three-column vocabulary chart.
+Do not show class colors in the unsupervised panel, label every point in the
+semi-supervised panel, or depict must/cannot-link as inert legend text.
+Do not imply that nearest distance always reveals the true concept, and do not
+use external images, fonts, scripts, or resources.
+
+STYLE:
+Clean offline inline SVG scientific infographic, logical viewBox coordinates,
+white and light-gray panels, #0891b2 accent with grayscale, crisp arrows,
+subtle cluster fills, readable Chinese typography, and strong side-by-side
+alignment suitable for an undergraduate textbook.</pre></details></div>
+<!-- END Phase B 圖解 -->
+<p><strong>一句話</strong>：依「訓練時有沒有類別標籤」，樣式識別／機器學習分成三種：<strong>監督式</strong>（有標籤）、<strong>非監督式／分群</strong>（完全沒標籤）、<strong>半監督式</strong>（一部分有標籤、一部分沒有）。</p>
+<p><strong>監督式學習</strong>：就是前兩節良性/惡性病灶那個例子——每個訓練樣本的真實類別事先已知，拿這些「已知答案」的樣本去設計分類器。</p>
+<p><strong>非監督式學習（分群 clustering）</strong>：只有一堆特徵向量 $\boldsymbol{x}$，沒有任何類別標籤，目標是挖出「相似的向量該被歸在一起」的內在結構。</p>
+<ul>
+<li><strong>例子一：多光譜遙測影像分類</strong>。衛星/飛機上的感測器對地表不同波段的電磁能量取樣，同一塊地（水域、農地、森林、火燒地……）在不同波段的反射特性不同。把每個像元（cell）在各波段的強度組成一支特徵向量，用分群演算法把相近的向量聚成群，再對照少量已知地面資料（地圖或實地訪查）為每一群「命名」。</li>
+</ul>
+<figure class="orig-fig">
+<img src="assets/1f607add-71ac-4b76-9587-f077f9e3839f-08_556_1085_1351_497.jpg" alt="地表覆蓋類型與雙波段特徵分群示意圖">
+<figcaption>FIGURE 1.4　(a) 各種地表覆蓋類型示意；(b) 用兩個波段的特徵做分群後的結果。</figcaption>
+</figure>
+
+<ul>
+<li><strong>例子二：社會科學統計</strong>。想研究「國民生產毛額（GNP）」「文盲率」「兒童死亡率」三者的關聯，把每個國家表示成一支三維特徵向量。分群演算法會揭露出一群「GNP 低、文盲率高、兒童死亡率高」的國家緊緊聚在一起——這種關聯不是事先設定好的類別，而是資料自己「長」出來的結構。</li>
+</ul>
+<p><strong>分群的兩個關鍵抉擇</strong>：怎麼定義兩個特徵向量之間的「相似度」？用哪種分群演算法把向量依相似度分組？——不同的演算法選擇常常會得到不同的分群結果，需要專家判讀。</p>
+<p><strong>半監督式學習</strong>：介於兩者之間——除了有標籤的訓練樣本，手邊還有一批「不知道類別」的未標籤樣本。當有標籤資料很少時，未標籤樣本裡藏的資料結構資訊可以拿來輔助設計，讓系統學得更好。在分群任務裡，半監督的作法是把已知的標籤轉成<strong>必連（must-link）</strong>與<strong>不可連（cannot-link）</strong>兩種限制——強制某些點分到同一群，或禁止某些點分到同一群。</p>
+<p><strong>怎麼記</strong>：監督式＝有老師改考卷；非監督式＝自己把考卷依相似度分堆；半監督式＝只有幾張考卷有老師改過的分數，其餘靠這幾張的線索去輔助分堆。</p>
+<!-- == Phase C demo kp-4 == -->
+<div class="demo kp4-demo" data-demo-id="kp-4">
+  <style>
+    .kp4-demo { --kp4-accent:#0891b2; --kp4-accent-dark:#0e7490; --kp4-ink:#1f2937; --kp4-muted:#64748b; --kp4-line:#cbd5e1; --kp4-soft:#f8fafc; --kp4-a:#0891b2; --kp4-b:#64748b; --kp4-warn:#b45309; margin:20px 0; border:1px solid #cbd5e1; border-radius:14px; background:#fff; overflow:hidden; }
+    .kp4-demo * { box-sizing:border-box; }
+    .kp4-instruction { padding:16px 18px 12px; background:linear-gradient(135deg,#f0fbfd,#f8fafc); border-bottom:1px solid #e2e8f0; }
+    .kp4-instruction h4 { margin:0 0 6px; color:var(--kp4-accent-dark); font-size:1.05rem; }
+    .kp4-instruction p { margin:5px 0; color:var(--kp4-ink); font-size:.9rem; line-height:1.65; }
+    .kp4-guide-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:12px; }
+    .kp4-guide-item { padding:9px 10px; border:1px solid #dbeafe; border-radius:9px; background:#fff; font-size:.8rem; line-height:1.55; }
+    .kp4-guide-item strong { display:block; margin-bottom:2px; color:var(--kp4-accent-dark); }
+    .kp4-controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:13px; }
+    .kp4-controls-label { color:var(--kp4-muted); font-size:.82rem; }
+    .kp4-button { appearance:none; border:1px solid #94a3b8; border-radius:8px; padding:6px 10px; background:#fff; color:var(--kp4-ink); cursor:pointer; font:600 .82rem/1.2 inherit; }
+    .kp4-button:hover, .kp4-button:focus-visible { border-color:var(--kp4-accent); outline:2px solid #a5f3fc; outline-offset:1px; }
+    .kp4-button.is-active { color:#fff; border-color:var(--kp4-accent-dark); background:var(--kp4-accent); }
+    .kp4-button[data-label="B"].is-active { background:var(--kp4-b); border-color:#475569; }
+    .kp4-current { color:var(--kp4-muted); font-size:.82rem; }
+    .kp4-layout { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; padding:16px 18px 12px; }
+    .kp4-panel { min-width:0; border:1px solid #e2e8f0; border-radius:12px; background:#fff; overflow:hidden; }
+    .kp4-panel-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding:11px 13px 8px; border-bottom:1px solid #e2e8f0; background:#fafafa; }
+    .kp4-panel-head h5 { margin:0; color:var(--kp4-ink); font-size:.96rem; }
+    .kp4-panel-head span { color:var(--kp4-muted); font-size:.74rem; }
+    .kp4-canvas-wrap { padding:8px 10px 10px; background:#fff; }
+    .kp4-canvas { display:block; width:100%; height:auto; border:1px solid #e2e8f0; border-radius:8px; background:#fff; cursor:crosshair; touch-action:manipulation; }
+    .kp4-canvas:focus-visible { outline:2px solid var(--kp4-accent); outline-offset:2px; }
+    .kp4-mini-legend { display:flex; flex-wrap:wrap; gap:7px 12px; padding:0 3px 2px; color:var(--kp4-muted); font-size:.75rem; }
+    .kp4-legend-item { display:inline-flex; align-items:center; gap:4px; }
+    .kp4-swatch { display:inline-block; width:10px; height:10px; border-radius:50%; border:1px solid currentColor; }
+    .kp4-swatch-a { color:var(--kp4-a); background:rgba(8,145,178,.23); }
+    .kp4-swatch-b { color:var(--kp4-b); background:rgba(100,116,139,.23); }
+    .kp4-swatch-boundary { color:#f59e0b; background:#fff; border:2px dashed #f59e0b; }
+    .kp4-readout { margin:0 18px 16px; padding:12px 14px; border:1px solid #bae6fd; border-radius:10px; background:#f0fbfd; color:var(--kp4-ink); font-size:.84rem; line-height:1.65; }
+    .kp4-readout strong { color:var(--kp4-accent-dark); }
+    .kp4-status { margin-bottom:5px; font-weight:600; }
+    .kp4-status.is-conflict { color:var(--kp4-warn); }
+    .kp4-boundary-readout { display:grid; gap:2px; margin-top:5px; }
+    .kp4-boundary-row { padding-left:8px; border-left:3px solid #f59e0b; }
+    .kp4-rules { margin:0 18px 18px; padding:12px 14px; border-left:4px solid var(--kp4-accent); background:#f8fafc; color:#334155; font-size:.83rem; line-height:1.7; }
+    .kp4-rules p { margin:3px 0; }
+    .kp4-rules strong { color:var(--kp4-accent-dark); }
+    @media (max-width:760px) { .kp4-guide-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .kp4-layout { grid-template-columns:1fr; } .kp4-panel-head { align-items:flex-start; flex-direction:column; gap:2px; } }
+    @media (max-width:430px) { .kp4-guide-grid { grid-template-columns:1fr; } .kp4-controls { align-items:flex-start; flex-direction:column; } }
+  </style>
+
+  <div class="kp4-instruction">
+    <h4>半監督式分群：少量限制如何修正純距離的誤分？</h4>
+    <p><strong>這在做什麼：</strong>同一批固定的 16 個二維資料點，左側只用幾何距離分成兩群；右側把你點出的 A／B 標記轉成 must-link 與 cannot-link，再重新分群。</p>
+    <p><strong>怎麼操作：</strong>先選「標記 A」或「標記 B」，再點右側資料點；同一點雙擊可取消標記。也可以按「套用示範標記」觀察兩個邊界點如何被拉回概念上正確的群。</p>
+    <div class="kp4-guide-grid">
+      <div class="kp4-guide-item"><strong>觀察什麼</strong>看橙色圈出的邊界點：純距離可能把它們放錯，少量語意限制能否修正？</div>
+      <div class="kp4-guide-item"><strong>正確基準</strong>complete-linkage 每輪選「群間最大點距離」最小的合法合併。</div>
+      <div class="kp4-guide-item"><strong>must-link</strong>同類標記的每一對點先強制併入同一個初始群。</div>
+      <div class="kp4-guide-item"><strong>cannot-link</strong>不同類標記的點不能出現在同一群；違法候選合併會跳過。</div>
+    </div>
+    <div class="kp4-controls" aria-label="半監督式標記控制">
+      <span class="kp4-controls-label">目前點擊標記：</span>
+      <button class="kp4-button is-active" type="button" data-label="A">A 類</button>
+      <button class="kp4-button" type="button" data-label="B">B 類</button>
+      <button class="kp4-button" type="button" data-action="clear">清除標記</button>
+      <button class="kp4-button" type="button" data-action="demo">套用示範標記</button>
+      <span class="kp4-current" data-current-label>目前選擇：A 類</span>
+    </div>
+  </div>
+
+  <div class="kp4-layout">
+    <section class="kp4-panel" aria-labelledby="kp4-left-title">
+      <div class="kp4-panel-head"><h5 id="kp4-left-title">純距離分群</h5><span>無標籤、無限制；只計算一次</span></div>
+      <div class="kp4-canvas-wrap">
+        <canvas id="demo-canvas-kp4-left" class="kp4-canvas" width="640" height="390" tabindex="0" aria-label="純距離 complete-linkage 分群結果">您的瀏覽器不支援 canvas。</canvas>
+        <div class="kp4-mini-legend"><span class="kp4-legend-item"><i class="kp4-swatch kp4-swatch-a"></i>群 A</span><span class="kp4-legend-item"><i class="kp4-swatch kp4-swatch-b"></i>群 B</span><span class="kp4-legend-item"><i class="kp4-swatch kp4-swatch-boundary"></i>邊界曖昧點</span></div>
+      </div>
+    </section>
+    <section class="kp4-panel" aria-labelledby="kp4-right-title">
+      <div class="kp4-panel-head"><h5 id="kp4-right-title">半監督式：約束 complete-linkage</h5><span data-constraint-count>0 個標記 · 0 must-link · 0 cannot-link</span></div>
+      <div class="kp4-canvas-wrap">
+        <canvas id="demo-canvas-kp4-right" class="kp4-canvas" width="640" height="390" tabindex="0" aria-label="可互動的半監督式約束分群結果">您的瀏覽器不支援 canvas。</canvas>
+        <div class="kp4-mini-legend"><span class="kp4-legend-item"><i class="kp4-swatch kp4-swatch-a"></i>群 A</span><span class="kp4-legend-item"><i class="kp4-swatch kp4-swatch-b"></i>群 B</span><span class="kp4-legend-item"><i class="kp4-swatch kp4-swatch-boundary"></i>邊界曖昧點</span></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="kp4-readout demo-readout" id="demo-kp4-readout" aria-live="polite">
+    <div class="kp4-status" id="demo-kp4-status">正在計算固定資料點的分群結果……</div>
+    <div id="demo-kp4-summary"></div>
+    <div class="kp4-boundary-readout" id="demo-kp4-boundaries"></div>
+  </div>
+
+  <div class="kp4-rules">
+    <p><strong>合併規則：</strong>complete-linkage 的群間距離，是兩群所有點對距離的最大值；每一輪優先合併這個最大值最小的群對。</p>
+    <p><strong>限制如何介入：</strong>must-link 先把同類標記點合成初始群；cannot-link 讓含有禁連點對的候選合併跳過，改找下一個合法合併。若沒有合法合併或限制無法形成兩群，畫面會停止並明確報錯。</p>
+  </div>
+</div>
+<!-- END Phase C demo -->
+<button class="guide-btn" data-kp="4">📖 偷看教授祕笈</button>
+<div class="quiz" data-ans="B">
+      <p class="q"><p>下列何者最符合「非監督式學習（分群）」的定義？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q4-0" value="A"><span>A. <p>訓練樣本的真實類別事先已知，用來設計分類器</p></span></label><label class="opt"><input type="radio" name="q4-0" value="B"><span>B. <p>完全沒有類別標籤，目標是找出向量間的相似結構並分群</p></span></label><label class="opt"><input type="radio" name="q4-0" value="C"><span>C. <p>一半樣本有標籤、一半沒有</p></span></label><label class="opt"><input type="radio" name="q4-0" value="D"><span>D. <p>不需要任何特徵向量</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="非監督式學習／分群的定義就是：只有特徵向量、沒有類別標籤，目標是揭露相似向量的分群結構。"></div>
+    </div><div class="quiz" data-ans="B">
+      <p class="q"><p>半監督式分群裡的「must-link」與「cannot-link」是用來做什麼的？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q4-1" value="A"><span>A. <p>决定要用幾個特徵</p></span></label><label class="opt"><input type="radio" name="q4-1" value="B"><span>B. <p>把已知的標籤資訊轉成限制，強制或禁止特定點被分到同一群</p></span></label><label class="opt"><input type="radio" name="q4-1" value="C"><span>C. <p>計算分類器的錯誤率</p></span></label><label class="opt"><input type="radio" name="q4-1" value="D"><span>D. <p>選擇該用哪一種相機拍攝影像</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="must-link 強制某些點必須同群、cannot-link 禁止某些點同群，這就是半監督式學習把少量標籤知識注入分群演算法的方式。"></div>
+    </div></div>
+</section>
+<section id="kp5" class="card" data-kp="5">
+  <div class="card-head"><span class="badge">1.5</span><h3>全書地圖：從監督式到非監督式的旅程</h3><span class="toggle">▼</span></div>
+  <div class="card-body"><p><strong>一句話</strong>：全書分成兩大板塊——<strong>第 2–10 章</strong>是監督式樣式識別，<strong>第 11–16 章</strong>是非監督式（分群），第 10 章則是連接兩者的橋樑（系統評估＋半監督式學習）。</p>
+<p><strong>MATLAB 程式的角色</strong>：書中大部分章節附的 MATLAB 程式<strong>不是</strong>要拿來當現成軟體套件用，而是純粹的教學工具——刻意大量使用高斯分布模擬資料，讓學生能清楚看懂每個方法「在乾淨的假設下」該長什麼樣子；程式對應的都是作者認為每章「必須在第一次讀就搞懂」的核心演算法。</p>
+<p><strong>監督式板塊（第 2–10 章）地圖</strong>：</p>
+<ul>
+<li>Ch2　貝氏分類與機率密度估計（最小距離、最近鄰、單純貝氏、貝氏網路）</li>
+<li>Ch3　線性分類器（感知器演算法、最小平方解、支援向量機的幾何直覺）</li>
+<li>Ch4　非線性分類器（倒傳遞、Cover 定理、RBF 網路、非線性 SVM、決策樹、分類器結合）</li>
+<li>Ch5　特徵選擇（t 檢定、divergence、Bhattacharyya 距離、散布矩陣、Fisher 線性判別）</li>
+<li>Ch6　特徵生成 I：資料轉換與降維（KLT/PCA、SVD、ICA、NMF、DFT/DCT/Hadamard/Haar/小波）</li>
+<li>Ch7　特徵生成 II：以影像與音訊分類為重心的特徵（一階/二階統計特徵、run-length、鏈碼）</li>
+<li>Ch8　樣板匹配（動態規劃、Viterbi 演算法、應用在語音辨識）</li>
+<li>Ch9　脈絡相關分類（隱藏式馬可夫模型，應用在通訊與語音辨識）</li>
+<li>Ch10　系統評估與半監督式學習（錯誤率估計、leave-one-out、resubstitution）——<strong>監督式與非監督式的橋樑</strong></li>
+</ul>
+<p><strong>非監督式板塊（第 11–16 章）地圖</strong>：</p>
+<ul>
+<li>Ch11　分群基本概念（資料型態、相似度量測）</li>
+<li>Ch12　序列式分群演算法</li>
+<li>Ch13　階層式分群演算法（單一連結、完全連結）</li>
+<li>Ch14　以成本函數最佳化為基礎的分群（硬分群、模糊分群）</li>
+<li>Ch15　其他分群哲學（頻譜分群、競爭式學習、分支界限法、模擬退火、遺傳演算法）</li>
+<li>Ch16　分群效度驗證</li>
+</ul>
+<p><strong>書裡刻意不談的東西</strong>：語法式樣式識別（syntactic pattern recognition）——用文法規則與自動機描述樣式結構的路線，因為哲學與本書主線（統計/幾何取向）差異太大，作者選擇整章省略、只在這裡點名交代。</p>
+<p><strong>怎麼記</strong>：把整本書想成一條「先學怎麼用已知答案設計分類器（監督式），再學完全沒有答案時怎麼自己找結構（非監督式）」的主線，第 10 章正好卡在轉彎處。</p><div class="quiz" data-ans="B">
+      <p class="q"><p>依本節，全書的監督式樣式識別涵蓋哪些章節？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q5-0" value="A"><span>A. <p>第 1–5 章</p></span></label><label class="opt"><input type="radio" name="q5-0" value="B"><span>B. <p>第 2–10 章</p></span></label><label class="opt"><input type="radio" name="q5-0" value="C"><span>C. <p>第 11–16 章</p></span></label><label class="opt"><input type="radio" name="q5-0" value="D"><span>D. <p>只有第 2 章</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="原文明白指出第 2–10 章處理監督式樣式識別，第 11–16 章處理非監督式（分群）。"></div>
+    </div><div class="quiz" data-ans="B">
+      <p class="q"><p>書中大部分章節附的 MATLAB 程式，其設計目的最主要是？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q5-1" value="A"><span>A. <p>做成商用軟體套件直接販售</p></span></label><label class="opt"><input type="radio" name="q5-1" value="B"><span>B. <p>純粹的教學工具，用模擬的高斯資料幫助學生理解核心演算法</p></span></label><label class="opt"><input type="radio" name="q5-1" value="C"><span>C. <p>用來取代課本文字說明</p></span></label><label class="opt"><input type="radio" name="q5-1" value="D"><span>D. <p>只給研究生使用，大學部不開放</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="原文明確說明：MATLAB 程式不是要成為軟體套件的一部分，而是服務教學目的，多用高斯模擬資料引導學生理解基本概念。"></div>
+    </div></div>
+</section>
+  </main>
+</div>
+<footer>依 Pattern Recognition（Theodoridis &amp; Koutroumbas）Ch1 改寫 · 自學用</footer>
+<script>
+(function(){
+  function renderMath(){
+    if(window.katex && window.renderMathInElement) window.renderMathInElement(document.body,{
+      delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],
+      throwOnError:false,
+      ignoredClasses:['katex']
+    });
+  }
+  window.renderMath=renderMath;
+  var cards=document.querySelectorAll('.card');
+  function upd(){
+    var n=cards.length, done=0;
+    cards.forEach(function(c){ if(c.classList.contains('done')) done++; });
+    var pct=Math.round(done/n*100);
+    document.getElementById('pf').style.width=pct+'%';
+    document.getElementById('ptxt').textContent='已完成 '+done+' / '+n+'（'+pct+'%）';
+  }
+  cards.forEach(function(c){
+    c.querySelector('.card-head').addEventListener('click',function(){ c.classList.toggle('collapsed'); });
+    c.querySelectorAll('.quiz').forEach(function(qz){
+      var btn=qz.querySelector('.check'), fb=qz.querySelector('.fb');
+      btn.addEventListener('click',function(){
+        var sel=qz.querySelector('input:checked');
+        if(!sel){ fb.className='fb wrong'; fb.textContent='請先選擇答案。'; return; }
+        if(sel.value===qz.dataset.ans){ fb.className='fb ok'; fb.textContent='✓ 正確！'; c.classList.add('done'); }
+        else { fb.className='fb wrong'; fb.textContent='✗ 答錯：'+qz.querySelector('.fb').dataset.expl; }
+        upd();
+      });
+    });
+  });
+  window.addEventListener('load',function(){ setTimeout(renderMath,50); upd(); });
+})();
+</script>
+
+
+
+
+
+<script data-phase-c="kp-2">
+(function () {
+  "use strict";
+
+  function init() {
+    var canvas = document.getElementById("demo-canvas-kp2");
+    var readout = document.getElementById("demo-readout-kp2");
+    var resetButton = document.getElementById("demo-reset-kp2");
+    if (!canvas || !readout || !resetButton) {
+      console.error("kp-2 demo markup is incomplete.");
+      return;
+    }
+
+    var ctx = canvas.getContext("2d");
+    if (!ctx) {
+      console.error("kp-2 demo could not acquire a 2-D canvas context.");
+      return;
+    }
+
+    var X_MIN = 20;
+    var X_MAX = 90;
+    var Y_MIN = 2;
+    var Y_MAX = 24;
+    var PLOT = { left: 72, top: 44, right: 30, bottom: 60 };
+    var EPS = 1e-12;
+    var BLUE = "#2563eb";
+    var RED = "#dc2626";
+    var GREEN = "#059669";
+    var SLATE = "#64748b";
+    var INK = "#1f2937";
+    var MUTED = "#64748b";
+    var ACCENT = "#0891b2";
+    var WARNING = "#b45309";
+
+    var DEFAULT_POINTS = [
+      { x: 42.0, y: 16.5, kind: 0 },
+      { x: 43.0, y: 18.4, kind: 0 },
+      { x: 44.0, y: 15.2, kind: 0 },
+      { x: 41.0, y: 20.5, kind: 0 },
+      { x: 48.0, y: 14.8, kind: 0 },
+      { x: 50.0, y: 13.8, kind: 0 },
+      { x: 53.0, y: 14.5, kind: 0 },
+      { x: 46.0, y: 17.6, kind: 0 },
+      { x: 55.0, y: 13.2, kind: 1 },
+      { x: 58.0, y: 10.8, kind: 1 },
+      { x: 62.0, y: 10.4, kind: 1 },
+      { x: 66.0, y: 9.7, kind: 1 },
+      { x: 70.0, y: 10.6, kind: 1 },
+      { x: 73.0, y: 9.5, kind: 1 },
+      { x: 78.0, y: 10.5, kind: 1 },
+      { x: 64.0, y: 5.4, kind: 1 }
+    ];
+
+    var points = clonePoints(DEFAULT_POINTS);
+    var lastValid = { lda: null, pca: null };
+    var activeModels = { lda: null, pca: null };
+    var currentResults = { lda: null, pca: null };
+    var statusMessages = [];
+    var dragIndex = -1;
+    var hoverIndex = -1;
+    var activePointerId = null;
+    var drawPending = false;
+
+    function clonePoints(source) {
+      return source.map(function (point) {
+        return { x: point.x, y: point.y, kind: point.kind };
+      });
+    }
+
+    function finite(value) {
+      return typeof value === "number" && Number.isFinite(value);
+    }
+
+    function fmt(value, digits) {
+      if (!finite(value)) {
+        return "—";
+      }
+      return value.toFixed(digits == null ? 2 : digits);
+    }
+
+    function clamp(value, low, high) {
+      return Math.max(low, Math.min(high, value));
+    }
+
+    function dot(a, b) {
+      return a[0] * b[0] + a[1] * b[1];
+    }
+
+    function norm(vector) {
+      return Math.sqrt(dot(vector, vector));
+    }
+
+    function meanOf(group) {
+      var sx = 0;
+      var sy = 0;
+      group.forEach(function (point) {
+        sx += point.x;
+        sy += point.y;
+      });
+      return [sx / group.length, sy / group.length];
+    }
+
+    function computeLda() {
+      var classA = points.filter(function (point) {
+        return point.kind === 0;
+      });
+      var classB = points.filter(function (point) {
+        return point.kind === 1;
+      });
+      if (classA.length < 2 || classB.length < 2) {
+        return {
+          ok: false,
+          reason: "每一類至少需要 2 個點",
+          meanA: classA.length ? meanOf(classA) : null,
+          meanB: classB.length ? meanOf(classB) : null,
+          sw: null
+        };
+      }
+
+      var meanA = meanOf(classA);
+      var meanB = meanOf(classB);
+      var sxx = 0;
+      var sxy = 0;
+      var syy = 0;
+      classA.concat(classB).forEach(function (point) {
+        var mean = point.kind === 0 ? meanA : meanB;
+        var dx = point.x - mean[0];
+        var dy = point.y - mean[1];
+        sxx += dx * dx;
+        sxy += dx * dy;
+        syy += dy * dy;
+      });
+
+      var denominator = classA.length + classB.length - 2;
+      var sw = [
+        [sxx / denominator, sxy / denominator],
+        [sxy / denominator, syy / denominator]
+      ];
+      var determinant = sw[0][0] * sw[1][1] - sw[0][1] * sw[1][0];
+      var scale = Math.max(
+        1,
+        Math.abs(sw[0][0] * sw[1][1]),
+        Math.abs(sw[0][1] * sw[0][1])
+      );
+      if (
+        !finite(determinant) ||
+        Math.abs(determinant) <= EPS * scale
+      ) {
+        return {
+          ok: false,
+          reason: "S_w 奇異或共線（det ≈ 0）",
+          meanA: meanA,
+          meanB: meanB,
+          sw: sw,
+          determinant: determinant
+        };
+      }
+
+      var delta = [meanA[0] - meanB[0], meanA[1] - meanB[1]];
+      // Explicit 2×2 inverse: [a b; b d]⁻¹ = 1/(ad−b²) [d −b; −b a].
+      var inverse = [
+        [sw[1][1] / determinant, -sw[0][1] / determinant],
+        [-sw[1][0] / determinant, sw[0][0] / determinant]
+      ];
+      var weights = [
+        inverse[0][0] * delta[0] + inverse[0][1] * delta[1],
+        inverse[1][0] * delta[0] + inverse[1][1] * delta[1]
+      ];
+      if (!finite(weights[0]) || !finite(weights[1]) || norm(weights) <= EPS) {
+        return {
+          ok: false,
+          reason: "兩類均值沒有可用的判別方向",
+          meanA: meanA,
+          meanB: meanB,
+          sw: sw,
+          determinant: determinant
+        };
+      }
+
+      var midpoint = [
+        (meanA[0] + meanB[0]) / 2,
+        (meanA[1] + meanB[1]) / 2
+      ];
+      var bias = -0.5 * dot([meanA[0] + meanB[0], meanA[1] + meanB[1]], weights);
+      return {
+        ok: true,
+        meanA: meanA,
+        meanB: meanB,
+        sw: sw,
+        determinant: determinant,
+        weights: weights,
+        bias: bias,
+        midpoint: midpoint
+      };
+    }
+
+    function computePca(previousDirection) {
+      if (points.length < 2) {
+        return { ok: false, reason: "至少需要 2 個點" };
+      }
+      var center = meanOf(points);
+      var cxx = 0;
+      var cxy = 0;
+      var cyy = 0;
+      points.forEach(function (point) {
+        var dx = point.x - center[0];
+        var dy = point.y - center[1];
+        cxx += dx * dx;
+        cxy += dx * dy;
+        cyy += dy * dy;
+      });
+      var denominator = points.length - 1;
+      cxx /= denominator;
+      cxy /= denominator;
+      cyy /= denominator;
+
+      // For C = [a b; b d], λ₁ = (a+d)/2 + √(((a-d)/2)²+b²).
+      var halfDifference = (cxx - cyy) / 2;
+      var radius = Math.sqrt(halfDifference * halfDifference + cxy * cxy);
+      var scale = Math.max(1, Math.abs(cxx) + Math.abs(cyy) + Math.abs(cxy));
+      if (!finite(radius) || radius <= EPS * scale) {
+        return {
+          ok: false,
+          reason: "資料沒有唯一的主軸方向（共變異數近似相同）",
+          center: center,
+          covariance: [[cxx, cxy], [cxy, cyy]]
+        };
+      }
+
+      var lambda1 = (cxx + cyy) / 2 + radius;
+      var direction = [cxy, lambda1 - cxx];
+      if (norm(direction) <= EPS * scale) {
+        direction = [lambda1 - cyy, cxy];
+      }
+      var directionNorm = norm(direction);
+      if (!finite(directionNorm) || directionNorm <= EPS) {
+        return {
+          ok: false,
+          reason: "主軸特徵向量無法正規化",
+          center: center,
+          covariance: [[cxx, cxy], [cxy, cyy]]
+        };
+      }
+      direction = [direction[0] / directionNorm, direction[1] / directionNorm];
+
+      // Keep the line orientation continuous without using class labels.
+      if (previousDirection && dot(direction, previousDirection) < 0) {
+        direction = [-direction[0], -direction[1]];
+      } else if (
+        !previousDirection &&
+        (direction[0] < 0 ||
+          (Math.abs(direction[0]) <= EPS && direction[1] < 0))
+      ) {
+        direction = [-direction[0], -direction[1]];
+      }
+      return {
+        ok: true,
+        center: center,
+        covariance: [[cxx, cxy], [cxy, cyy]],
+        eigenvalue: lambda1,
+        direction: direction,
+        normal: [-direction[1], direction[0]]
+      };
+    }
+
+    function classifyLda(model, point) {
+      var centered = [
+        point.x - model.midpoint[0],
+        point.y - model.midpoint[1]
+      ];
+      return dot(centered, model.weights) >= 0 ? 0 : 1;
+    }
+
+    function classifyPca(model, point) {
+      var centered = [
+        point.x - model.center[0],
+        point.y - model.center[1]
+      ];
+      return dot(centered, model.normal) >= 0 ? 0 : 1;
+    }
+
+    function accuracy(model, classifier) {
+      if (!model) {
+        return null;
+      }
+      var correct = 0;
+      points.forEach(function (point) {
+        if (classifier(model, point) === point.kind) {
+          correct += 1;
+        }
+      });
+      return { correct: correct, total: points.length };
+    }
+
+    function recompute() {
+      var ldaResult = computeLda();
+      var pcaResult = computePca(lastValid.pca ? lastValid.pca.direction : null);
+      currentResults = { lda: ldaResult, pca: pcaResult };
+      statusMessages = [];
+
+      if (ldaResult.ok) {
+        lastValid.lda = ldaResult;
+        activeModels.lda = ldaResult;
+      } else if (lastValid.lda) {
+        activeModels.lda = lastValid.lda;
+        statusMessages.push("LDA 退化：" + ldaResult.reason + "；沿用上一個有效邊界");
+      } else {
+        activeModels.lda = null;
+        statusMessages.push("LDA 暫無可用邊界：" + ldaResult.reason);
+      }
+
+      if (pcaResult.ok) {
+        lastValid.pca = pcaResult;
+        activeModels.pca = pcaResult;
+      } else if (lastValid.pca) {
+        activeModels.pca = lastValid.pca;
+        statusMessages.push("主軸退化：" + pcaResult.reason + "；沿用上一個有效主軸");
+      } else {
+        activeModels.pca = null;
+        statusMessages.push("主軸暫無可用方向：" + pcaResult.reason);
+      }
+
+      updateReadout();
+      scheduleDraw();
+    }
+
+    function updateReadout() {
+      var lines = [];
+      var ldaAccuracy = accuracy(activeModels.lda, classifyLda);
+      var pcaAccuracy = accuracy(activeModels.pca, classifyPca);
+      var ldaLabel = currentResults.lda && currentResults.lda.ok
+        ? "即時重算"
+        : "退化，沿用上一個有效邊界";
+      var pcaLabel = currentResults.pca && currentResults.pca.ok
+        ? "即時重算"
+        : "退化，沿用上一個有效主軸";
+      lines.push(
+        "LDA（" +
+          ldaLabel +
+          "）準確率：" +
+          (ldaAccuracy ? ldaAccuracy.correct + "/" + ldaAccuracy.total : "—")
+      );
+      if (currentResults.lda && currentResults.lda.meanA) {
+        lines.push(
+          "μA = (" +
+            fmt(currentResults.lda.meanA[0]) +
+            ", " +
+            fmt(currentResults.lda.meanA[1]) +
+            ")；μB = (" +
+            fmt(currentResults.lda.meanB[0]) +
+            ", " +
+            fmt(currentResults.lda.meanB[1]) +
+            ")"
+        );
+      }
+      if (currentResults.lda && currentResults.lda.sw) {
+        lines.push(
+          "S_w = [[" +
+            fmt(currentResults.lda.sw[0][0]) +
+            ", " +
+            fmt(currentResults.lda.sw[0][1]) +
+            "], [" +
+            fmt(currentResults.lda.sw[1][0]) +
+            ", " +
+            fmt(currentResults.lda.sw[1][1]) +
+            "]]；det(S_w) = " +
+            fmt(currentResults.lda.determinant, 5)
+        );
+      }
+      if (activeModels.lda) {
+        lines.push(
+          "w = S_w⁻¹(μA − μB) = (" +
+            fmt(activeModels.lda.weights[0]) +
+            ", " +
+            fmt(activeModels.lda.weights[1]) +
+            ")；bias = " +
+            fmt(activeModels.lda.bias)
+        );
+      }
+      lines.push(
+        "主軸猜測（" +
+          pcaLabel +
+          "）準確率：" +
+          (pcaAccuracy ? pcaAccuracy.correct + "/" + pcaAccuracy.total : "—")
+      );
+      if (
+        currentResults.pca &&
+        currentResults.pca.center &&
+        currentResults.pca.direction
+      ) {
+        lines.push(
+          "c = (" +
+            fmt(currentResults.pca.center[0]) +
+            ", " +
+            fmt(currentResults.pca.center[1]) +
+            ")；u₁ = (" +
+            fmt(currentResults.pca.direction[0]) +
+            ", " +
+            fmt(currentResults.pca.direction[1]) +
+            ")；λ₁ = " +
+            fmt(currentResults.pca.eigenvalue)
+        );
+      } else if (currentResults.pca && currentResults.pca.center) {
+        lines.push(
+          "c = (" +
+            fmt(currentResults.pca.center[0]) +
+            ", " +
+            fmt(currentResults.pca.center[1]) +
+            ")；u₁ = 無法求解"
+        );
+      }
+      if (statusMessages.length) {
+        lines.push("狀態：" + statusMessages.join("；"));
+      } else {
+        lines.push("狀態：兩條線都依目前資料即時重算。");
+      }
+      readout.textContent = lines.join("\n");
+    }
+
+    function plotWidth() {
+      return canvas.width - PLOT.left - PLOT.right;
+    }
+
+    function plotHeight() {
+      return canvas.height - PLOT.top - PLOT.bottom;
+    }
+
+    function dataToPixel(x, y) {
+      return {
+        x: PLOT.left + ((x - X_MIN) / (X_MAX - X_MIN)) * plotWidth(),
+        y: PLOT.top + plotHeight() - ((y - Y_MIN) / (Y_MAX - Y_MIN)) * plotHeight()
+      };
+    }
+
+    function pixelToData(x, y) {
+      return {
+        x: X_MIN + ((x - PLOT.left) / plotWidth()) * (X_MAX - X_MIN),
+        y: Y_MIN + ((PLOT.top + plotHeight() - y) / plotHeight()) * (Y_MAX - Y_MIN)
+      };
+    }
+
+    function addUnique(candidate, list) {
+      var alreadyThere = list.some(function (point) {
+        return Math.abs(point[0] - candidate[0]) <= 1e-9 &&
+          Math.abs(point[1] - candidate[1]) <= 1e-9;
+      });
+      if (!alreadyThere && finite(candidate[0]) && finite(candidate[1])) {
+        list.push(candidate);
+      }
+    }
+
+    function lineSegment(a, b, c) {
+      var candidates = [];
+      if (Math.abs(b) > EPS) {
+        addUnique([X_MIN, -(a * X_MIN + c) / b], candidates);
+        addUnique([X_MAX, -(a * X_MAX + c) / b], candidates);
+      }
+      if (Math.abs(a) > EPS) {
+        addUnique([-(b * Y_MIN + c) / a, Y_MIN], candidates);
+        addUnique([-(b * Y_MAX + c) / a, Y_MAX], candidates);
+      }
+      candidates = candidates.filter(function (point) {
+        return (
+          point[0] >= X_MIN - EPS &&
+          point[0] <= X_MAX + EPS &&
+          point[1] >= Y_MIN - EPS &&
+          point[1] <= Y_MAX + EPS
+        );
+      });
+      if (candidates.length < 2) {
+        return null;
+      }
+      var bestPair = [candidates[0], candidates[1]];
+      var bestDistance = -1;
+      for (var i = 0; i < candidates.length; i += 1) {
+        for (var j = i + 1; j < candidates.length; j += 1) {
+          var dx = candidates[i][0] - candidates[j][0];
+          var dy = candidates[i][1] - candidates[j][1];
+          var distance = dx * dx + dy * dy;
+          if (distance > bestDistance) {
+            bestDistance = distance;
+            bestPair = [candidates[i], candidates[j]];
+          }
+        }
+      }
+      return bestPair;
+    }
+
+    function drawLine(segment, color, dashed, label, labelOffset) {
+      if (!segment) {
+        return;
+      }
+      var first = dataToPixel(segment[0][0], segment[0][1]);
+      var second = dataToPixel(segment[1][0], segment[1][1]);
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.8;
+      ctx.setLineDash(dashed ? [8, 6] : []);
+      ctx.beginPath();
+      ctx.moveTo(first.x, first.y);
+      ctx.lineTo(second.x, second.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = color;
+      ctx.font = "12px sans-serif";
+      var midX = (first.x + second.x) / 2 + labelOffset[0];
+      var midY = (first.y + second.y) / 2 + labelOffset[1];
+      ctx.fillText(label, midX, midY);
+      ctx.restore();
+    }
+
+    function drawMarker(point, radius, fill, stroke, lineWidth) {
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = lineWidth || 1;
+        ctx.stroke();
+      }
+    }
+
+    function drawLegendItem(x, y, kind, label) {
+      ctx.save();
+      if (kind === 0) {
+        drawMarker({ x: x, y: y - 4 }, 5.5, BLUE, "#ffffff", 1.2);
+      } else if (kind === 1) {
+        ctx.strokeStyle = RED;
+        ctx.lineWidth = 2.1;
+        ctx.beginPath();
+        ctx.moveTo(x - 5, y - 9);
+        ctx.lineTo(x + 5, y + 1);
+        ctx.moveTo(x + 5, y - 9);
+        ctx.lineTo(x - 5, y + 1);
+        ctx.stroke();
+      } else if (kind === 2) {
+        ctx.strokeStyle = GREEN;
+        ctx.lineWidth = 2.8;
+        ctx.beginPath();
+        ctx.moveTo(x - 8, y - 4);
+        ctx.lineTo(x + 8, y - 4);
+        ctx.stroke();
+      } else {
+        ctx.strokeStyle = SLATE;
+        ctx.lineWidth = 2.8;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x - 8, y - 4);
+        ctx.lineTo(x + 8, y - 4);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.fillStyle = INK;
+      ctx.font = "12px sans-serif";
+      ctx.fillText(label, x + 14, y);
+      ctx.restore();
+    }
+
+    function draw() {
+      var visibleRect = canvas.getBoundingClientRect();
+      if (visibleRect.width <= 0 || visibleRect.height <= 0) {
+        return;
+      }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#f8fcfd";
+      ctx.fillRect(PLOT.left, PLOT.top, plotWidth(), plotHeight());
+
+      ctx.font = "12px sans-serif";
+      ctx.fillStyle = MUTED;
+      ctx.textAlign = "center";
+      var xTicks = [20, 30, 40, 50, 60, 70, 80, 90];
+      xTicks.forEach(function (tick) {
+        var px = dataToPixel(tick, Y_MIN).x;
+        ctx.strokeStyle = "#e2e8f0";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(px, PLOT.top);
+        ctx.lineTo(px, PLOT.top + plotHeight());
+        ctx.stroke();
+        ctx.fillText(String(tick), px, PLOT.top + plotHeight() + 19);
+      });
+      ctx.textAlign = "right";
+      var yTicks = [5, 10, 15, 20];
+      yTicks.forEach(function (tick) {
+        var py = dataToPixel(X_MIN, tick).y;
+        ctx.strokeStyle = "#e2e8f0";
+        ctx.beginPath();
+        ctx.moveTo(PLOT.left, py);
+        ctx.lineTo(PLOT.left + plotWidth(), py);
+        ctx.stroke();
+        ctx.fillText(String(tick), PLOT.left - 9, py + 4);
+      });
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(PLOT.left, PLOT.top, plotWidth(), plotHeight());
+      ctx.textAlign = "center";
+      ctx.fillStyle = INK;
+      ctx.font = "13px sans-serif";
+      ctx.fillText("特徵 x₁：平均灰階值", PLOT.left + plotWidth() / 2, canvas.height - 15);
+      ctx.save();
+      ctx.translate(17, PLOT.top + plotHeight() / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText("特徵 x₂：灰階標準差", 0, 0);
+      ctx.restore();
+      ctx.textAlign = "left";
+
+      if (activeModels.lda) {
+        drawLine(
+          lineSegment(
+            activeModels.lda.weights[0],
+            activeModels.lda.weights[1],
+            activeModels.lda.bias
+          ),
+          GREEN,
+          false,
+          "LDA 決策線",
+          [6, -7]
+        );
+      }
+      if (activeModels.pca) {
+        var pcaNormal = activeModels.pca.normal;
+        var pcaConstant = -dot(pcaNormal, activeModels.pca.center);
+        drawLine(
+          lineSegment(pcaNormal[0], pcaNormal[1], pcaConstant),
+          SLATE,
+          true,
+          "無標籤主軸",
+          [6, 15]
+        );
+      }
+
+      if (activeModels.lda) {
+        var meanA = dataToPixel(
+          activeModels.lda.meanA[0],
+          activeModels.lda.meanA[1]
+        );
+        var meanB = dataToPixel(
+          activeModels.lda.meanB[0],
+          activeModels.lda.meanB[1]
+        );
+        drawMarker(meanA, 4.5, "#ffffff", BLUE, 1.7);
+        drawMarker(meanB, 4.5, "#ffffff", RED, 1.7);
+        ctx.fillStyle = BLUE;
+        ctx.font = "12px sans-serif";
+        ctx.fillText("μA", meanA.x - 18, meanA.y - 8);
+        ctx.fillStyle = RED;
+        ctx.fillText("μB", meanB.x + 7, meanB.y - 8);
+      }
+      if (activeModels.pca) {
+        var centerPixel = dataToPixel(
+          activeModels.pca.center[0],
+          activeModels.pca.center[1]
+        );
+        drawMarker(centerPixel, 4.5, ACCENT, "#ffffff", 1.2);
+        ctx.fillStyle = ACCENT;
+        ctx.font = "12px sans-serif";
+        ctx.fillText("c", centerPixel.x + 7, centerPixel.y - 7);
+      }
+
+      points.forEach(function (point, index) {
+        var pixel = dataToPixel(point.x, point.y);
+        var ldaClass = activeModels.lda ? classifyLda(activeModels.lda, point) : null;
+        var pcaClass = activeModels.pca ? classifyPca(activeModels.pca, point) : null;
+        var wrong = (ldaClass != null && ldaClass !== point.kind) ||
+          (pcaClass != null && pcaClass !== point.kind);
+        var disagreement = ldaClass != null && pcaClass != null && ldaClass !== pcaClass;
+        if (wrong || disagreement || index === hoverIndex) {
+          ctx.save();
+          ctx.strokeStyle = index === hoverIndex ? ACCENT : WARNING;
+          ctx.lineWidth = index === hoverIndex ? 2.1 : 1.4;
+          ctx.setLineDash(index === hoverIndex ? [] : [3, 3]);
+          ctx.beginPath();
+          ctx.arc(pixel.x, pixel.y, 12, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.restore();
+        }
+        if (point.kind === 0) {
+          drawMarker(pixel, 7, BLUE, "#ffffff", 1.3);
+        } else {
+          ctx.save();
+          ctx.strokeStyle = RED;
+          ctx.lineWidth = 2.6;
+          ctx.beginPath();
+          ctx.moveTo(pixel.x - 6, pixel.y - 6);
+          ctx.lineTo(pixel.x + 6, pixel.y + 6);
+          ctx.moveTo(pixel.x + 6, pixel.y - 6);
+          ctx.lineTo(pixel.x - 6, pixel.y + 6);
+          ctx.stroke();
+          ctx.restore();
+        }
+      });
+
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "#dbe4ea";
+      ctx.lineWidth = 1;
+      ctx.fillRect(canvas.width - 205, 10, 190, 82);
+      ctx.strokeRect(canvas.width - 205, 10, 190, 82);
+      drawLegendItem(canvas.width - 190, 30, 0, "A 類：藍色圓點");
+      drawLegendItem(canvas.width - 190, 51, 1, "B 類：紅色叉號");
+      drawLegendItem(canvas.width - 190, 72, 2, "LDA 實線");
+      drawLegendItem(canvas.width - 100, 72, 3, "主軸虛線");
+
+      ctx.fillStyle = INK;
+      ctx.font = "12px sans-serif";
+      ctx.fillText("正值側 → A；負值側 → B", PLOT.left + 8, PLOT.top - 15);
+      if (statusMessages.length) {
+        ctx.fillStyle = "#9a3412";
+        ctx.font = "12px sans-serif";
+        ctx.fillText("⚠ " + statusMessages.join("；"), PLOT.left + 8, canvas.height - 37);
+      }
+    }
+
+    function isVisible() {
+      var rect = canvas.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    }
+
+    function scheduleDraw() {
+      if (!isVisible() || drawPending) {
+        return;
+      }
+      drawPending = true;
+      var frame = window.requestAnimationFrame || function (callback) {
+        return window.setTimeout(callback, 0);
+      };
+      frame(function () {
+        drawPending = false;
+        draw();
+      });
+    }
+
+    function eventToCanvas(event) {
+      var rect = canvas.getBoundingClientRect();
+      return {
+        x: (event.clientX - rect.left) * (canvas.width / rect.width),
+        y: (event.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+
+    function hitTest(pixel) {
+      var radius = 15 * (canvas.width / canvas.getBoundingClientRect().width);
+      for (var i = points.length - 1; i >= 0; i -= 1) {
+        var candidate = dataToPixel(points[i].x, points[i].y);
+        var dx = candidate.x - pixel.x;
+        var dy = candidate.y - pixel.y;
+        if (dx * dx + dy * dy <= radius * radius) {
+          return i;
+        }
+      }
+      return -1;
+    }
+
+    function finishPointer(event) {
+      if (activePointerId !== null && event.pointerId !== activePointerId) {
+        return;
+      }
+      if (activePointerId !== null && canvas.hasPointerCapture(activePointerId)) {
+        canvas.releasePointerCapture(activePointerId);
+      }
+      activePointerId = null;
+      dragIndex = -1;
+      scheduleDraw();
+    }
+
+    canvas.addEventListener("pointerdown", function (event) {
+      if (!isVisible()) {
+        return;
+      }
+      var pixel = eventToCanvas(event);
+      dragIndex = hitTest(pixel);
+      hoverIndex = dragIndex;
+      if (dragIndex >= 0) {
+        activePointerId = event.pointerId;
+        canvas.setPointerCapture(event.pointerId);
+        event.preventDefault();
+        scheduleDraw();
+      }
+    });
+
+    canvas.addEventListener("pointermove", function (event) {
+      var pixel = eventToCanvas(event);
+      if (dragIndex < 0) {
+        hoverIndex = hitTest(pixel);
+        scheduleDraw();
+        return;
+      }
+      if (activePointerId !== event.pointerId) {
+        return;
+      }
+      var data = pixelToData(pixel.x, pixel.y);
+      points[dragIndex].x = clamp(data.x, X_MIN, X_MAX);
+      points[dragIndex].y = clamp(data.y, Y_MIN, Y_MAX);
+      recompute();
+    });
+    canvas.addEventListener("pointerup", finishPointer);
+    canvas.addEventListener("pointercancel", finishPointer);
+    canvas.addEventListener("pointerleave", function () {
+      if (dragIndex < 0) {
+        hoverIndex = -1;
+        scheduleDraw();
+      }
+    });
+
+    resetButton.addEventListener("click", function () {
+      points = clonePoints(DEFAULT_POINTS);
+      lastValid = { lda: null, pca: null };
+      activeModels = { lda: null, pca: null };
+      recompute();
+    });
+
+    window.addEventListener("resize", scheduleDraw);
+    window.addEventListener("load", scheduleDraw);
+    if (window.ResizeObserver) {
+      new ResizeObserver(scheduleDraw).observe(canvas);
+    }
+    recompute();
+    window.setTimeout(scheduleDraw, 0);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
+  }
+}());
+</script>
+
+<script data-phase-c="kp-4">
+(function () {
+  "use strict";
+
+  var root = document.querySelector('.demo[data-demo-id="kp-4"]');
+  if (!root || root.dataset.kp4Ready === "true") return;
+
+  var leftCanvas = root.querySelector('#demo-canvas-kp4-left');
+  var rightCanvas = root.querySelector('#demo-canvas-kp4-right');
+  var statusEl = root.querySelector('#demo-kp4-status');
+  var summaryEl = root.querySelector('#demo-kp4-summary');
+  var boundaryEl = root.querySelector('#demo-kp4-boundaries');
+  var countEl = root.querySelector('[data-constraint-count]');
+  var currentLabelEl = root.querySelector('[data-current-label]');
+  var labelButtons = Array.prototype.slice.call(root.querySelectorAll('[data-label]'));
+
+  if (!leftCanvas || !rightCanvas || !statusEl || !summaryEl || !boundaryEl) return;
+
+  var COLORS = {
+    A: { fill: "rgba(8, 145, 178, 0.16)", stroke: "#0891b2", point: "#0891b2" },
+    B: { fill: "rgba(100, 116, 139, 0.16)", stroke: "#64748b", point: "#64748b" },
+    boundary: "#f59e0b",
+    ink: "#1f2937",
+    muted: "#64748b",
+    grid: "#e2e8f0",
+    warn: "#b45309"
+  };
+
+  /* The same fixed points are used by both panels for the whole demo lifetime. */
+  var points = [
+    { id: "P1", x: 15, y: 25, truth: "A" },
+    { id: "P2", x: 23, y: 20, truth: "A" },
+    { id: "P3", x: 18, y: 35, truth: "A" },
+    { id: "P4", x: 30, y: 30, truth: "A" },
+    { id: "P5", x: 29, y: 43, truth: "A" },
+    { id: "P6", x: 38, y: 38, truth: "A" },
+    { id: "P7", x: 40, y: 50, truth: "A" },
+    { id: "P8", x: 58, y: 50, truth: "A", ambiguous: true },
+    { id: "P9", x: 47, y: 42, truth: "B", ambiguous: true },
+    { id: "P10", x: 75, y: 48, truth: "B" },
+    { id: "P11", x: 80, y: 58, truth: "B" },
+    { id: "P12", x: 72, y: 65, truth: "B" },
+    { id: "P13", x: 85, y: 68, truth: "B" },
+    { id: "P14", x: 90, y: 78, truth: "B" },
+    { id: "P15", x: 82, y: 88, truth: "B" },
+    { id: "P16", x: 93, y: 90, truth: "B" }
+  ];
+
+  var plot = { left: 60, top: 34, width: 520, height: 270 };
+  var EPS = 1e-9;
+  var clickTimer = null;
+  var state = { activeLabel: "A", labels: points.map(function () { return null; }), rightResult: null };
+
+  function distance(i, j) {
+    var dx = points[i].x - points[j].x;
+    var dy = points[i].y - points[j].y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function completeDistance(clusterA, clusterB) {
+    var maximum = 0;
+    clusterA.forEach(function (i) {
+      clusterB.forEach(function (j) {
+        maximum = Math.max(maximum, distance(i, j));
+      });
+    });
+    return maximum;
+  }
+
+  /* Complete-linkage agglomeration: repeatedly merge the closest legal pair. */
+  function completeLinkage() {
+    var clusters = points.map(function (_, i) { return [i]; });
+    var steps = [];
+    var safety = 0;
+
+    while (clusters.length > 2 && safety < points.length) {
+      var best = null;
+      for (var i = 0; i < clusters.length; i += 1) {
+        for (var j = i + 1; j < clusters.length; j += 1) {
+          var candidateDistance = completeDistance(clusters[i], clusters[j]);
+          if (!best || candidateDistance < best.distance - EPS ||
+              (Math.abs(candidateDistance - best.distance) <= EPS &&
+               (i < best.i || (i === best.i && j < best.j)))) {
+            best = { i: i, j: j, distance: candidateDistance };
+          }
+        }
+      }
+      if (!best) break;
+      var merged = clusters[best.i].concat(clusters[best.j]).sort(function (a, b) { return a - b; });
+      clusters.splice(best.j, 1);
+      clusters[best.i] = merged;
+      steps.push({ left: best.i, right: best.j, distance: best.distance });
+      safety += 1;
+    }
+
+    return {
+      clusters: clusters,
+      steps: steps,
+      iterations: safety,
+      status: clusters.length === 2 ? "ok" : "conflict",
+      message: clusters.length === 2 ? "" : "限制互相衝突，無法收斂成兩群"
+    };
+  }
+
+  function makeUnionFind(size) {
+    var parent = [];
+    for (var i = 0; i < size; i += 1) parent.push(i);
+    function find(x) {
+      while (parent[x] !== x) {
+        parent[x] = parent[parent[x]];
+        x = parent[x];
+      }
+      return x;
+    }
+    function union(a, b) {
+      var rootA = find(a);
+      var rootB = find(b);
+      if (rootA !== rootB) parent[rootB] = rootA;
+    }
+    return { find: find, union: union };
+  }
+
+  function containsPair(clusterA, clusterB, i, j) {
+    var across = (clusterA.indexOf(i) !== -1 && clusterB.indexOf(j) !== -1) ||
+      (clusterA.indexOf(j) !== -1 && clusterB.indexOf(i) !== -1);
+    return across;
+  }
+
+  function legalMerge(clusterA, clusterB, cannotPairs) {
+    for (var i = 0; i < cannotPairs.length; i += 1) {
+      if (containsPair(clusterA, clusterB, cannotPairs[i][0], cannotPairs[i][1])) return false;
+    }
+    return true;
+  }
+
+  /* Must-link components are made before the constrained complete-linkage loop. */
+  function constrainedLinkage(labels) {
+    var unionFind = makeUnionFind(points.length);
+    var mustPairs = [];
+    var cannotPairs = [];
+    for (var i = 0; i < points.length; i += 1) {
+      for (var j = i + 1; j < points.length; j += 1) {
+        if (labels[i] && labels[j]) {
+          if (labels[i] === labels[j]) {
+            mustPairs.push([i, j]);
+            unionFind.union(i, j);
+          } else {
+            cannotPairs.push([i, j]);
+          }
+        }
+      }
+    }
+
+    var componentsByRoot = {};
+    for (var p = 0; p < points.length; p += 1) {
+      var rootId = unionFind.find(p);
+      if (!componentsByRoot[rootId]) componentsByRoot[rootId] = [];
+      componentsByRoot[rootId].push(p);
+    }
+    var clusters = Object.keys(componentsByRoot).map(function (key) {
+      return componentsByRoot[key].sort(function (a, b) { return a - b; });
+    }).sort(function (a, b) { return a[0] - b[0]; });
+
+    for (var c = 0; c < cannotPairs.length; c += 1) {
+      if (unionFind.find(cannotPairs[c][0]) === unionFind.find(cannotPairs[c][1])) {
+        return { clusters: clusters, steps: [], iterations: 0, status: "conflict", message: "限制互相衝突，無法收斂成兩群", mustPairs: mustPairs, cannotPairs: cannotPairs };
+      }
+    }
+
+    var steps = [];
+    var safety = 0;
+    while (clusters.length > 2 && safety < points.length) {
+      var best = null;
+      for (var a = 0; a < clusters.length; a += 1) {
+        for (var b = a + 1; b < clusters.length; b += 1) {
+          if (!legalMerge(clusters[a], clusters[b], cannotPairs)) continue;
+          var candidateDistance = completeDistance(clusters[a], clusters[b]);
+          if (!best || candidateDistance < best.distance - EPS ||
+              (Math.abs(candidateDistance - best.distance) <= EPS &&
+               (a < best.i || (a === best.i && b < best.j)))) {
+            best = { i: a, j: b, distance: candidateDistance };
+          }
+        }
+      }
+      if (!best) {
+        return { clusters: clusters, steps: steps, iterations: safety, status: "conflict", message: "限制互相衝突，無法收斂成兩群", mustPairs: mustPairs, cannotPairs: cannotPairs };
+      }
+      var merged = clusters[best.i].concat(clusters[best.j]).sort(function (x, y) { return x - y; });
+      clusters.splice(best.j, 1);
+      clusters[best.i] = merged;
+      steps.push({ left: best.i, right: best.j, distance: best.distance });
+      safety += 1;
+    }
+
+    if (clusters.length !== 2) {
+      return { clusters: clusters, steps: steps, iterations: safety, status: "conflict", message: "限制互相衝突，無法收斂成兩群", mustPairs: mustPairs, cannotPairs: cannotPairs };
+    }
+    return { clusters: clusters, steps: steps, iterations: safety, status: "ok", message: "", mustPairs: mustPairs, cannotPairs: cannotPairs };
+  }
+
+  function classAssignment(clusters) {
+    if (clusters.length !== 2) return clusters.map(function (_, i) { return i % 2 === 0 ? "A" : "B"; });
+    var firstA = 0;
+    var firstB = 0;
+    var secondA = 0;
+    var secondB = 0;
+    clusters[0].forEach(function (i) { if (points[i].truth === "A") firstA += 1; else firstB += 1; });
+    clusters[1].forEach(function (i) { if (points[i].truth === "A") secondA += 1; else secondB += 1; });
+    return firstA + secondB >= firstB + secondA ? ["A", "B"] : ["B", "A"];
+  }
+
+  function predictionFor(result) {
+    var assignment = classAssignment(result.clusters);
+    var prediction = points.map(function () { return null; });
+    result.clusters.forEach(function (cluster, clusterIndex) {
+      cluster.forEach(function (pointIndex) { prediction[pointIndex] = assignment[clusterIndex]; });
+    });
+    return prediction;
+  }
+
+  function convexHull(coords) {
+    if (coords.length <= 1) return coords.slice();
+    var sorted = coords.slice().sort(function (a, b) { return a.x - b.x || a.y - b.y; });
+    function cross(o, a, b) { return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x); }
+    var lower = [];
+    sorted.forEach(function (point) {
+      while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], point) <= 0) lower.pop();
+      lower.push(point);
+    });
+    var upper = [];
+    sorted.slice().reverse().forEach(function (point) {
+      while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) upper.pop();
+      upper.push(point);
+    });
+    upper.pop();
+    lower.pop();
+    return lower.concat(upper);
+  }
+
+  function toCanvasPoint(point) {
+    return {
+      x: plot.left + (point.x / 100) * plot.width,
+      y: plot.top + plot.height - (point.y / 100) * plot.height
+    };
+  }
+
+  function setupContext(canvas) {
+    var ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    var ratio = window.devicePixelRatio || 1;
+    var logicalWidth = Number(canvas.getAttribute("width")) || 640;
+    var logicalHeight = Number(canvas.getAttribute("height")) || 390;
+    if (canvas.width !== logicalWidth * ratio || canvas.height !== logicalHeight * ratio) {
+      canvas.width = logicalWidth * ratio;
+      canvas.height = logicalHeight * ratio;
+    }
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    return ctx;
+  }
+
+  function drawGrid(ctx) {
+    ctx.clearRect(0, 0, 640, 390);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, 640, 390);
+    ctx.font = '12px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillStyle = COLORS.muted;
+    ctx.fillText("固定 16 點；位置不會改變", plot.left, 18);
+    ctx.strokeStyle = COLORS.grid;
+    ctx.lineWidth = 1;
+    for (var tick = 0; tick <= 4; tick += 1) {
+      var x = plot.left + (plot.width / 4) * tick;
+      var y = plot.top + (plot.height / 4) * tick;
+      ctx.beginPath(); ctx.moveTo(x, plot.top); ctx.lineTo(x, plot.top + plot.height); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(plot.left, y); ctx.lineTo(plot.left + plot.width, y); ctx.stroke();
+    }
+    ctx.strokeStyle = "#94a3b8";
+    ctx.lineWidth = 1.3;
+    ctx.strokeRect(plot.left, plot.top, plot.width, plot.height);
+    ctx.fillStyle = COLORS.muted;
+    ctx.fillText("特徵 1", plot.left + plot.width - 38, plot.top + plot.height + 28);
+    ctx.save();
+    ctx.translate(20, plot.top + 42);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("特徵 2", 0, 0);
+    ctx.restore();
+  }
+
+  function drawClusters(ctx, result, prediction) {
+    result.clusters.forEach(function (cluster, clusterIndex) {
+      var coords = cluster.map(function (pointIndex) { return toCanvasPoint(points[pointIndex]); });
+      var hull = convexHull(coords);
+      var label = prediction[cluster[0]] || (clusterIndex % 2 === 0 ? "A" : "B");
+      var color = COLORS[label] || COLORS.A;
+      ctx.save();
+      ctx.fillStyle = color.fill;
+      ctx.strokeStyle = color.stroke;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      if (hull.length >= 3) {
+        ctx.beginPath();
+        ctx.moveTo(hull[0].x, hull[0].y);
+        hull.slice(1).forEach(function (point) { ctx.lineTo(point.x, point.y); });
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else if (hull.length === 2) {
+        ctx.beginPath(); ctx.moveTo(hull[0].x, hull[0].y); ctx.lineTo(hull[1].x, hull[1].y); ctx.stroke();
+      }
+      ctx.restore();
+      var center = coords.reduce(function (acc, point) { return { x: acc.x + point.x / coords.length, y: acc.y + point.y / coords.length }; }, { x: 0, y: 0 });
+      ctx.font = '700 12px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+      ctx.fillStyle = color.stroke;
+      ctx.fillText("群 " + label, center.x - 12, center.y);
+    });
+  }
+
+  function drawConstraintLines(ctx) {
+    var labels = state.labels;
+    for (var i = 0; i < points.length; i += 1) {
+      for (var j = i + 1; j < points.length; j += 1) {
+        if (!labels[i] || !labels[j]) continue;
+        var a = toCanvasPoint(points[i]);
+        var b = toCanvasPoint(points[j]);
+        ctx.save();
+        ctx.lineWidth = labels[i] === labels[j] ? 2.3 : 1.8;
+        ctx.strokeStyle = labels[i] === labels[j] ? "rgba(8,145,178,.68)" : "rgba(71,85,105,.68)";
+        ctx.setLineDash(labels[i] === labels[j] ? [] : [5, 4]);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        if (labels[i] !== labels[j]) {
+          var midX = (a.x + b.x) / 2;
+          var midY = (a.y + b.y) / 2;
+          ctx.setLineDash([]);
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(midX - 5, midY - 5); ctx.lineTo(midX + 5, midY + 5); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(midX + 5, midY - 5); ctx.lineTo(midX - 5, midY + 5); ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+  }
+
+  function drawPoints(ctx, prediction, mode, result) {
+    points.forEach(function (point, index) {
+      var screen = toCanvasPoint(point);
+      var predicted = prediction[index] || "A";
+      var color = COLORS[predicted] || COLORS.A;
+      var isCorrect = predicted === point.truth;
+      ctx.save();
+      ctx.fillStyle = color.point;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(screen.x, screen.y, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      if (point.ambiguous) {
+        ctx.strokeStyle = COLORS.boundary;
+        ctx.lineWidth = 2.4;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.arc(screen.x, screen.y, 11, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.font = '700 15px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+        ctx.fillStyle = mode === "left" ? (isCorrect ? COLORS.muted : COLORS.warn) : (result.status === "ok" && isCorrect ? COLORS.A.stroke : COLORS.warn);
+        ctx.fillText(mode === "left" ? (isCorrect ? "✓" : "×") : (result.status === "ok" ? (isCorrect ? "✓" : "!") : "!"), screen.x + 12, screen.y - 9);
+        ctx.font = '700 11px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+        ctx.fillStyle = COLORS.warn;
+        ctx.fillText(point.id, screen.x + 12, screen.y + 6);
+      }
+
+      if (state.labels[index]) {
+        ctx.strokeStyle = state.labels[index] === "A" ? COLORS.A.stroke : COLORS.B.stroke;
+        ctx.lineWidth = 2.6;
+        ctx.beginPath(); ctx.arc(screen.x, screen.y, 9, 0, Math.PI * 2); ctx.stroke();
+        ctx.font = '700 11px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+        ctx.fillStyle = state.labels[index] === "A" ? COLORS.A.stroke : COLORS.B.stroke;
+        ctx.fillText(state.labels[index], screen.x - 4, screen.y - 13);
+      }
+      ctx.restore();
+    });
+  }
+
+  function drawConflictMessage(ctx, result) {
+    if (result.status !== "conflict") return;
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.fillRect(92, 130, 456, 76);
+    ctx.strokeStyle = "#f59e0b";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(92, 130, 456, 76);
+    ctx.fillStyle = COLORS.warn;
+    ctx.font = '700 16px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.textAlign = "center";
+    ctx.fillText("限制互相衝突，無法收斂成兩群", 320, 162);
+    ctx.font = '12px "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText("演算法已安全停止，沒有繼續嘗試或陷入死迴圈。", 320, 185);
+    ctx.restore();
+  }
+
+  function drawPanel(canvas, result, mode) {
+    if (!canvas || canvas.getBoundingClientRect().width < 2 || canvas.getBoundingClientRect().height < 2) return;
+    var ctx = setupContext(canvas);
+    if (!ctx) return;
+    var prediction = predictionFor(result);
+    drawGrid(ctx);
+    if (mode === "right") drawClusters(ctx, result, prediction);
+    else drawClusters(ctx, result, prediction);
+    if (mode === "right") drawConstraintLines(ctx);
+    drawPoints(ctx, prediction, mode, result);
+    drawConflictMessage(ctx, result);
+  }
+
+  function scheduleDraw() {
+    window.requestAnimationFrame(function () {
+      drawPanel(leftCanvas, baselineResult, "left");
+      drawPanel(rightCanvas, state.rightResult, "right");
+    });
+  }
+
+  function resultSummary(result, sideName) {
+    if (result.status === "conflict") return sideName + "：" + result.message + "。";
+    return sideName + "：完成兩群，實際合併 " + result.steps.length + " 次。";
+  }
+
+  function updateReadout() {
+    var baselinePrediction = predictionFor(baselineResult);
+    var rightPrediction = state.rightResult.status === "ok" ? predictionFor(state.rightResult) : points.map(function () { return null; });
+    var mustCount = state.rightResult.mustPairs ? state.rightResult.mustPairs.length : 0;
+    var cannotCount = state.rightResult.cannotPairs ? state.rightResult.cannotPairs.length : 0;
+    var labelledCount = state.labels.filter(function (label) { return Boolean(label); }).length;
+    countEl.textContent = labelledCount + " 個標記 · " + mustCount + " must-link · " + cannotCount + " cannot-link";
+    statusEl.textContent = state.rightResult.status === "conflict" ? state.rightResult.message : "右側已依目前標記重新計算；每次點擊都會重跑約束式 complete-linkage。";
+    statusEl.classList.toggle("is-conflict", state.rightResult.status === "conflict");
+    summaryEl.textContent = resultSummary(baselineResult, "左側純距離") + " " + resultSummary(state.rightResult, "右側半監督式");
+    boundaryEl.innerHTML = "";
+    points.forEach(function (point, index) {
+      if (!point.ambiguous) return;
+      var leftText = baselinePrediction[index] ? "群 " + baselinePrediction[index] : "未定";
+      var leftVerdict = baselinePrediction[index] === point.truth ? "本來正確" : "純距離誤分";
+      var rightText = rightPrediction[index] ? "群 " + rightPrediction[index] : "—";
+      var rightVerdict = state.rightResult.status !== "ok" ? "限制未收斂" : (rightPrediction[index] === point.truth ? "已修正" : "仍未修正");
+      var row = document.createElement("div");
+      row.className = "kp4-boundary-row";
+      row.textContent = point.id + "（概念基準 " + point.truth + "）：左側 " + leftText + "，" + leftVerdict + "；右側 " + rightText + "，" + rightVerdict + "。";
+      boundaryEl.appendChild(row);
+    });
+  }
+
+  function recomputeRight() {
+    state.rightResult = constrainedLinkage(state.labels);
+    updateReadout();
+    scheduleDraw();
+  }
+
+  function setActiveLabel(label) {
+    state.activeLabel = label;
+    labelButtons.forEach(function (button) { button.classList.toggle("is-active", button.getAttribute("data-label") === label); });
+    currentLabelEl.textContent = "目前選擇：" + label + " 類";
+  }
+
+  function canvasPointAt(canvas, event) {
+    var rect = canvas.getBoundingClientRect();
+    var logicalX = (event.clientX - rect.left) * (640 / rect.width);
+    var logicalY = (event.clientY - rect.top) * (390 / rect.height);
+    var nearest = -1;
+    var nearestDistance = 16;
+    points.forEach(function (point, index) {
+      var screen = toCanvasPoint(point);
+      var d = Math.hypot(screen.x - logicalX, screen.y - logicalY);
+      if (d < nearestDistance) { nearest = index; nearestDistance = d; }
+    });
+    return nearest;
+  }
+
+  function bindCanvas(canvas) {
+    canvas.addEventListener("click", function (event) {
+      var index = canvasPointAt(canvas, event);
+      if (index < 0) return;
+      if (clickTimer) window.clearTimeout(clickTimer);
+      clickTimer = window.setTimeout(function () {
+        state.labels[index] = state.activeLabel;
+        clickTimer = null;
+        recomputeRight();
+      }, 230);
+    });
+    canvas.addEventListener("dblclick", function (event) {
+      event.preventDefault();
+      if (clickTimer) window.clearTimeout(clickTimer);
+      clickTimer = null;
+      var index = canvasPointAt(canvas, event);
+      if (index < 0) return;
+      state.labels[index] = null;
+      recomputeRight();
+    });
+  }
+
+  labelButtons.forEach(function (button) {
+    button.addEventListener("click", function () { setActiveLabel(button.getAttribute("data-label")); });
+  });
+  root.querySelector('[data-action="clear"]').addEventListener("click", function () {
+    state.labels = points.map(function () { return null; });
+    recomputeRight();
+  });
+  root.querySelector('[data-action="demo"]').addEventListener("click", function () {
+    /* P1/P8 are the conceptual A pair; P9/P10 are the conceptual B pair. */
+    state.labels = points.map(function () { return null; });
+    state.labels[0] = "A";
+    state.labels[7] = "A";
+    state.labels[8] = "B";
+    state.labels[9] = "B";
+    setActiveLabel("A");
+    recomputeRight();
+  });
+
+  var baselineResult = completeLinkage();
+  bindCanvas(rightCanvas);
+  state.rightResult = constrainedLinkage(state.labels);
+  updateReadout();
+  root.dataset.kp4Ready = "true";
+
+  function drawWhenVisible() {
+    if (leftCanvas.getBoundingClientRect().width > 2 && rightCanvas.getBoundingClientRect().width > 2) scheduleDraw();
+  }
+  if (window.IntersectionObserver) {
+    var observer = new IntersectionObserver(function (entries) {
+      if (entries.some(function (entry) { return entry.isIntersecting; })) drawWhenVisible();
+    }, { threshold: 0.01 });
+    observer.observe(root);
+  }
+  if (window.ResizeObserver) {
+    var resizeObserver = new ResizeObserver(drawWhenVisible);
+    resizeObserver.observe(root);
+  }
+  window.addEventListener("resize", drawWhenVisible);
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", drawWhenVisible, { once: true });
+  else drawWhenVisible();
+})();
+</script>
+<div id="guide-modal"><div class="modal-box"><button class="modal-close" type="button">✕</button><h1></h1><div class="modal-body"></div></div></div>
+<script>
+// == Phase D 教授祕笈邏輯 ==
+(function(){
+  var GUIDE_TITLES = {"1": "教授祕笈：為什麼要學樣式識別？（五大應用領域）", "2": "教授祕笈：特徵、特徵向量與分類器", "3": "教授祕笈：分類系統設計的四個階段", "4": "教授祕笈：監督式、非監督式與半監督式學習"};
+  var GUIDE_CONTENT = {"1": "<p>同學，這一段屬於<strong>模式識別（pattern recognition）</strong>，也就是「從觀察到的資料判斷它屬於哪一類」的學問。今天我先暫時扮演一位有點愛講比喻的模式識別教授，帶你參觀一座<strong>中央分揀站</strong>：不管貨物長得像照片、聲音、文字，還是一串生物資料，最後都要被送進正確的分類格。</p> <h2>先把任務講成一句人話</h2> <p>模式識別在做的事很單純：<strong>把各式各樣的輸入，依照它們呈現出的特徵，分到適當的類別，然後採取行動。</strong> 這裡的「輸入」不只是一張圖片，也可以是訊號波形、量測數字，甚至資料庫裡一長串紀錄。</p> <p>為什麼需要這座分揀站？因為資料多到人類眼睛和手都忙不過來。早期模式識別多半停留在統計學的理論紙上；電腦普及後，工廠、醫院、辦公室和研究室都開始把資料送進來，於是「怎麼分得準」又反過來逼著理論繼續進步。簡單說，電腦把分揀站的貨量突然開到洪水等級，光靠人工看一眼說「嗯，這箱應該是 A」已經不夠用了。</p> <p>這座站的共同動作可以先記成一條路線：<strong>原始輸入 → 量出能區分的特徵 → 做分類或相似度判斷 → 送出結果與行動。</strong> 真正的祕密通常藏在中間那一步，而不是最後那個看起來很威風的「分類」按鈕。</p> <h2>五種貨物，其實走同一座站</h2> <p><strong>第一站：機器視覺。</strong> 想像輸送帶把零件一個個送到相機前。相機拍下影像，系統分析影像後，先把零件分成「有瑕疵」和「沒瑕疵」兩格；一旦進入瑕疵格，機械手臂就把它剔除。換到裝配線，分揀格可以改成「螺絲起子」「德式扳手」等已知類別，機械手臂再把不同工具送到正確位置。相機不是只負責拍照，它是分揀站的入口；分類結果會真的觸發下一個動作。</p> <p><strong>第二站：文字辨識 OCR。</strong> OCR 是光學字元辨識，白話就是「把掃描到的字，認成電腦懂的字」。掃描器用光源和感測器把紙面上的亮暗變化轉成數字，先切出一行一行、再切出一個一個字元，最後把每個字分到字母、數字或標點的格子。辨識後存成 ASCII——也就是電腦用來表示英文字母、數字和符號的文字編碼——比把整張掃描影像留著更方便：文字處理器可以直接編輯，而且通常省下大量儲存空間。</p> <p>同一座分揀站還能處理手寫支票。它可以讀出金額欄的數字、核對大寫和數字是否相符，再檢查收款人是否對得上要入帳的帳戶。就算只能正確處理一半支票，也已經替人省下大把人工。郵局的郵遞區號分類、用筆寫字輸入的手寫電腦，也都是「先把筆跡變成可量的線索，再送進分類格」。</p> <p><strong>第三站：電腦輔助診斷。</strong> 這一站的貨物是 X 光、電腦斷層、超音波，或心電圖與腦電圖訊號；它的角色是<strong>第二意見</strong>，不是把醫師請回家。系統可以協助醫師判斷，但最後診斷仍由醫師做出。這個限制非常重要，因為分類器會犯錯，醫療更不能把「模型說 A」誤聽成「宇宙真理說 A」。</p> <p>乳房 X 光攝影是很好的提醒：在已罹病、接受乳房攝影的女性中，大約有 $10\\%$ 到 $30\\%$ 的結果會呈現陰性；而這些「假陰性」案例約有三分之二，事後回看才發現影像上其實已有癌症跡象。原因可能是影像品質不好、讀片眼睛疲勞，或病灶細微得像躲在背景裡。多一位放射科醫師再讀一次，正確分類比例會改善；模式識別系統也可以扮演這個第二讀者，幫忙提高信心、減少不必要的手術切片。</p> <p><strong>第四站：語音辨識。</strong> 人說話時送進來的是聲音波形，不是現成的文字。麥克風把聲音交給系統，系統量測波形中的線索，再把辨識出的語句轉成 ASCII 文字，顯示在螢幕或存進記憶體。它可以讓工廠操作更有效率、讓人遠端控制危險環境裡的機器，也能讓行動不便的人用說話操控設備。說話輸入資訊，甚至可能是熟練打字者的兩倍速度；對某些使用者來說，這不是炫技，而是把溝通的門檻降低。</p> <p><strong>第五站：資料探勘與資料庫中的知識發掘。</strong> 這裡的貨物不是一箱箱實體物，而是醫學、商業、金融、科學、影像、音樂等資料。傳統搜尋像是要求每件貨物先貼好人工關鍵字，再用文字比對去找；問題是資料一多、來源一分散，請人把全世界每件資料都標註一次，會先把人類累成化石。</p> <p>內容式檢索（content-based retrieval）換了一個做法：不只問「標籤寫了什麼」，而是量出輸入物件和資料庫物件的相似線索。影像可以用顏色、紋理、形狀組成一個簽名，搜尋外觀相似的圖片；音樂可以量測節拍、速度和重複段落的位置，找出聽起來相近的作品。DNA 也能送進這座站：DNA 由四種基本核苷酸 A、C、G、T 像字母一樣排成長序列，某些基因排列和疾病有關，於是我們可以比較健康組織與患病組織的序列，尋找關鍵差異。</p> <p>你會發現，機器視覺、OCR、X 光、聲音、DNA 看起來像五種完全不同的貨物；可是它們都要先回答同一個問題：<strong>哪些可量的線索，能讓不同類別不再混成一堆？</strong> 這就是模式識別把不同領域串在一起的原因。指紋辨識、簽名驗證、文字檢索、人臉和手勢辨識，甚至用 MPEG-7（描述多媒體內容的標準）搜尋「某人正在大笑的影片」，也都在使用這座共同分揀站。它因此和語言學、電腦圖學、機器視覺、資料庫設計互相牽手。</p> <h2>真的算一遍：第二讀者為什麼值得請</h2> <p>我們用一個<strong>示意批次</strong>把上面的醫療數字算清楚。假設有 $1000$ 位已知罹患乳癌、都接受乳房攝影的女性；為了方便演算，取原文 $10\\%$ 到 $30\\%$ 的中間值 $20\\%$：</p> <table> <thead> <tr> <th>計算步驟</th> <th style=\"text-align: right;\">數字</th> <th>這一步在分揀站代表什麼</th> </tr> </thead> <tbody> <tr> <td>已知患病且接受檢查</td> <td style=\"text-align: right;\">$1000$ 人</td> <td>送進入口的貨量</td> </tr> <tr> <td>假陰性</td> <td style=\"text-align: right;\">$1000\\times20\\%=200$ 人</td> <td>被送進「陰性」格，但其實有病</td> </tr> <tr> <td>事後看出原有跡象的假陰性</td> <td style=\"text-align: right;\">$200\\times\\frac{2}{3}\\approx133$ 人</td> <td>原本線索存在，只是第一次分揀漏看</td> </tr> </tbody> </table> <p>所以在這個示意批次裡，約 $133$ 人的影像不是「完全沒有資訊」，而是資訊細微、品質不佳或讀片者疲勞，導致第一次分揀失手。這個算例不是在宣布每一批病人都固定如此，而是在說明<strong>錯誤率有真實代價</strong>：第二讀者或電腦輔助系統的價值，不是取代醫師，而是讓同一件貨物多一次被仔細檢查的機會。</p> <h2>先留一個反轉</h2> <p>看到五個應用後，你可能會以為每一站都需要一套完全不同的魔法。反轉在這裡：<strong>表面輸入可以千奇百怪，中間的「量成可比較線索，再做分類或相似度判斷」才是共同骨架。</strong> 分類器只是最後把貨物送進某格；如果入口沒有量到真正有用的特徵，末端按鈕再漂亮，也只是很有自信地分錯。</p> <h2>換個場景，自己找出同一條路</h2> <p>把中央分揀站換成垃圾郵件過濾器：一封信可以被量成「連結數量」「寄件者是否陌生」「文字是否大量重複」等線索，然後分到「收件匣」或「垃圾郵件」。表面上它不再是 X 光或 DNA，底層結構卻完全相同。你可以先不看答案，想想看：如果寄件者是朋友，但信裡塞了二十個可疑連結，分揀站應該只看一個線索，還是綜合多個線索？這個問題會一路帶到後面「特徵怎麼選、分類器怎麼設計」。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解是「模式識別就是看圖片」。其實圖片只是其中一種貨物；聲音波形、醫療量測、資料庫紀錄和 DNA 序列都可以成為輸入。第二個誤解是「分類結果就是事實」。分類器輸出的是依據目前特徵與規則做出的判斷，邊界附近可能誤判；在醫療情境，它更應該是輔助醫師的第二意見，而不是自動開刀的院長。</p> <p>前一個例子也埋好了下一節的伏筆：我們說「先量成可分辨的線索」，下一節就會把這個中間站拆開，看看一個平均值、一個標準差，如何組成特徵向量，再交給決策線分類。</p> <p><strong>一句話收尾：</strong> <strong>先把貨物量成有用線索，再交給中央分揀；五種輸入是一條管線，分類是判斷，不是神諭。</strong></p>", "2": "<p>同學，這一段仍然屬於<strong>模式識別</strong>，但我們要從中央分揀站走進醫院的影像分診室。今天我就是你的影像分類分診教授，主線比喻只有一個：<strong>每張影像都是一位來報到的病人，特徵是分診台量出的指標，特徵向量是這位病人的數字病歷卡，分類器則是把病人送往 A 類或 B 類的分診規則。</strong></p> <h2>先別急著看符號：分診台到底在做什麼</h2> <p>一句大白話：<strong>不要直接拿整張影像去和另一張影像比臉；先用幾把量尺量出幾個重要數字，把每張影像放到同一張數字地圖上，再畫一條線決定它屬於哪一類。</strong></p> <p>為什麼需要這樣做？一張影像的像素數量可能多得像醫院病歷室，逐格比較既慢又容易被細節淹沒。我們希望保留「能把良性和惡性病灶分開」的資訊，而不是把所有像素一股腦塞給分診台。這裡的簡化做法，是對感興趣區域（ROI，也就是我們圈起來要量的那一小塊）量兩把尺：<strong>平均灰階值</strong>告訴我們這一區整體偏亮還是偏暗；<strong>灰階標準差</strong>告訴我們亮暗起伏有多大。兩個數字都不是診斷本身，它們是幫忙分診的量測線索。</p> <h2>把每個名詞放回病歷卡</h2> <p>先說<strong>特徵（feature）</strong>：它就是一個用來分類的可量測數字，例如一塊病灶區域的平均灰階值，或灰階標準差。再說<strong>特徵向量（feature vector）</strong>：它是把同一張影像量到的多個特徵依序裝進一張卡。若一張影像用了 $l$ 個特徵，這張卡寫成</p> <p>$$ \\boldsymbol{x}=[x_1,x_2,\\dots,x_l]^T. $$</p> <p>逐項翻譯這行字：$l$ 是量尺的總數；$x_i$ 是第 $i$ 個特徵；粗體的 $\\boldsymbol{x}$ 是整張數字病歷卡；上標 $T$ 代表<strong>轉置（transpose）</strong>，把原本橫向列出的數字轉成直向欄向量。若只量平均灰階值和標準差，病歷卡就可以想成 $\\boldsymbol{x}=[\\text{平均灰階值},\\text{標準差}]^T$。</p> <p>每個特徵向量對應一個樣式，也就是一張影像中的一個病灶區域。可是同一類病灶不會每次都長得一模一樣：不同病人的生理差異、影像品質和量測雜訊，都會讓數字稍微飄動。因此，特徵和特徵向量常被當成<strong>隨機變數與隨機向量</strong>來看；這不是說病灶在玩骰子，而是說我們承認測量有自然散布。</p> <p>接著是<strong>分類器（classifier）</strong>：它是一套把特徵空間切成類別區域的規則。在只有兩個特徵的情況，特徵空間就是一張平面；一條直線叫做<strong>決策線（decision line）</strong>，線的一側標成類別 A，另一側標成類別 B。新病人的數字病歷卡落在哪一側，分診台就依規則送去哪一格。</p> <p>這裡先埋一個小懸念：如果一張新影像剛好落在決策線旁邊，分診台會不會突然獲得「看穿真相」的超能力？先把這個問題放在桌邊，等數字算完再揭曉。</p> <h2>真的量一次：從像素到特徵向量</h2> <p>假設某個感興趣區域只有四個像素，灰階值是 $40,40,60,60$。我們先不談高深名詞，只照分診台的兩把尺計算：</p> <table> <thead> <tr> <th>步驟</th> <th>計算</th> <th style=\"text-align: right;\">結果</th> </tr> </thead> <tbody> <tr> <td>平均灰階值</td> <td>$(40+40+60+60)/4$</td> <td style=\"text-align: right;\">$50$</td> </tr> <tr> <td>每個像素離平均的差</td> <td>$-10,-10,+10,+10$</td> <td style=\"text-align: right;\">—</td> </tr> <tr> <td>離差平方的平均</td> <td>$(100+100+100+100)/4$</td> <td style=\"text-align: right;\">$100$</td> </tr> <tr> <td>灰階標準差</td> <td>$\\sqrt{100}$</td> <td style=\"text-align: right;\">$10$</td> </tr> </tbody> </table> <p>所以這張影像的數字病歷卡是</p> <p>$$ \\boldsymbol{x}=[50,10]^T. $$</p> <p>這張卡的意思不是「病人有 $50\\%$ 的良性、$10\\%$ 的惡性」；它只是在特徵平面上留下座標：橫軸是平均灰階值 $50$，縱軸是灰階標準差 $10$。把很多張影像都量成這種卡，良性 A 和惡性 B 往往會在平面上散到不同區域，但不會像教室座位一樣整齊排隊。</p> <p>現在假設我們先用一批已知答案的訓練影像，畫出一條簡化決策線：</p> <p>$$ x_2=0.5x_1-10. $$</p> <p>把它改寫成一個「站內分數」會更好用：</p> <p>$$ g(\\boldsymbol{x})=x_2-(0.5x_1-10). $$</p> <p>分診規則定為：若 $g(\\boldsymbol{x})\\geq0$，送到 A 類；若 $g(\\boldsymbol{x})\\lt 0$，送到 B 類。這條規則的幾何意思很直白：拿病歷卡上的點和直線比較，點在上方就是 A，點在下方就是 B。</p> <p>來看幾張訓練卡：</p> <table> <thead> <tr> <th>真實類別</th> <th style=\"text-align: right;\">特徵卡 $(x_1,x_2)$</th> <th style=\"text-align: right;\">線在該 $x_1$ 的高度</th> <th style=\"text-align: right;\">$g(\\boldsymbol{x})$</th> <th>分診結果</th> </tr> </thead> <tbody> <tr> <td>A</td> <td style=\"text-align: right;\">$(40,14)$</td> <td style=\"text-align: right;\">$0.5(40)-10=10$</td> <td style=\"text-align: right;\">$14-10=4$</td> <td>A，切對</td> </tr> <tr> <td>A</td> <td style=\"text-align: right;\">$(44,13)$</td> <td style=\"text-align: right;\">$12$</td> <td style=\"text-align: right;\">$1$</td> <td>A，切對</td> </tr> <tr> <td>B</td> <td style=\"text-align: right;\">$(60,10)$</td> <td style=\"text-align: right;\">$20$</td> <td style=\"text-align: right;\">$-10$</td> <td>B，切對</td> </tr> <tr> <td>B</td> <td style=\"text-align: right;\">$(64,9)$</td> <td style=\"text-align: right;\">$22$</td> <td style=\"text-align: right;\">$-13$</td> <td>B，切對</td> </tr> </tbody> </table> <p>接著來一張未知病歷卡 $(52,16.5)$。直線在 $x_1=52$ 時的高度是 $0.5(52)-10=16$，所以</p> <p>$$ g(\\boldsymbol{x})=16.5-16=0.5\\gt 0. $$</p> <p>按照規則，它會被判為 A。可是注意：<strong>「判為 A」只代表它落在 A 側，不代表宇宙已經替我們蓋章保證它是 A。</strong> 如果事後知道這張影像其實來自 B 類，那就叫<strong>誤分類（misclassification）</strong>。這就是剛才的懸念答案：決策線會做判斷，但不會突然長出透視眼。</p> <h2>這條線為什麼能畫出來？</h2> <p>因為設計它時，我們偷看了訓練影像的答案。那些真實類別已知、而且被拿來設計分類器的樣式或特徵向量，叫做<strong>訓練樣式（training patterns）</strong>或<strong>訓練特徵向量</strong>。有了 A、B 標籤，分診台才知道哪些點應該被安排在同一邊，決策線才不是隨手拿尺在牆上劃一刀。</p> <p>但原文其實已經把後面的四個大問題寫在門牌上：</p> <ol> <li><strong>特徵生成</strong>：到底該量哪一些數字？本例知道平均值和標準差有用，是因為我們事先知道影像怎麼形成；換一個問題，合適的量尺可能完全不同。</li> <li><strong>特徵選擇</strong>：如果候選量尺有一大把，該留下幾個？通常先產生比需要更多的候選特徵，再挑出真正有分辨力的子集合。</li> <li><strong>分類器設計</strong>：分界線要放哪裡、該用直線還是彎曲的曲面？本例的直線是為了讓眼睛容易看懂而畫的示範；真實問題通常要用最佳化準則找位置，而且多數分界面未必是直線。</li> <li><strong>系統評估</strong>：分診規則到底準不準？必須量化分類錯誤率，而不能只看圖覺得「好像分得不錯」。</li> </ol> <h2>再換一張病歷卡，看看結構有沒有變</h2> <p>把影像換成垃圾郵件，分診台仍然可以工作：用「信件中的連結數」「寄件者是否陌生」等數字組成特徵向量，再把郵件分到收件匣或垃圾郵件格。表面情境換了，底層動作沒換——量特徵、組向量、用分類器切區域。</p> <p>留一題給你自己走到分診台：若規則仍是 $x_2=0.5x_1-10$，未知卡是 $(58,18)$，它會落在哪一側？先算直線高度，再算 $g(\\boldsymbol{x})$；不要急著翻答案，因為這題的目的就是讓你的手先熟悉「點、線、側」的關係。</p> <h2>常見誤解，現在一次拆掉</h2> <p>第一個誤解是「特徵向量就是診斷結果」。不是；它只是把影像整理成一串可比較的量測值，還要經過分類器才會產生 A 或 B 的判斷。第二個誤解是「決策線就是自然界的真實分界」。也不是；它是根據訓練資料和某個設計準則得到的規則，邊界附近仍可能誤判。第三個誤解是「特徵越多一定越好」。量尺太多不代表分診更聰明，反而可能把雜訊也請進病歷卡；所以後面才需要特徵選擇與系統評估。</p> <p>回頭接上前一節：前一節說五種輸入都要先轉成可分辨的數字；現在我們看見了這個轉換的最小版本——兩個灰階統計量變成一個二維特徵向量。下一個階段則會繼續追問：這些特徵怎麼生成、怎麼挑、分類器怎麼設計，以及最後怎麼檢查它真的可靠。</p> <p><strong>一句話收尾：</strong> <strong>特徵是分診台量出的線索，特徵向量是整張數字病歷卡，分類器是切區域的規則；點落在哪一側就先判哪一類，但判斷永遠不是保證。</strong></p>", "3": "<h2>先把問題換成一間急診分診站</h2> <p>這一段屬於<strong>統計式樣式識別與機器學習中的分類系統設計</strong>。今天我先不把自己想成站在黑板前丟名詞的教授；我們一起當急診分診站的總設計師。病人一個個進來，系統要回答的不是「這個人看起來像誰」，而是「我應該用哪些觀察，把他分到哪一類？」</p> <p>一句大白話先記住：<strong>分類系統不是畫一條線就結案，而是從找線索、挑線索、訂規則，到拿新資料驗收的一整圈工作。</strong></p> <h2>第一關：到底要量什麼？——特徵生成</h2> <p>急診分診不能只說「我看他臉色不對」。我們得把病人的狀況變成可記錄的線索：體溫、血氧、心跳、咳嗽程度，甚至影像裡某一塊區域的平均亮度與變異程度。這一步叫<strong>特徵生成</strong>：把原本複雜的樣本，轉成分類器看得懂的數字。</p> <p>這裡有個容易被低估的難題：不是所有重要的事情都已經被量出來。前面醫學影像的例子可以用平均值和標準差，是因為我們事先知道影像怎麼產生；換到另一種疾病、另一種感測器，最有用的線索可能完全不同。你若量錯東西，後面再高明的分類器，也像拿血壓計去量 Wi-Fi——儀器沒有壞，問題是你問錯問題。</p> <h2>第二關：工具箱不要整箱背上街——特徵選擇</h2> <p>假設我們已經產生二十個候選線索。這不代表二十個都該送進系統。太多線索會增加計算負擔，也可能讓系統記住訓練資料的小噪音，遇到新病人反而慌張。於是我們要從候選工具箱裡挑出真正有用的那幾支，這叫<strong>特徵選擇</strong>。</p> <p>課本用 $l$ 表示最後採用的特徵數量。先別被符號嚇到：$l$ 就是在問「最後保留幾個測量值」。實務上常見的做法不是一開始就只想三個，而是先多生一些候選，再用資料和準則挑出較好的子集合。這有點像先把可能的檢查項目列完整，再問哪些真的能幫助分診；不是檢查越多越專業，病人也不會因為表格變長就自動康復。</p> <h2>第三關：規則怎麼畫？——分類器設計</h2> <p>挑好線索之後，系統要有一個<strong>分類器</strong>。分類器就是分診規則：看到哪些數值組合，就把病人送到哪一類。</p> <p>初學者常把分類器想成一條直線，例如「體溫高於某值就進高危區」。在兩個特徵的平面上，這確實可以畫成一條線；如果有 $l$ 個特徵，那條線的高維版本叫超平面。可是，真實問題通常不會乖乖排成一刀切的兩堆。可能是「高燒，或低血氧」才算高危，這種區域像兩條帶子拼在一起，不是一條漂亮直線。</p> <p>因此，分類器設計不只是拿尺畫線，而是要決定兩件事：用什麼形式的邊界，以及用什麼<strong>最佳化準則</strong>把它放在適當位置。最佳化準則可以白話理解成「我們到底要把哪種錯誤壓低」：漏掉危急病人，通常比多叫幾個人再檢查更嚴重。</p> <h2>第四關：新病人來了，真的準嗎？——系統評估</h2> <p>分類器設計完成，不等於它畢業了。它只是拿到一張「理論上會分」的准考證，還要拿<strong>沒有看過的新資料</strong>來驗收。系統評估會量化分類錯誤率，例如</p> <p>$$ E=\\frac{\\text{錯分件數}}{\\text{總件數}} $$</p> <p>這個式子其實很樸素：八位病人錯了兩位，就是 $E=2/8=25\\%$。重要的是，評估不能只問「訓練資料上看起來多漂亮」，而要問它對新病人是否仍然可靠。</p> <h2>數值走一輪：一個看似及格、其實還要回頭的分診系統</h2> <p>現在我們真的做一次。先生成三種候選特徵：體溫 $T$、血氧 $O_2$，以及咳嗽程度。為了示範特徵選擇，我們先偷懶，只留下體溫；分類規則也先訂得很直覺：<strong>$T\\ge 38.5$ 就判為高危，否則判為一般。</strong></p> <table> <thead> <tr> <th>個案</th> <th style=\"text-align: right;\">體溫 $T$</th> <th style=\"text-align: right;\">血氧 $O_2$</th> <th>人工複核的真實類別</th> <th>只看體溫的結果</th> </tr> </thead> <tbody> <tr> <td>A</td> <td style=\"text-align: right;\">39.0</td> <td style=\"text-align: right;\">90</td> <td>高危</td> <td>正確</td> </tr> <tr> <td>B</td> <td style=\"text-align: right;\">38.8</td> <td style=\"text-align: right;\">96</td> <td>高危</td> <td>正確</td> </tr> <tr> <td>C</td> <td style=\"text-align: right;\">37.8</td> <td style=\"text-align: right;\">91</td> <td>高危</td> <td><strong>錯：漏掉</strong></td> </tr> <tr> <td>D</td> <td style=\"text-align: right;\">37.4</td> <td style=\"text-align: right;\">97</td> <td>一般</td> <td>正確</td> </tr> <tr> <td>E</td> <td style=\"text-align: right;\">38.0</td> <td style=\"text-align: right;\">95</td> <td>一般</td> <td>正確</td> </tr> <tr> <td>F</td> <td style=\"text-align: right;\">38.6</td> <td style=\"text-align: right;\">98</td> <td>一般</td> <td><strong>錯：誤報</strong></td> </tr> <tr> <td>G</td> <td style=\"text-align: right;\">37.2</td> <td style=\"text-align: right;\">93</td> <td>一般</td> <td>正確</td> </tr> <tr> <td>H</td> <td style=\"text-align: right;\">37.5</td> <td style=\"text-align: right;\">90</td> <td>高危</td> <td><strong>錯：漏掉</strong></td> </tr> </tbody> </table> <p>八位裡錯三位，所以</p> <p>$$ E=\\frac{3}{8}=37.5\\%. $$</p> <p>這時候先停一下：如果你是值班總醫師，會不會想說「那就把體溫門檻再調一點」？這是一個很自然的猜法，但真正的轉折在這裡——問題可能不是門檻，而是我們根本漏看了另一個重要線索。</p> <p>於是回到特徵選擇，把血氧也留下來；分類器改成：<strong>體溫高於等於 $38.5$，或血氧低於等於 $92$，就判為高危。</strong> 這個「或」形成的區域已經不是一條單純直線，而是兩種危險情況的聯合。</p> <p>重新看八位：C 因為血氧 $91$ 被抓回來，H 因為血氧 $90$ 也被抓回來；只有 F 仍因體溫 $38.6$ 被誤報。錯誤從三位降成一位：</p> <p>$$ E=\\frac{1}{8}=12.5\\%. $$</p> <p>看起來漂亮很多，但故事還沒結束。拿四位新病人測試時，出現一位體溫 $37.6$、血氧 $94$、咳嗽程度 $9$ 的病人。新規則沒有看到咳嗽，於是漏掉一位高危個案；新資料錯一位，錯誤率就是 $1/4=25\\%$。這個結果會把我們送回更早的階段：也許要重新生成「咳嗽程度」或影像紋理特徵，再重新選擇特徵、設計規則。</p> <p>這就是 Figure 1.3 回饋箭頭真正要說的事：<strong>評估不是終點，而是下一輪設計的起點。</strong> 有些方法甚至把特徵選擇和分類器設計放在同一個共同最佳化任務裡，因為「保留哪個線索」和「怎麼用它畫邊界」本來就互相牽制。</p> <h2>把符號翻回分診站的白話</h2> <p>現在再回頭整理四個名詞，順序就不會像背車牌：</p> <ul> <li><strong>特徵生成</strong>：決定要量哪些東西，讓樣本變成可用的數字線索。</li> <li><strong>特徵選擇</strong>：從候選線索中挑出真正有助於區分的子集合；$l$ 是最後留下的特徵數。</li> <li><strong>分類器設計</strong>：根據保留下來的特徵，找出決策邊界和最佳化準則。</li> <li><strong>系統評估</strong>：用新資料量錯誤率，檢查整套分診系統能不能泛化。</li> </ul> <h2>換個出口：垃圾郵件也走同一圈</h2> <p>把急診換成郵件過濾，骨架完全一樣。特徵生成可以是寄件者網域、連結數量、可疑詞比例；特徵選擇挑出最有辨識力的幾項；分類器設計決定什麼組合算垃圾郵件；系統評估則拿下週的新信件測試。若大量正常信被誤刪，就不是把「垃圾郵件」四個字貼得更大，而是回頭檢查特徵、門檻與錯誤代價。</p> <p>留一題給你：某郵件系統在 20 封新信中錯了 3 封。若新增「寄件者是否剛註冊」這個特徵後錯了 1 封，你會把改動歸在四階段中的哪兩個地方？先自己說一次，再往下看答案——答案是特徵生成／選擇與分類器規則都可能被重新設計，因為新線索一加入，原本的邊界也可能不再是最佳邊界。</p> <h2>大家最常在這裡搞混</h2> <p>第一個誤解是：「四個階段就是四個獨立抽屜，做完一格才能關起來。」其實它們是迴圈；評估發現漏診，可能回到特徵生成，也可能回到特徵選擇或分類器設計。</p> <p>第二個誤解是：「分類器就是畫一條直線。」直線只是某些資料形狀剛好適合的工具；原文特別提醒，非線性分界面才是一般情況。更根本的誤解是把特徵生成和特徵選擇當成同一件事：前者問「要量什麼」，後者問「候選中留什麼」，一個是發明菜單，一個是刪菜單。</p> <p>前一節我們已經看過平均值、標準差和特徵平面；現在這四階段就是把那個小例子放大成完整系統。你不再只問「這條線怎麼畫」，而是連「線索從哪裡來」與「畫完後是否真的可靠」一起問。</p> <h2>一句話收尾</h2> <p><strong>分類系統像急診分診站：先找對線索，再挑精華，接著訂出決策邊界，最後用新病人驗收；驗收不過，就沿著回饋箭頭回頭改，因為真正的流程是迴圈，不是流水線。</strong></p>", "4": "<h2>先把鏡頭對準一座城市</h2> <p>這一段屬於<strong>樣式識別、機器學習與分群分析</strong>。我們把自己想成替一座城市做空拍地圖分區的資料科學家：衛星拍到一大片土地，但電腦一開始不知道哪裡是水、哪裡是森林、哪裡是農地。問題不是「有沒有一個神奇按鈕」，而是「手上有多少答案，可以拿來教系統？」</p> <p>先用一句大白話定錨：<strong>有答案時，學怎麼照答案分類；沒有答案時，先按相似性找群；答案很少時，就用少量答案替分群畫幾條不能違反的規矩。</strong></p> <h2>三種地圖工作，差別只在手上的答案</h2> <h3>監督式：地圖上已經有標註</h3> <p>如果我們手上有一批已經確認的地面資料：這一格是水、那一格是森林、另一格是建築物，那就可以用這些已知類別的樣本設計分類器。這叫<strong>監督式學習</strong>。監督不是老師拿長尺打手心，而是資料裡真的附著「正確答案」，系統可以用它來調整規則。</p> <h3>非監督式：先別急著替群組取名字</h3> <p>若沒有地面標註，手上只剩每個地圖小格的數值，系統就不能直接知道「這一群叫森林」。它能做的是找出底層相似性，把特徵相近的向量聚在一起，這叫<strong>非監督式學習</strong>或<strong>分群</strong>。</p> <p>這裡的<strong>特徵向量</strong>，就是把同一小格在不同測量上的數值排成一列。假設衛星看兩個波段，一格土地可能寫成 $\\boldsymbol{x}=(x_1,x_2)$；若有 $l$ 個波段，就會變成 $\\boldsymbol{x}=(x_1,x_2,\\ldots,x_l)$。每一個 $x_i$ 都是「第 $i$ 個測量值」，而不是一個神秘的外星座標。</p> <p>分群完成後，分析者才拿少量地圖或實地訪查資料來替群組命名。電腦先說「這些點很像」，人類再說「原來這群是水」。<strong>分群找到的是結構，不是自動長出來的語意。</strong></p> <h3>半監督式：答案不多，但不能浪費</h3> <p>現實通常卡在中間：有些格子已經知道類別，更多格子卻沒有標籤。這時是<strong>半監督式學習</strong>：一方面利用少量 labeled data，也就是已標記資料；另一方面利用大量 unlabeled data，也就是未標記資料的整體分布。</p> <p>在分群任務裡，少量標記可以變成兩種限制：<strong>must-link</strong> 說「這兩點必須在同一群」；<strong>cannot-link</strong> 說「這兩點不能在同一群」。它們不是把點在畫面上硬拖到一起，而是告訴演算法哪些分組方案合法、哪些方案直接出局。</p> <h2>數值小地圖：最靠近的點，可能不是你以為的同一種地表</h2> <p>我們用兩個波段做一個迷你城市。令 $x_1$ 表示可見光反射指標，$x_2$ 表示另一個能幫助分辨地表的波段。四個已知小格和一個曖昧小格如下：</p> <table> <thead> <tr> <th>小格</th> <th>特徵向量</th> <th>已知／未知</th> <th>地面資料</th> </tr> </thead> <tbody> <tr> <td>W1</td> <td>$(1.0,1.0)$</td> <td>已知</td> <td>水</td> </tr> <tr> <td>W2</td> <td>$(1.5,1.2)$</td> <td>已知</td> <td>水</td> </tr> <tr> <td>F1</td> <td>$(5.0,5.0)$</td> <td>已知</td> <td>森林</td> </tr> <tr> <td>F2</td> <td>$(5.5,4.8)$</td> <td>已知</td> <td>森林</td> </tr> <tr> <td>Q</td> <td>$(3.2,3.0)$</td> <td>未知</td> <td>實地後來確認為森林</td> </tr> </tbody> </table> <p>先做一個很透明的監督式示範：把水的兩個已知點平均，得到水的代表位置</p> <p>$$ c_W=\\left(\\frac{1.0+1.5}{2},\\frac{1.0+1.2}{2}\\right)=(1.25,1.10) $$</p> <p>森林的代表位置是</p> <p>$$ c_F=\\left(\\frac{5.0+5.5}{2},\\frac{5.0+4.8}{2}\\right)=(5.25,4.90) $$</p> <p>現在把曖昧點 Q 拿來比距離。兩點間的直線距離寫成</p> <p>$$ d(\\boldsymbol{x},\\boldsymbol{y})=\\sqrt{(x_1-y_1)^2+(x_2-y_2)^2} $$</p> <p>Q 到水代表點的距離是</p> <p>$$ d(Q,c_W)=\\sqrt{(3.2-1.25)^2+(3.0-1.10)^2} =\\sqrt{1.95^2+1.90^2} =\\sqrt{7.4125}\\approx2.72 $$</p> <p>Q 到森林代表點的距離是</p> <p>$$ d(Q,c_F)=\\sqrt{(3.2-5.25)^2+(3.0-4.90)^2} =\\sqrt{2.05^2+1.90^2} =\\sqrt{7.8125}\\approx2.80 $$</p> <p>距離只差 $0.08$，但純幾何規則會說：「Q 比較靠近水，先放水那邊。」</p> <p>這裡先埋一個小反轉：<strong>如果最靠近就等於同類，那現場勘查是不是可以退休了？</strong> 先不要急著回答。Q 的地面資料後來確認是森林，表示幾何相似性很有用，卻不等於完整真相。這正是半監督式方法有價值的地方。</p> <h2>三種學習方式，在同一張小地圖上各自做什麼</h2> <p>在<strong>監督式</strong>版本裡，我們已經知道 W1、W2 是水、F1、F2 是森林，所以可以用它們設計分類規則，再判斷新來的 Q。這裡的答案像地圖上的圖例，系統可以直接學「哪一側是哪一類」。</p> <p>在<strong>非監督式</strong>版本裡，我們把類別名稱先遮住，只留下五個向量。演算法會依採用的相似度量測和分群方法，把靠近的點聚在一起。Q 到 W2 的距離是</p> <p>$$ d(Q,W2)=\\sqrt{(3.2-1.5)^2+(3.0-1.2)^2} =\\sqrt{1.7^2+1.8^2} =\\sqrt{6.13}\\approx2.48 $$</p> <p>而 Q 到 F1 的距離是</p> <p>$$ d(Q,F1)=\\sqrt{(3.2-5.0)^2+(3.0-5.0)^2} =\\sqrt{1.8^2+2^2} =\\sqrt{7.24}\\approx2.69 $$</p> <p>所以只看距離，Q 再一次很容易被吸到水群。這不表示非監督式「做錯了」；它忠實地回答的是「哪些向量在你選定的相似度下比較接近」。問題是，接近的群究竟代表什麼，仍要靠專家、地圖或實地資料解釋。換一種距離、尺度化方式或分群演算法，結果也可能不同。</p> <p>在<strong>半監督式</strong>版本裡，我們把少量地面知識轉成限制：</p> <ul> <li>把 Q 與 F1 標成同類，產生 <code>must-link(Q,F1)</code>。</li> <li>把 Q 與 W2 標成不同類，產生 <code>cannot-link(Q,W2)</code>。</li> </ul> <p>現在演算法仍然可以參考距離，但不能再選擇「把 Q 和 W2 放同群」這個方案；它也必須尊重 Q 與 F1 同群的要求。於是，Q 從原本被幾何距離拉向水群，改被少量語意限制導向森林群。注意，must-link 不是把 Q 的座標真的搬到 F1 旁邊；它是把某些分群結果標成「不准這樣分」。這個差別很重要，否則你會以為半監督式是在畫面上用橡皮筋拖點。</p> <h2>為什麼遙測和社會科學都會遇到同一件事？</h2> <p>在多光譜遙測中，同一小格土地的不同波段反射，組成一個向量。水、森林、農地、火燒地可能在高維空間形成不同密集區；分群先找出這些密集區，再由分析者拿地圖或現場訪查替群組命名。這就是「先找結構，再補語意」。</p> <p>把鏡頭換到社會科學，國家也可以變成向量。例如用三個指標表示一個國家：國民生產毛額、識字率、兒童死亡率。假設我們把每個指標都轉成 0 到 100 的指數，國家甲是 $(20,80,12)$，國家乙是 $(22,75,10)$，國家丙是 $(90,5,2)$。甲和乙在三個座標上都接近，容易形成「低 GNP、高文盲率、較高兒童死亡率」的一群；丙則可能落在另一個結構區。表面上是國家資料，底層仍然是「向量、相似度、分群、專家解釋」這條路。</p> <h2>留一個小練習：距離和意義，誰該聽誰的？</h2> <p>想像再加入一個未標記小格 R，特徵向量是 $(3.0,3.4)$。純距離分群可能把 R 和 Q 放在一起，也可能因為採用的演算法不同，把它分到旁邊的群。請你自己設計一個限制：如果現場人員說 R 與 F1 是同一種地表，應該寫哪一種 link？如果說 R 與 W1 不可能同類，又應該寫哪一種 link？答案先留在腦中：前者是 must-link，後者是 cannot-link；標記很少，但它能把分群的解答空間縮小。</p> <h2>大家最常在這裡搞混</h2> <p>第一個誤解是：「非監督式就是什麼都不知道，所以它不需要特徵。」其實非監督式仍然需要特徵向量；它只是沒有每個向量的類別答案。沒有標籤，不等於沒有資料，也不等於電腦可以閉眼亂分。</p> <p>第二個誤解是：「分群完成後，群組名稱會自己浮現。」不會。演算法看到的是數值結構；「這群是水、那群是森林」需要地圖、實地訪查或專家解釋。第三個誤解則是：「半監督式就是把一半資料標籤、一半資料不標籤。」半監督的重點不是剛好五五分，而是<strong>少量標籤加上大量未標記結構</strong>，再把先驗知識轉成演算法必須遵守的限制。</p> <p>前面 kp-2 談過特徵、特徵向量和分類器；現在只是把同一個向量放進三種「答案供應量」不同的情境。接著回到 kp-3，你也會看到：一旦決定用哪些特徵、採用哪種相似度和分群規則，整個分類系統就進入設計與評估的迴圈。半監督式的 must-link／cannot-link，正是在資料不完整時，把少量可靠知識接回這條設計管線。</p> <h2>一句話收尾</h2> <p><strong>城市空拍分區的口訣是：有答案，照答案學分類；沒答案，按相似性找群；答案少，就用 must-link 和 cannot-link 管住找群——距離負責找結構，專業知識負責替結構命名並修正方向。</strong></p>"};
+  var modal = document.getElementById('guide-modal');
+  function openGuide(kp){
+    modal.querySelector('h1').textContent = GUIDE_TITLES[kp] || '';
+    modal.querySelector('.modal-body').innerHTML = GUIDE_CONTENT[kp] || '';
+    modal.classList.add('open');
+    if(window.renderMath) window.renderMath();
+  }
+  window.closeGuide = function(){ modal.classList.remove('open'); };
+  window.openGuide = openGuide;
+  document.addEventListener('click', function(e){
+    if(e.target.classList && e.target.classList.contains('guide-btn')){
+      openGuide(parseInt(e.target.dataset.kp));
+    }
+    if(e.target.classList && e.target.classList.contains('modal-close')){
+      window.closeGuide();
+    }
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') window.closeGuide();
+  });
+  modal.addEventListener('click', function(e){
+    if(e.target === modal) window.closeGuide();
+  });
+})();
+</script>
+
+</body>
+</html>

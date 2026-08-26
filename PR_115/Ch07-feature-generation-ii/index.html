@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>特徵生成 II：影像與音訊特徵</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="setTimeout(function(){if(window.renderMath)renderMath();},200);"></script>
+<style>
+:root { --accent:#7c3aed; --accent2:#5b21b6; --bg:#f6f5fb; --card:#fff; --ink:#1f2430; --muted:#6b7280; --line:#e5e7eb; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; background:var(--bg); color:var(--ink); line-height:1.75; }
+header { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; padding:30px 20px; text-align:center; }
+header h1 { margin:0 0 8px; font-size:1.55rem; }
+header p { margin:0; opacity:.92; font-size:.92rem; }
+.wrap { max-width:1120px; margin:0 auto; display:flex; gap:24px; padding:22px; }
+nav { width:270px; position:sticky; top:16px; align-self:flex-start; max-height:90vh; overflow:auto; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; }
+nav h2 { font-size:.8rem; color:var(--muted); margin:0 0 10px; text-transform:uppercase; letter-spacing:.5px; }
+nav .toc-item { display:block; padding:6px 10px; border-radius:8px; color:var(--ink); text-decoration:none; font-size:.86rem; }
+nav .toc-item:hover { background:#f3f0ff; color:var(--accent); }
+main { flex:1; min-width:0; }
+.progress { position:sticky; top:0; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin-bottom:18px; display:flex; align-items:center; gap:12px; z-index:10; }
+.progress .bar { flex:1; height:8px; background:#eee; border-radius:99px; overflow:hidden; }
+.progress .fill { height:100%; width:0; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .3s; }
+.progress .txt { font-size:.85rem; color:var(--muted); white-space:nowrap; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:14px; margin-bottom:18px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+.card-head { display:flex; align-items:center; gap:12px; padding:14px 18px; cursor:pointer; background:#fafafd; border-bottom:1px solid var(--line); }
+.card-head:hover { background:#f5f3ff; }
+.card-head .badge { background:var(--accent); color:#fff; font-size:.75rem; font-weight:700; padding:3px 9px; border-radius:99px; }
+.card-head h3 { margin:0; font-size:1.05rem; flex:1; }
+.card-head .toggle { transition:transform .2s; color:var(--muted); }
+.card.collapsed .toggle { transform:rotate(-90deg); }
+.card-body { padding:16px 18px; }
+.card.collapsed .card-body { display:none; }
+.card-body h4 { margin:.9em 0 .4em; color:var(--accent2); }
+.card-body p { margin:.6em 0; }
+.card-body strong { color:var(--accent2); }
+.quiz { margin-top:18px; border:1px dashed var(--line); border-radius:12px; padding:14px; background:#fdfdff; }
+.quiz .q { font-weight:600; margin-bottom:10px; }
+.quiz .opts { display:grid; gap:8px; margin-bottom:10px; }
+.quiz .opt { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--line); border-radius:9px; cursor:pointer; background:#fff; }
+.quiz .opt:hover { border-color:var(--accent); }
+.quiz .check { background:var(--accent); color:#fff; border:none; padding:7px 16px; border-radius:8px; cursor:pointer; font-weight:600; }
+.quiz .check:hover { background:var(--accent2); }
+.quiz .fb { margin-top:8px; font-size:.9rem; display:none; }
+.quiz .fb.ok { display:block; color:#059669; }
+.quiz .fb.wrong { display:block; color:#dc2626; }
+footer { text-align:center; color:var(--muted); font-size:.8rem; padding:24px; }
+@media (max-width:760px) { .wrap { flex-direction:column; } nav { width:auto; position:static; max-height:none; } }
+
+.figure-diagram img{max-width:100%;border-radius:10px;border:1px solid #eee;margin:10px 0}
+figure.diagram{margin:14px 0}
+figure.diagram figcaption{font-size:.85rem;color:var(--muted);text-align:center;margin-top:6px}
+.ai-diagram{margin:8px 0 4px}
+.ai-diagram summary{color:var(--accent);cursor:pointer;font-size:.88rem}
+.ai-diagram pre{background:#f7f5ff;border:1px solid #e0d8f5;border-radius:8px;padding:10px;font-size:.82rem;white-space:pre-wrap;color:#4c1d95}
+
+
+.demo{border:1px solid #e0d8f5;border-radius:12px;margin:14px 0;background:#fdfbff;overflow:hidden}
+.demo-head{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;padding:10px 14px;font-weight:600;font-size:.95rem}
+.demo-body{display:flex;gap:16px;padding:14px;flex-wrap:wrap;align-items:flex-start}
+.demo-panel{flex:1;min-width:220px;display:flex;flex-direction:column;gap:10px}
+.demo-panel label{font-size:.85rem;color:#4c1d95;font-weight:600}
+.demo-panel input[type=range]{width:100%}
+.demo-panel select{padding:6px;border:1px solid #d0c8e8;border-radius:8px}
+.panel-readout{background:#f3f0ff;border-radius:8px;padding:8px 10px;font-size:.85rem;color:#4c1d95;min-height:20px}
+.demo-canvas-row{display:flex;gap:10px}
+.demo-canvas-row canvas{border:1px solid #eee;border-radius:8px}
+.demo-instruction{background:#f7f5ff;border-top:1px solid #e0d8f5;padding:10px 14px;font-size:.85rem;color:#4c1d95;line-height:1.6}
+
+
+
+
+/* 原文附圖 */
+.orig-fig{margin:18px 0;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fafafa}
+.orig-fig img{max-width:100%;height:auto;border-radius:8px;display:block}
+.orig-fig figcaption{font-size:.82rem;color:#6b7280;margin-top:8px;text-align:center}
+
+
+
+
+
+
+/* Phase D 教授祕笆 CSS */
+.guide-btn{display:inline-block;background:#7c3aed;color:#fff;border:none;padding:12px 22px;
+  border-radius:12px;font-size:1.02rem;font-weight:700;cursor:pointer;margin:10px 0;
+  box-shadow:0 4px 14px rgba(124,58,237,.35);transition:transform .15s,background .2s}
+.guide-btn:hover{background:#6d28d9;transform:translateY(-2px)}
+#guide-modal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(20,10,40,.6);
+  align-items:center;justify-content:center;padding:20px}
+#guide-modal.open{display:flex}
+#guide-modal .modal-box{background:#fff;max-width:720px;width:100%;max-height:85vh;overflow-y:auto;
+  border-radius:16px;padding:26px 30px;box-shadow:0 20px 60px rgba(0,0,0,.4);position:relative}
+#guide-modal .modal-close{position:sticky;top:0;float:right;background:#f3f0ff;border:1px solid #e0d8f5;
+  color:#4c1d95;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1.1rem;line-height:1}
+#guide-modal h1{color:#5b21b6;font-size:1.4rem;margin:0 0 14px;padding-right:40px}
+#guide-modal .modal-body{color:#1f2430;line-height:1.8;font-size:.98rem}
+#guide-modal .modal-body table{border-collapse:collapse;margin:10px 0;width:100%}
+#guide-modal .modal-body td,#guide-modal .modal-body th{border:1px solid #e5e7eb;padding:6px 10px;font-size:.92rem}
+#guide-modal .modal-body th{background:#f5f3ff}
+/* END Phase D */
+
+</style>
+</head>
+<body>
+<header>
+  <h1>特徵生成 II：影像與音訊特徵</h1>
+  <p>Chapter 7 · PR 115 · 互動式自學講義</p>
+</header>
+<div class="wrap">
+  <nav><h2>目錄</h2><a class="toc-item" href="#kp1">7.1 圖像表示與特徵生成動機（引言）</a><a class="toc-item" href="#kp2">7.2.1 一階統計特徵（灰度直方圖）</a><a class="toc-item" href="#kp3">7.2.1 二階統計特徵：共相關矩陣</a><a class="toc-item" href="#kp4">7.2.1 灰階游程長度特徵</a><a class="toc-item" href="#kp5">7.2.2 局部線性轉換（Laws 遮罩）</a><a class="toc-item" href="#kp6">7.2.3 幾何矩與中心矩</a><a class="toc-item" href="#kp7">7.2.3 Hu 七不變矩</a><a class="toc-item" href="#kp8">7.2.3 Zernike 矩</a><a class="toc-item" href="#kp9">7.2.4 一維 AR 參數模型</a><a class="toc-item" href="#kp10">7.2.4 AR 參數估計（Levinson）</a><a class="toc-item" href="#kp11">7.2.4 二維 AR 模型</a><a class="toc-item" href="#kp12">7.3.1 Fourier 描述子（形狀）</a><a class="toc-item" href="#kp13">7.3.2 鏈碼（Chain Codes）</a><a class="toc-item" href="#kp14">7.3.3 基於矩陣的形狀特徵</a><a class="toc-item" href="#kp15">7.3.4 幾何特徵（周長/面積/圓度）</a><a class="toc-item" href="#kp16">7.4.1 自相似與碎形維度</a><a class="toc-item" href="#kp17">7.4.2 分數布朗運動與 Hurst 參數</a><a class="toc-item" href="#kp18">7.5.1 音訊特徵：短時處理</a><a class="toc-item" href="#kp19">7.5.2 倒頻譜（Cepstrum）</a><a class="toc-item" href="#kp20">7.5.3 梅爾倒頻譜（Mel-Cepstrum / MFCC）</a><a class="toc-item" href="#kp21">7.5.4 頻譜特徵</a><a class="toc-item" href="#kp22">7.5.5 時域特徵：過零率與能量</a></nav>
+  <main>
+    <div class="progress"><div class="bar"><div class="fill" id="pf"></div></div><div class="txt" id="ptxt"></div></div>
+    <section id="kp1" class="card" data-kp="1">
+  <div class="card-head"><span class="badge">7.1</span><h3>圖像表示與特徵生成動機（引言）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="1">📖 偷看教授祕笈</button>
+<p>數位影像在電腦裡就是一張二維陣列 $I(m,n)$，每個位置 $(m,n)$ 的數值叫<strong>像素</strong>（pixel），代表那一點的亮度。影像的「深度」$N_g$ 是灰階階層數，例如 $N_g=256$ 就是 0~255 共 256 階灰。</p>
+<p>就算是一張小小的 $64\times64$ 影像，也有 4096 個像素；直接拿這 4096 個數值當特徵餵給分類器，既耗計算又容易過度配適（泛化差）。<strong>特徵生成</strong>的目的，就是把影像陣列 $I(m,n)$ 變成數量少、卻能把不同類別「分得開」的新變數。</p>
+<p>本章沿兩條主線走：<strong>影像分析</strong>（紋理、形狀、碎形）與<strong>音訊分類</strong>（短時窗、頻譜）。</p><div class="quiz" data-ans="B">
+      <p class="q"><p>把 $64\times64$ 影像的 4096 個原始像素直接當分類特徵，主要問題是？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q1-0" value="A"><span>A. <p>計算太慢而已</p></span></label><label class="opt"><input type="radio" name="q1-0" value="B"><span>B. <p>數量過多造成計算與泛化問題</p></span></label><label class="opt"><input type="radio" name="q1-0" value="C"><span>C. <p>數值是整數不能當特徵</p></span></label><label class="opt"><input type="radio" name="q1-0" value="D"><span>D. <p>沒有問題最好直接用</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="原始像素太多會造成計算負擔與泛化（過擬合）問題，這正是需要做特徵生成的原因。"></div>
+    </div><div class="quiz" data-ans="B">
+      <p class="q"><p>影像深度 $N_g$ 指的是？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q1-1" value="A"><span>A. <p>影像寬度</p></span></label><label class="opt"><input type="radio" name="q1-1" value="B"><span>B. <p>灰階層數</p></span></label><label class="opt"><input type="radio" name="q1-1" value="C"><span>C. <p>影像面積</p></span></label><label class="opt"><input type="radio" name="q1-1" value="D"><span>D. <p>解析度</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="$N_g$ 是灰階層數，如 $N_g=256$ 表示 0~255 共 256 階。"></div>
+    </div></div>
+</section>
+<section id="kp2" class="card" data-kp="2">
+  <div class="card-head"><span class="badge">7.2.1</span><h3>一階統計特徵（灰度直方圖）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+
+
+<div class="demo" data-demo-id="1st-order">
+  <div class="demo-head">🎛️ 互動：一階統計特徵（偏態 / 峰態）</div>
+  <div class="demo-body">
+    <div class="demo-panel">
+      <div class="panel-item"><label>偏態 skew（μ₃ 方向）</label>
+        <input type="range" id="skew" min="-0.9" max="0.9" step="0.05" value="0"></div>
+      <div class="panel-item"><label>峰態 kurtosis（μ₄ 陡峭度）</label>
+        <input type="range" id="kurt" min="0.3" max="3" step="0.1" value="1"></div>
+      <div class="panel-item"><label>灰階數 N_g</label>
+        <input type="range" id="ng" min="8" max="64" step="4" value="32"></div>
+      <div class="panel-readout demo-readout" id="ro-1st"></div>
+    </div>
+    <canvas id="cv-1st" width="520" height="300"></canvas>
+  </div>
+  <div class="demo-instruction">
+    <b>做什麼：</b>調偏態與峰態，看直方圖形狀。<b>怎麼操作：</b>拖動三個滑桿。<b>觀察什麼：</b>偏態讓分布歪向一邊、峰態讓分布變尖或變扁。<b>正確基準：</b>偏態=0 對稱；峰態大→高瘦（leptokurtic）、小→扁平（platykurtic）。
+  </div>
+</div>
+<button class="guide-btn" data-kp="2">📖 偷看教授祕笈</button>
+
+
+<figure class="diagram" data-kpcap="2"><img src="assets/diagram-1st-order.png" alt="知識點 2 示意圖" style="max-width:100%"><figcaption>圖：知識點 7.2 示意</figcaption></figure>
+<div class="ai-illustration" data-diagram-id="kp-2" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT: 一階直方圖的三個統計量——偏態(μ3)與峰態(μ4)。
+WHY: 展示灰階分布如何被偏態與峰態描述。
+MUST show: 左圖三條不同偏態的分布曲線(負偏/對稱/正偏)，右圖三條不同陡峭度的峰態曲線(高瘦/中等/扁平)。
+AVOID: 不要只畫單一鐘形曲線。
+STYLE: clean scientific line plot, white background, three curves per panel, legend.</pre></details></div><p>把影像某一區塊的灰度當成隨機變數 $I$，統計每種灰度出現的比例，得到<strong>一階直方圖</strong>：</p>
+<p>$$P(I)=\frac{\text{灰度為 }I\text{ 的像素數}}{\text{區塊總像素數}}\tag{7.1}$$</p>
+<p>從 $P(I)$ 可算出一連串特徵：</p>
+<ul>
+<li><strong>矩</strong> $m_i=E[I^i]=\sum_I I^i P(I)$：$m_1=E[I]$ 是均值。</li>
+<li><strong>中心矩</strong> $\mu_i=E[(I-E[I])^i]$：$\mu_2=\sigma^2$（變異數，量直方圖寬度）、$\mu_3$（<strong>偏態</strong>，量對稱性）、$\mu_4$（<strong>峰態</strong>，量陡峭度）。</li>
+<li><strong>熵</strong> $H=-\sum P(I)\log_2 P(I)$：量直方圖是否均勻。</li>
+</ul>
+<p><strong>直覺</strong>：變異數大→灰階分得散；偏態≠0→直方圖歪向一邊；峰態大→集中在少數灰階。</p>
+
+
+
+<!-- == 原文附圖 kp-2 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-03_540_1147_1444_261.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 2）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="A">
+      <p class="q"><p>一階直方圖能告訴我們影像的？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q2-0" value="A"><span>A. <p>灰階值分布（均值/變異/偏態/峰態）</p></span></label><label class="opt"><input type="radio" name="q2-0" value="B"><span>B. <p>灰階空間相對位置</p></span></label><label class="opt"><input type="radio" name="q2-0" value="C"><span>C. <p>邊界形狀</p></span></label><label class="opt"><input type="radio" name="q2-0" value="D"><span>D. <p>時間變化</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="一階統計只描述灰階分布，不含空間位置資訊（那屬二階）。"></div>
+    </div><div class="quiz" data-ans="B">
+      <p class="q"><p>直方圖「偏態」對應的中心矩是？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q2-1" value="A"><span>A. <p>$\mu_2$</p></span></label><label class="opt"><input type="radio" name="q2-1" value="B"><span>B. <p>$\mu_3$</p></span></label><label class="opt"><input type="radio" name="q2-1" value="C"><span>C. <p>$\mu_4$</p></span></label><label class="opt"><input type="radio" name="q2-1" value="D"><span>D. <p>$m_1$</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="$\mu_3$ 是偏態，量直方圖繞均值的對稱性。"></div>
+    </div></div>
+</section>
+<section id="kp3" class="card" data-kp="3">
+  <div class="card-head"><span class="badge">7.2.1</span><h3>二階統計特徵：共相關矩陣</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+
+
+<div class="demo" data-demo-id="cooccurrence">
+  <div class="demo-head">🎛️ 互動：共相關矩陣（方向 / 距離）</div>
+  <div class="demo-body">
+    <div class="demo-panel">
+      <div class="panel-item"><label>方向 φ</label>
+        <select id="phi"><option value="0">0°</option><option value="45">45°</option><option value="90">90°</option><option value="135">135°</option></select></div>
+      <div class="panel-item"><label>距離 d</label>
+        <input type="range" id="dist" min="1" max="3" step="1" value="1"></div>
+      <div class="panel-item"><label>紋理型態</label>
+        <select id="tex"><option value="diag">斜紋</option><option value="horiz">水平條紋</option><option value="noise">隨機雜訊</option></select></div>
+      <div class="panel-readout demo-readout" id="ro-cooc"></div>
+    </div>
+    <div class="demo-canvas-row">
+      <canvas id="cv-tex" width="200" height="200"></canvas>
+      <canvas id="cv-cooc" width="200" height="200"></canvas>
+    </div>
+  </div>
+  <div class="demo-instruction">
+    <b>做什麼：</b>看不同紋理在特定方向/距離下的共相關矩陣。<b>怎麼操作：</b>選方向、距離、紋理型態。<b>觀察什麼：</b>斜紋在 45° 方向、水平紋在 0° 方向會讓矩陣對角線集中。<b>正確基準：</b>隨機雜訊的矩陣較均勻；規則紋理在匹配方向時矩陣較集中。
+  </div>
+</div>
+<button class="guide-btn" data-kp="3">📖 偷看教授祕笈</button>
+
+
+<figure class="diagram" data-kpcap="3"><img src="assets/diagram-cooccurrence.png" alt="知識點 3 示意圖" style="max-width:100%"><figcaption>圖：知識點 7.3 示意</figcaption></figure>
+<div class="ai-illustration" data-diagram-id="kp-3" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT: 共相關矩陣的建構。
+WHY: 展示像素對在方向φ與距離d下的空間關係。
+MUST show: 一個小影像格陣列，用彩色箭頭標出水平(0°)與垂直(90°)方向的像素對。
+AVOID: 不要畫成普通的灰階直方圖。
+STYLE: flat scientific diagram, small pixel grid, white background, red/blue directional arrows.</pre></details></div><p>一階統計看不出「哪些灰階彼此相鄰」。要抓<strong>紋理</strong>得看<strong>像素對</strong>：相距 $d$、方向 $\phi\in\{0^\circ,45^\circ,90^\circ,135^\circ\}$ 的兩像素灰度 $(I_1,I_2)$ 一起出現的機率，構成<strong>共相關（co-occurrence）矩陣</strong>：</p>
+<p>$$A=\frac{1}{R}\big[\eta(I_1,I_2)\big]$$</p>
+<p>$\eta(I_1,I_2)$ 是「距離 $d$、方向 $\phi$ 下灰度為 $I_1,I_2$ 的像素對數」；$R$ 是可能像素對數總。由此定義 <strong>Haralick 特徵</strong>：</p>
+<ul>
+<li><strong>ASM</strong> $=\sum_{i,j}P(i,j)^2$：量平滑度，全同灰階→1。</li>
+<li><strong>Contrast</strong> $=\sum_n n^2\sum_{|i-j|=n}P(i,j)$：量對比，$n^2$ 放大大差異。</li>
+<li><strong>IDF</strong> $=\sum_{i,j}\frac{P(i,j)}{1+(i-j)^2}$：低對比時較高。</li>
+<li><strong>Entropy</strong> $H_{xy}=-\sum_{i,j}P(i,j)\log P(i,j)$：量隨機程度。</li>
+</ul>
+<p><strong>旋轉容忍</strong>：實務上對四個方向取平均，讓特徵對旋轉不敏感。</p>
+
+
+
+<!-- == 原文附圖 kp-3 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-05_495_493_278_588.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 3）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="A">
+      <p class="q"><p>二階共矩陣比一階統計多了哪種資訊？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q3-0" value="A"><span>A. <p>灰階空間相對位置/朝向</p></span></label><label class="opt"><input type="radio" name="q3-0" value="B"><span>B. <p>灰階均值</p></span></label><label class="opt"><input type="radio" name="q3-0" value="C"><span>C. <p>像素個數</p></span></label><label class="opt"><input type="radio" name="q3-0" value="D"><span>D. <p>影像深度</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="共矩陣納入了距離 $d$ 與方向 $\phi$，記錄灰階空間關係。"></div>
+    </div><div class="quiz" data-ans="B">
+      <p class="q"><p>對同一影像的共矩陣，把四方向結果平均是為了？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q3-1" value="A"><span>A. <p>加快計算</p></span></label><label class="opt"><input type="radio" name="q3-1" value="B"><span>B. <p>讓紋理特徵對旋轉不敏感</p></span></label><label class="opt"><input type="radio" name="q3-1" value="C"><span>C. <p>降低解析度</p></span></label><label class="opt"><input type="radio" name="q3-1" value="D"><span>D. <p>提高對比度</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="方向平均後影像旋轉時特徵值變化小。"></div>
+    </div></div>
+</section>
+<section id="kp4" class="card" data-kp="4">
+  <div class="card-head"><span class="badge">7.2.1</span><h3>灰階游程長度特徵</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="4">📖 偷看教授祕笈</button>
+
+
+<p><strong>灰階游程</strong>（run）是一串連續且灰度相同的像素。以<strong>游程長度矩陣</strong> $Q_{RL}(i,j)$ 記錄「灰度 $i$ 以游程長度 $j$ 出現的次數」，是 $N_g\times N_r$ 矩陣。</p>
+<p>由此定義：</p>
+<ul>
+<li><strong>SRE（短游程強調）</strong>：用 $1/j^2$ 加權，強調短游程→粗糙紋理大。</li>
+<li><strong>LRE（長游程強調）</strong>：用 $j^2$ 加權，強調長游程→平滑紋理大。</li>
+<li><strong>GLNU（灰階不均勻）</strong>：灰度間游程分布差異。</li>
+<li><strong>RLN（游程不均勻）</strong>：游程長度間分布差異。</li>
+</ul>
+<p><strong>直覺</strong>：粗糙紋理游程短→SRE 大；平滑紋理游程長→LRE 大。</p>
+
+
+
+<!-- == 原文附圖 kp-4 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-09_483_902_270_384.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 4）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="B">
+      <p class="q"><p>平滑影像（大面積同灰度）通常哪個特徵值較大？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q4-0" value="A"><span>A. <p>SRE</p></span></label><label class="opt"><input type="radio" name="q4-0" value="B"><span>B. <p>LRE</p></span></label><label class="opt"><input type="radio" name="q4-0" value="C"><span>C. <p>GLNU</p></span></label><label class="opt"><input type="radio" name="q4-0" value="D"><span>D. <p>對比度</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="平滑區游程長，LRE 用 $j^2$ 加權故較大。"></div>
+    </div></div>
+</section>
+<section id="kp5" class="card" data-kp="5">
+  <div class="card-head"><span class="badge">7.2.2</span><h3>局部線性轉換（Laws 遮罩）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="5">📖 偷看教授祕笈</button>
+<p>另一種抓紋理的方法是<strong>局部線性轉換</strong>。取 $N\times N$ 鄰域當向量 $\boldsymbol{x}_{mn}$，乘線性轉換矩陣 $A^T$：</p>
+<p>$$\boldsymbol{y}_{mn}=A^T\boldsymbol{x}_{mn}$$</p>
+<p>相當於用 $N^2$ 個遮罩（mask）捲積原圖，得到 $N^2$ 個新「通道」影像。Laws 用三個基本向量組出 9 個 $3\times3$ 遮罩：</p>
+<ul>
+<li>$[1,2,1]^T$：局部平均（平滑）</li>
+<li>$[-1,0,1]^T$：邊緣偵測</li>
+<li>$[-1,2,-1]^T$：斑點偵測</li>
+</ul>
+<p>遮罩彼此做外積產生 9 個遮罩；對每個通道再算一階統計（變異、峰態）當特徵。</p>
+<p><strong>精髓</strong>：原本影像的空間相依（二階）被吸收進每個通道的一階統計裡。</p>
+
+
+
+<!-- == 原文附圖 kp-5 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-12_552_860_282_609.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 5）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="A">
+      <p class="q"><p>Laws 的三個基本向量主要對應哪三種局部特徵？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q5-0" value="A"><span>A. <p>平均/邊緣/斑點</p></span></label><label class="opt"><input type="radio" name="q5-0" value="B"><span>B. <p>顏色/大小/方向</p></span></label><label class="opt"><input type="radio" name="q5-0" value="C"><span>C. <p>亮度/對比/飽和</p></span></label><label class="opt"><input type="radio" name="q5-0" value="D"><span>D. <p>頻率/相位/振幅</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="$[1,2,1]$ 平均、$[-1,0,1]$ 邊緣、$[-1,2,-1]$ 斑點。"></div>
+    </div></div>
+</section>
+<section id="kp6" class="card" data-kp="6">
+  <div class="card-head"><span class="badge">7.2.3</span><h3>幾何矩與中心矩</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="6">📖 偷看教授祕笈</button>
+
+
+<p>影像 $I(x,y)$ 的<strong>幾何矩</strong>：</p>
+<p>$$m_{pq}=\iint x^p y^q I(x,y)\,dx\,dy\tag{7.21}$$</p>
+<p>幾何矩可完整表示一張影像（可由所有階重建）。<strong>中心矩</strong>以質心為原點：</p>
+<p>$$\mu_{pq}=\int\int (x-\bar x)^p(y-\bar y)^q I(x,y)\,dx\,dy\tag{7.22}$$</p>
+<p>其中 $\bar x=m_{10}/m_{00}$、$\bar y=m_{01}/m_{00}$。<strong>歸一化中心矩</strong> $\eta_{pq}=\mu_{pq}/\mu_{00}^{\gamma}$（$\gamma=(p+q+2)/2$）對平移、縮放不變。</p>
+<p><strong>直覺</strong>：一階矩=$\bar x$（質心）；二階矩描述分布的方向與寬度。</p><div class="quiz" data-ans="A">
+      <p class="q"><p>中心矩對哪種幾何變換不變？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q6-0" value="A"><span>A. <p>平移</p></span></label><label class="opt"><input type="radio" name="q6-0" value="B"><span>B. <p>旋轉</p></span></label><label class="opt"><input type="radio" name="q6-0" value="C"><span>C. <p>縮放</p></span></label><label class="opt"><input type="radio" name="q6-0" value="D"><span>D. <p>以上皆非</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="中心矩以質心為原點，故對平移不變。"></div>
+    </div></div>
+</section>
+<section id="kp7" class="card" data-kp="7">
+  <div class="card-head"><span class="badge">7.2.3</span><h3>Hu 七不變矩</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="7">📖 偷看教授祕笈</button>
+
+
+<p>Hu 定義了七個對平移、縮放、旋轉都不變的矩，由歸一化中心矩組合。例如前兩個：</p>
+<p>$$\phi_1=\eta_{20}+\eta_{02},\quad \phi_2=(\eta_{20}-\eta_{02})^2+4\eta_{11}^2$$</p>
+<p>前六個對<strong>反射（鏡射）</strong>也不變，$\phi_7$ 在鏡射時變號。實務上常用 $\log|\phi_k|$ 當特徵以避免精確度問題。</p><div class="quiz" data-ans="C">
+      <p class="q"><p>七個不變矩中哪個在「鏡射（reflection）」時會變號？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q7-0" value="A"><span>A. <p>$\phi_1$</p></span></label><label class="opt"><input type="radio" name="q7-0" value="B"><span>B. <p>$\phi_2$</p></span></label><label class="opt"><input type="radio" name="q7-0" value="C"><span>C. <p>$\phi_7$</p></span></label><label class="opt"><input type="radio" name="q7-0" value="D"><span>D. <p>$\phi_6$</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="$\phi_7$ 對鏡射變號，可用來區分左右手性。"></div>
+    </div></div>
+</section>
+<section id="kp8" class="card" data-kp="8">
+  <div class="card-head"><span class="badge">7.2.3</span><h3>Zernike 矩</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="8">📖 偷看教授祕笈</button>
+<p>幾何矩所用的單項式 $x^p y^q$ 不互正交，特徵有資訊重複。<strong>Zernike 矩</strong>改用單位圓 $x^2+y^2\le1$ 內完備正交的 Zernike 多項式：</p>
+<p>$$A_{pq}=\frac{p+1}{\pi}\iint_{x^2+y^2\le1} I(x,y)V^*(\rho,\theta)\,dx\,dy$$</p>
+<p>$V_{pq}(\rho,\theta)=R_{pq}(\rho)e^{jq\theta}$。其<strong>大小</strong> $|A_{pq}|$ 對旋轉不變。對數位影像，把像素投影進單位圓再求和即可。Zernike 矩在雜訊環境下比 Hu 矩表現更好。</p>
+
+
+
+<!-- == 原文附圖 kp-8 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-16_493_881_268_599.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 8）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="A">
+      <p class="q"><p>Zernike 矩的主要優點是？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q8-0" value="A"><span>A. <p>基函數正交，資訊不重複</p></span></label><label class="opt"><input type="radio" name="q8-0" value="B"><span>B. <p>計算最便宜</p></span></label><label class="opt"><input type="radio" name="q8-0" value="C"><span>C. <p>不需平移</p></span></label><label class="opt"><input type="radio" name="q8-0" value="D"><span>D. <p>只適用於彩色影像</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="Zernike 用單位圓上正交多項式，減少資訊重疊，旋轉不變性更強。"></div>
+    </div></div>
+</section>
+<section id="kp9" class="card" data-kp="9">
+  <div class="card-head"><span class="badge">7.2.4</span><h3>一維 AR 參數模型</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="9">📖 偷看教授祕笈</button>
+
+
+<p>把隨機序列 $I(n)$ 想成「由過去的樣本 + 一個白雜訊刺激」產生。<strong>自迴歸 AR($p$) 模型</strong>：</p>
+<p>$$I(n)=\sum_{k=1}^{p} a(k) I(n-k)+\eta(n)\tag{7.26}$$</p>
+<p>$p$ 是階數，$a(k)$ 是 AR 參數，$\eta(n)$ 是白雜訊。AR 比 ARMA 好的地方是參數估計會得到<strong>線性方程組</strong>。</p>
+
+
+
+<!-- == 原文附圖 kp-9 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-19_209_599_278_535.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 9）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="B">
+      <p class="q"><p>AR($p$) 模型的輸出由哪兩部分構成？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q9-0" value="A"><span>A. <p>只有白雜訊</p></span></label><label class="opt"><input type="radio" name="q9-0" value="B"><span>B. <p>過去 $p$ 個樣本的線性組合 + 白雜訊</p></span></label><label class="opt"><input type="radio" name="q9-0" value="C"><span>C. <p>只有過去樣本</p></span></label><label class="opt"><input type="radio" name="q9-0" value="D"><span>D. <p>只有未來樣本</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="AR($p$)：$I(n)=\sum_{k=1}^p a(k)I(n-k)+\eta(n)$，過去樣本 + 白雜訊。"></div>
+    </div></div>
+</section>
+<section id="kp10" class="card" data-kp="10">
+  <div class="card-head"><span class="badge">7.2.4</span><h3>AR 參數估計（Levinson）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="10">📖 偷看教授祕笈</button>
+
+
+<p>AR 參數 $a(k)$ 可視為<strong>線性預測器</strong>的係數：用前 $p$ 個樣本預測當前值，$\eta(n)$ 是預測誤差。最小化均方預測誤差得法方程：</p>
+<p>$$E[I_p I_p^T]\boldsymbol a=E[I(n)\boldsymbol I_p(n-1)]$$</p>
+<p>自動相關矩陣 $\boldsymbol R$ 是<strong>對稱 + Toeplitz</strong>（各對角線相同）。利用此結構，<strong>Levinson 演算法</strong>可 $O(p^2)$ 解（而非一般 $O(p^3)$）。預測誤差變異：$\sigma_\eta^2=r(0)-\sum_{k=1}^p a(k) r(k)$</p>
+
+
+
+<!-- == 原文附圖 kp-10 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-22_1022_1009_280_533.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 10）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="A">
+      <p class="q"><p>Levinson 演算法善用了自動相關矩陣的哪個性質？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q10-0" value="A"><span>A. <p>對稱且 Toeplitz</p></span></label><label class="opt"><input type="radio" name="q10-0" value="B"><span>B. <p>正交且對稱</p></span></label><label class="opt"><input type="radio" name="q10-0" value="C"><span>C. <p>稀疏</p></span></label><label class="opt"><input type="radio" name="q10-0" value="D"><span>D. <p>奇異</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="自動相關矩陣對稱且 Toeplitz，Levinson 可用 $O(p^2)$ 求解。"></div>
+    </div></div>
+</section>
+<section id="kp11" class="card" data-kp="11">
+  <div class="card-head"><span class="badge">7.2.4</span><h3>二維 AR 模型</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="11">📖 偷看教授祕笈</button>
+<p>對影像 $I(m,n)$ 定義二維 AR 預測：</p>
+<p>$$\hat I(m,n)=\sum_k\sum_l a(k,l) I(m-k,n-l)$$</p>
+<p>依鄰域窗 $W$ 分：<strong>強因果/因果/半因果/非因果</strong>。非因果窗對稱 $a(k,l)=a(-k,-l)$。自動相關等向時矩陣呈<strong>塊 Toeplitz</strong>，可用 Levinson 型演算法求解。</p><div class="quiz" data-ans="B">
+      <p class="q"><p>二維 AR 中「非因果窗」的窗 $W$ 有何特徵？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q11-0" value="A"><span>A. <p>只含過去像素</p></span></label><label class="opt"><input type="radio" name="q11-0" value="B"><span>B. <p>同時含前後左右鄰域且對稱</p></span></label><label class="opt"><input type="radio" name="q11-0" value="C"><span>C. <p>只含未來像素</p></span></label><label class="opt"><input type="radio" name="q11-0" value="D"><span>D. <p>不含任何鄰域</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="非因果窗包含四周鄰域且係數對稱。"></div>
+    </div></div>
+</section>
+<section id="kp12" class="card" data-kp="12">
+  <div class="card-head"><span class="badge">7.3.1</span><h3>Fourier 描述子（形狀）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+
+
+<div class="demo" data-demo-id="fourier">
+  <div class="demo-head">🎛️ 互動：Fourier 描述子（邊界重建）</div>
+  <div class="demo-body">
+    <div class="demo-panel">
+      <div class="panel-item"><label>保留係數數 K</label>
+        <input type="range" id="fK" min="2" max="60" step="1" value="8"></div>
+      <div class="panel-item"><label>形狀</label>
+        <select id="fshape"><option value="star">星形</option><option value="square">方角</option><option value="blob">不規則</option></select></div>
+      <div class="panel-readout demo-readout" id="ro-fourier"></div>
+    </div>
+    <canvas id="cv-fourier" width="520" height="300"></canvas>
+  </div>
+  <div class="demo-instruction">
+    <b>做什麼：</b>用少量 Fourier 係數重建邊界。<b>怎麼操作：</b>拖動 K 滑桿、選形狀。<b>觀察什麼：</b>K 小→輪廓粗糙（只保留低頻），K 大→逼近原始邊界。<b>正確基準：</b>K=全部係數時完全重建；K 很小時只剩大致形狀。
+  </div>
+</div>
+<button class="guide-btn" data-kp="12">📖 偷看教授祕笈</button>
+
+
+<figure class="diagram" data-kpcap="12"><img src="assets/diagram-fourier.png" alt="知識點 12 示意圖" style="max-width:100%"><figcaption>圖：知識點 7.12 示意</figcaption></figure>
+<div class="ai-illustration" data-diagram-id="kp-12" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT: 用 Fourier 描述子重建影像邊界。
+WHY: 展示少量傅立葉係數即可逼近原始輪廓。
+MUST show: 左為原始邊界(u_k=x_k+jy_k)，右為用少量係數重建的輪廓與原始重疊對比。
+AVOID: 不要只畫一個圓。
+STYLE: clean scientific plot, white background, two-panel boundary comparison, blue original / red reconstructed.</pre></details></div><p>把影像區塊邊界取 $N$ 個取樣點 $(x_k,y_k)$，組成複數 $u_k=x_k+jy_k$。其 DFT 係數 $f_l$ 稱為 <strong>Fourier 描述子</strong>：</p>
+<p>$$f_l=\sum_{k=0}^{N-1} u_k \exp\left(-j\frac{2\pi}{N}lk\right)$$</p>
+<p>幾何變換對描述子的影響<strong>很乾淨</strong>：</p>
+<ul>
+<li><strong>平移</strong>：只影響 $f_0$。</li>
+<li><strong>旋轉</strong>：所有 $f_l$ 相位乘同因子，<strong>大小不變</strong>。</li>
+<li><strong>縮放</strong>：所有 $f_l$ 同倍，比值 $f_i/f_j$ 不變。</li>
+<li><strong>取樣起點移動</strong>：相位變、大小 $|f_l|$ 不變。</li>
+</ul>
+<p>因此可用歸一化讓描述子對這些變換不變。</p>
+
+
+
+<!-- == 原文附圖 kp-12 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-25_244_820_1694_428.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 12）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-26_373_936_1614_567.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 12）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="A">
+      <p class="q"><p>Fourier 描述子的哪些性質使其適合做形狀辨識？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q12-0" value="A"><span>A. <p>平移只影響 $f_0$，旋轉/縮放對大小影響簡單</p></span></label><label class="opt"><input type="radio" name="q12-0" value="B"><span>B. <p>完全不變</p></span></label><label class="opt"><input type="radio" name="q12-0" value="C"><span>C. <p>不能用 DFT</p></span></label><label class="opt"><input type="radio" name="q12-0" value="D"><span>D. <p>只適合二維陣列</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="描述子對幾何變換的影響可解析，可設計出不變特徵。"></div>
+    </div></div>
+</section>
+<section id="kp13" class="card" data-kp="13">
+  <div class="card-head"><span class="badge">7.3.2</span><h3>鏈碼（Chain Codes）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="13">📖 偷看教授祕笈</button>
+<p><strong>鏈碼</strong>把邊界表示成一段<strong>方向碼序列</strong>：沿邊界從起點走，每個單位步長用一個方向編碼（如 4-鄰域：$0,1,2,3$；8-鄰域：$0..7$）。序列本身攜帶形狀資訊。</p>
+<p>問題是對<strong>起始點</strong>與<strong>旋轉</strong>敏感。<strong>差分鏈碼</strong>（取相鄰方向碼之差）可消除起點影響；對旋轉做歸一化可減少旋轉敏感。</p>
+
+
+
+<!-- == 原文附圖 kp-13 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-29_461_847_1528_413.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 13）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-30_493_1186_268_447.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 13）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="A">
+      <p class="q"><p>「差分鏈碼」的目的是？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q13-0" value="A"><span>A. <p>消除起始點影響</p></span></label><label class="opt"><input type="radio" name="q13-0" value="B"><span>B. <p>加快編碼</p></span></label><label class="opt"><input type="radio" name="q13-0" value="C"><span>C. <p>減少記憶體</p></span></label><label class="opt"><input type="radio" name="q13-0" value="D"><span>D. <p>增加資訊</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="差分鏈碼取相鄰碼差值，對起始點選擇不敏感。"></div>
+    </div></div>
+</section>
+<section id="kp14" class="card" data-kp="14">
+  <div class="card-head"><span class="badge">7.3.3</span><h3>基於矩陣的形狀特徵</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="14">📖 偷看教授祕笈</button>
+<p>由二階中心矩可定義<strong>方向與離心率</strong>：主軸方向角：$$\theta=\frac12\tan^{-1}\frac{2\mu_{11}}{\mu_{20}-\mu_{02}}$$離心率 $e$ 量「物體多像一根棒」，$e\to1$ 棒狀、$e\to0$ 圓形。這些是緊湊的形狀特徵，對平移不變。</p><div class="quiz" data-ans="B">
+      <p class="q"><p>離心率 $e$ 接近 0 表示？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q14-0" value="A"><span>A. <p>物體細長如棒</p></span></label><label class="opt"><input type="radio" name="q14-0" value="B"><span>B. <p>物體近似圓形</p></span></label><label class="opt"><input type="radio" name="q14-0" value="C"><span>C. <p>物體很大</p></span></label><label class="opt"><input type="radio" name="q14-0" value="D"><span>D. <p>物體很小</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="離心率小表示分布均勻，接近圓形。"></div>
+    </div></div>
+</section>
+<section id="kp15" class="card" data-kp="15">
+  <div class="card-head"><span class="badge">7.3.4</span><h3>幾何特徵（周長/面積/圓度）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="15">📖 偷看教授祕笈</button>
+<p>直接由區域量到的描述性特徵：<strong>周長</strong>（邊界長）、<strong>面積</strong>、<strong>圓度</strong>、<strong>凸包/孔洞數</strong>等。這些是「描述性」而非「再生性」——能描述形狀但不足以重建。常與離心率、不圓度等一起組成特徵向量。</p>
+
+
+
+<!-- == 原文附圖 kp-15 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-31_851_875_274_400.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 15）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-33_270_915_1678_379.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 15）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="A">
+      <p class="q"><p>周長與面積這類特徵是？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q15-0" value="A"><span>A. <p>描述性（能描述但不足以重建）</p></span></label><label class="opt"><input type="radio" name="q15-0" value="B"><span>B. <p>再生性（能完整重建邊界）</p></span></label><label class="opt"><input type="radio" name="q15-0" value="C"><span>C. <p>無用</p></span></label><label class="opt"><input type="radio" name="q15-0" value="D"><span>D. <p>只適用於音訊</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="描述性特徵如周長/面積提供資訊但不夠重建邊界。"></div>
+    </div></div>
+</section>
+<section id="kp16" class="card" data-kp="16">
+  <div class="card-head"><span class="badge">7.4.1</span><h3>自相似與碎形維度</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+
+
+<div class="demo" data-demo-id="fractal">
+  <div class="demo-head">🎛️ 互動：Koch 雪花與碎形維度</div>
+  <div class="demo-body">
+    <div class="demo-panel">
+      <div class="panel-item"><label>遞迴深度</label>
+        <input type="range" id="fdepth" min="0" max="5" step="1" value="2"></div>
+      <div class="panel-readout demo-readout" id="ro-fractal"></div>
+    </div>
+    <canvas id="cv-fractal" width="520" height="300"></canvas>
+  </div>
+  <div class="demo-instruction">
+    <b>做什麼：</b>看 Koch 雪花隨遞迴深度變崎嶇。<b>怎麼操作：</b>拖動深度滑桿。<b>觀察什麼：</b>每加深一層，每段換成 4 段、縮放 1/3，維度 D=ln4/ln3≈1.26。<b>正確基準：</b>深度 0 是三角形（D=1）；深度越大邊界越長、越崎嶇。
+  </div>
+</div>
+<button class="guide-btn" data-kp="16">📖 偷看教授祕笈</button>
+
+
+<figure class="diagram" data-kpcap="16"><img src="assets/diagram-fractal.png" alt="知識點 16 示意圖" style="max-width:100%"><figcaption>圖：知識點 7.16 示意</figcaption></figure>
+<div class="ai-illustration" data-diagram-id="kp-16" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT: Koch 雪花與碎形維度 D=ln N/-ln m。
+WHY: 展示自相似結構與維度如何隨遞迴深度改變。
+MUST show: 左深度0(D=1)、右深度2(D≈1.26)兩級對比，標出 N 與 m。
+AVOID: 不要只畫一條直線。
+STYLE: clean scientific plot, white background, two-panel Koch curve comparison at different recursion depths.</pre></details></div><p>碎形是「自相似」的物件：把細部放大與整體相似的結構。Koch 雪花的<strong>碎形維度</strong>：</p>
+<p>$$D=\frac{\ln N}{-\ln m}$$</p>
+<p>$N$ 是每段取代的線段數、$m$ 是縮放比。碎形維度衡量「邊界有多崎嶇」——介於拓撲維與歐氏維之間。</p>
+
+
+
+<!-- == 原文附圖 kp-16 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-34_788_527_1165_773.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 16）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="A">
+      <p class="q"><p>碎形維度 $D=\ln N/-\ln m$ 愈大代表？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q16-0" value="A"><span>A. <p>邊界愈崎嶇/不規則</p></span></label><label class="opt"><input type="radio" name="q16-0" value="B"><span>B. <p>邊界愈平滑</p></span></label><label class="opt"><input type="radio" name="q16-0" value="C"><span>C. <p>面積愈大</p></span></label><label class="opt"><input type="radio" name="q16-0" value="D"><span>D. <p>無意義</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="$D$ 介於拓撲維與歐氏維之間，愈大表示填補空間的能力愈強、邊界愈崎嶇。"></div>
+    </div></div>
+</section>
+<section id="kp17" class="card" data-kp="17">
+  <div class="card-head"><span class="badge">7.4.2</span><h3>分數布朗運動與 Hurst 參數</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="17">📖 偷看教授祕笈</button>
+
+
+
+<figure class="diagram" data-kpcap="17"><img src="assets/diagram-hurst.png" alt="知識點 17 示意圖" style="max-width:100%"><figcaption>圖：知識點 7.17 示意</figcaption></figure>
+<div class="ai-illustration" data-diagram-id="kp-17" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT: 分數布朗運動與 Hurst 參數 H。
+WHY: 展示不同 H 下序列樣態(趨勢持續 vs 均值回歸)及如何由 log-log 斜率推 H。
+MUST show: 左三條不同 H 的序列軌跡；右 log(Var)對 log(Δx)斜線標 2H。
+AVOID: 不要只畫單一隨機軌跡。
+STYLE: clean scientific two-panel plot, white background, multiple colored trajectories, log-log regression line.</pre></details></div><p><strong>分數布朗運動</strong>（fBm）的方差與增量尺度成冪律：$\mathrm{Var}\big(I(x)-I(x+\Delta x)\big)\propto\Delta x^{2H}$。$H$ 是 <strong>Hurst 參數</strong>，$0\lt H\lt 1$。$H\gt 0.5$ 表示「趨勢持續」、$H\lt 0.5$ 表示「均值回歸」。對 $\ln(\mathrm{Var})$ 對 $\ln(\Delta x)$ 迴歸，斜率 $=2H$。碎形維度 $D=2-H$（對影像）。</p>
+
+
+
+<!-- == 原文附圖 kp-17 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-38_706_1001_272_537.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-39_750_1052_274_312.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-40_959_1049_990_512.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="A">
+      <p class="q"><p>Hurst 參數 $H\gt 0.5$ 表示序列？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q17-0" value="A"><span>A. <p>趨勢持續（persistent）</p></span></label><label class="opt"><input type="radio" name="q17-0" value="B"><span>B. <p>均值回歸</p></span></label><label class="opt"><input type="radio" name="q17-0" value="C"><span>C. <p>完全隨機</p></span></label><label class="opt"><input type="radio" name="q17-0" value="D"><span>D. <p>確定性</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="$H>0.5$ 表示有長期記憶，走勢傾向持續；$H<0.5$ 傾向回歸。"></div>
+    </div></div>
+</section>
+<section id="kp18" class="card" data-kp="18">
+  <div class="card-head"><span class="badge">7.5.1</span><h3>音訊特徵：短時處理</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="18">📖 偷看教授祕笈</button>
+<p>語音/音訊<strong>非平穩</strong>（統計特性隨時變）。解法是<strong>分框</strong>：把訊號切成連續小框（frame），每框內近似平穩（<strong>準平穩 quasistationary</strong>）。框長 $N$ 是「藝術」：要夠長才有資料、夠短才平穩。常用窗函數（Hamming 等）降低框邊緣效應，並讓相鄰框部分重疊。</p>
+<p>每框算出的特徵（如過零率、能量、頻譜）隨時間排列，便成特徵軌跡。</p>
+
+
+
+<!-- == 原文附圖 kp-18 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-43_729_912_274_379.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 18）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-44_453_1003_270_537.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 18）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="A">
+      <p class="q"><p>語音訊號為何要「切短框」處理？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q18-0" value="A"><span>A. <p>訊號非平穩，需在短窗內近似平穩</p></span></label><label class="opt"><input type="radio" name="q18-0" value="B"><span>B. <p>為了省記憶體</p></span></label><label class="opt"><input type="radio" name="q18-0" value="C"><span>C. <p>讓聲音變小</p></span></label><label class="opt"><input type="radio" name="q18-0" value="D"><span>D. <p>沒有原因</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="音訊統計特性隨時間變化，需在短框內近似平穩再分析。"></div>
+    </div></div>
+</section>
+<section id="kp19" class="card" data-kp="19">
+  <div class="card-head"><span class="badge">7.5.2</span><h3>倒頻譜（Cepstrum）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="19">📖 偷看教授祕笈</button>
+
+
+<p>倒頻譜把「頻譜的對數」再做一次反傅立葉變換：</p>
+<p>$$c(n)=\frac1{2\pi}\int_{-\pi}^{\pi} \ln|X(\omega)| e^{j\omega n}d\omega$$</p>
+<p>用意是把<strong>聲源（激發）</strong>與<strong>聲道（濾波）</strong>分開——在對數譜上兩者變<strong>相加</strong>，倒頻域就分離成不同位置。可估計基頻（找 peak）與語者特徵。</p><div class="quiz" data-ans="A">
+      <p class="q"><p>倒頻譜能把哪兩個語音成分分離？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q19-0" value="A"><span>A. <p>聲源激發與聲道濾波</p></span></label><label class="opt"><input type="radio" name="q19-0" value="B"><span>B. <p>雜訊與殘響</p></span></label><label class="opt"><input type="radio" name="q19-0" value="C"><span>C. <p>左聲道與右聲道</p></span></label><label class="opt"><input type="radio" name="q19-0" value="D"><span>D. <p>音高與音量</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="對數譜使聲源與聲道由相乘變相加，倒頻譜中分離。"></div>
+    </div></div>
+</section>
+<section id="kp20" class="card" data-kp="20">
+  <div class="card-head"><span class="badge">7.5.3</span><h3>梅爾倒頻譜（Mel-Cepstrum / MFCC）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="20">📖 偷看教授祕笈</button>
+
+
+<p>人類聽覺在低頻較敏銳、高頻較粗糙（<strong>Mel 刻度</strong>）。<strong>MFCC</strong> 把頻譜照 Mel 刻度分成若干濾波器組，取對數再 DCT：</p>
+<ol>
+<li>分框 → 每個框做 FFT。</li>
+<li>過 Mel 濾波器組、取 $\log$。</li>
+<li>DCT 得係數 $c_i$（稱 MFCC）。</li>
+</ol>
+<p>MFCC 是最流行的語音/音訊特徵，對說話者與環境有較好魯棒性。</p>
+
+
+
+<!-- == 原文附圖 kp-20 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-48_631_813_275_636.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 20）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-49_632_792_1351_441.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 20）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="A">
+      <p class="q"><p>MFCC 最常做哪些語音處理的基礎特徵？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q20-0" value="A"><span>A. <p>語音辨識/說話者辨識</p></span></label><label class="opt"><input type="radio" name="q20-0" value="B"><span>B. <p>圖像壓縮</p></span></label><label class="opt"><input type="radio" name="q20-0" value="C"><span>C. <p>只做音量</p></span></label><label class="opt"><input type="radio" name="q20-0" value="D"><span>D. <p>只做幾何</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="MFCC 是語音與音訊分類最常用特徵之一。"></div>
+    </div></div>
+</section>
+<section id="kp21" class="card" data-kp="21">
+  <div class="card-head"><span class="badge">7.5.4</span><h3>頻譜特徵</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="21">📖 偷看教授祕笈</button>
+<p>從頻譜可抓更直觀特徵：<strong>頻譜質心</strong>（能量集中位置，brightness）、<strong>頻譜展點/頻帶 Roll-off</strong>（頻譜累積達某閾值處）、<strong>頻譜流量 Flux</strong>（頻譜隨時間變化量）、<strong>基頻頻率 Fundamental Frequency</strong>（基本音高）。這些對音樂/語音分類很有用。</p>
+
+
+
+<!-- == 原文附圖 kp-21 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-52_674_860_276_609.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 21）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="A">
+      <p class="q"><p>頻譜質心（Spectral Centroid）大致對應人類感知的？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q21-0" value="A"><span>A. <p>亮度/brightness</p></span></label><label class="opt"><input type="radio" name="q21-0" value="B"><span>B. <p>音量</p></span></label><label class="opt"><input type="radio" name="q21-0" value="C"><span>C. <p>音長</p></span></label><label class="opt"><input type="radio" name="q21-0" value="D"><span>D. <p>左右相位</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="質心是頻譜能量重心的頻率位置，對應亮度/尖銳度。"></div>
+    </div></div>
+</section>
+<section id="kp22" class="card" data-kp="22">
+  <div class="card-head"><span class="badge">7.5.5</span><h3>時域特徵：過零率與能量</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="22">📖 偷看教授祕笈</button>
+<p>在時域最簡單特徵：<strong>過零率（ZCR）</strong>——每框訊號穿越零軸的次數/比例，粗糙量「高頻含量」或清音/濁音。<strong>能量（Energy）</strong>——框內樣本平方和，量響度，常用對數。時域特徵運算便宜、即時好用。</p>
+
+
+
+<!-- == 原文附圖 kp-22 == -->
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-54_643_797_1172_639.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 22）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-54_664_833_272_622.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 22）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-55_639_786_523_445.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 22）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/459d4277-a47f-4b28-8570-6907e2b6af81-55_639_820_1362_428.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 22）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="A">
+      <p class="q"><p>過零率偏高通常表示？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q22-0" value="A"><span>A. <p>訊號較高頻或較小聲</p></span></label><label class="opt"><input type="radio" name="q22-0" value="B"><span>B. <p>訊號較低頻</p></span></label><label class="opt"><input type="radio" name="q22-0" value="C"><span>C. <p>全是靜音</p></span></label><label class="opt"><input type="radio" name="q22-0" value="D"><span>D. <p>無意義</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="過零率量訊號穿越零的次數，越高頻越高。"></div>
+    </div></div>
+</section>
+  </main>
+</div>
+<footer>依 Pattern Recognition（Theodoridis &amp; Koutroumbas）Ch7 改寫 · 自學用</footer>
+<script>
+(function(){
+  function renderMath(){
+    if(window.katex && window.renderMathInElement) window.renderMathInElement(document.body,{
+      delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],
+      throwOnError:false,
+      ignoredClasses:['katex']
+    });
+  }
+  window.renderMath=renderMath;
+  var cards=document.querySelectorAll('.card');
+  function upd(){
+    var n=cards.length, done=0;
+    cards.forEach(function(c){ if(c.classList.contains('done')) done++; });
+    var pct=Math.round(done/n*100);
+    document.getElementById('pf').style.width=pct+'%';
+    document.getElementById('ptxt').textContent='已完成 '+done+' / '+n+'（'+pct+'%）';
+  }
+  cards.forEach(function(c){
+    c.querySelector('.card-head').addEventListener('click',function(){ c.classList.toggle('collapsed'); });
+    c.querySelectorAll('.quiz').forEach(function(qz){
+      var btn=qz.querySelector('.check'), fb=qz.querySelector('.fb');
+      btn.addEventListener('click',function(){
+        var sel=qz.querySelector('input:checked');
+        if(!sel){ fb.className='fb wrong'; fb.textContent='請先選擇答案。'; return; }
+        if(sel.value===qz.dataset.ans){ fb.className='fb ok'; fb.textContent='✓ 正確！'; c.classList.add('done'); }
+        else { fb.className='fb wrong'; fb.textContent='✗ 答錯：'+qz.querySelector('.fb').dataset.expl; }
+        upd();
+      });
+    });
+  });
+  window.addEventListener('load',function(){ setTimeout(renderMath,50); upd(); });
+})();
+</script>
+<script>
+// Phase C — 4 個互動 demo 的邏輯（kp-2,3,12,16）
+// 所有輸出皆由實際公式依當前參數計算，非概念式動畫。
+
+// ---------- kp-2 一階統計：偏態/峰態 ----------
+function draw1st() {
+  var cv = document.getElementById('cv-1st');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var skew = parseFloat(document.getElementById('skew').value);
+  var kurt = parseFloat(document.getElementById('kurt').value);
+  var ng = parseInt(document.getElementById('ng').value);
+  var W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  // 用 Beta 分布近似：a,b 由 skew 控制；標準差由 kurt 控制
+  var a = 5 + skew * 4, b = 5 - skew * 4;
+  a = Math.max(1.2, a); b = Math.max(1.2, b);
+  var sd = 0.5 / kurt; // 峰態越大越尖
+  var xs = [], ys = [];
+  for (var i = 0; i <= ng; i++) {
+    var t = i / ng;
+    var beta = Math.pow(t, a - 1) * Math.pow(1 - t, b - 1);
+    var gauss = Math.exp(-0.5 * Math.pow((t - 0.5) / sd, 2));
+    var y = beta * gauss;
+    xs.push(t); ys.push(y);
+  }
+  // 歸一化
+  var maxy = Math.max.apply(null, ys);
+  var x0 = 40, y0 = H - 30, pw = (W - x0 - 20) / ng, ph = H - 60;
+  // 畫直方圖柱
+  for (var i = 0; i < ng; i++) {
+    var h = (ys[i] / maxy) * ph;
+    ctx.fillStyle = 'rgba(124,58,237,0.55)';
+    ctx.fillRect(x0 + i * pw, y0 - h, pw - 1, h);
+  }
+  // 畫分布曲線
+  ctx.strokeStyle = '#5b21b6'; ctx.lineWidth = 2; ctx.beginPath();
+  for (var i = 0; i <= ng; i++) {
+    var px = x0 + i * pw, py = y0 - (ys[i] / maxy) * ph;
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  // 標註
+  ctx.fillStyle = '#1f2430'; ctx.font = '13px sans-serif';
+  ctx.fillText('偏態 μ₃=' + skew.toFixed(2), x0, 20);
+  ctx.fillText('峰態 μ₄ 控制=' + kurt.toFixed(2), x0, 40);
+  // readout
+  var m1 = 0, m2 = 0, m3 = 0;
+  for (var i = 0; i < ng; i++) {
+    var t = i / ng, p = ys[i] / (ys.reduce(function(a, b) { return a + b; }, 0));
+    m1 += t * p; m2 += (t - 0.5) * (t - 0.5) * p; m3 += Math.pow(t - 0.5, 3) * p;
+  }
+  var ro = document.getElementById('ro-1st');
+  if (ro) ro.textContent = '均值≈' + m1.toFixed(2) + '  變異數≈' + m2.toFixed(3) + '  偏態方向=' + (m3 > 0 ? '右偏' : m3 < 0 ? '左偏' : '對稱');
+}
+
+// ---------- kp-3 共相關矩陣 ----------
+function makeTexture(type, size) {
+  var g = [];
+  for (var i = 0; i < size; i++) {
+    g[i] = [];
+    for (var j = 0; j < size; j++) {
+      if (type === 'diag') g[i][j] = ((i + j) % 4 < 2) ? 1 : 0;
+      else if (type === 'horiz') g[i][j] = (i % 4 < 2) ? 1 : 0;
+      else g[i][j] = Math.random() < 0.5 ? 1 : 0;
+    }
+  }
+  return g;
+}
+function drawCooc() {
+  var cvT = document.getElementById('cv-tex'), cvC = document.getElementById('cv-cooc');
+  if (!cvT) return;
+  var ctxT = cvT.getContext('2d'), ctxC = cvC.getContext('2d');
+  var phi = parseInt(document.getElementById('phi').value);
+  var d = parseInt(document.getElementById('dist').value);
+  var tex = document.getElementById('tex').value;
+  var size = 16;
+  var g = makeTexture(tex, size);
+  // 畫紋理
+  var cell = cvT.width / size;
+  for (var i = 0; i < size; i++) for (var j = 0; j < size; j++) {
+    ctxT.fillStyle = g[i][j] ? '#4c1d95' : '#f3f0ff';
+    ctxT.fillRect(j * cell, i * cell, cell, cell);
+  }
+  // 計算共相關矩陣（2x2 灰階）
+  var dirs = {0: [0, 1], 45: [-1, 1], 90: [1, 0], 135: [-1, -1]};
+  var di = dirs[phi][0], dj = dirs[phi][1];
+  var M = [[0, 0], [0, 0]];
+  for (var i = 0; i < size; i++) for (var j = 0; j < size; j++) {
+    var ni = i + di * d, nj = j + dj * d;
+    if (ni < 0 || nj < 0 || ni >= size || nj >= size) continue;
+    M[g[i][j]][g[ni][nj]]++;
+  }
+  // 歸一化
+  var total = 0; for (var a = 0; a < 2; a++) for (var b = 0; b < 2; b++) total += M[a][b];
+  var P = [[0, 0], [0, 0]];
+  for (var a = 0; a < 2; a++) for (var b = 0; b < 2; b++) P[a][b] = total ? M[a][b] / total : 0;
+  // 畫矩陣熱圖
+  var c2 = cvC.width / 2;
+  for (var a = 0; a < 2; a++) for (var b = 0; b < 2; b++) {
+    var v = P[a][b];
+    var mx = Math.max.apply(null, [P[0][0], P[0][1], P[1][0], P[1][1]]);
+    var alpha = mx > 0 ? v / mx : 0;
+    ctxC.fillStyle = 'rgba(124,58,237,' + (0.1 + alpha * 0.9) + ')';
+    ctxC.fillRect(b * c2, a * c2, c2, c2);
+    ctxC.strokeStyle = '#fff'; ctxC.strokeRect(b * c2, a * c2, c2, c2);
+    ctxC.fillStyle = '#1f2430'; ctxC.font = '14px sans-serif';
+    ctxC.fillText(v.toFixed(3), b * c2 + c2 / 2 - 20, a * c2 + c2 / 2 + 5);
+  }
+  // readout：ASM 與對比度
+  var asm = P[0][0] * P[0][0] + P[0][1] * P[0][1] + P[1][0] * P[1][0] + P[1][1] * P[1][1];
+  var ro = document.getElementById('ro-cooc');
+  if (ro) ro.textContent = 'ASM=' + asm.toFixed(3) + '（越接近1越平滑）  方向=' + phi + '°  d=' + d;
+}
+
+// ---------- kp-12 Fourier 描述子 ----------
+function makeShape(type, N) {
+  var pts = [];
+  for (var k = 0; k < N; k++) {
+    var t = 2 * Math.PI * k / N;
+    var r;
+    if (type === 'star') r = 1 + 0.5 * Math.cos(5 * t);
+    else if (type === 'square') r = 1 / Math.max(Math.abs(Math.cos(t)), Math.abs(Math.sin(t)));
+    else r = 1 + 0.3 * Math.sin(3 * t) + 0.2 * Math.cos(7 * t);
+    pts.push([r * Math.cos(t), r * Math.sin(t)]);
+  }
+  return pts;
+}
+function drawFourier() {
+  var cv = document.getElementById('cv-fourier');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var K = parseInt(document.getElementById('fK').value);
+  var shape = document.getElementById('fshape').value;
+  var N = 128;
+  var pts = makeShape(shape, N);
+  // 轉複數並 DFT
+  var u = pts.map(function(p) { return [p[0], p[1]]; });
+  var f = dft(u);
+  // 保留前 K 個（含負頻）
+  var fk = f.slice();
+  for (var l = K; l < N - K; l++) fk[l] = 0;
+  var rec = idft(fk);
+  var W = cv.width, H = cv.height, cx = W / 2, cy = H / 2, s = 100;
+  ctx.clearRect(0, 0, W, H);
+  // 原始（虛線）
+  ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.beginPath();
+  for (var k = 0; k <= N; k++) {
+    var px = cx + u[k % N][0] * s, py = cy - u[k % N][1] * s;
+    k === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+  // 重建（實線）
+  ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 2.5; ctx.beginPath();
+  for (var k = 0; k <= N; k++) {
+    var px = cx + rec[k % N][0] * s, py = cy - rec[k % N][1] * s;
+    k === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.fillStyle = '#1f2430'; ctx.font = '13px sans-serif';
+  ctx.fillText('保留 K=' + K + ' 個係數', 10, 20);
+  var ro = document.getElementById('ro-fourier');
+  if (ro) ro.textContent = 'K=' + K + ' / ' + N + '（K 越大越逼近原始邊界）';
+}
+// 複數 DFT/IDFT（用陣列 [re,im]）
+function dft(u) {
+  var N = u.length, out = [];
+  for (var l = 0; l < N; l++) {
+    var re = 0, im = 0;
+    for (var k = 0; k < N; k++) {
+      var ang = -2 * Math.PI * l * k / N;
+      re += u[k][0] * Math.cos(ang) - u[k][1] * Math.sin(ang);
+      im += u[k][0] * Math.sin(ang) + u[k][1] * Math.cos(ang);
+    }
+    out.push([re / N, im / N]);
+  }
+  return out;
+}
+function idft(f) {
+  var N = f.length, out = [];
+  for (var k = 0; k < N; k++) {
+    var re = 0, im = 0;
+    for (var l = 0; l < N; l++) {
+      var ang = 2 * Math.PI * l * k / N;
+      re += f[l][0] * Math.cos(ang) - f[l][1] * Math.sin(ang);
+      im += f[l][0] * Math.sin(ang) + f[l][1] * Math.cos(ang);
+    }
+    out.push([re, im]);
+  }
+  return out;
+}
+
+// ---------- kp-16 Koch 雪花 ----------
+function kochPoints(depth) {
+  // 初始三角形
+  var pts = [[0, 0], [1, 0], [0.5, Math.sqrt(3) / 2], [0, 0]];
+  for (var d = 0; d < depth; d++) {
+    var next = [];
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p0 = pts[i], p1 = pts[i + 1];
+      var vx = (p1[0] - p0[0]) / 3, vy = (p1[1] - p0[1]) / 3;
+      var a = [p0[0] + vx, p0[1] + vy];
+      var b = [a[0] + vx * 0.5 - vy * Math.sqrt(3) / 2, a[1] + vx * Math.sqrt(3) / 2 + vy * 0.5];
+      var c = [p0[0] + 2 * vx, p0[1] + 2 * vy];
+      next.push(p0, a, b, c);
+    }
+    next.push(pts[pts.length - 1]);
+    pts = next;
+  }
+  return pts;
+}
+function drawFractal() {
+  var cv = document.getElementById('cv-fractal');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var depth = parseInt(document.getElementById('fdepth').value);
+  var pts = kochPoints(depth);
+  var W = cv.width, H = cv.height, cx = W / 2, cy = H / 2, s = 120;
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 1.5; ctx.beginPath();
+  for (var i = 0; i < pts.length; i++) {
+    var px = cx + (pts[i][0] - 0.5) * s, py = cy - (pts[i][1] - 0.3) * s;
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  // 維度
+  var D = Math.log(4) / Math.log(3);
+  var ro = document.getElementById('ro-fractal');
+  if (ro) ro.textContent = '深度=' + depth + '  每段換 4 段、縮放 1/3 → D=ln4/ln3≈' + D.toFixed(3);
+}
+
+// ---------- 初始化 ----------
+function initDemos() {
+  var binds = [
+    ['skew', draw1st], ['kurt', draw1st], ['ng', draw1st],
+    ['phi', drawCooc], ['dist', drawCooc], ['tex', drawCooc],
+    ['fK', drawFourier], ['fshape', drawFourier],
+    ['fdepth', drawFractal]
+  ];
+  binds.forEach(function(b) {
+    var el = document.getElementById(b[0]);
+    if (el) {
+      el.addEventListener('input', b[1]);
+      if (el.tagName === 'SELECT') el.addEventListener('change', b[1]);
+    }
+  });
+  draw1st(); drawCooc(); drawFourier(); drawFractal();
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDemos);
+else initDemos();
+
+</script>
+</div></div>
+
+</div></div>
+
+</div></div>
+
+<div id="guide-modal"><div class="modal-box"><button class="modal-close" type="button">✕</button><h1></h1><div class="modal-body"></div></div></div>
+<script>
+// == Phase D 教授祕笆邏輯 ==
+(function(){
+  var GUIDE_TITLES = {"1": "教授祕笈：圖像表示與特徵生成動機（引言）", "2": "教授祕笈：一階統計特徵（灰度直方圖）", "3": "教授祕笈：二階統計特徵（共相關矩陣）", "4": "教授祕笈：灰階游程長度特徵（Run Length）", "5": "教授祕笈：局部線性轉換（Laws 遮罩）", "6": "教授祕笈：幾何矩與中心矩", "7": "教授祕笈：Hu 七不變矩", "8": "教授祕笈：Zernike 矩", "9": "教授祕笈：一維 AR 參數模型", "10": "教授祕笈：AR 參數估計（Levinson）", "11": "教授祕笈：二維 AR 模型", "12": "教授祕笈：Fourier 描述子（形狀）", "13": "教授祕笈：鏈碼（Chain Codes）", "14": "教授祕笈：基於矩陣的形狀特徵", "15": "教授祕笈：幾何特徵（周長/面積/圓度）", "16": "教授祕笈：自相似與碎形維度", "17": "教授祕笈：分數布朗運動與 Hurst 參數", "18": "教授祕笈：音訊特徵：短時處理", "19": "教授祕笈：倒頻譜（Cepstrum）", "20": "教授祕笈：梅爾倒頻譜（MFCC）", "21": "教授祕笈：頻譜特徵", "22": "教授祕笈：時域特徵：過零率與能量"};
+  var GUIDE_CONTENT = {"1": "<p>同學，歡迎來到第七章。這節不談公式，先談「為什麼」——為什麼整章都在教你把一張圖片、一段聲音，變成一堆奇怪的數字。</p> <p>先講個健檢比喻。你去醫院做健康檢查，醫生不會把你身體裡<strong>每一顆細胞</strong>的狀態都印給你看——那份報告會有幾十億行，你也看不懂、醫生也沒空看。醫生要的，是<strong>抽血後化驗出來的那十幾個數字</strong>：血糖、白血球、肝指數……<strong>這十幾個數字，就是你這個人的「特徵」</strong>，它們是從幾十億顆細胞裡萃取出來的精華，濃縮到「一眼就能判斷你健不健康」的程度。</p> <p>一張數位影像，說穿了就是二維陣列 $I(m,n)$，每個位置 $(m,n)$ 一個像素值，代表那一點的亮度。深度 $N_g$ 是灰階階層數，例如 $N_g=256$ 就是 0~255 共 256 階灰。就算是一張小小的 $64\\times64$ 影像，也有 4096 個像素——這就像那份「每顆細胞都列出來」的報告，資訊量爆炸，卻沒有把重點講清楚。</p> <p>要不要先猜：如果我們真的把這 4096 個原始像素數值，一個不漏地全部塞給分類器當特徵，會發生什麼事？——先別急著回答「準確率會很高」。答案恰恰相反：<strong>計算量爆炸</strong>（4096 維的運算，比幾十維貴太多），而且<strong>泛化能力會變差</strong>——分類器會被少數幾張訓練圖片裡的雜訊細節「背」下來，換一張新照片就認不得了。這就跟醫生拿到幾十億行報告一樣，資訊太多反而抓不到重點。</p> <p><strong>特徵生成（Feature Generation）</strong>的目的，就是把影像陣列 $I(m,n)$——或一段聲音樣本——變成<strong>數量少、卻能把不同類別「分得開」</strong>的新變數。重點不是「壓縮」本身，是壓縮完之後，蘋果的特徵數字要跟橘子的特徵數字，落在不一樣的地方。</p> <p>本章沿兩條主線走：</p> <ul> <li><strong>影像分析</strong>：紋理特徵（這塊區域摸起來粗還是滑？）、形狀特徵（這個輪廓長什麼樣？）、碎形特徵（這個邊界有多崎嶇？）。</li> <li><strong>音訊分類</strong>：把聲音切成短時窗，再從頻譜、倒頻譜裡萃取特徵。</li> </ul> <p>這裡最容易踩的坑：<strong>別以為「特徵生成」只等於「降維」</strong>。降維（第 6 章的 KLT/SVD/DFT 那一套）是「换一組基底、保留能量最多的幾維」，但本章的特徵（紋理、形狀、碎形）往往是<strong>全新設計出來的物理量</strong>，跟原始像素的線性組合是兩回事——例如「離心率」量的是「這個形狀有多像一根棒子」，這個概念在原始像素座標系裡根本不存在，是我們<strong>發明</strong>出來的新變數，不是「投影」出來的。</p> <p>舉一反三：如果你要設計一套系統分辨「蘋果」跟「橘子」的照片，別急著比對像素值，想想看——你會抽取哪幾個「特徵數字」？（提示：顏色分布算不算一階統計？表面粗糙度算不算紋理？輪廓的圓度算不算形狀特徵？）</p> <p>跟本章第一個具體方法接軌：從下一節 <strong>KP-2</strong> 開始，我們就從最簡單的「一階統計」出發，一步步把「一張圖」變成「一串有意義的數字」。</p> <p><strong>一句話收尾：</strong> 特徵生成就是醫生的抽血報告——把幾千個像素這種「原始細胞資料」，濃縮成十幾個「一眼看出健不健康（分不分得開類別）」的關鍵數字。</p>", "2": "<p>同學啊，我們今天來看看「一張照片的灰階分布能告訴我們什麼」。先別急著碰公式，我們先把話講白。</p> <p>一張灰階影像，說穿了就是一個灰階的分布——有些影像整體偏亮、有些偏暗，有些明暗對比很強、有些灰濛濛一片。<strong>一階統計特徵</strong>這四個字，翻譯成人話就是：<strong>我們不去管每個像素在哪裡，只看「每個灰階出現幾次」。</strong> 位置完全不看，只看比例。這就像你去統計一個班級的成績，你不管誰坐在哪，只管「有幾個考 90 分、幾個考 70 分」，這張成績分布表就是「一階直方圖」。</p> <p>為什麼需要它？因為整張影像的像素太多、太碎，直接餵給分類器會消化不良（還記得嗎，一張 $64\\times64$ 就有 4096 個值）。我們想抓的是「這塊區域整體的質地」，而質地往往就藏在灰階分布裡。位置不重要，比例才是主角。</p> <p>來，我們把公式一個符號一個符號拆開。</p> <p>$$P(I)=\\frac{\\text{灰階為 }I\\text{ 的像素數}}{\\text{區域總像素數}}$$</p> <ul> <li>$P(I)$：灰階 $I$ 出現的比例，介於 0 到 1。</li> <li>整張直方圖就是所有灰階的 $P(I)$ 排在一起。</li> </ul> <p>有了 $P(I)$ 就能算三件寶：</p> <ul> <li><strong>均值</strong> $m_1=E[I]$：所有灰階加權平均，告訴你這塊區域整體偏亮還是偏暗。</li> <li><strong>變異數</strong> $\\mu_2=\\sigma^2$：灰階離均值多遠，越大代表明暗分得越開、對比越強。</li> <li><strong>偏態</strong> $\\mu_3$ 與 <strong>峰態</strong> $\\mu_4$：偏態看直方圖歪不歪，峰態看它是尖的還是扁的。</li> </ul> <p>要不要先猜一下：如果一張照片灰濛濛、全部集中在幾個中間灰階，它的變異數會大還是小？……想一下再繼續。答案是小——因為大家離均值都不遠，分布集中，所以變異數小。</p> <p>我們實際算一遍。假設只有 4 個灰階 $0,1,2,3$，各出現 2, 4, 3, 1 次，共 10 個像素：</p> <table> <thead> <tr> <th style=\"text-align: center;\">灰階 $I$</th> <th style=\"text-align: center;\">次數</th> <th style=\"text-align: center;\">$P(I)$</th> </tr> </thead> <tbody> <tr> <td style=\"text-align: center;\">0</td> <td style=\"text-align: center;\">2</td> <td style=\"text-align: center;\">0.2</td> </tr> <tr> <td style=\"text-align: center;\">1</td> <td style=\"text-align: center;\">4</td> <td style=\"text-align: center;\">0.4</td> </tr> <tr> <td style=\"text-align: center;\">2</td> <td style=\"text-align: center;\">3</td> <td style=\"text-align: center;\">0.3</td> </tr> <tr> <td style=\"text-align: center;\">3</td> <td style=\"text-align: center;\">1</td> <td style=\"text-align: center;\">0.1</td> </tr> </tbody> </table> <p>均值 $m_1=0\\times0.2+1\\times0.4+2\\times0.3+3\\times0.1=1.3$。變異數 $\\mu_2=(0-1.3)^2\\times0.2+(1-1.3)^2\\times0.4+(2-1.3)^2\\times0.3+(3-1.3)^2\\times0.1$，自己按一下計算機，約 0.81。偏態 $\\mu_3$ 會是正的，因為尾巴往高灰階那邊多了一點——這正是「右偏」。</p> <p>這裡最容易踩的坑有兩個：<strong>第一，別把偏態跟峰態搞混</strong>——偏態管「歪不歪」，峰態管「尖不扁」，兩個是不同的統計量，一個管左右、一個管高低。<strong>第二，別誤會「熵」</strong>——熵 $H=-\\sum P(I)\\log_2 P(I)$ 越大代表分布越均勻，跟我們常說的「亂度」一致；如果一張圖所有灰階都一樣多，熵最大；如果只剩一種灰階，熵是 0。</p> <p>其實這套邏輯你早就會了——<strong>這就是統計學裡的機率分布與動差（moment）</strong>，只是把「隨機變數」換成「灰階」。你在機率課學的均值、變異、偏態、峰態，一個都沒少，只是換了身分證。</p> <p>一階統計只看「每個灰階出現幾次」，完全不管像素彼此的位置關係——這正是它的極限。下一節 <strong>KP-3</strong> 就要把「位置」找回來：不只問「這個灰階多常見」，還要問「這個灰階旁邊常常是哪個灰階」，那就是二階的共相關矩陣。</p> <p><strong>一句話收尾：</strong> 一階統計就是把影像「剝了位置、只看灰階比例」，然後用均值看亮度、變異看對比、偏態看歪斜、峰態看尖扁——這四顆量尺就能抓住整塊區域的質地個性。</p>", "3": "<p>上一節我們說一階統計「只看灰階比例、不看位置」。這節要講的<strong>共相關矩陣（co-occurrence matrix）</strong>，就是來補那個洞的——它要看<strong>灰階彼此相鄰</strong>的關係。</p> <p>先講白。想像你在看一張毛毯的編織紋路：一階統計只告訴你「這塊毯子用了哪幾種顏色、各佔多少」，但它完全看不出「顏色是怎麼排的」——是黑白相間像斑馬紋，還是一整片黑再一整片白？<strong>共相關矩陣就是來回答「哪種灰階跟哪種灰階靠在一起」這個問題的。</strong></p> <p>為什麼需要它？因為兩張影像可能有一模一樣的灰階直方圖，但紋理完全不同——一張是整齊的方格、一張是亂糟糟的噪點。如果你只用一階統計，就傻傻分不清它們，分類器也分不開。所以要搬出二階統計。</p> <p>做法是這樣：我挑一個<strong>距離 $d$</strong> 和一個<strong>方向 $\\phi$</strong>（通常是 $0^\\circ,45^\\circ,90^\\circ,135^\\circ$ 四個方向），然後看「相距 $d$、沿著方向 $\\phi$ 的那兩個像素，一個是灰階 $I_1$、另一個是 $I_2$ 的機率」有多大。把所有 $(I_1,I_2)$ 的機率排成一張表，就是共相關矩陣。</p> <p>$$A=\\frac{1}{R}\\big[\\eta(I_1,I_2)\\big]$$</p> <ul> <li>$\\eta(I_1,I_2)$：數一數「距離 $d$、方向 $\\phi$ 下，灰階 $I_1$ 與 $I_2$ 成對出現」的次數。</li> <li>$R$：所有可能的像素對數，當分母把它歸一化成機率。</li> </ul> <p>要不要先猜一下：如果影像是一條條水平的斑馬紋，你在 $0^\\circ$（水平）方向數像素對，會發現什麼？——你大概會數到一大堆「一樣的灰階」配對，因為沿著水平方向走的都是同一條顏色。可是換到 $90^\\circ$（垂直）方向，就變成黑白交錯。<strong>所以同樣一張圖，不同方向數出來的大不相同——這就是它抓紋理方向的能力。</strong></p> <p>有了這張矩陣，就能定義一堆 Haralick 特徵，最常用的三個：</p> <ul> <li><strong>ASM</strong>（角二次矩）$=\\sum_{i,j}P(i,j)^2$：把所有機率平方加起來。如果影像很平、大家都集中在少數灰階對，ASM 大；如果很亂、分布平均，ASM 小。它量的是「平滑/集中度」。</li> <li><strong>Contrast</strong> $=\\sum_n n^2\\sum_{|i-j|=n}P(i,j)$：量對比。$n^2$ 會放大「灰階差很多」的配對，所以明暗反差大的影像 Contrast 大。</li> <li><strong>熵</strong> $H=-\\sum_{i,j}P(i,j)\\log P(i,j)$：量「亂」。越隨機的紋理熵越大。</li> </ul> <p>我們用 Ch7 表 7.2 的真實數字感受一下：同一組影像，粗紋理（grass）的 ASM=0.0066、熵 8.35；平滑影像 ASM=0.0272、熵 5.88。看！平滑影像 ASM 比較大、熵比較小，是不是剛好符合「ASM 量大集中、熵量大分散」的直覺？</p> <p>這裡最常踩的坑，是把 <strong>ASM 跟對比度弄反</strong>：ASM 大代表「越平滑/越集中」，不是「對比越強」。另一個坑是忘了<strong>方向平均</strong>——單看一個方向會對旋轉敏感，實務上常把四個方向平均，這樣影像轉個 90 度特徵也不太變。</p> <p>這其實就是<strong>二維的共變異數矩陣概念</strong>的延伸——你在一階（<strong>KP-2</strong>）看單變數分布，二階看的是「兩兩變數一起怎麼變」，只是這裡的「變數」換成灰階對。跟共相關矩陣同屬「紋理特徵」家族的還有 <strong>KP-4</strong> 的游程長度——一個數「像素對」、一個數「連續段」，是從不同角度回答同一個問題：這塊區域的質地長怎樣。</p> <p><strong>一句話收尾：</strong> 一階統計問「每個顏色多少」，二階統計問「哪個顏色跟哪個顏色住隔壁」——共相關矩陣就是那張「誰跟誰是好鄰居」的戶口名簿，ASM 看鄰居和諧度、Contrast 看鄰居反差、熵看鄰居有多亂。</p>", "4": "<p>同學，上一節我們用「像素對」抓紋理，這節換一個更直覺的角度——<strong>看連續相同灰階的「一段」有多長</strong>。</p> <p>先講白。你在看一片草原的照片，有些地方草很粗、顆粒很大，有些地方很平滑、灰階整片一樣。<strong>游程（run）</strong>就是「連續幾個像素是同一種灰階」的那一串。比如一條馬路，沿路走過去整段都是灰色，那就是一條很長的游程；一片草皮，每個像素顏色都不同，游程就都很短。<strong>游程長度特徵就是統計「每一種灰階、以多長的連續段出現」這件事。</strong></p> <p>為什麼需要它？因為它用很省力的方式抓住了「粗糙 vs 平滑」——而這正是紋理最核心的分類依據。</p> <p>做法是把資料記進一張 <strong>游程長度矩陣 $Q_{RL}(i,j)$</strong>：行是灰階 $i$，列是游程長度 $j$，格子裡填「灰階 $i$ 以長度 $j$ 出現的次數」。它是 $N_g\\times N_r$ 的大小。</p> <p>由這張矩陣可以定義幾個特徵，最關鍵的是：</p> <ul> <li><strong>SRE</strong>（短游程強調）：用 $1/j^2$ 加權——短的游程權重高，所以<strong>粗糙紋理</strong>（游程都短）的 SRE 大。</li> <li><strong>LRE</strong>（長游程強調）：用 $j^2$ 加權——長的游程權重高，所以<strong>平滑紋理</strong>的 LRE 大。</li> </ul> <p>要不要先猜：一塊平滑的牆壁，SRE 跟 LRE 哪個會比較大？——想一下。答案是 LRE 大，因為牆壁整片同色、游程都很長，$j^2$ 把長游程加權放大。</p> <p>我們來實際算一個小例子。看 Ch7 那個 $4\\times4$ 影像（灰階 0~3）：</p> <p>$$I=\\begin{bmatrix}0&0&2&2\\\\1&1&0&0\\\\3&2&3&3\\\\3&2&2&2\\end{bmatrix}$$</p> <p>我們沿 $0^\\circ$（水平）數游程。第一列 <code>0 0</code> 是一條長度 2 的灰階 0 游程，<code>2 2</code> 是一條長度 2 的灰階 2 游程。把四列都數完，就得到 $Q_{RL}(0^\\circ)$ 那張矩陣，例如第一行是灰階 0 的游程分布。這裡我特別要你注意：<strong>同樣一張圖，沿不同方向數，游程長度會不一樣</strong>——這正是它能反映紋理方向性的原因。</p> <p>這裡最容易搞混的是 <strong>SRE 和 LRE 的「誰對應誰」</strong>：很多人記反。口訣是「<strong>短=粗、長=滑</strong>」——短游程多表示紋理粗糙（每一段都碎碎的），長游程多表示平滑（一整片連在一起）。另一坑是別把游程矩陣跟共相關矩陣（<strong>KP-3</strong>）搞混：共相關看「像素對」，游程看「連續段」，一個是二元的配對、一個是連續的串。</p> <p>這其實跟<strong>一階統計（KP-2）裡的「分布集中度」</strong>是異曲同工——只是把「灰階的長度分布」換成「游程長度的分布」，SRE/LRE 就是這個長度分布的加權統計量。</p> <p><strong>一句話收尾：</strong> 游程就是「連續同色的段」，短游程多＝紋理粗，長游程多＝紋理滑——SRE 偏愛短、LRE 偏愛長，一個看破碎、一個看連續。</p>", "5": "<p>同學，我們在 <strong>KP-2、KP-3、KP-4</strong> 裡已經學了三種抓紋理的方法：看灰階分布、看像素對、看連續段。這節來看第四種思路——<strong>用一組濾網去篩紋理</strong>。</p> <p>先講個廚房比喻。你有三種基本篩網：一種<strong>只留粗顆粒</strong>（平滑）、一種<strong>只留邊緣顆粒</strong>（邊緣）、一種<strong>只留中間凸起的顆粒</strong>（斑點）。單獨用一種篩網，抓到的資訊有限；但如果你把「粗顆粒篩網」跟「邊緣篩網」<strong>交叉組合</strong>——先用篩網 A 篩過一次、再用篩網 B 篩過一次——你能篩出的紋理花樣就變多了。<strong>Laws 遮罩</strong>做的正是這件事：拿幾個一維的基本濾網，兩兩交叉組合出一整組二維遮罩。</p> <p>先講白。<strong>局部線性轉換</strong>的核心操作，是拿影像裡每個 $N\\times N$ 鄰域當成一個向量 $\\boldsymbol{x}_{mn}$，乘上一個線性轉換矩陣 $A^T$：</p> <p>$$\\boldsymbol{y}_{mn}=A^T\\boldsymbol{x}_{mn}$$</p> <p>逐符號拆開看：</p> <ul> <li>$\\boldsymbol{x}_{mn}$：以像素 $(m,n)$ 為中心、攤平成向量的 $N\\times N$ 鄰域。</li> <li>$A$：轉換矩陣，它的每一行就是一個「遮罩」（mask）。</li> <li>$\\boldsymbol{y}_{mn}$：轉換後的向量，每個分量對應「這個鄰域跟某個遮罩有多像」。</li> </ul> <p>這件事等價於：用 $N^2$ 個遮罩去<strong>捲積</strong>原圖，得到 $N^2$ 張新的「通道」影像——每張通道圖，都在回答「原圖這個位置，有多少某種特定紋理成分」。</p> <p><strong>Laws 用三個基本向量</strong>組出遮罩：</p> <p>$$L=[1,2,1]^T\\ (\\text{局部平均}),\\qquad E=[-1,0,1]^T\\ (\\text{邊緣}),\\qquad S=[-1,2,-1]^T\\ (\\text{斑點})$$</p> <p>把這三個 $3\\times1$ 向量兩兩做<strong>外積</strong>（$L E^T$、$E L^T$、$S S^T$……），就能組出 $3\\times3=9$ 個遮罩。例如 $LE^T$ 這個遮罩，效果是「先在垂直方向平滑、再在水平方向抓邊緣」——専門找<strong>水平邊緣</strong>。</p> <p>要不要先猜：如果我們把一整張影像跟這 9 個遮罩都捲積一遍，得到 9 張通道圖之後，接下來要怎麼變成「特徵」？——不是直接把 9 張圖攤平當特徵（那還是太多維），而是對<strong>每個通道再算一次一階統計</strong>（例如變異數、峰態）。想想看：這其實就是這章最精妙的地方——<strong>原本要靠二階統計（KP-3 共相關矩陣）才能抓到的「空間相依性」，被 Laws 遮罩事先吸收進了每個通道，於是我們只需要對每個通道做最簡單的一階統計（KP-2）就夠了</strong>。</p> <p>我們手算一個迷你例子感受一下。假設某個 $1\\times3$ 的一維切片是 $[2,5,2]$（中間亮、兩邊暗，像個「凸起」）。用 $E=[-1,0,1]^T$ 做內積：</p> <p>$$E^T\\cdot[2,5,2]^T=(-1)(2)+(0)(5)+(1)(2)=0$$</p> <p>$E$ 濾網量到的邊緣反應是 0——合理，因為兩端一樣亮，沒有「一邊暗一邊亮」的邊緣。改用 $S=[-1,2,-1]^T$：</p> <p>$$S^T\\cdot[2,5,2]^T=(-1)(2)+(2)(5)+(-1)(2)=6$$</p> <p>$S$ 濾網量到強烈反應——因為這正是它要抓的「中間凸起」的斑點形狀！同一段訊號，不同遮罩量出完全不同的數字，這就是為什麼要用<strong>一整組</strong>遮罩，而不是單一個。</p> <p>這裡最容易踩的坑：<strong>別以為 9 個遮罩通道就是最終特徵</strong>——它們只是「中繼」表示，還要對每個通道做統計量摘要（變異、峰態）才是真正拿去分類的特徵向量；直接把 9 張全解析度的通道圖攤平，維度反而比原圖更大，完全違背特徵生成的初衷。另一坑是把 Laws 遮罩跟共相關矩陣搞混：共相關矩陣（<strong>KP-3</strong>）是先算出「空間關係」再統計；Laws 遮罩是反過來，先用捲積把空間關係<strong>吸收</strong>進每個像素、再做最簡單的一階統計。</p> <p>舉一反三：如果你想專門偵測「垂直條紋」紋理，你會用哪個遮罩組合（提示：想想 $E L^T$ 跟 $L E^T$ 誰對應水平、誰對應垂直）？</p> <p><strong>一句話收尾：</strong> Laws 遮罩用 $L$（平滑）、$E$（邊緣）、$S$（斑點）三個基本濾網交叉組合出九張「紋理成分地圖」，把二階的空間資訊預先捲進每個通道，剩下只要對每個通道做最簡單的一階統計就能當特徵。</p>", "6": "<p>同學，這節開始我們要從「看紋理」切換到「看形狀」。而看形狀最強的工具之一，就是<strong>矩（moment）</strong>。</p> <p>先講白。<strong>幾何矩</strong>就是把一張影像「壓縮」成幾個數字，每個數字捕捉影像分布的一個面向。你其實早就見過最簡單的矩了——<strong>重心</strong>。一張影像的質心 $\\bar x,\\bar y$ 就是兩個特別的矩：$m_{10}/m_{00}$、$m_{01}/m_{00}$。而更高階的矩，就告訴你這個形狀往哪邊伸、伸多遠、歪不歪。</p> <p>為什麼需要它？因為一張影像可能有幾千個像素，但我們想用<strong>少少的幾個數字</strong>就描述出它的形狀輪廓，餵給分類器辨識。而矩有個很棒的性質：<strong>只要把所有階的矩都算出來，理論上能重建整張影像</strong>——所以每個矩都帶著一點獨特的形狀資訊。</p> <p>定義長這樣：</p> <p>$$m_{pq}=\\iint x^p y^q I(x,y)\\,dx\\,dy$$</p> <ul> <li>$x,y$：影像平面座標。</li> <li>$p,q$：階數。$p+q$ 越大，捕捉的形狀細節越細。</li> <li>$m_{00}$：總質量（總灰階量）。$m_{10},m_{01}$：質心的分子。</li> </ul> <p>問題來了：$m_{pq}$ 很依賴物體在影像裡的位置。我把同一個杯子往右移 10 公分，$m_{10}$ 就變了，這對分類來說很討厭。所以我們把座標<strong>搬到質心當原點</strong>，得到<strong>中心矩</strong>：</p> <p>$$\\mu_{pq}=\\iint (x-\\bar x)^p(y-\\bar y)^q I(x,y)\\,dx\\,dy$$</p> <p>因為減掉了質心，中心矩<strong>對平移就不變了</strong>——杯子移到哪裡都無所謂。</p> <p>要不要先猜：為什麼二階中心矩 $\\mu_{20}$ 很有用？——它描述形狀在 $x$ 方向「張得多開」，是「寬度」的量化。$\\mu_{11}$ 描述形狀是不是歪斜著長。</p> <p>再來，中心矩對平移不變，但對<strong>縮放</strong>還是會變——放大兩倍的形狀，$\\mu_{20}$ 會變大。所以再歸一化：</p> <p>$$\\eta_{pq}=\\frac{\\mu_{pq}}{\\mu_{00}^{\\gamma}},\\quad \\gamma=\\frac{p+q+2}{2}$$</p> <p>這個歸一化讓 $\\eta_{pq}$ <strong>對縮放也不變</strong>。為什麼是 $\\gamma=\\frac{p+q+2}{2}$？因為 $p+q$ 階的矩隨縮放尺度 $s$ 的變化是 $s^{p+q+2}$，用 $\\mu_{00}=s^2$ 的 $\\gamma$ 次方去抵銷，剛好消掉尺度。</p> <p>這裡最容易踩的坑是<strong>把 $m_{pq}$ 跟 $\\mu_{pq}$ 搞混</strong>：$m_{pq}$ 是普通幾何矩（對平移敏感），$\\mu_{pq}$ 是中心矩（對平移不變），差別就在有沒有減質心。另一坑是忘了<strong>歸一化才對縮放不變</strong>——只有 $\\eta_{pq}$ 同時對平移和縮放都穩。</p> <p>這其實就是<strong>統計學裡的動差（moments）</strong>——一階統計（<strong>KP-2</strong>）的 $m_1,\\mu_2$ 我們用過，只是那時 $x$ 是灰階值、這裡 $x,y$ 是空間座標。同一套數學，換個解釋就從「灰階分布」變成「形狀分布」。下一節 <strong>KP-7</strong> 會把這裡的歸一化中心矩 $\\eta_{pq}$ 再組合一次，疊出連旋轉都不怕的 Hu 不變矩。</p> <p><strong>一句話收尾：</strong> 幾何矩用「$x^p y^q$ 加權求和」把形狀壓成數字——$m_{pq}$ 是原始座標、$\\mu_{pq}$ 搬回質心（對平移不變）、$\\eta_{pq}$ 再歸一化（對縮放也不變）。</p>", "7": "<p>上一節我們把影像壓成矩，還讓它對平移、縮放都不變。這節要更進一步——讓它連<strong>旋轉</strong>都不怕。</p> <p>先講白。想像你在做指紋或手勢辨識：手指不管是水平、垂直、還是斜 45 度，你都希望分類器認出「這是同一個手勢」。但一張圖轉個角度，普通的矩就變了。<strong>Hu 七不變矩就是一組「怎麼轉都不會變樣」的七個數字</strong>，拿來當形狀的身分證字號。</p> <p>為什麼需要這七個？因為單靠二階矩還不夠——旋轉會讓 $\\mu_{20}$ 跟 $\\mu_{02}$ 互換（形狀轉了 90 度，「寬」變「高」）。所以 Hu 巧妙地把這些矩組合起來，消掉旋轉的影響。</p> <p>配方是這樣：先用歸一化中心矩 $\\eta_{pq}$（還記得嗎，對平移和縮放都不變），然後組合成不變量。看最常用的兩個：</p> <p>$$\\phi_1=\\eta_{20}+\\eta_{02},\\qquad \\phi_2=(\\eta_{20}-\\eta_{02})^2+4\\eta_{11}^2$$</p> <ul> <li>$\\eta_{20}+\\eta_{02}$：把 $x$、$y$ 兩個方向的二階矩加起來——不管形狀怎麼轉，這「兩個方向張開的總和」是常數，這就是 $\\phi_1$ 對旋轉不變的秘密。</li> <li>$(\\eta_{20}-\\eta_{02})^2+4\\eta_{11}^2$：這是「張開差」的平方加上「歪斜度」的平方——也是個旋轉不變量，因為它其實就是橢圓的「半長軸×半短軸」之類的組合。</li> </ul> <p>要不要先猜：為什麼 $\\phi_1$ 轉個角度不會變？——因為旋轉只是把 $x$ 方向的「張開」分攤到 $y$ 方向去，此消彼長，總和固定。這就像一個十字轉起來，橫的變斜的，但「橫+縱的總伸展」不變。</p> <p>我們用最簡單的想像算：假設某形狀轉之前 $\\eta_{20}=3,\\eta_{02}=1$，那 $\\phi_1=3+1=4$。轉 90 度後，寬度跟高度互換，變成 $\\eta_{20}=1,\\eta_{02}=3$，但 $\\phi_1=1+3=4$，<strong>一點沒變</strong>。這就是不變量的威力。</p> <p>Hu 總共給七個（$\\phi_1\\sim\\phi_7$）。這裡有個超有趣的細節：<strong>前六個連「鏡射（reflection）」都不怕，但 $\\phi_7$ 在鏡射時會變號</strong>。意思是說，如果左撇子的手勢跟右撇子是鏡像，前六個數字長得一模一樣，只有 $\\phi_7$ 的正負號能區分它們——所以 $\\phi_7$ 是用來抓「左右手性」的。</p> <p>這裡最容易踩的坑：<strong>別以為七個都要一次背起來</strong>——考試/實務上最常用的是 $\\phi_1,\\phi_2$，剩下的是更高階的組合，重點是「它們都是旋轉不變量」這個概念，而不是逐個背公式。另一坑是<strong>數值範圍很大</strong>——實務上常取 $\\log|\\phi_k|$ 當特徵，不然數字動輒差好幾個數量級。</p> <p>其實這就是我們前面講的「中心矩」（<strong>KP-6</strong>）的<strong>進化版</strong>：$\\mu_{pq}$ 對平移不變，$\\eta_{pq}$ 對平移縮放不變，Hu 這七個再加碼到對平移縮放旋轉都不變——一步一步把「不變性」疊上去。</p> <p><strong>一句話收尾：</strong> Hu 七不變矩把歸一化中心矩組合起來，讓形狀「怎麼轉都認得出來」——前六個連鏡射都不怕，$\\phi_7$ 是專抓左右手的那個。</p>", "8": "<p>同學，我們在 <strong>KP-6、KP-7</strong> 學了幾何矩 $m_{pq}$ 跟 Hu 七不變矩。這節要問一個更深的問題：幾何矩這套工具，有沒有先天的缺陷？</p> <p>先講個拼圖比喻。想像你要用一組「基本形狀」去描述一張畫，重建出原畫。如果這組基本形狀彼此<strong>長得很像、互相重疊</strong>（比如一堆形狀相近的橢圓拼片），那你量出來的每一片資訊會<strong>互相重複</strong>——量了十片，可能只換到七片份的真資訊，剩下三片都是「炒冷飯」。幾何矩用的基底函數是 $x^p y^q$（單項式），這組基底<strong>不是正交的</strong>——不同階的單項式彼此有重疊的資訊，所以幾何矩的特徵裡藏著冗餘。<strong>Zernike 矩</strong>要做的，就是換一組「彼此不重疊」的正交拼圖片，讓每量一片、就真的多一分新資訊。</p> <p>先講白。Zernike 矩改用<strong>單位圓</strong> $x^2+y^2\\le1$ 內完備正交的 <strong>Zernike 多項式</strong>當基底：</p> <p>$$A_{pq}=\\frac{p+1}{\\pi}\\iint_{x^2+y^2\\le1} I(x,y)\\,V_{pq}^*(\\rho,\\theta)\\,dx\\,dy$$</p> <p>逐符號拆開看：</p> <ul> <li>$\\rho,\\theta$：把 $(x,y)$ 換成極座標——半徑跟角度。</li> <li>$V_{pq}(\\rho,\\theta)=R_{pq}(\\rho)\\,e^{jq\\theta}$：Zernike 基底函數，由一個「徑向」部分 $R_{pq}(\\rho)$（只跟半徑有關）乘上一個「角度」部分 $e^{jq\\theta}$（旋轉相位）組成。</li> <li>$\\frac{p+1}{\\pi}$：正規化常數，讓這組基底彼此正交、能量歸一。</li> <li>積分範圍限制在單位圓內——所以做 Zernike 矩之前，要先把影像座標<strong>縮放進單位圓</strong>。</li> </ul> <p>關鍵性質：$V_{pq}$ 裡「角度」的部分是 $e^{jq\\theta}$，如果影像旋轉一個角度 $\\alpha$，$A_{pq}$ 只會多乘上一個相位因子 $e^{-jq\\alpha}$——<strong>大小 $|A_{pq}|$ 完全不受影響</strong>。這跟複數 Fourier 描述子（<strong>KP-12</strong>）旋轉時「大小不變、相位變」的性質，是同一套數學邏輯，只是這裡的「訊號」換成了 2D 影像本身，而不是邊界座標序列。</p> <p>要不要先猜：既然幾何矩理論上「集齊所有階」就能重建影像（<strong>KP-6</strong> 提過這件事），那為什麼實務上大家還是偏好 Zernike 矩？——因為幾何矩的非正交性，讓高階矩對雜訊特別敏感、數值容易發散；而 Zernike 的正交基底讓每個係數獨立、穩定，<strong>在雜訊環境下比 Hu 矩表現更好</strong>。這正是「理論上都能做到」跟「實務上做得穩」之間的差距。</p> <p>我們用一個極簡例子感受「正交」在幹嘛。$A_{00}$ 是最簡單的 Zernike 矩，此時 $R_{00}(\\rho)=1$、$q=0$，所以 $V_{00}=1$——公式退化成：</p> <p>$$A_{00}=\\frac{1}{\\pi}\\iint_{x^2+y^2\\le1} I(x,y)\\,dx\\,dy$$</p> <p>這就是「單位圓內的平均亮度」（乘上圓面積 $\\pi$ 的倒數做歸一化）。假設離散化後，單位圓內只取樣到 4 個點，亮度分別是 $I=\\{0.2,\\,0.6,\\,0.8,\\,0.4\\}$，每個點代表的小面積都相等、四點恰好貼近覆蓋整個單位圓（近似 $\\pi$ 面積）。用離散加總近似積分：</p> <p>$$A_{00}\\approx\\frac{1}{\\pi}\\times\\pi\\times\\frac{0.2+0.6+0.8+0.4}{4}=\\frac{2.0}{4}=0.5$$</p> <p>$A_{00}=0.5$——就是這 4 個點的平均亮度，跟幾何矩的 $m_{00}$（總質量）角色很像，但 Zernike 版本從一開始就活在「單位圓 + 正交基底」這個乾淨的座標系裡。</p> <p>這裡最容易踩的坑：<strong>別以為 Zernike 矩可以直接套用在任意大小的原始影像座標上</strong>——公式明確限制積分範圍在單位圓 $x^2+y^2\\le1$ 內，所以用之前一定要先把影像像素座標<strong>正規化、投影進單位圓</strong>，這一步很多人會漏掉。另一坑是搞混「正交」跟「不變性」：正交解決的是<strong>資訊冗餘</strong>問題（每個係數獨立），旋轉不變性則是<strong>大小 $|A_{pq}|$ 不受角度影響</strong>這個獨立的性質——兩者是 Zernike 矩的兩個不同優點，不要以為正交自動就等於不變。</p> <p>舉一反三：如果 Zernike 矩對「反射（鏡射）」也有類似 Hu 矩 $\\phi_7$ 那種特殊行為，你會猜是哪個下標 $q$ 的分量最可能受影響（提示：鏡射會把角度 $\\theta$ 反號，想想 $e^{jq\\theta}$ 在 $\\theta\\to-\\theta$ 時會怎麼變）？</p> <p><strong>一句話收尾：</strong> Zernike 矩把單項式基底 $x^py^q$ 換成單位圓上彼此正交的 $V_{pq}(\\rho,\\theta)$，讓每個係數不再互相重疊資訊，大小 $|A_{pq}|$ 天生對旋轉不變，雜訊環境下比 Hu 矩（KP-7）更穩。</p>", "9": "<p>同學，這節我們從「空間」跳到「時間序列」。我們要想辦法用<strong>幾個參數</strong>就描述一條隨機序列——比如一段語音、一條股市走勢、或一行掃描到的影像。</p> <p>先講白。<strong>自迴歸模型（AR，Auto-Regressive）</strong>的核心思想就一句話：<strong>「現在的狀態，是過去狀態的線性組合，再加上一點隨機雜訊。」</strong> 就像你預測明天的天氣，會參考過去幾天的天氣，然後留一點不確定的餘地。</p> <p>為什麼需要它？因為我們不想把整條幾千點的序列當特徵，太肥了。我們想用<strong>少少的幾個 AR 參數 $a(k)$</strong> 就抓住「這條序列的脾氣」——它的慣性、它的波動模式，然後拿這幾個參數去分類，比如分辨這是哪個人講的話。</p> <p>公式長這樣（AR($p$) 模型）：</p> <p>$$I(n)=\\sum_{k=1}^{p} a(k) I(n-k)+\\eta(n)$$</p> <p>逐符號拆：</p> <ul> <li>$I(n)$：當前的樣本值（此刻的狀態）。</li> <li>$\\sum_{k=1}^{p} a(k) I(n-k)$：<strong>過去的 $p$ 個樣本</strong>的加權和，權重是 $a(k)$。</li> <li>$p$：模型的<strong>階數</strong>，看幾個過去樣本。</li> <li>$\\eta(n)$：白雜訊（均勻的隨機刺激，平均 0）。</li> </ul> <p>所以整句話是：「今天 = 過去 $p$ 天的加權平均 + 一點隨機抖動」。$a(k)$ 就是「昨天影響今天多少、前天影響多少」的權重。</p> <p>要不要先猜：如果 $a(1)$ 很接近 1，這條序列看起來會是什麼樣？——它會「黏住」上一個值，走得很平順、有慣性，不太會突然暴衝。如果所有 $a(k)$ 都接近 0，就幾乎是純雜訊、亂跳。</p> <p>我們實際看 Ch7 的例 7.4。給定 AR(2)：$I(n)=a(1)I(n-1)+a(2)I(n-2)+\\eta(n)$，且自相關 $r(0)=1, r(1)=0.5, r(2)=0.85$。解出來：</p> <p>$$\\begin{bmatrix}1&0.5\\\\0.5&1\\end{bmatrix}\\begin{bmatrix}a(1)\\\\a(2)\\end{bmatrix}=\\begin{bmatrix}0.5\\\\0.85\\end{bmatrix}$$</p> <p>解聯立得 $a(1)=0.1, a(2)=0.8$。看！$a(2)=0.8$ 很大——代表「兩步前的值」強烈影響現在，這條序列其實有比較長的記憶。這兩個數字（0.1, 0.8）就是這條序列的特徵。</p> <p>這裡最常踩的坑是<strong>搞混 AR 和 ARMA</strong>：AR 只靠「過去的輸出」迴歸，ARMA 還多了一塊「過去的雜訊」——AR 的好處就是估計參數時會得到<strong>線性方程組</strong>，好解。另一坑是<strong>階數 $p$ 別亂猜</strong>——$p$ 太小抓不住記憶、$p$ 太大過度配適，要靠 AIC/BIC 去選。</p> <p>這其實就是第 3 章講過的<strong>均方誤差線性迴歸</strong>（Ch3 KP-7）在「時間」上的變身：普通迴歸用「其他變數」預測，AR 用「自己的過去」預測自己——所以叫「自」迴歸。參數怎麼解，下一節 <strong>KP-10</strong> 接著講。</p> <p><strong>一句話收尾：</strong> AR 說「現在是過去的加權平均 + 一點雜訊」，$a(k)$ 那幾個權重就是序列的簽名——階數 $p$ 看記憶長短，$a(k)$ 看誰影響誰。</p>", "10": "<p>上一節我們知道了 AR 參數 $a(k)$ 就是序列的「簽名」。但問題來了：<strong>這些 $a(k)$ 到底怎麼從資料估出來？</strong> 這節就講這件事，而且我們會講到一個又快又美的算法——Levinson。</p> <p>先講白。我們想找一組權重 $a(1),\\dots,a(p)$，讓「用過去預測現在」的誤差越小越好。<strong>AR 參數估計</strong>，說穿了就是<strong>解一個線性方程組</strong>，把 $a(k)$ 解出來。</p> <p>為什麼需要特別的算法？因為 $p$ 可能很大（比如 $p=100$），硬解一個 $p\\times p$ 的線性系統要 $O(p^3)$，太慢。但這裡的矩陣很特別，<strong>長得很漂亮</strong>，可以抄捷徑到 $O(p^2)$。</p> <p>我們把預測看成這樣：$\\hat I(n)=\\sum_{k=1}^p a(k)I(n-k)$，而誤差是 $\\eta(n)=I(n)-\\hat I(n)$。最小化均方誤差 $E[\\eta^2(n)]$，會得到：</p> <p>$$E[I_p I_p^T]\\boldsymbol a=E[I(n)\\boldsymbol I_p(n-1)]$$</p> <p>用自相關來寫就是 $\\boldsymbol R\\boldsymbol a_p=\\boldsymbol r_p$，其中：</p> <p>$$\\boldsymbol R=\\begin{bmatrix}r(0)&r(-1)&\\cdots&r(-p+1)\\\\r(1)&r(0)&\\cdots&r(-p+2)\\\\\\vdots&&&\\vdots\\\\r(p-1)&r(p-2)&\\cdots&r(0)\\end{bmatrix}$$</p> <p>這裡藏著關鍵：<strong>$r(k)=r(-k)$（對稱），而且沿著每條對角線的值都一樣</strong>——這種矩陣叫 <strong>Toeplitz 矩陣</strong>。就是這個「對角線都一樣」的結構，讓 Levinson 能只用 $O(p^2)$ 就解完。</p> <p>要不要先猜：為什麼「對角線相同」能省這麼多計算？——因為矩陣裡其實只有 $p+1$ 個不同的數（$r(0),r(1),\\dots,r(p)$），不是 $p^2$ 個，一堆重複的資訊可以一次利用、逐層遞推。</p> <p>我們回到 Ch7 例 7.4 感受一下 $O(p^2)$ 的好處。$p=2$ 時系統是：</p> <p>$$\\begin{bmatrix}1&0.5\\\\0.5&1\\end{bmatrix}\\begin{bmatrix}a(1)\\\\a(2)\\end{bmatrix}=\\begin{bmatrix}0.5\\\\0.85\\end{bmatrix}$$</p> <p>注意這矩陣：主對角線都是 $r(0)=1$，副對角線都是 $r(1)=0.5$——典型的 Toeplitz。解出 $a(1)=0.1,a(2)=0.8$。如果 $p$ 只有 2，直接解沒差；但想想 $p=1000$，一般方法要算 $10^9$ 次運算，Levinson 只要 $10^6$ 次——差了一千倍！</p> <p>解出 $a(k)$ 之後，預測誤差的變異數（殘餘雜訊強度）是：</p> <p>$$\\sigma_\\eta^2=r(0)-\\sum_{k=1}^p a(k)r(k)$$</p> <p>也就是「總能量」減掉「被過往解釋掉的部分」，剩下的就是「模型抓不到的隨機部分」。</p> <p>這裡最容易踩的坑：<strong>別以為 Levinson 只省常數倍</strong>——它是從 $O(p^3)$ 降到 $O(p^2)$，這在大 $p$ 時是天壤之別。另一坑是<strong>忘了這個加速前提是「Toeplitz」</strong>——如果自相關不知道、改用最小平方和，矩陣就不是 Toeplitz，但還是有類似的 Levinson 型算法，只是性質不同。</p> <p>這其實就是我們第 3 章講過的<strong>最小均方估計</strong>（Ch3 KP-7）的應用——那時是解線性分類器，這裡是解<strong>上一節 KP-9</strong> 定義的線性預測器，數學架構一模一樣，只是變數從「特徵」換成「過去的樣本」。</p> <p><strong>一句話收尾：</strong> AR 參數就是解「$\\boldsymbol R\\boldsymbol a=\\boldsymbol r$」這個線性系統——而自相關矩陣「對稱 + 對角線相同（Toeplitz）」讓 Levinson 能用 $O(p^2)$ 快速遞推，省下一整個數量級。</p>", "11": "<p>同學，<strong>KP-9、KP-10</strong> 教了一維 AR：用「過去的時間點」預測「現在」。這節要把同一套邏輯搬進二維——沒有「過去」跟「未來」的影像世界，AR 要怎麼玩？</p> <p>先講個村莊比喻。一維 AR 像是看一個人的財富紀錄，用他「昨天、前天」的財富猜「今天」的財富——時間只有一個方向，過去永遠在過去。但一張影像沒有這種單向的時間軸：一個像素的「鄰居」可以在它的上下左右，沒有誰是「過去」誰是「未來」。這就像一個村莊裡，某戶人家的財富可以參考<strong>東西南北</strong>四個鄰居的財富來猜，而不只是「前一戶」。</p> <p>先講白。對影像 $I(m,n)$，二維 AR 預測寫成：</p> <p>$$\\hat I(m,n)=\\sum_k\\sum_l a(k,l)\\,I(m-k,n-l),\\quad(k,l)\\in W$$</p> <p>逐符號拆開看：</p> <ul> <li>$\\hat I(m,n)$：用鄰域預測出來的像素值。</li> <li>$a(k,l)$：權重，告訴我們「位移 $(k,l)$ 的那個鄰居，對現在這個像素影響多大」。</li> <li>$W$：<strong>窗（window）</strong>——決定哪些鄰居可以參與預測，這是二維 AR 跟一維 AR 最大的不同之處。</li> </ul> <p>一維 AR 只有一種窗（過去的 $p$ 個點）；二維因為沒有天然的方向性，窗的選法變成好幾種：</p> <ul> <li><strong>強因果</strong>：$W_1=\\{0\\le k\\le p,\\ 0\\le l\\le q,\\ (k,l)\\neq(0,0)\\}$——只用座標比 $(m,n)$「更小」的鄰居（沿光柵掃描順序，真的像過去）。</li> <li><strong>因果</strong>：$W_2$——放寬一點，允許同一列裡左邊的點。</li> <li><strong>半因果</strong>：$W_3=\\{-p\\le k\\le p,\\ 0\\le l\\le q,\\ (k,l)\\neq(0,0)\\}$——某個方向對稱、另一個方向不對稱。</li> <li><strong>非因果</strong>：$W_4=\\{-p\\le k\\le p,\\ -q\\le l\\le q,\\ (k,l)\\neq(0,0)\\}$——四面八方的鄰居都用，而且權重對稱 $a(k,l)=a(-k,-l)$。</li> </ul> <p>要不要先猜：既然「非因果窗」用了上下左右所有鄰居、資訊最多，是不是永遠都該選它？——先別急著說是。非因果窗雖然資訊豐富，但求解時<strong>沒辦法像一維那樣直接用簡單的線性方程組遞推</strong>，計算更複雜；強因果窗雖然只看局部方向，但保留了跟一維 AR 一樣的「遞迴」結構，估計起來反而輕鬆。這就跟一維 AR 的階數 $p$ 一樣——不是「用得越多越好」，是要在「資訊量」跟「求解難度」之間權衡。</p> <p>我們手算一個迷你非因果例子感受一下。假設窗只取上下左右四個緊鄰像素，權重對稱、都等於 $a=0.2$：</p> <p>$$\\hat I(m,n)=0.2\\big[I(m-1,n)+I(m+1,n)+I(m,n-1)+I(m,n+1)\\big]$$</p> <p>給定一小塊影像，中心像素的四個鄰居值是 $I=\\{8,\\,6,\\,7,\\,9\\}$（上下左右）：</p> <p>$$\\hat I(m,n)=0.2\\times(8+6+7+9)=0.2\\times30=6.0$$</p> <p>預測值是 6.0——你會發現這其實就是「四鄰居的平均」乘上一點權重調整，這正是「非因果、對稱」窗的直覺：<strong>不偏袒任何一個方向</strong>，公平地讓四周鄰居一起投票。如果鄰居們的值都差不多，預測就會很準；如果某個方向差很多（例如剛好在邊緣上），殘差 $\\eta(m,n)=I(m,n)-\\hat I(m,n)$ 就會變大——這正是這一整套模型能抓到「這裡是不是邊緣/紋理劇烈變化處」的原因。</p> <p>自相關矩陣的估計，若假設等向（各方向統計特性一樣），會呈現<strong>塊 Toeplitz（block Toeplitz）</strong>的結構——這是一維 AR 裡 Toeplitz 矩陣（<strong>KP-10</strong> 提過，讓 Levinson 遞推法能用）的二維推廣，同樣可以用 Levinson 型演算法加速求解，不必硬解一般線性方程組。</p> <p>這裡最容易踩的坑：<strong>別把「非因果」窗跟「用了未來資訊」搞混</strong>——影像沒有時間軸，「非因果」只是說權重在空間上對稱分布（$a(k,l)=a(-k,-l)$），不是真的違反什麼因果律，這只是借用一維訊號處理的舊詞彙。另一坑是以為二維 AR 只有一種窗——實際上強因果、因果、半因果、非因果各有取捨，選哪種要看你要簡單求解還是要豐富資訊。</p> <p>舉一反三：如果你要對一張「水平條紋」紋理的影像建二維 AR 模型，你猜哪個方向的權重 $a(k,l)$ 會比較大（提示：想想沿著條紋方向走，鄰居像素值變化大不大）？</p> <p><strong>一句話收尾：</strong> 二維 AR 把一維「用過去猜現在」的邏輯，換成「用空間鄰居猜這一點」——因為影像沒有天然的時間方向，窗 $W$ 要自己選（強因果/因果/半因果/非因果），自相關呈塊 Toeplitz 結構時，Levinson 型演算法（KP-10）一樣能派上用場。</p>", "12": "<p>同學，前面我們用「矩」看形狀，這節換一個非常優雅的角度——<strong>用傅立葉變換來描述邊界</strong>。</p> <p>先講白。想像你要描述一個物體（比如一個字元、一顆細胞）的輪廓。<strong>Fourier 描述子</strong>的做法是：沿著邊界走一圈，把每個點的位置當成一個複數 $u_k=x_k+jy_k$，然後對這一串複數做傅立葉變換——得到的係數就叫做 Fourier 描述子。為什麼這很讚？因為<strong>平移、旋轉、縮放對這些係數的影響是可以精確算出來的</strong>，我們能把它們「淨化」成不變特徵。</p> <p>定義：邊界取 $N$ 個取樣點，DFT：</p> <p>$$f_l=\\sum_{k=0}^{N-1} u_k \\exp\\!\\left(-j\\frac{2\\pi}{N}lk\\right)$$</p> <ul> <li>$u_k$：第 $k$ 個取樣點的位置（複數，把 $x,y$ 打包成一格）。</li> <li>$f_l$：第 $l$ 個 Fourier 係數（描述子）。</li> </ul> <p>關鍵的魔法在這裡——幾何變換怎麼影響 $f_l$，一張表說清楚：</p> <table> <thead> <tr> <th style=\"text-align: center;\">變換</th> <th style=\"text-align: center;\">對係數的影響</th> </tr> </thead> <tbody> <tr> <td style=\"text-align: center;\">平移 $u_k'=u_k+\\Delta u$</td> <td style=\"text-align: center;\">只影響 $f_0$（直流項）</td> </tr> <tr> <td style=\"text-align: center;\">旋轉 $u_k'=u_k e^{j\\theta}$</td> <td style=\"text-align: center;\">每個 $f_l$ 相位乘 $e^{j\\theta}$，<strong>大小不變</strong></td> </tr> <tr> <td style=\"text-align: center;\">縮放 $u_k'=au_k$</td> <td style=\"text-align: center;\">每個 $f_l$ 乘 $a$，比值 $f_i/f_j$ 不變</td> </tr> <tr> <td style=\"text-align: center;\">取樣起點移動</td> <td style=\"text-align: center;\">相位變，大小 $|f_l|$ 不變</td> </tr> </tbody> </table> <p>要不要先猜：為什麼旋轉只改相位、不改大小？——因為旋轉就是對所有複數乘一個模長為 1 的數 $e^{j\\theta}$，而「乘一個模長 1 的數」只會把角度轉一下、長度完全不會動。所以<strong>旋轉的影響，被 $|f_l|$ 這個「大小」自動抵銷掉了</strong>。</p> <p>我們在互動 demo 裡實際玩過：保留越少係數，輪廓越粗糙——只用前幾個 $f_l$（低頻）就能看出大致形狀，係數越多越逼近原始邊界。這就像用幾根線條先畫出輪廓骨架，再慢慢補細節。</p> <p>這裡最容易踩的坑：<strong>別以為 $f_0$ 無所謂</strong>——$f_0$ 就是形狀的重心（直流項），平移全靠它反映；如果你要做平移不變特徵，就得把 $f_0$ 拿掉或歸零。另一坑是<strong>取樣起點</strong>——邊界是封閉的，起點選在哪會影響相位，所以實務上要用 $|f_l|$（大小）而不是相位本身當特徵。</p> <p>這其實就是第 6 章學的<strong>離散傅立葉變換</strong>（Ch6 KP-11）在「封閉邊界」上的應用——只是訊號不再是時間、而是「沿著輪廓走的複數位置」。跟本章 <strong>KP-2、KP-3</strong> 那些看灰階質地的紋理特徵不同，Fourier 描述子看的是「形狀輪廓」，兩條路線互補：一個問「像什麼材質」、一個問「長什麼形狀」。</p> <p><strong>一句話收尾：</strong> Fourier 描述子把邊界拆成複數譜——平移動 $f_0$、旋轉轉相位（大小不變）、縮放乘倍數，所以抓「大小 $|f_l|$」就能得到對平移旋轉縮放都穩的形狀特徵。</p>", "13": "<p>同學，<strong>KP-12</strong> 用複數 Fourier 描述子描述邊界。這節換一種完全不同的路數——不用頻率，直接把邊界寫成一串「走路方向」。</p> <p>先講個健行比喻。你要跟朋友描述一條登山步道的形狀，你可以拍一張空照圖給他（那就是原始像素），但你也可以直接口述：「從起點出發，往東走一步、再往東走一步、往北走一步、往東北走一步……」——只要方向夠精確，朋友光聽你唸這串方向，就能在腦中重建出整條步道的形狀。<strong>鏈碼</strong>做的正是這件事：把邊界曲線切成等長的線段，每一段只記錄一個「方向編碼」。</p> <p>先講白。鏈碼把邊界表示成一段<strong>方向碼序列</strong> $[d_i]$：沿著邊界（通常順時針）走，每走一個單位步長，就用一個編碼記錄這一步的方向。常見兩種編碼方式：</p> <ul> <li><strong>4-鄰域</strong>（四方向）：只能往上下左右走，編碼 $0,1,2,3$。</li> <li><strong>8-鄰域</strong>（八方向）：多了斜角，編碼 $0\\sim7$（像羅盤的八個方位）。</li> </ul> <p>$d_i$ 就是連接邊界像素 $(x_i,y_i)$ 與下一個 $(x_{i+1},y_{i+1})$ 那條線段的方向編碼。以邊長為基本單位，<strong>偶數編碼</strong>（$0,2,4,6$，水平/垂直方向）的線段長度是 $1$，<strong>奇數編碼</strong>（$1,3,5,7$，斜角方向）的線段長度是 $\\sqrt2$（畢氏定理）。</p> <p>要不要先猜：同一個正方形，如果你從<strong>左上角</strong>開始描述，跟從<strong>右下角</strong>開始描述，得到的鏈碼序列會一樣嗎？——不會！雖然描述的是同一個形狀，但<strong>起始點不同，整串數字的排列就不同</strong>。這是鏈碼一個很惱人的缺點：對「起始點」敏感。</p> <p>我們手畫一個迷你例子。假設有一個邊長 2 的正方形，四個角依序是 $(0,0)\\to(2,0)\\to(2,2)\\to(0,2)\\to(0,0)$，用 4-鄰域編碼（$0$=東, $1$=北, $2$=西, $3$=南），每邊走 2 步：</p> <p>$$\\text{鏈碼}=[0,0,1,1,2,2,3,3]$$</p> <p>如果換成從 $(2,0)$ 開始描述同一個正方形，繞法一樣，鏈碼會變成 $[1,1,2,2,3,3,0,0]$——<strong>同一個形狀，序列整組「輪轉」了</strong>。這正是「對起始點敏感」的具體樣子。</p> <p><strong>差分鏈碼</strong>解決這個問題：把相鄰兩個方向碼相減（模上總方向數），$b_i=(d_{i+1}-d_i)\\bmod K$。用上面第一串 $[0,0,1,1,2,2,3,3]$（4-鄰域，$K=4$）算差分：</p> <p>$$b=[0-0,\\ 1-0,\\ 1-1,\\ 2-1,\\ 2-2,\\ 3-2,\\ 3-3,\\ (0-3)\\bmod4]=[0,1,0,1,0,1,0,1]$$</p> <p>再對第二串（從 $(2,0)$ 開始）算一次差分，你會發現算出來也是同一組<strong>輪轉版本</strong>的 $[0,1,0,1,0,1,0,1]$——因為差分鏈碼量的是「方向的<strong>變化量</strong>」而不是「絕對方向」，起點挪到哪裡，這個「變化模式」都長得一樣。這就是差分鏈碼能消除起點影響的關鍵。</p> <p>鏈碼還有兩類常見的下游特徵：</p> <ul> <li><strong>方向特徵</strong>：統計每個方向碼出現的次數（或該方向線段總長）除以總數/總長，八方向就能產生 8 個特徵。</li> <li><strong>曲率特徵</strong>：看相鄰兩個方向碼構成的<strong>外角</strong>是凹（小於 $180°$）還是凸（大於 $180°$），統計各種凹凸組合出現的比例，最多可以分出 16 種特徵（8 凸 + 8 凹）。</li> </ul> <p>這裡最容易踩的坑：<strong>鏈碼對「旋轉」也敏感</strong>——差分鏈碼只解決了起始點的問題，物體整個轉個角度，方向碼還是會整組改變（除非額外做旋轉歸一化），這是兩個獨立的問題，不要以為做了差分鏈碼就萬事俱備。另一坑是搞混鏈碼跟 Fourier 描述子（<strong>KP-12</strong>）的適用場合：Fourier 描述子把邊界看成「複數訊號」走頻域，天生對平移/旋轉/縮放有乾淨的代數性質；鏈碼是「離散方向序列」，直覺、好懂、好畫，但要對付幾何變換得靠額外的技巧（差分、重新取樣格點），兩者是同一個問題（描述邊界形狀）的不同哲學。</p> <p>舉一反三：如果你把上面正方形鏈碼範例的<strong>掃描方向</strong>從順時針改成逆時針，你猜差分鏈碼 $b_i$ 會變成什麼樣（提示：所有方向碼會不會整組變號或反轉）？</p> <p><strong>一句話收尾：</strong> 鏈碼把邊界寫成「往哪個方向走一步」的序列——差分鏈碼（相鄰方向相減）能消除起始點的影響，但旋轉敏感的問題還是要另外處理，跟 Fourier 描述子（KP-12）是描述形狀的兩條不同路。</p>", "14": "<p>同學，前面兩節我們學了幾何矩（KP-6）跟 Hu 七不變矩（KP-7）——一路把矩疊加成「怎麼轉都認得出來」的形狀簽章。這節我們回頭做點更直接的事：用最底層的二階矩，直接量出形狀「躺得多斜」跟「多像一根棒」。</p> <p>先講白。想像你把一把米粒灑在桌上，米粒散落成一個橢圓形的區域。你會很自然地問兩個問題：<strong>這攤米粒的長軸指向哪個方向？</strong>、<strong>這攤米粒是圓圓一團、還是拉成細細一條？</strong> 這兩個問題的答案，分別就是<strong>方向角（orientation）</strong>與<strong>離心率（eccentricity）</strong>——而且它們完全是從二階中心矩 $\\mu_{11},\\mu_{20},\\mu_{02}$（KP-6 已經教過怎麼算）直接讀出來的，不需要新公式家族。</p> <p>方向角定義：</p> <p>$$\\theta=\\frac{1}{2}\\tan^{-1}\\left[\\frac{2\\mu_{11}}{\\mu_{20}-\\mu_{02}}\\right]$$</p> <ul> <li>$\\mu_{20},\\mu_{02}$：分別是形狀沿 $x$、$y$ 方向「散開多少」的中心矩（可以想成 $x$、$y$ 方向各自的變異數）。</li> <li>$\\mu_{11}$：$x$、$y$ 兩個方向「一起變」的中心矩（可以想成共變異數）——如果形狀是斜的，$\\mu_{11}$ 就不會是 0。</li> <li>$\\theta$：形狀「慣性最小的那條軸」跟 $x$ 軸的夾角，也就是這攤米粒真正的長軸方向。</li> </ul> <p>我們來真的算一遍。假設一個形狀由 5 個像素座標組成：$(0,0),(1,0),(2,1),(3,1),(4,2)$——光用眼睛看，這幾個點大致往右上方緩緩爬升。</p> <p><strong>第一步，找質心：</strong> $$\\bar{x}=\\frac{0+1+2+3+4}{5}=2,\\qquad \\bar{y}=\\frac{0+0+1+1+2}{5}=0.8$$</p> <p><strong>第二步，算中心矩：</strong> $$\\mu_{20}=\\sum(i-\\bar{x})^2=4+1+0+1+4=10$$ $$\\mu_{02}=\\sum(j-\\bar{y})^2=0.64+0.64+0.04+0.04+1.44=2.8$$ $$\\mu_{11}=\\sum(i-\\bar{x})(j-\\bar{y})=1.6+0.8+0+0.2+2.4=5.0$$</p> <p><strong>第三步，代入方向角公式：</strong> $$\\theta=\\frac{1}{2}\\tan^{-1}\\left[\\frac{2\\times5.0}{10-2.8}\\right]=\\frac{1}{2}\\tan^{-1}(1.389)\\approx\\frac{1}{2}\\times54.2^\\circ\\approx27.1^\\circ$$</p> <p>要不要先猜：這個答案合不合理？——這五個點從 $(0,0)$ 爬到 $(4,2)$，斜率是 $2/4=0.5$，對應角度 $\\tan^{-1}(0.5)\\approx26.6^\\circ$。跟我們算出的 $27.1^\\circ$ 幾乎一樣！<strong>矩算出來的方向角，跟你用肉眼「連端點畫一條線」估出來的斜率幾乎吻合</strong>——這正是二階矩在做的事：不是真的連端點，而是找一條讓所有點「整體上」離得最近的軸，只是巧合在這個例子裡兩者很接近。</p> <p>至於離心率，量的是「這攤米粒多像一根棒」：$\\epsilon\\to 1$ 表示細長如棒、$\\epsilon\\to 0$ 表示接近圓形。除了直接用中心矩組合出的公式，教材也提到一個更直覺的替代量法：找出質心到邊界的<strong>最大距離 $R_{\\max}$</strong> 與<strong>最小距離 $R_{\\min}$</strong>，兩者的比值 $R_{\\max}/R_{\\min}$ 越大，形狀就越像一根棒；比值接近 1，就接近圓形。這給了我們一個不用公式也能「用眼睛驗證」的辦法。</p> <p>這裡最容易踩的坑：<strong>別把「方向角 $\\theta$」跟「離心率 $\\epsilon$」的角色搞混</strong>——$\\theta$ 回答「指向哪裡」（一個角度），$\\epsilon$ 回答「胖還是瘦」（一個比例），兩者是正交的兩個問題，一個描述姿態、一個描述體態。另一個坑是<strong>忘記這些是「平移不變」但不是「旋轉不變」</strong>——中心矩已經扣掉了質心（對平移不變），但形狀轉個方向，$\\theta$ 會跟著變、$\\mu_{20}$ 跟 $\\mu_{02}$ 也會互換，只有 $\\epsilon$（跟 Hu 矩一樣）才對旋轉保持穩定。</p> <p>這其實就是把 <strong>KP-6</strong> 教過的中心矩拿來做最直接的應用——不用像 <strong>KP-7</strong> 那樣把七個不變量兜在一起，只用 $\\mu_{11},\\mu_{20},\\mu_{02}$ 三個數，就能立刻讀出形狀的「姿態」與「體態」，是矩家族裡最省力、最好解釋的一組特徵。</p> <p><strong>一句話收尾：</strong> 二階中心矩不用兜成不變量也能立大功——$\\theta=\\frac12\\tan^{-1}[2\\mu_{11}/(\\mu_{20}-\\mu_{02})]$ 告訴你形狀躺向哪裡，$R_{\\max}/R_{\\min}$ 告訴你它有多像一根棒。</p>", "15": "<p>同學，前幾節我們用矩（KP-6/7/8）跟 Fourier 描述子（KP-12）把形狀變成抽象的數學係數——很強大，但有點「不食人間煙火」。這節我們回到最樸素的層次：<strong>直接量周長、量面積、算圓不圓</strong>，就跟你小時候學的幾何一樣。</p> <p>先講白。想像你要幫兩個蛋糕包緞帶：一個是圓形蛋糕、一個是方形蛋糕，兩個蛋糕<strong>面積一樣大</strong>。哪一個要用的緞帶比較長？直覺告訴你——方形的角落「浪費」了周長，所以方形蛋糕要包的緞帶比較長。這個「面積相同、周長卻不同」的落差，正是<strong>圓度（roundness）</strong>這個特徵要量化的東西。</p> <p>三個最直接的特徵：</p> <p>$$P=\\sum_{i=1}^{N-1}\\|\\boldsymbol{x}_{i+1}-\\boldsymbol{x}_i\\|+\\|\\boldsymbol{x}_N-\\boldsymbol{x}_1\\|$$</p> <ul> <li>$P$：<strong>周長</strong>，把邊界取樣點 $\\boldsymbol{x}_1,\\dots,\\boldsymbol{x}_N$ 一個接一個算距離加起來，最後再把終點接回起點（閉合邊界）。</li> <li>$A$：<strong>面積</strong>，最簡單的算法就是把區域內的像素一顆一顆數，當作測量單位。</li> <li>圓度 $\\gamma=\\dfrac{P^2}{4\\pi A}$：把周長跟面積的關係「歸一化」成一個跟大小無關的比值。</li> </ul> <p>要不要先猜：一個<strong>正圓形</strong>代入這個公式，$\\gamma$ 會是多少？——圓的周長 $P=2\\pi r$、面積 $A=\\pi r^2$，代進去：$\\gamma=\\dfrac{(2\\pi r)^2}{4\\pi\\cdot\\pi r^2}=\\dfrac{4\\pi^2r^2}{4\\pi^2r^2}=1$。<strong>正圓形的圓度恆等於 1，這是圓度量尺的「基準點」</strong>——任何形狀只要不是圓，$\\gamma$ 就會大於 1，形狀越扭曲、$\\gamma$ 越大。</p> <p>我們拿正方形蛋糕來驗證這個直覺。假設正方形邊長 $s=3$：</p> <p>$$A=s^2=9,\\qquad P=4s=12$$</p> <p>$$\\gamma=\\frac{P^2}{4\\pi A}=\\frac{144}{4\\pi\\times9}=\\frac{144}{113.1}\\approx1.27$$</p> <p>看！方形蛋糕的圓度是 $1.27$，比圓形的 $1$ 大——<strong>面積一樣大時，方形確實要包更長的緞帶</strong>，跟我們一開始的直覺完全吻合。而且這個 $1.27$ 不管正方形多大都一樣（因為 $\\gamma$ 對縮放不變：邊長變兩倍，$P^2$ 變四倍、$A$ 也變四倍，比值不變）。</p> <p>除了 $P$、$A$、$\\gamma$ 這三個「量了就懂」的特徵，教材也提到幾個延伸量：<strong>彎曲能量（bending energy）</strong> 用邊界曲率的平方和來量「邊界有多崎嶇」；<strong>角點數（corner count）</strong> 數邊界上曲率暴衝的位置；<strong>孔洞數</strong>——例如區分手寫字元「8」跟「0」，光看外圍邊界常常長得很像，但「8」多一個孔洞、「0」沒有，這個額外資訊在 OCR 裡非常有鑑別力。</p> <p>這裡最容易踩的坑：<strong>別以為周長、面積這類特徵可以「重建」原始形狀</strong>——教材特別強調它們是<strong>描述性（descriptive）</strong>特徵，不是<strong>再生性（regenerative）</strong>特徵：你知道一個形狀的 $P=12,A=9$，並不能反推出它長什麼樣子（可能是正方形，也可能是別的形狀湊出同樣的 $P,A$）。這跟 Fourier 描述子（<strong>KP-12</strong>）不一樣——後者原則上收集夠多係數就能把邊界「重建」回來。另一個坑是<strong>別忽略孔洞數這種拓樸資訊</strong>——只看外圍周長，會漏掉「裡面有沒有洞」這種對辨識極重要的線索。</p> <p>這其實跟 <strong>KP-6/KP-7</strong> 那些矩特徵是互補的兩條路——矩是把整個形狀「加權積分」壓成抽象係數，這節的幾何特徵則是直接在邊界或區域上「量出來」的直觀數字；前者精緻但不直觀，後者直觀但描述力較弱，實務上常常兩種一起用，各補各的短。</p> <p><strong>一句話收尾：</strong> 周長 $P$、面積 $A$ 是最樸素的量尺，圓度 $\\gamma=P^2/4\\pi A$ 把兩者濃縮成「這形狀有多不圓」——正圓恆為 1，越扭曲、越有角，$\\gamma$ 就越大，只是這些數字能描述形狀、卻不能重建形狀。</p>", "16": "<p>同學，這節要講一個讓人心生敬畏的概念——<strong>碎形（fractal）</strong>。它不是數學玩具，而是「自然界邊界」的真實模型。</p> <p>先講白。<strong>碎形</strong>就是「把自己的一部分放大，長得跟整體一樣」的圖形——這叫<strong>自相似（self-similarity）</strong>。海岸線就是最好的例子：你從衛星看、從直升機看、從沙灘上看，看到的都是彎彎曲曲的鋸齒，怎麼放大都長差不多。普通的圓、直線不是碎形，因為放大後就「變平」了。</p> <p>為什麼需要碎形維度？因為我們要回答一個問題：<strong>海岸線到底有多長？</strong> 你拿越小的尺去量，量到的長度越長——因為小尺能鑽進更小的灣。這代表海岸線的「真實維度」不是 1（線），也不是 2（面），而是<strong>介於 1 和 2 之間</strong>。碎形維度就是來量化「這種中間狀態的崎嶇度」的。</p> <p>最經典的例子是 <strong>Koch 雪花</strong>。它由一條線段開始，每次把每一段中間的 1/3 換成一個「山」字（兩個 1/3 段）。規律是：每段被換成 $N=4$ 段，但整體縮小到原來的 $m=3$ 分之一。碎形維度公式：</p> <p>$$D=\\frac{\\ln N}{-\\ln m}$$</p> <p>代入 Koch：$D=\\ln4/\\ln3\\approx1.26$。</p> <p>要不要先猜：為什麼不是「換成 4 段、所以 $D=4$」？——因為 $D$ 不是算「段數」，而是算「段數對照縮放比的增長速度」。$N$ 是段數（4）、$m$ 是縮放比（3），把兩者的對數相除，得到的是「每縮小 3 倍，就多出 4 倍的細節」這個增長率——剛好落在 1（直線）和 2（平面）之間。</p> <p>我們把公式講白：</p> <ul> <li>$D=1$：完全直的線（縮小多少倍、段數就少多少倍，沒有額外細節）。</li> <li>$D=2$：完全填滿一個平面。</li> <li>$D=1.26$：介於之間，邊界「比線崎嶇、但還沒填滿面」。</li> </ul> <p>實務上我們從影像估碎形維度，通常用「<strong>盒子計數法</strong>」：用不同大小的方格子去蓋住邊界，數需要幾個盒子，然後對「盒子數 $N$」和「格子大小 $\\epsilon$」取對數做迴歸，斜率就是 $D$。</p> <p>這裡最容易踩的坑：<strong>別把碎形維度 $D$ 跟「整數的拓撲維度」搞混</strong>——$D$ 是分數、可以不是整數，它量的是「填滿空間的能力」，不是簡單的「這是幾維空間」。另一坑是<strong>別以為真實物體在所有尺度都是碎形</strong>——自然界只在有限尺度範圍內有自相似性，超過範圍就不成立了。</p> <p>這其實跟我們前面的「紋理特徵」（<strong>KP-2</strong>~<strong>KP-4</strong>）有關聯——碎形維度本身就是一種很強的紋理特徵，粗紋理的 $D$ 高、平滑的 $D$ 低，所以它常被拿來做影像紋理分類。碎形維度是空間上的自相似量尺，下一節 <strong>KP-17</strong> 會介紹它在時間序列上的雙胞胎——Hurst 參數。</p> <p><strong>一句話收尾：</strong> 碎形維度 $D=\\ln N/-\\ln m$ 量的是「邊界有多崎嶇」——直線是 1、平面是 2、海岸線約 1.26，介於中間，用「段數增長對照縮放比」的對數來算。</p>", "17": "<p>上一節的碎形維度講的是「空間的崎嶇」。這節把它搬到「時間」——用<strong>分數布朗運動</strong>和 <strong>Hurst 參數</strong>來描述一條隨機序列「多會自己重複趨勢」。</p> <p>先講白。普通隨機漫步（布朗運動）是「今天往上或往下完全隨機、跟前一天無關」。但很多真實訊號不是這樣：有些「有記憶」——今天漲了，明天傾向續漲（趨勢持續）；有些「愛回頭」——偏離久了會自己拉回來（均值回歸）。<strong>Hurst 參數 $H$ 就是用來量「這條序列屬於哪種」的單一數字。</strong></p> <p>為什麼需要它？因為如果我們知道某訊號有長期記憶（$H\\gt 0.5$），就能用這個特性當分類特徵——比如判斷這是「有人講話的語音」還是「白噪音」，或分析金融走勢。</p> <p>分數布朗運動（fBm）的關鍵性質，是它的增量方差跟尺度成<strong>冪律</strong>：</p> <p>$$\\mathrm{Var}\\big(I(x+\\Delta x)-I(x)\\big)\\propto \\Delta x^{2H}$$</p> <ul> <li>$\\Delta x$：你觀察的尺度間隔。</li> <li>$H$：Hurst 參數，$0\\lt H\\lt 1$。</li> <li>$2H$：冪律的指數。</li> </ul> <p>$H$ 的三種樣態：</p> <ul> <li>$H\\gt 0.5$：<strong>趨勢持續（persistent）</strong>——走勢有慣性，喜歡延續。</li> <li>$H=0.5$：<strong>純隨機</strong>——就是一班隨機漫步。</li> <li>$H\\lt 0.5$：<strong>均值回歸（anti-persistent）</strong>——偏離後會拉回來。</li> </ul> <p>要不要先猜：如果某條訊號 $H=0.8$，你該預期它明天「延續今天的方向」還是「反過來」？——是延續。因為 $H\\gt 0.5$ 表示正相關、有長期記憶，這跟直覺「隨機就是亂」相反，所以這正是最容易搞混的地方。</p> <p>那 $H$ 怎麼估？兩邊取對數：</p> <p>$$\\ln \\mathrm{Var} = 2H \\cdot \\ln\\Delta x + \\text{常數}$$</p> <p>所以你只要對「不同尺度 $\\Delta x$ 下的增量方差」取對數，然後畫 $\\ln\\mathrm{Var}$ 對 $\\ln\\Delta x$ 的圖，<strong>斜率就是 $2H$</strong>。這是個很優雅的做法——把冪律變成直線，用迴歸斜率抓出指數。</p> <p>對二維影像，碎形維度跟 Hurst 參數還有個漂亮的關係：$D=2-H$（$D$ 是碎形維度、$H$ 是 Hurst）。$H$ 越大，$D$ 越小（表面越平滑）。</p> <p>這裡最容易踩的坑：<strong>別把 $H$ 跟「相關性方向」搞反</strong>——$H\\gt 0.5$ 是正相關（延續）、$H\\lt 0.5$ 是負相關（回歸），很多人記反，因為直覺上「$H$ 大」容易被誤會成「更亂」，其實 $H$ 大代表「更有記憶、更有規律」。另一坑是<strong>別以為真實訊號全範圍都服從單一 $H$</strong>——自然界只在有限尺度範圍內是 fBm，超過範圍就不成立。</p> <p>這其實就是碎形維度（<strong>KP-16</strong>）在「時間序列」上的化身——一個管空間的崎嶇、一個管時間的記憶，背後都是同一套冪律思維。</p> <p><strong>一句話收尾：</strong> Hurst 參數 $H$ 用「增量方差 $\\propto \\Delta x^{2H}$」量序列的記憶——$H\\gt 0.5$ 愛延續、$H\\lt 0.5$ 愛回頭，估法就是把 log-log 圖的斜率除以 2，且 $D=2-H$。</p>", "18": "<p>同學，前面十七節我們都在講影像的特徵，這節開始換跑道——進入<strong>聲音</strong>的世界。但在講任何一個音訊特徵之前，我們得先解決一個根本問題：<strong>為什麼不能直接把整段錄音丟進傅立葉變換？</strong></p> <p>先講白。想像你在拍一部縮時攝影的影片，內容是「一整天城市的車流」。如果你把整部影片疊成一張照片求平均，你只會得到一片模糊的殘影——因為早上車流跟深夜車流長得完全不一樣，<strong>整段時間根本不是「穩定」的狀態</strong>。正確做法是把影片切成一格一格（frame），每一格裡的車流狀況大致穩定，再逐格分析。語音訊號也是一模一樣的道理：一整句話裡有母音、有子音、有停頓，統計特性隨時間劇烈變化（這叫<strong>非平穩，nonstationary</strong>），你不能對整句話做一次傅立葉變換就想抓到有用的頻率資訊。</p> <p>解法是<strong>分框（framing）</strong>：</p> <p>$$x_i(n)=x(n+m_i)\\,w(n)$$</p> <ul> <li>$x(n)$：原始的完整訊號。</li> <li>$w(n)$：<strong>窗函數</strong>，只在 $0\\le n\\le N-1$ 這 $N$ 個樣本內有值，框外全是 0。最簡單的是<strong>矩形窗</strong>（直接切一刀），但邊緣會有突兀的斷點；更常用的是<strong>漢明窗（Hamming window）</strong> $w(n)=0.54-0.46\\cos\\!\\big(\\frac{2\\pi n}{N-1}\\big)$，讓框的邊緣平滑地降到 0，減少頻譜洩漏。</li> <li>$m_i$：第 $i$ 個框的起始位移——窗往右移一點，就切出下一框。</li> <li>每一框內，訊號被當成「準平穩（quasistationary）」——短時間內近似穩定，可以放心套用為穩定訊號設計的分析工具（像傅立葉變換）。</li> </ul> <p>框長 $N$ 怎麼選，教材說是「一門藝術」：<strong>太短</strong>，框內樣本數不夠，抓不到訊號的週期性等關鍵資訊；<strong>太長</strong>，框內的統計特性又開始漂移，違反「準平穩」的假設。實務上語音在 $f_s=10$ kHz 取樣時，框長常落在 100–200 個樣本（約 10–20 毫秒）；音樂在 44.1 kHz 取樣時，框長常落在 2048–4096 個樣本（約 45–95 毫秒）。</p> <p>我們來實際排一次框。假設一段訊號有 50 個樣本，我們選框長 $N=20$、相鄰框重疊 5 個樣本（這正是教材 Figure 7.19 用的例子）。<strong>重疊</strong>代表每次窗往前移動的距離（hop）是 $20-5=15$ 個樣本，不是整個 20 個樣本——這樣才不會漏掉框與框交界處的資訊。</p> <ul> <li>第 1 框：涵蓋樣本 $0\\sim19$</li> <li>第 2 框：起點右移 15，涵蓋樣本 $15\\sim34$</li> <li>第 3 框：再右移 15，涵蓋樣本 $30\\sim49$——剛好用完全部 50 個樣本！</li> </ul> <p>要不要先猜：如果我們把重疊改成 0（框跟框完全不重疊）會怎樣？——50 個樣本、框長 20、無重疊，起點會落在 $0,20,40$，但第 3 框從 40 開始只剩 10 個樣本（不夠一整框），資訊會在框與框的邊界處硬生生被切斷、沒有任何緩衝——這就是為什麼實務上幾乎都要留一點重疊，讓每個時刻至少被兩個相鄰框「看到」，分析結果才不會在框邊界處突然斷裂。</p> <p>有了分框，教材接著把<strong>自相關序列</strong>（第 7.2.4 節用過的舊朋友）也搬進「短時」版本：</p> <p>$$r_i(k)=\\frac{1}{N}\\sum_{n=0}^{N-1-|k|}x_i(n)\\,x_i(n+|k|)$$</p> <p>跟全域自相關 $r(k)=E[x(n)x(n+k)]$ 意思一樣，只是限制在第 $i$ 框的 $N$ 個樣本內計算——這個短時自相關矩陣依然保有<strong>對稱、Toeplitz</strong> 的良好結構（跟 <strong>KP-9/KP-10</strong> 的 AR 模型用的是同一套矩陣結構），讓 Levinson 遞推法在音訊上一樣能派上用場。</p> <p>這裡最容易踩的坑：<strong>別以為框長選越長越好</strong>——長框確實資訊多、頻率解析度高，但代價是犧牲了「準平穩」假設、也犧牲了時間解析度（你沒辦法精準抓到某個瞬間發生的事）。這是頻率解析度跟時間解析度之間永遠的兩難。另一個坑是<strong>忘記加窗直接硬切</strong>——矩形窗硬切會在頻域產生額外的高頻漣漪（frequency leakage），這正是漢明窗這類平滑窗存在的理由。</p> <p>分好框之後，怎麼從每一框抽特徵？後面幾節分頭給答案：<strong>KP-19</strong> 的倒頻譜、<strong>KP-20</strong> 的梅爾倒頻譜都是從每一框的頻譜出發算出來的；<strong>KP-21</strong> 的頻譜特徵直接量頻譜的形狀；<strong>KP-22</strong> 的過零率跟能量甚至不需要頻譜，直接在時域裡算。所有這些方法的共同前提，都是這一節教的「先把訊號切成一格一格」。</p> <p><strong>一句話收尾：</strong> 語音非平穩，不能整段分析——分框（配合漢明窗、留重疊）把它切成一格一格「近似平穩」的短片段，讓後面每一種特徵（倒頻譜、頻譜特徵、時域特徵）都能站在穩固的地基上計算。</p>", "19": "<p>同學，這節我們要認識語音處理裡一個名字很嚇人、但其實很優雅的工具——<strong>倒頻譜（cepstrum）</strong>。</p> <p>先講白。<strong>倒頻譜</strong>，就是把「頻譜的對數」再做一次傅立葉變換的結果。翻譯成人話：頻譜告訴你「訊號有哪些頻率成分」，而倒頻譜告訴你「這些頻率成分是如何<strong>週期性</strong>起伏的」。它用來把「聲源」跟「聲道」分開——這正是語音辨識的關鍵一步。</p> <p>為什麼需要它？因為人的語音是兩個東西相乘：<strong>聲源</strong>（聲帶的振動，決定了音高）乘上<strong>聲道</strong>（口腔鼻腔的形狀，決定了是「啊」還是「一」）。問題是「相乘」很討厭，難分開。但如果取對數，乘法就變成加法：</p> <p>$$\\log(\\text{聲源}\\times\\text{聲道})=\\log(\\text{聲源})+\\log(\\text{聲道})$$</p> <p>變成加法之後，再做一次傅立葉變換，兩者就在「倒頻域」裡分居兩地——<strong>聲源的週期性特徵跑到一個位置，聲道的形狀跑到另一個位置</strong>，可以輕鬆切開。這就像把兩片疊在一起的透明膠片分開來看。</p> <p>定義：</p> <p>$$c(n)=\\frac{1}{2\\pi}\\int_{-\\pi}^{\\pi} \\ln|X(\\omega)| e^{j\\omega n}\\,d\\omega$$</p> <ul> <li>$X(\\omega)$：原訊號的傅立葉變換（頻譜）。</li> <li>$\\ln|X(\\omega)|$：取對數（把乘法變加法）。</li> <li>再對它做反傅立葉：得到倒頻譜 $c(n)$。</li> </ul> <p>倒頻譜的「時間軸」單位其實不是時間，而是「<strong>倒頻（quefrency）</strong>」——一個故意把頻譜顛倒過來造的詞。</p> <p>要不要先猜：倒頻譜的 peak 位置告訴你什麼？——它對應「頻譜的週期」；而頻譜的週期，正是<strong>基本頻率（pitch）</strong>！所以倒頻譜找 peak，就能估出一個人的音高。這是它的招牌應用之一。</p> <p>我們用數字想：假設一段語音的頻譜在高頻處有一排等間距的小峰（這是泛音，間距＝基頻）。取對數後這排峰變成「鋸齒」，再反傅立葉，就在某個「倒頻」位置出現一個大峰——那個位置就是基頻的週期。這就是「頻譜的週期性」的量化。</p> <p>這裡最容易踩的坑：<strong>別把倒頻譜跟頻譜搞混</strong>——頻譜的 $x$ 軸是「頻率」，倒頻譜的 $x$ 軸是「倒頻」（≈頻譜週期的倒數），兩者是傅立葉變換的一對。另一坑是<strong>別忘了先取對數</strong>——如果不取對數，聲源跟聲道還是「相乘」狀態，切不開；取對數讓它們變成「相加」，這一步是整個方法的靈魂。</p> <p>這其實跟下一節 <strong>KP-20</strong> 的<strong>梅爾倒頻譜（MFCC）</strong>是同一家人——MFCC 就是倒頻譜的改良版，先照人耳聽覺的 Mel 刻度把頻譜加權，再取對數、做離散餘弦變換。先懂倒頻譜，MFCC 就只是加了一個「人類聽覺濾波」的步驟。</p> <p><strong>一句話收尾：</strong> 倒頻譜 = 對頻譜取對數（把「相乘」的聲源×聲道變成「相加」）再反傅立葉，讓聲源跟聲道在倒頻域分居兩地——找 peak 就能估音高。</p>", "20": "<p>同學，如果語音/音訊分類只學一種特徵，那八成就是它——<strong>MFCC</strong>。它是目前語音辨識、說話者辨識、音樂分類的「工業標準」特徵。</p> <p>先講白。<strong>MFCC</strong>（梅爾頻率倒頻譜係數）是倒頻譜的「人耳友善版」。倒頻譜把聲源跟聲道分開了，但它是用「均勻的頻率刻度」在做——問題是人類耳朵根本不是均勻的：<strong>低頻我們超靈敏、高頻我們很遲鈍</strong>。MFCC 就是先把頻譜照「人的聽覺」重新加權（用 Mel 刻度），再做倒頻譜那套，得到的係數對人耳更貼切、也更適合分類。</p> <p>為什麼需要它？因為機器要分類「這是哪個人講的話」「這是哪種音樂」，用的特徵要能抓住「聲道形狀」（決定發什麼音）跟「聲源」（決定音高），同時對雜訊、說話者變異要有魯棒性。MFCC 這套剛好做到。</p> <p>做法四步走：</p> <ol> <li><strong>分框</strong>：把訊號切成短框（每框內近似平穩，還記得 7.5.1 嗎）。</li> <li><strong>FFT</strong>：每個框做傅立葉變換得到頻譜。</li> <li><strong>Mel 濾波器組 + 取對數</strong>：把頻譜用一組「低頻密、高頻疏」的三角濾波器包起來，取對數。</li> <li><strong>DCT</strong>：對這些對數能量做離散餘弦變換，得到一堆係數 $c_i$，就是 MFCC。</li> </ol> <p>其中 <strong>Mel 刻度</strong>是核心。它把頻率 $f$ 轉成「人耳感覺的頻率」：</p> <p>$$\\text{Mel}(f)=2595\\cdot\\log_{10}\\left(1+\\frac{f}{700}\\right)$$</p> <p>看！這是個<strong>對數式</strong>的轉換——低頻時變化快、高頻時變化慢，完全符合「耳朵低頻靈敏、高頻遲鈍」的特性。</p> <p>要不要先猜：為什麼高頻在 Mel 刻度上「被壓縮」？——因為人耳在高頻對「頻率差」不敏感。2000Hz 跟 2100Hz 你分不太出來，但 100Hz 跟 200Hz 差很多。Mel 刻度就是把人耳的這種「非線性」先內建到特徵裡。</p> <p>為什麼最後要 DCT？因為 DCT 能把這堆 Mel 能量的資訊<strong>去相關、壓縮</strong>——前幾個係數就抓住了大部分聲道形狀的資訊，後面的是細節。所以實務上常只保留前 13~20 個 MFCC 當特徵。</p> <p>這裡最容易踩的坑：<strong>別把 Mel 濾波器跟倒頻譜的步驟搞混順序</strong>——MFCC 是先「照 Mel 加權頻譜」再「取對數」再「DCT」，不是直接拿上一節的倒頻譜就用。另一坑是<strong>別忘了這四個步驟的次序</strong>（分框→FFT→Mel+對數→DCT），口訣是「框頻梅對 DCT」。</p> <p>這其實就是把我們前面講的<strong>倒頻譜</strong>（<strong>KP-19</strong>）加上「人耳聽覺（Mel 刻度）」的改良——倒頻譜是原型，MFCC 是把它照人類聽覺優化的量產版。</p> <p><strong>一句話收尾：</strong> MFCC = 分框 → FFT → Mel 濾波+取對數 → DCT，用「低頻密高頻疏」的人耳刻度改良倒頻譜，是目前語音/音訊分類最標準的特徵。</p>", "21": "<p>同學，<strong>KP-18</strong> 教會我們把音訊切成一框一框，這節我們拿其中一框的頻譜 $X_i(m)$ 出來，直接從它的「形狀」讀出四個很直觀的特徵——不需要像倒頻譜（<strong>KP-19</strong>）那樣再做一次變換。</p> <p>先講白。想像你在看一段聲音的頻譜長條圖，橫軸是頻率、每根長條高度是能量。這節要教你四種「用眼睛看形狀就懂」的量法：<strong>這堆能量整體偏向哪裡（centroid）</strong>、<strong>大部分能量塞在哪個門檻以下（roll-off）</strong>、<strong>這根長條圖跟上一框比動了多少（flux）</strong>、<strong>有沒有規律的間隔重複出現（fundamental frequency）</strong>。</p> <p><strong>頻譜質心（Spectral Centroid）</strong>：</p> <p>$$C(i)=\\frac{\\sum_{m=0}^{N-1}m\\,|X_i(m)|}{\\sum_{m=0}^{N-1}|X_i(m)|}$$</p> <p>這是頻譜的「加權平均位置」——用每個頻率的能量 $|X_i(m)|$ 當權重，算出能量的重心落在哪個頻率索引 $m$ 上。質心越高，代表能量越往高頻集中，聽起來就越「明亮、尖銳」；質心越低，聽起來越「低沉、渾厚」。這就跟你評論一幅畫「偏暖色調」還是「偏冷色調」是一樣的邏輯，只是把顏色換成頻率。</p> <p>我們來實際算一遍。假設某一框的頻譜只有 4 個頻率點，強度分別是 $|X(0)|=1,|X(1)|=2,|X(2)|=6,|X(3)|=1$：</p> <p>$$C=\\frac{0\\times1+1\\times2+2\\times6+3\\times1}{1+2+6+1}=\\frac{0+2+12+3}{10}=1.7$$</p> <p>質心落在 $1.7$，比中間值 $1.5$ 略高一點——因為能量最大的那根長條在 $m=2$（強度 6），把重心往右拉了一些。</p> <p><strong>頻譜 Roll-off</strong>：找一個頻率門檻 $m_c^R(i)$，讓門檻以下的能量恰好佔全部能量的 $c\\%$（常取 $c=85$ 或 $90$）：</p> <p>$$\\sum_{m=0}^{m_c^R(i)}|X_i(m)|=\\frac{c}{100}\\sum_{m=0}^{N-1}|X_i(m)|$$</p> <p>用剛剛同一組數字驗算，$c=85\\%$：總能量 $10$，$85\\%$ 是 $8.5$。累加：$m=0$ 累積 $1$；$m=0\\sim1$ 累積 $3$；$m=0\\sim2$ 累積 $9$，已經超過 $8.5$！所以 $m_c^R=2$——<strong>85% 的能量在 $m=2$（含）之前就已經累積完畢</strong>，這告訴我們高頻（$m=3$）幾乎沒有貢獻。Roll-off 越高，代表能量越往右（高頻）分散，是頻譜「向右偏斜（skewness）」程度的量尺。</p> <p><strong>頻譜流量（Spectral Flux）</strong>：</p> <p>$$F(i)=\\sum_{m=0}^{N-1}\\big(N_i(m)-N_{i-1}(m)\\big)^2$$</p> <p>這裡 $N_i(m)$ 是<strong>正規化過</strong>（除以自己的最大值）的頻譜強度。Flux 量的是「這一框的頻譜形狀，跟上一框比變了多少」——就像比較兩張連續影格的差異一樣，是頻譜界的「動作偵測器」。如果聲音很穩定（像拉長的母音），連續幾框的頻譜幾乎不變，Flux 就很小；如果聲音正在劇烈變化（像子音轉母音的瞬間），Flux 就會飆高。</p> <p><strong>基頻（Fundamental Frequency）</strong>：如果聲音是<strong>諧和（harmonic）</strong>的（像人聲的母音、樂器聲），頻譜會出現一整排等間距的尖峰——這些尖峰的間距就是基頻，也就是我們聽感上的「音高（pitch）」。</p> <p>要不要先猜：如果基頻本身那根尖峰因為某種原因消失了（頻譜上那個位置根本沒有能量），我們還聽得出音高嗎？——教材真的舉了單簧管的例子：基頻 230 Hz 那根尖峰在頻譜裡完全缺席，但耳朵依然能穩穩聽出音高是 230 Hz！原因是耳朵（跟後續的基頻估計演算法）會去看<strong>其他倍頻峰值之間的間距</strong>（求它們的最大公因數），反推出「原本應該存在」的基頻位置——這是一個心理聲學現象，聽感上的音高不必然等於頻譜裡真的存在的那根尖峰。</p> <p>這裡最容易踩的坑：<strong>別把頻譜質心跟基頻搞混</strong>——質心是「能量重心」，是一個統計量，任何聲音（包括噪音）都算得出來；基頻是「週期結構的間距」，只有諧和聲音才有意義，噪音類聲音（如拍手聲、腳步聲）根本沒有基頻可言。另一個坑是<strong>Flux 一定要先正規化</strong>——如果不除以最大值，兩框只要整體音量不同（哪怕形狀完全一樣），Flux 也會被算得很大，這樣量到的就是「音量變化」而不是「形狀變化」。</p> <p>這四個頻譜特徵，跟同框算出來的 <strong>KP-22</strong> 時域特徵（過零率、能量）剛好是一組互補的搭檔——一個從頻域看形狀，一個從時域看波形，兩者背後用的都是 <strong>KP-18</strong> 分好的同一框訊號。</p> <p><strong>一句話收尾：</strong> 質心量「亮不亮」、Roll-off 量「能量往右偏多少」、Flux 量「跟上一框差多少」、基頻量「間距重複的節奏」——四個都是直接盯著頻譜的形狀讀數字，不需要再做一次變換。</p>", "22": "<p>同學，<strong>KP-21</strong> 教了四個要先算頻譜才能用的特徵，這節反過來——介紹兩個<strong>連傅立葉變換都不用做</strong>、直接在時域裡數一數、加一加就能算出來的特徵。便宜、即時、好用，是它們的招牌。</p> <p>先講白。想像你是地震觀測站的值班員，眼前是一條地震儀畫出的震動曲線，你不需要對它做任何複雜運算，光用眼睛就能大致判斷「這是強震還是微震」：<strong>曲線擺動的幅度有多大</strong>（振幅大小），以及<strong>曲線穿過中線的密集程度</strong>（擺動有多快、多雜）。這兩個直覺，翻譯成音訊的語言，正好就是<strong>能量（Energy）</strong>跟<strong>過零率（Zero-Crossing Rate, ZCR）</strong>。</p> <p><strong>過零率</strong>：</p> <p>$$Z(i)=\\frac{1}{2N}\\sum_{n=0}^{N-1}\\big|\\mathrm{sgn}[x_i(n)]-\\mathrm{sgn}[x_i(n-1)]\\big|,\\qquad \\mathrm{sgn}[x_i(n)]=\\begin{cases}1 & x_i(n)\\ge0\\\\-1 & x_i(n)\\lt0\\end{cases}$$</p> <p>每比較一次相鄰兩個樣本的正負號，只要<strong>變號</strong>了，$|\\mathrm{sgn}(n)-\\mathrm{sgn}(n-1)|$ 就會是 $|1-(-1)|=2$；沒變號就是 $0$。除以 $2N$ 是把它正規化成一個「比例」——大致告訴你這一框裡波形穿越零軸的頻繁程度。<strong>過零越頻繁，代表訊號含有越高頻或越像雜訊的成分</strong>，這正是無聲子音（如「s」、「f」這種氣音）過零率偏高、母音過零率偏低的原因。</p> <p><strong>能量</strong>：</p> <p>$$E(i)=\\frac{1}{N}\\sum_{n=0}^{N-1}|x_i(n)|^2$$</p> <p>就是這一框樣本的平方和取平均——量的是這一段聲音「響不響」。振幅越大，能量越高；靜音片段能量趨近於 0，是偵測「有沒有人在講話」最簡單的判準。</p> <p>我們來實際算一遍。假設某一框只有 8 個樣本，符號序列是 $x=[1,-1,1,1,-1,-1,1,-1]$（振幅都取 $\\pm1$ 方便計算）。</p> <p><strong>先算過零率</strong>（依序比較相鄰樣本的正負號）：</p> <table> <thead> <tr> <th style=\"text-align: center;\">$n$</th> <th style=\"text-align: center;\">1</th> <th style=\"text-align: center;\">2</th> <th style=\"text-align: center;\">3</th> <th style=\"text-align: center;\">4</th> <th style=\"text-align: center;\">5</th> <th style=\"text-align: center;\">6</th> <th style=\"text-align: center;\">7</th> </tr> </thead> <tbody> <tr> <td style=\"text-align: center;\">符號變化</td> <td style=\"text-align: center;\">$+\\to-$</td> <td style=\"text-align: center;\">$-\\to+$</td> <td style=\"text-align: center;\">$+\\to+$</td> <td style=\"text-align: center;\">$+\\to-$</td> <td style=\"text-align: center;\">$-\\to-$</td> <td style=\"text-align: center;\">$-\\to+$</td> <td style=\"text-align: center;\">$+\\to-$</td> </tr> <tr> <td style=\"text-align: center;\">變號？</td> <td style=\"text-align: center;\">是</td> <td style=\"text-align: center;\">是</td> <td style=\"text-align: center;\">否</td> <td style=\"text-align: center;\">是</td> <td style=\"text-align: center;\">否</td> <td style=\"text-align: center;\">是</td> <td style=\"text-align: center;\">是</td> </tr> </tbody> </table> <p>7 次比較裡有 5 次變號，每次貢獻 $|{\\pm2}|=2$，總和 $=10$：</p> <p>$$Z=\\frac{1}{2\\times8}\\times10=\\frac{10}{16}=0.625$$</p> <p>過零率 $0.625$ 相當高（滿分是 $1.0$，也就是每次都變號）——符合這條序列「幾乎每一步都在正負跳動」的觀察。</p> <p><strong>再算能量</strong>：因為每個樣本的絕對值都是 $1$，平方也都是 $1$：</p> <p>$$E=\\frac{1}{8}(1+1+1+1+1+1+1+1)=\\frac{8}{8}=1.0$$</p> <p>要不要先猜：如果我們把這串樣本的<strong>順序打亂</strong>（一樣是 4 個 $+1$、4 個 $-1$，只是排列方式不同），能量會不會跟著變？——<strong>完全不會！</strong> 能量只加總「大小的平方」，跟正負號出現的「順序、規律」一點關係都沒有，打亂順序後 $E$ 永遠還是 $1.0$；但過零率會因為順序不同而劇烈改變（例如全部正號排在一起、負號排在一起，過零率會趨近於 0）。<strong>這正是能量跟過零率互補的地方</strong>：一個只在乎「振幅有多大」、對排列順序完全不敏感；另一個只在乎「正負變化的節奏」、對振幅大小完全不敏感——兩者合起來，才同時抓住了「響度」跟「音色粗細」兩種完全不同的資訊。</p> <p>這裡最容易踩的坑：<strong>別以為過零率高就等於音量大</strong>——過零率量的是「變化的頻繁程度」，能量量的是「振幅的大小」，一個很小聲但快速震盪的雜訊，過零率可以很高、能量卻很低。另一個坑是<strong>忘記過零率的正規化基準是 $2N$ 不是 $N$</strong>——因為每次變號的絕對差是 2（從 $-1$ 跳到 $+1$，差是 2），除以 $2N$ 才能把結果限制在 $[0,1]$ 這個好解讀的範圍。</p> <p>這兩個特徵，跟 <strong>KP-21</strong> 從頻譜算出來的四個特徵，是同一框訊號的兩種完全不同視角——<strong>KP-18</strong> 把訊號切好框之後，你可以選擇直接在時域裡數（這一節），也可以先做頻譜再看形狀（KP-21），兩條路都通、而且經常一起用，互相補強對方看不到的資訊。</p> <p><strong>一句話收尾：</strong> 過零率數「正負跳動的節奏」、能量算「振幅平方的平均」——兩個都不用做傅立葉，一個抓音色粗細、一個抓響度大小，互不干擾、各司其職。</p>"};
+  var modal = document.getElementById('guide-modal');
+  function openGuide(kp){
+    modal.querySelector('h1').textContent = GUIDE_TITLES[kp] || '';
+    modal.querySelector('.modal-body').innerHTML = GUIDE_CONTENT[kp] || '';
+    modal.classList.add('open');
+    if(window.renderMath) window.renderMath();
+  }
+  window.closeGuide = function(){ modal.classList.remove('open'); };
+  window.openGuide = openGuide;
+  document.addEventListener('click', function(e){
+    if(e.target.classList && e.target.classList.contains('guide-btn')){
+      openGuide(parseInt(e.target.dataset.kp));
+    }
+    if(e.target.classList && e.target.classList.contains('modal-close')){
+      window.closeGuide();
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

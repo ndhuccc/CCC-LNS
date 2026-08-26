@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>特徵生成 I：資料轉換與降維</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="setTimeout(function(){if(window.renderMath)renderMath();},200);"></script>
+<style>
+:root { --accent:#7c3aed; --accent2:#5b21b6; --bg:#f6f5fb; --card:#fff; --ink:#1f2430; --muted:#6b7280; --line:#e5e7eb; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; background:var(--bg); color:var(--ink); line-height:1.75; }
+header { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; padding:30px 20px; text-align:center; }
+header h1 { margin:0 0 8px; font-size:1.55rem; }
+header p { margin:0; opacity:.92; font-size:.92rem; }
+.wrap { max-width:1120px; margin:0 auto; display:flex; gap:24px; padding:22px; }
+nav { width:270px; position:sticky; top:16px; align-self:flex-start; max-height:90vh; overflow:auto; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; }
+nav h2 { font-size:.8rem; color:var(--muted); margin:0 0 10px; text-transform:uppercase; letter-spacing:.5px; }
+nav .toc-item { display:block; padding:6px 10px; border-radius:8px; color:var(--ink); text-decoration:none; font-size:.86rem; }
+nav .toc-item:hover { background:#f3f0ff; color:var(--accent); }
+main { flex:1; min-width:0; }
+.progress { position:sticky; top:0; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin-bottom:18px; display:flex; align-items:center; gap:12px; z-index:10; }
+.progress .bar { flex:1; height:8px; background:#eee; border-radius:99px; overflow:hidden; }
+.progress .fill { height:100%; width:0; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .3s; }
+.progress .txt { font-size:.85rem; color:var(--muted); white-space:nowrap; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:14px; margin-bottom:18px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+.card-head { display:flex; align-items:center; gap:12px; padding:14px 18px; cursor:pointer; background:#fafafd; border-bottom:1px solid var(--line); }
+.card-head:hover { background:#f5f3ff; }
+.card-head .badge { background:var(--accent); color:#fff; font-size:.75rem; font-weight:700; padding:3px 9px; border-radius:99px; }
+.card-head h3 { margin:0; font-size:1.05rem; flex:1; }
+.card-head .toggle { transition:transform .2s; color:var(--muted); }
+.card.collapsed .toggle { transform:rotate(-90deg); }
+.card-body { padding:16px 18px; }
+.card.collapsed .card-body { display:none; }
+.card-body h4 { margin:.9em 0 .4em; color:var(--accent2); }
+.card-body p { margin:.6em 0; }
+.card-body strong { color:var(--accent2); }
+.quiz { margin-top:18px; border:1px dashed var(--line); border-radius:12px; padding:14px; background:#fdfdff; }
+.quiz .q { font-weight:600; margin-bottom:10px; }
+.quiz .opts { display:grid; gap:8px; margin-bottom:10px; }
+.quiz .opt { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--line); border-radius:9px; cursor:pointer; background:#fff; }
+.quiz .opt:hover { border-color:var(--accent); }
+.quiz .check { background:var(--accent); color:#fff; border:none; padding:7px 16px; border-radius:8px; cursor:pointer; font-weight:600; }
+.quiz .check:hover { background:var(--accent2); }
+.quiz .fb { margin-top:8px; font-size:.9rem; display:none; }
+.quiz .fb.ok { display:block; color:#059669; }
+.quiz .fb.wrong { display:block; color:#dc2626; }
+footer { text-align:center; color:var(--muted); font-size:.8rem; padding:24px; }
+@media (max-width:760px) { .wrap { flex-direction:column; } nav { width:auto; position:static; max-height:none; } }
+
+/* Phase B 圖解 */
+.diagram-figure{margin:18px 0;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;text-align:center}
+.diagram-figure img{max-width:100%;height:auto;border-radius:8px}
+.diagram-figure figcaption{font-size:.85rem;color:#6b7280;margin-top:8px;text-align:center}
+
+
+.demo{border:1px solid #e0d8f5;border-radius:12px;margin:14px 0;background:#fdfbff;overflow:hidden}
+.demo-head{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;padding:10px 14px;font-weight:600;font-size:.95rem}
+.demo-body{display:flex;gap:16px;padding:14px;flex-wrap:wrap;align-items:flex-start}
+.demo-panel{flex:1;min-width:220px;display:flex;flex-direction:column;gap:10px}
+.demo-panel label{font-size:.85rem;color:#4c1d95;font-weight:600}
+.demo-panel input[type=range]{width:100%}
+.demo-panel select{padding:6px;border:1px solid #d0c8e8;border-radius:8px}
+.panel-readout,.demo-readout{background:#f3f0ff;border-radius:8px;padding:8px 10px;font-size:.85rem;color:#4c1d95;min-height:20px}
+.demo-foot{background:#f7f5ff;border-top:1px solid #e0d8f5;padding:10px 14px;font-size:.85rem;color:#4c1d95;line-height:1.6}
+
+
+
+
+/* 原文附圖 */
+.orig-fig{margin:18px 0;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fafafa}
+.orig-fig img{max-width:100%;height:auto;border-radius:8px;display:block}
+.orig-fig figcaption{font-size:.82rem;color:#6b7280;margin-top:8px;text-align:center}
+
+
+/* Phase D 教授祕笆 CSS */
+.guide-btn{display:inline-block;background:#7c3aed;color:#fff;border:none;padding:12px 22px;
+  border-radius:12px;font-size:1.02rem;font-weight:700;cursor:pointer;margin:10px 0;
+  box-shadow:0 4px 14px rgba(124,58,237,.35);transition:transform .15s,background .2s}
+.guide-btn:hover{background:#6d28d9;transform:translateY(-2px)}
+#guide-modal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(20,10,40,.6);
+  align-items:center;justify-content:center;padding:20px}
+#guide-modal.open{display:flex}
+#guide-modal .modal-box{background:#fff;max-width:720px;width:100%;max-height:85vh;overflow-y:auto;
+  border-radius:16px;padding:26px 30px;box-shadow:0 20px 60px rgba(0,0,0,.4);position:relative}
+#guide-modal .modal-close{position:sticky;top:0;float:right;background:#f3f0ff;border:1px solid #e0d8f5;
+  color:#4c1d95;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1.1rem;line-height:1}
+#guide-modal h1{color:#5b21b6;font-size:1.4rem;margin:0 0 14px;padding-right:40px}
+#guide-modal .modal-body{color:#1f2430;line-height:1.8;font-size:.98rem}
+#guide-modal .modal-body table{border-collapse:collapse;margin:10px 0;width:100%}
+#guide-modal .modal-body td,#guide-modal .modal-body th{border:1px solid #e5e7eb;padding:6px 10px;font-size:.92rem}
+#guide-modal .modal-body th{background:#f5f3ff}
+/* END Phase D */
+
+</style>
+</head>
+<body>
+<header>
+  <h1>特徵生成 I：資料轉換與降維</h1>
+  <p>Chapter 7 · PR 115 · 互動式自學講義</p>
+</header>
+<div class="wrap">
+  <nav><h2>目錄</h2><a class="toc-item" href="#kp1">6.1 特徵生成與降維動機（Feature Generation）</a><a class="toc-item" href="#kp2">6.2 基底向量與基底影像（Basis Vectors & Images）</a><a class="toc-item" href="#kp3">6.3 Karhunen-Loève 變換（KLT／PCA）</a><a class="toc-item" href="#kp4">6.4 奇異值分解（SVD）</a><a class="toc-item" href="#kp5">6.5 獨立成分分析（ICA）</a><a class="toc-item" href="#kp6">6.6 非負矩陣分解（NMF）</a><a class="toc-item" href="#kp7">6.7 非線性降維概述與流形假設</a><a class="toc-item" href="#kp8">6.7.1 Kernel PCA</a><a class="toc-item" href="#kp9">6.7.2 Laplacian Eigenmaps（圖論降維）</a><a class="toc-item" href="#kp10">6.7.2 LLE 與 ISOMAP</a><a class="toc-item" href="#kp11">6.8.1 離散傅立葉變換（1D DFT）</a><a class="toc-item" href="#kp12">6.8.2 二維 DFT 與可分離變換</a><a class="toc-item" href="#kp13">6.9 離散餘弦/正弦變換（DCT/DST）</a><a class="toc-item" href="#kp14">6.10 Hadamard 變換</a><a class="toc-item" href="#kp15">6.11 Haar 變換與多解析度分析的起點</a><a class="toc-item" href="#kp16">6.13 離散小波變換（DTWT）與濾波器組</a><a class="toc-item" href="#kp17">6.14–6.16 小波包、多解析度與二維推廣</a></nav>
+  <main>
+    <div class="progress"><div class="bar"><div class="fill" id="pf"></div></div><div class="txt" id="ptxt"></div></div>
+    <section id="kp1" class="card" data-kp="1">
+  <div class="card-head"><span class="badge">6.1</span><h3>特徵生成與降維動機（Feature Generation）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="1">📖 偷看教授祕笈</button>
+
+<p><strong>一句話</strong>：把高維原始測量值壓縮成少數「資訊密度高」的特徵，是模式辨識、資料視覺化、資訊檢索的共同前置工程。</p>
+<p><strong>為何需要</strong>：像素、相機感測值、聲音樣本這些原始測量彼此高度相關（一張照片裡相鄰像素差不多紅、語音在毫秒尺度上相關），直接餵給分類器會浪費計算並容易過擬合。我們想把「相關冗餘」壓掉，留下「能把不同類別分開」的本質變數。</p>
+<p><strong>三條主線</strong>：</p>
+<ul>
+<li><strong>線性變換族</strong>：固定基底（DFT/DCT/Hadamard/Haar/Wavelet）— 計算快，但基底不為資料量身打造。</li>
+<li><strong>資料自適應族</strong>：KLT（PCA）/SVD/ICA/NMF — 基底從資料學出來，壓縮效果最好但計算貴。</li>
+<li><strong>非線性流形族</strong>：Kernel PCA、Laplacian Eigenmap、LLE、ISOMAP — 處理彎曲流形（如瑞士捲、臉部姿態空間）。</li>
+</ul>
+<p><strong>怎麼用</strong>：先看資料是否大致線性（PCA/KLT 即可）；若像螺旋、捲曲則改用流形方法；若要稀疏且非負（如影像像素、機率），NMF 是首選；若要訊號/影像壓縮，DCT 與 Wavelet 是業界標準。</p><div class="quiz" data-ans="C">
+      <p class="q"><p>特徵生成的主要目的為何？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q1-0" value="A"><span>A. <p>增加資料維度以容納更多資訊</p></span></label><label class="opt"><input type="radio" name="q1-0" value="B"><span>B. <p>資料視覺化</p></span></label><label class="opt"><input type="radio" name="q1-0" value="C"><span>C. <p>壓縮冗餘、保留類別區辨資訊</p></span></label><label class="opt"><input type="radio" name="q1-0" value="D"><span>D. <p>讓模型跑得更慢</p></span></label><label class="opt"><input type="radio" name="q1-0" value="E"><span>E. <p>加密資料</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="「壓縮冗餘、保留類別區辨資訊」是核心目的。"></div>
+    </div></div>
+</section>
+<section id="kp2" class="card" data-kp="2">
+  <div class="card-head"><span class="badge">6.2</span><h3>基底向量與基底影像（Basis Vectors & Images）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="2">📖 偷看教授祕笈</button>
+
+<!-- == Phase B 圖解 kp-2 == -->
+<figure class="diagram-figure"><img src="assets/diagram-basis.png" alt="基底影像展開：幾個 basis image 加權相加重建出目標影像"><figcaption>📊 基底影像展開 $X=\sum_i y(i)\mathcal{A}_i$，係數 $y(i)$ 就是新特徵</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-02" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: Five panels left to right: three small colored grid patterns labeled basis image 0/1/2, an equation "target = y0*A0 + y1*A1 + y2*A2 + ...", and a grayscale reconstructed image on the right.
+WHY: The reader must see that ANY image can be written as a weighted sum of a small set of fixed basis patterns, and the weights y(i) ARE the new features -- this is the shared idea behind every transform in the chapter (KLT/DFT/DCT/...).
+MUST show: (1) at least 3 visually distinct basis patterns (not identical blobs), (2) an explicit weighted-sum equation connecting them to the output, (3) a plausible reconstructed image on the right that looks like a combination, not a random image.
+AVOID: drawing basis patterns as plain solid-color squares with text labels; showing the reconstruction as unrelated to the basis patterns.
+STYLE: flat scientific plot, small grid heatmaps, white background, red-blue diverging colormap for basis patterns.</pre>
+</details>
+</div>
+
+<p><strong>一句話</strong>：線性變換把訊號寫成「一組基底向量的加權和」，權重就是新特徵。</p>
+<p><strong>向量版</strong>：給定 $N\times N$ 么正矩陣 $A$（其行 $\boldsymbol{a}_i$ 是正交基底向量），變換 $\boldsymbol{y}=A^H\boldsymbol{x}$ 的每個分量 $y(i)=\boldsymbol{a}_i^H\boldsymbol{x}$ 就是 $\boldsymbol{x}$ 在第 $i$ 個基底上的投影。逆變換 $\boldsymbol{x}=\sum_i y(i)\boldsymbol{a}_i$ 重建原向量。</p>
+<p><strong>影像（矩陣）版</strong>：把 $N\times N$ 影像 $X$ 用兩個么正矩陣變換 $Y=U^H X V$，basis images $\mathcal{A}_{ij}=\boldsymbol{u}_i\boldsymbol{v}_j^H$ 是外積矩陣。當 $Y$ 對角時只剩 $N$ 個非零 basis images，$X=\sum_i Y(i,i)\boldsymbol{u}_i\boldsymbol{v}_i^H$，這就是 SVD 的雛形。</p>
+<p><strong>為何重要</strong>：所有本章線性變換（KLT/SVD/DFT/DCT/Hadamard/Haar/Wavelet）都是選不同的 $A$、$U$、$V$，差別只在基底怎麼選：KLT/SVD 的基底從資料學，其他則是固定公式。</p><div class="quiz" data-ans="B">
+      <p class="q"><p>「basis image」是什麼？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q2-0" value="A"><span>A. <p>任何一張影像</p></span></label><label class="opt"><input type="radio" name="q2-0" value="B"><span>B. <p>矩陣的外積 $\boldsymbol{u}_i\boldsymbol{v}_j^H$ 一張影像</p></span></label><label class="opt"><input type="radio" name="q2-0" value="C"><span>C. <p>高頻雜訊</p></span></label><label class="opt"><input type="radio" name="q2-0" value="D"><span>D. <p>隨機像素</p></span></label><label class="opt"><input type="radio" name="q2-0" value="E"><span>E. <p>資料庫裡的參考圖</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="basis image 是 $\mathcal{A}_{ij}=\boldsymbol{u}_i\boldsymbol{v}_j^H$，原影像可由它們線性組合而成。"></div>
+    </div></div>
+</section>
+<section id="kp3" class="card" data-kp="3">
+  <div class="card-head"><span class="badge">6.3</span><h3>Karhunen-Loève 變換（KLT／PCA）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<div class="demo" data-demo-id="klt">
+  <div class="demo-head">🎛 互動：PCA 主成分方向（受 eigenvalues 影響）</div>
+  <div class="demo-body">
+    <div class="demo-panel">
+      <div class="panel-item"><label>$\sigma_1^2$（長軸變異）</label>
+        <input type="range" id="klt-s1" min="0.2" max="3" step="0.1" value="2"></div>
+      <div class="panel-item"><label>$\sigma_2^2$（短軸變異）</label>
+        <input type="range" id="klt-s2" min="0.2" max="3" step="0.1" value="0.5"></div>
+      <div class="panel-item"><label>$\rho$（相關係數）</label>
+        <input type="range" id="klt-rho" min="-0.9" max="0.9" step="0.05" value="0.6"></div>
+      <div class="panel-readout demo-readout" id="ro-klt"></div>
+    </div>
+    <canvas id="cv-klt" width="520" height="320"></canvas>
+  </div>
+  <div class="demo-foot">
+    <strong>做什麼</strong>：調整共變異數的長軸、短軸變異量與相關係數，看 PCA 主軸（長箭頭）如何指向變異數最大的方向。<br>
+    <strong>怎麼操作</strong>：拖動三條滑桿；資料分布會即時更新，主軸方向也跟著旋轉。<br>
+    <strong>觀察什麼</strong>：當 $\rho$ 變小，主軸會越接近水平；當 $\sigma_1^2/\sigma_2^2$ 比值變大，主軸越「分明」。<br>
+    <strong>正確基準</strong>：主軸必指向變異數最大方向；主軸方向即為協方差矩陣最大特徵值對應的特徵向量。
+  </div>
+</div>
+<button class="guide-btn" data-kp="3">📖 偷看教授祕笈</button>
+
+
+
+<!-- == Phase B 圖解 kp-3 == -->
+<figure class="diagram-figure"><img src="assets/diagram-klt.png" alt="知識點 3 示意圖"><figcaption>📊 知識點 3 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-03" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: A 2D scatter of two overlapping Gaussian-ish point clouds (two classes), with two lines overlaid: a solid long PCA principal axis and a dashed shorter secondary axis.
+WHY: The reader must see the counterintuitive point -- the PCA principal axis (direction of max variance) is NOT necessarily the direction that best separates the two classes; the secondary axis might separate them better.
+MUST show: (1) two visually distinguishable point clouds, (2) the principal axis clearly aligned with the combined spread direction, (3) a visual sense that class separation is better along a DIFFERENT direction than the principal axis.
+AVOID: drawing the principal axis as trivially aligned with class separation (that would hide the counterintuitive point); abstract arrows with no real scatter data.
+STYLE: clean scientific scatter plot, white background, blue/orange classes, red solid axis, green dashed axis.</pre>
+</details>
+</div>
+
+<p><strong>一句話</strong>：把相關的原始座標轉成<strong>互不相關</strong>的新座標，並讓前 $m$ 個新座標的<strong>變異數（資訊量）最大</strong>。</p>
+<p><strong>數學核心</strong>：取資料的相關矩陣 $R_x=\frac{1}{n}\sum_k \boldsymbol{x}_k\boldsymbol{x}_k^T$，做特徵分解 $R_x\boldsymbol{a}_i=\lambda_i\boldsymbol{a}_i$；以 $\boldsymbol{a}_i$ 為行組成的 $A$ 就是 KLT 矩陣，$R_y=A^T R_x A=\Lambda$ 對角化，$y(i)$ 互不相關且 $\mathrm{Var}[y(i)]=\lambda_i$。</p>
+<p><strong>MSE 最佳性</strong>：只保留前 $m$ 個最大特徵值對應的基底時，近似誤差 $E\|\boldsymbol{x}-\hat{\boldsymbol{x}}\|^2=\sum_{i=m}^{N-1}\lambda_i$ 對所有正交投影<strong>最小</strong>——這就是為什麼 KLT 又稱 PCA（Principal Component Analysis）。</p>
+<p><strong>三個性質的等價</strong>：互不相關 ↔ 變異數最大 ↔ 熵最大（高斯假設下）↔ MSE 最小——四個觀點同一件事。</p>
+<p><strong>反直覺</strong>：PCA 不一定給出最佳分類方向。Figure 6.1 顯示：PCA 的第一主軸可能把兩類疊在一起，反而第二主軸才分得開。這是 PCA 的無監督特性決定的——它只在乎變異數，不在乎類別。</p>
+<!-- == 原文附圖 kp-3 == -->
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-08_632_826_278_624.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 3）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-12_544_701_1366_690.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 3）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="B">
+      <p class="q"><p>KLT 與 PCA 的關係？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q3-0" value="A"><span>A. <p>完全不同的兩種方法</p></span></label><label class="opt"><input type="radio" name="q3-0" value="B"><span>B. <p>KLT 是 PCA 的另一個名字</p></span></label><label class="opt"><input type="radio" name="q3-0" value="C"><span>C. <p>PCA 比 KLT 嚴格</p></span></label><label class="opt"><input type="radio" name="q3-0" value="D"><span>D. <p>KLT 只能用於影像</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="KLT 從線性代數角度、PCA 從統計角度描述同一變換。"></div>
+    </div></div>
+</section>
+<section id="kp4" class="card" data-kp="4">
+  <div class="card-head"><span class="badge">6.4</span><h3>奇異值分解（SVD）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<div class="demo" data-demo-id="svd">
+  <div class="demo-head">🎛 互動：SVD 低秩近似（保留前 k 個奇異值）</div>
+  <div class="demo-body">
+    <div class="demo-panel">
+      <div class="panel-item"><label>保留奇異值數 $k$</label>
+        <input type="range" id="svd-k" min="1" max="20" step="1" value="5"></div>
+      <div class="panel-item"><label>原始矩陣大小 $N$</label>
+        <input type="range" id="svd-n" min="8" max="40" step="2" value="20"></div>
+      <div class="panel-readout demo-readout" id="ro-svd"></div>
+    </div>
+    <canvas id="cv-svd" width="520" height="320"></canvas>
+  </div>
+  <div class="demo-foot">
+    <strong>做什麼</strong>：觀察保留前 $k$ 個奇異值的低秩近似如何逼近原始影像矩陣。<br>
+    <strong>怎麼操作</strong>：拖動 $k$ 條滑桿（保留奇異值數）與 $N$ 條滑桿（矩陣大小）。<br>
+    <strong>觀察什麼</strong>：$k$ 越小，影像越模糊；Frobenius 誤差（右下 readout）等於丟棄奇異值平方和 $\sum_{i=k}^{r-1}\lambda_i$。<br>
+    <strong>正確基準</strong>：rank-$k$ 矩陣中 SVD 近似 $\hat{X}=\sum_{i=0}^{k-1}\sqrt{\lambda_i}\mathbf{u}_i\mathbf{v}_i^H$ 對原矩陣 Frobenius 範數誤差**最小**。
+  </div>
+</div>
+<button class="guide-btn" data-kp="4">📖 偷看教授祕笈</button>
+
+
+
+<!-- == Phase B 圖解 kp-4 == -->
+<figure class="diagram-figure"><img src="assets/diagram-svd.png" alt="知識點 4 示意圖"><figcaption>📊 知識點 4 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-04" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: A bar chart of singular values (or their square roots) sorted in decreasing order, rapidly decaying, with a vertical dashed cutoff line marking "keep top k=3".
+WHY: The reader must see WHY low-rank approximation works -- most of the "energy" is concentrated in the first few singular values, so truncating after a small k loses little information.
+MUST show: (1) a clearly decaying bar sequence (not flat/uniform), (2) an explicit cutoff marker at a small k, (3) axis labels naming singular value index and magnitude.
+AVOID: a flat or randomly-ordered bar chart that doesn't visually justify truncation.
+STYLE: clean scientific bar chart, white background, purple bars, red dashed cutoff line.</pre>
+</details>
+</div>
+
+<p><strong>一句話</strong>：把任意 $l\times n$ 矩陣 $X$ 寫成 $X=U\Sigma V^H$，$\Sigma$ 對角線上的奇異值 $\sqrt{\lambda_i}$ 給出<strong>單一矩陣</strong>的最佳低秩近似。</p>
+<p><strong>數學</strong>：$X^HX$ 與 $XX^H$ 共享非零特徵值 $\lambda_i$，$U$ 與 $V$ 分別是其對應的么正特徵向量矩陣。展開式 $X=\sum_{i=0}^{r-1}\sqrt{\lambda_i}\boldsymbol{u}_i\boldsymbol{v}_i^H$ 是精確表示。</p>
+<p><strong>低秩近似（最佳）</strong>：保留前 $k$ 個奇異值得到 $\hat{X}=\sum_{i=0}^{k-1}\sqrt{\lambda_i}\boldsymbol{u}_i\boldsymbol{v}_i^H$，Frobenius 範數誤差 $\epsilon^2=\sum_{i=k}^{r-1}\lambda_i$ 對所有 rank-$k$ 矩陣<strong>最小</strong>。這是 SVD 在影像壓縮、資訊檢索（潛在語意索引 LSI）、推薦系統的理論基礎。</p>
+<p><strong>與 KLT 的差異</strong>：KLT 處理一組樣本（共變異數矩陣），SVD 處理<strong>單一矩陣</strong>（無需統計平均）。SVD 的「資訊打包」能力與 KLT 類似，但 SVD 適合資料矩陣（樣本為行/列），KLT 適合特徵向量為行的場景。</p>
+<p><strong>幾何意涵</strong>：$\boldsymbol{x}_i\approx U_k\boldsymbol{a}_i$ 把每個 $\boldsymbol{x}_i$ 投影到主子空間 $\mathrm{span}(\boldsymbol{u}_0,...,\boldsymbol{u}_{k-1})$，且<strong>歐氏距離近似保留</strong>——這是資訊檢索能用低維空間搜尋的關鍵。</p>
+<!-- == 原文附圖 kp-4 == -->
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-16_434_849_1507_613.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 4）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="B">
+      <p class="q"><p>SVD 對單一矩陣 $X$ 給出的最佳 rank-$k$ 近似的 Frobenius 誤差是？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q4-0" value="A"><span>A. <p>$\sum_{i=0}^{k-1}\lambda_i$</p></span></label><label class="opt"><input type="radio" name="q4-0" value="B"><span>B. <p>$\sum_{i=k}^{r-1}\lambda_i$</p></span></label><label class="opt"><input type="radio" name="q4-0" value="C"><span>C. <p>$\prod_{i=k}^{r-1}\lambda_i$</p></span></label><label class="opt"><input type="radio" name="q4-0" value="D"><span>D. <p>0</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="Frobenius 誤差等於被丟棄的奇異值平方和 $\sum_{i=k}^{r-1}\lambda_i$。"></div>
+    </div></div>
+</section>
+<section id="kp5" class="card" data-kp="5">
+  <div class="card-head"><span class="badge">6.5</span><h3>獨立成分分析（ICA）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="5">📖 偷看教授祕笈</button>
+
+
+<!-- == Phase B 圖解 kp-5 == -->
+<figure class="diagram-figure"><img src="assets/diagram-ica.png" alt="知識點 5 示意圖"><figcaption>📊 知識點 5 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-05" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: Three overlaid probability density curves on one plot: a Gaussian (bell curve), a sharply-peaked heavy-tailed super-Gaussian (e.g. Laplacian), and a flat-topped sub-Gaussian (e.g. uniform-like), each labeled with an example domain (speech / image).
+WHY: The reader must see that ICA's search criterion is "how far from Gaussian", and that real-world independent sources (speech, natural images) are almost never Gaussian-shaped -- that's exactly what ICA exploits, while PCA cannot use this cue at all.
+MUST show: (1) three visibly different curve shapes on the same axes, (2) the Gaussian clearly in the middle as the "boring, PCA-sufficient" case, (3) labels naming which shape corresponds to which real signal type.
+AVOID: three curves that look almost identical; no labeling of which shape is "more/less Gaussian".
+STYLE: clean scientific line plot, white background, black/red/blue curves, legend.</pre>
+</details>
+</div>
+
+<p><strong>一句話</strong>：比 PCA 更進一步——尋找<strong>統計獨立</strong>（不只是不相關）的新座標，揭露高階結構。</p>
+<p><strong>問題設定</strong>：觀察 $\boldsymbol{x}=\mathcal{A}\boldsymbol{y}$（$\mathcal{A}$ 未知混合矩陣，$\boldsymbol{y}$ 的各分量統計獨立）。求反矩陣 $W$ 使 $\boldsymbol{y}=W\boldsymbol{x}$ 恢復獨立源。</p>
+<p><strong>識別條件</strong>：除一個以外，各獨立成分必須是<strong>非高斯</strong>。高斯時獨立=不相關，PCA 已足夠；非高斯才有資訊可挖。</p>
+<p><strong>兩個實作法</strong>：</p>
+<ol>
+<li><strong>二階+四階累計量（Como 94）</strong>：先做 PCA 讓資料不相關，再做一個么正變換 $\hat{A}$ 讓四階 cross-cumulants 歸零，等同最大化 $\sum_i \kappa_4(y(i))^2$。</li>
+<li><strong>互資訊最小化</strong>：$I(\boldsymbol{y})=-H(\boldsymbol{y})+\sum_i H(y(i))$，獨立時為零。用 Edgeworth 展開後近似為 $I\approx C-\sum_i[\frac{1}{12}\kappa_3^2+\frac{1}{48}\kappa_4^2+...]$，可用梯度下降解（自然梯度改善收斂）。</li>
+</ol>
+<p><strong>反直覺</strong>：PCA 的「第一主軸」不一定是「最有趣的方向」。圖 6.1 顯示：在雙類別、相同共變異數的高斯資料下，PCA 的 $\boldsymbol{a}_0$（高變異方向）會讓兩類幾乎重合；ICA 用四階累計量找出 $\boldsymbol{a}_1$——高斯性最低的方向——反而更能把兩類分開。</p>
+<!-- == 原文附圖 kp-5 == -->
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-26_672_870_1229_605.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 5）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="C">
+      <p class="q"><p>ICA 比 PCA 多利用了哪階統計量？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q5-0" value="A"><span>A. <p>只一階</p></span></label><label class="opt"><input type="radio" name="q5-0" value="B"><span>B. <p>只二階</p></span></label><label class="opt"><input type="radio" name="q5-0" value="C"><span>C. <p>高階（三階以上）</p></span></label><label class="opt"><input type="radio" name="q5-0" value="D"><span>D. <p>零階</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="PCA 用到二階（協方差/相關），ICA 用到高階（峰度、四階累計量）。"></div>
+    </div></div>
+</section>
+<section id="kp6" class="card" data-kp="6">
+  <div class="card-head"><span class="badge">6.6</span><h3>非負矩陣分解（NMF）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="6">📖 偷看教授祕笈</button>
+
+<!-- == Phase B 圖解 kp-6 == -->
+<figure class="diagram-figure"><img src="assets/diagram-nmf.png" alt="知識點 6 示意圖"><figcaption>📊 知識點 6 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-06" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: Two rows of small grayscale image patches: top row shows several sparse localized "part" patterns (like isolated bright blobs), bottom row shows a few "combined" images built by adding 2-3 of those parts together with different weights.
+WHY: The reader must see NMF's defining trait -- because weights are constrained non-negative, images decompose into a small number of LOCALIZED, ADDITIVE parts (e.g. nose, eyes) rather than the whole-face, signed eigenfaces PCA would produce.
+MUST show: (1) each "part" patch visibly sparse/localized (not filling the whole tile), (2) at least one "combined" image that visibly looks like a sum of 2+ parts, (3) a title or caption stating "non-negative additive parts".
+AVOID: parts that look like random noise with no localized structure; combined images identical to a single part (no visible combination).
+STYLE: flat scientific image-grid plot, white background, red/warm colormap for intensity.</pre>
+</details>
+</div>
+
+<p><strong>一句話</strong>：在「所有元素 $\geq 0$」的限制下，把 $X\approx WH$，分解成兩個低秩非負矩陣。</p>
+<p><strong>問題設定</strong>：$X\approx WH$，$W$ 是 $l\times r$，$H$ 是 $r\times n$，$r\lt \min(l,n)$，所有元素 $\geq 0$。</p>
+<p><strong>為何需要非負</strong>：物理量（像素強度、機率、頻譜強度、化學濃度）本質非負。PCA/SVD 的基底向量含正負號，物理上難解釋。NMF 的「部件組合」是加法、可加性，符合「整體是部分的和」直覺——這是 NMF 在人臉部件、主題模型、紋理字典成功的關鍵。</p>
+<p><strong>兩種損失</strong>：</p>
+<ul>
+<li>Frobenius 範數：$\min\|X-WH\|_F^2$ subject to $W,H\geq 0$。</li>
+<li>KL 散度版：$\min \sum_{ij}[X_{ij}\ln\frac{X_{ij}}{(WH)_{ij}}-X_{ij}+(WH)_{ij}]$，當列和為 1 時等同 KL 距離。</li>
+</ul>
+<p><strong>算法</strong>：常用 Lee/Seung 的乘法更新規則，保證非負、收斂。Newton 法、梯度下降法、投影梯度法等也可用。NMF 無閉式解，需迭代。</p>
+<p><strong>與 KLT/SVD 的哲學差異</strong>：後兩者用正交性約束基底，NMF 用非負性約束基底——後者在影像處理、生醫訊號、主題模型常更直覺。</p><div class="quiz" data-ans="B">
+      <p class="q"><p>NMF 的核心約束是？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q6-0" value="A"><span>A. <p>基底向量正交</p></span></label><label class="opt"><input type="radio" name="q6-0" value="B"><span>B. <p>矩陣元素非負</p></span></label><label class="opt"><input type="radio" name="q6-0" value="C"><span>C. <p>基底向量等長</p></span></label><label class="opt"><input type="radio" name="q6-0" value="D"><span>D. <p>稀疏性</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="NMF 強制 $W(i,k)\geq 0$、$H(k,j)\geq 0$，所有元素非負。"></div>
+    </div></div>
+</section>
+<section id="kp7" class="card" data-kp="7">
+  <div class="card-head"><span class="badge">6.7</span><h3>非線性降維概述與流形假設</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="7">📖 偷看教授祕笈</button>
+
+
+<!-- == Phase B 圖解 kp-7 == -->
+<figure class="diagram-figure"><img src="assets/diagram-manifold.png" alt="知識點 7 示意圖"><figcaption>📊 知識點 7 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-07" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: Two side-by-side scatter panels: LEFT shows a 3D "Swiss roll" curved manifold flattened by straight-line (PCA-style) 2D projection with points from different roll layers landing on top of each other (colored by their true position along the roll to reveal the mixing); RIGHT shows the same points "unrolled" along the manifold coordinate, preserving the color gradient smoothly.
+WHY: The reader must see WHY linear projection breaks on curved data -- neighboring points along the roll's spiral can end up far apart, or distant points can end up overlapping, after a naive linear projection; unrolling along the manifold preserves true neighbor relationships.
+MUST show: (1) a color gradient along the manifold's intrinsic coordinate so "mixing vs preservation" is visible, (2) the LEFT panel visibly showing color bands overlapping/crossing (evidence of broken neighbor structure), (3) the RIGHT panel showing a smooth unbroken color gradient.
+AVOID: two panels that look equally "clean" (that would hide the whole point of needing nonlinear methods); using different point sets in each panel.
+STYLE: clean scientific scatter plot, white background, viridis colormap.</pre>
+</details>
+</div>
+
+<p><strong>一句話</strong>：當資料分布是<strong>彎曲的低維流形</strong>（如瑞士捲、臉部姿態空間），線性方法（如 PCA）會高估內在維度，必須用非線性方法「展開」流形。</p>
+<p><strong>動機</strong>：很多高維資料其實是少數自由參數的非線性函數。例如手寫數字「0」在不同書寫者下可能有上千維像素差異，但實際只有「傾斜、寬度、圓度」幾個本質參數。我們要找出這個<strong>內在維度（intrinsic dimensionality）</strong>。</p>
+<p><strong>兩大流派</strong>：</p>
+<ul>
+<li><strong>核方法</strong>：把資料映射到高維（甚至無限維）Hilbert 空間 $H$，在 $H$ 做線性 PCA。代表：<strong>Kernel PCA</strong>（以 Gram 矩陣 $\mathcal{K}(i,j)=K(\boldsymbol{x}_i,\boldsymbol{x}_j)$ 的特徵分解代替協方差矩陣）。</li>
+<li><strong>圖論方法</strong>：建鄰接圖（用 $\epsilon$-鄰域或 $k$-近鄰），權重用熱核 $W(i,j)=\exp(-\|\boldsymbol{x}_i-\boldsymbol{x}_j\|^2/\sigma^2)$。在圖上定義「保持局部鄰居關係」的目標，求特徵向量得低維座標。代表：<strong>Laplacian Eigenmaps、LLE、ISOMAP</strong>。</li>
+</ul>
+<p><strong>重要概念</strong>：</p>
+<ul>
+<li>局部歐氏距離 ≈ 流形測地距離（微分幾何結果）。</li>
+<li>局部線性 → 全域非線性（流形可被局部線性面塊近似）。</li>
+</ul>
+<p><strong>與線性方法的關係</strong>：核 PCA 是 MDS 的核化版；圖論方法可用「資料相依核」改寫成 Kernel PCA 的一例 [Ham 04]——殊途同歸。</p><div class="quiz" data-ans="B">
+      <p class="q"><p>線性 PCA 在瑞士捲資料上的主要問題？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q7-0" value="A"><span>A. <p>太慢</p></span></label><label class="opt"><input type="radio" name="q7-0" value="B"><span>B. <p>會高估內在維度、把流形壓扁</p></span></label><label class="opt"><input type="radio" name="q7-0" value="C"><span>C. <p>需要標籤</p></span></label><label class="opt"><input type="radio" name="q7-0" value="D"><span>D. <p>不適合影像</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="線性 PCA 無法處理彎曲流形，會把瑞士捲壓扁成二維線性區域而非展開成一維。"></div>
+    </div></div>
+</section>
+<section id="kp8" class="card" data-kp="8">
+  <div class="card-head"><span class="badge">6.7.1</span><h3>Kernel PCA</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="8">📖 偷看教授祕笈</button>
+
+<!-- == Phase B 圖解 kp-8 == -->
+<figure class="diagram-figure"><img src="assets/diagram-kernel.png" alt="知識點 8 示意圖"><figcaption>📊 知識點 8 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-08" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: Two side-by-side panels: LEFT shows two concentric-ring point classes (inner ring = class 1, outer ring = class 2) in raw 2D input space with no line able to separate them; RIGHT shows the SAME points remapped by radius r (or an equivalent single feature) onto a 1D line where the two classes are now cleanly separated into two distinct clusters.
+WHY: The reader must see the causal mechanism of the kernel trick -- data that is linearly inseparable in the original space can become trivially (linearly) separable after a nonlinear feature map, without ever explicitly constructing the high-dimensional space.
+MUST show: (1) genuinely interleaved/concentric classes in the input panel (not already separable by a line), (2) a completely clean gap between classes in the output panel, (3) same color coding for classes in both panels so the reader can track correspondence.
+AVOID: showing classes that were already linearly separable in the left panel (that defeats the purpose); showing the right panel as still 2D with no explanation of what the new axis represents.
+STYLE: clean scientific scatter plot, white background, red/blue classes.</pre>
+</details>
+</div>
+
+<p><strong>一句話</strong>：把 PCA 提升到非線性版本——隱含映射 $\boldsymbol{\phi}:\mathbb{R}^N\to H$ 到高維 Hilbert 空間，在 $H$ 做線性 PCA。</p>
+<p><strong>做法</strong>：直接算 $n\times n$ Gram 矩陣 $\mathcal{K}(i,j)=K(\boldsymbol{x}_i,\boldsymbol{x}_j)$（$K$ 是核函數，如 RBF、多項式），求 $\mathcal{K}\boldsymbol{a}=\lambda n\boldsymbol{a}$ 的特徵向量 $\boldsymbol{a}$。第 $k$ 個主成分的投影為 $y(k)=\sum_i a_k(i)K(\boldsymbol{x}_i,\boldsymbol{x})$——完全不需要顯式計算 $\boldsymbol{\phi}(\boldsymbol{x})$（這就是「核技巧」）。</p>
+<p><strong>與線性 PCA 的對應</strong>：
+| | 線性 PCA | Kernel PCA |
+|--|--|--|
+| 對象 | $N\times N$ 協方差 $R$ | $n\times n$ Gram $\mathcal{K}$ |
+| 特徵分解 | $R\boldsymbol{v}=\lambda\boldsymbol{v}$ | $\mathcal{K}\boldsymbol{a}=n\lambda\boldsymbol{a}$ |
+| 投影 | $\boldsymbol{v}^T\boldsymbol{x}$ | $\sum_i a(i)K(\boldsymbol{x}_i,\boldsymbol{x})$ |</p>
+<p><strong>特性</strong>：保留線性 PCA 的所有性質（最大變異數、最小 MSE、不相關、最大化熵）。當核是線性時退化為線性 PCA。</p>
+<p><strong>侷限</strong>：不考慮底層流形的幾何結構，僅做非線性映射；樣本量大時 $n\times n$ 特徵分解昂貴。</p><div class="quiz" data-ans="B">
+      <p class="q"><p>Kernel PCA 用哪個矩陣做特徵分解？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q8-0" value="A"><span>A. <p>$N\times N$ 協方差</p></span></label><label class="opt"><input type="radio" name="q8-0" value="B"><span>B. <p>$n\times n$ Gram 矩陣</p></span></label><label class="opt"><input type="radio" name="q8-0" value="C"><span>C. <p>Hilbert 空間的 $\phi(x)$</p></span></label><label class="opt"><input type="radio" name="q8-0" value="D"><span>D. <p>像素矩陣</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="Kernel PCA 用 $n\times n$ Gram 矩陣 $\mathcal{K}(i,j)=K(\boldsymbol{x}_i,\boldsymbol{x}_j)$，無需顯式高維映射。"></div>
+    </div></div>
+</section>
+<section id="kp9" class="card" data-kp="9">
+  <div class="card-head"><span class="badge">6.7.2</span><h3>Laplacian Eigenmaps（圖論降維）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="9">📖 偷看教授祕笈</button>
+
+
+<!-- == Phase B 圖解 kp-9 == -->
+<figure class="diagram-figure"><img src="assets/diagram-lle.png" alt="知識點 9 示意圖"><figcaption>📊 知識點 9 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-09" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: A scatter of points in 2D forming a rough manifold shape, with ONE point highlighted (e.g. red star) and lines connecting it to its k nearest graph-neighbors, line thickness or opacity encoding an edge weight.
+WHY: The reader must see that graph-based methods (Laplacian Eigenmaps) build a local neighborhood graph FIRST and only trust distances along that graph, not raw Euclidean distance across the whole space -- this is what lets them respect a curved manifold's true geometry.
+MUST show: (1) a clearly highlighted center point, (2) multiple neighbor connections with VISIBLY different line weights/thicknesses (not all identical), (3) a caption or label naming this a "local neighborhood graph".
+AVOID: uniform unweighted lines that look like a generic network diagram with no notion of "local" vs "global"; showing all points connected to all others.
+STYLE: clean scientific scatter+graph plot, white background, red highlighted point, blue neighbors, black connecting lines with varying opacity.</pre>
+</details>
+</div>
+
+<p><strong>一句話</strong>：建鄰接圖，目標是「<strong>鄰居在低維空間仍相鄰</strong>」，用圖 Laplacian 的特徵向量當低維座標。</p>
+<p><strong>三步驟</strong>：</p>
+<ol>
+<li><strong>建圖</strong>：$v_i$ 對應 $\boldsymbol{x}_i$。邊準則：$\|\boldsymbol{x}_i-\boldsymbol{x}_j\|^2\lt \epsilon$ 或 $k$-近鄰。</li>
+<li><strong>加權</strong>：熱核 $W(i,j)=\exp(-\|\boldsymbol{x}_i-\boldsymbol{x}_j\|^2/\sigma^2)$，否則為 0。稀疏矩陣。</li>
+<li><strong>求特徵向量</strong>：圖 Laplacian $L=D-W$（$D$ 為度數矩陣對角），解廣義特徵問題 $L\boldsymbol{v}=\lambda D\boldsymbol{v}$。忽略 $\lambda_0=0$ 對應的全 1 向量，取後續 $m$ 個特徵向量，第 $i$ 個樣本的低維座標 $\boldsymbol{y}_i^T=[v_1(i),v_2(i),...,v_m(i)]$。</li>
+</ol>
+<p><strong>目標函數直觀</strong>：最小化 $E_L=\sum_{ij}(y_i-y_j)^2 W(i,j)$ —— 強迫高權重（鄰居）在低維保持接近。</p>
+<p><strong>反直覺效果</strong>：圖 6.6 顯示，PCA 對 Archimedes 螺旋給出兩個相近特徵值（誤判為 2D），而 Laplacian Eigenmaps 漂亮地「展開」螺旋為一維直線，並保留鄰居順序——這正是流形降維想要的。</p>
+<p><strong>計算</strong>：稀疏矩陣 + Lanczos 演算法可降到亞二次方。</p>
+<!-- == 原文附圖 kp-9 == -->
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-37_567_754_1294_461.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 9）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-40_571_990_276_542.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 9）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-41_510_677_1096_499.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 9）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-41_578_841_270_417.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 9）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="B">
+      <p class="q"><p>Laplacian Eigenmaps 為什麼保留鄰居關係？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q9-0" value="A"><span>A. <p>因為 Laplacian 是對稱矩陣</p></span></label><label class="opt"><input type="radio" name="q9-0" value="B"><span>B. <p>目標函數 $\sum(y_i-y_j)^2 W(i,j)$ 直接懲罰鄰居分離</p></span></label><label class="opt"><input type="radio" name="q9-0" value="C"><span>C. <p>用了 PCA</p></span></label><label class="opt"><input type="radio" name="q9-0" value="D"><span>D. <p>隨機保留</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="目標函數 $\sum_{ij}(y_i-y_j)^2W(i,j)$ 直接把「高權重（鄰居）拉開」罰掉。"></div>
+    </div></div>
+</section>
+<section id="kp10" class="card" data-kp="10">
+  <div class="card-head"><span class="badge">6.7.2</span><h3>LLE 與 ISOMAP</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="10">📖 偷看教授祕笈</button>
+
+<!-- == Phase B 圖解 kp-10 == -->
+<figure class="diagram-figure"><img src="assets/diagram-isomap.png" alt="知識點 10 示意圖"><figcaption>📊 知識點 10 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-10" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: A scatter plot of one target point (e.g. red star) surrounded by several neighbor points (blue dots), connected by lines whose thickness encodes a reconstruction weight W(i,j), with a caption showing the reconstruction equation.
+WHY: The reader must see LLE's specific mechanism -- each point is reconstructed as a WEIGHTED linear combination of just its local neighbors (not all points, not equal weights), and those same local weights are preserved when embedding into a lower dimension.
+MUST show: (1) visibly different line thicknesses for different neighbors (unequal weights), (2) the explicit reconstruction formula x_i ~ sum_j W(i,j) x_j near the figure, (3) a clear visual distinction between the "target point" and "neighbor points".
+AVOID: all connection lines drawn with identical weight/thickness (that hides the whole point of "weighted" reconstruction).
+STYLE: clean scientific scatter plot, white background, red target point, blue neighbor points, black lines with variable opacity/width.</pre>
+</details>
+</div>
+
+<p><strong>LLE（Locally Linear Embedding）</strong>：假設<strong>流形局部是線性的</strong>，所以每個點可由鄰居線性組合重建。</p>
+<ul>
+<li>步驟 1：找 $k$-近鄰。</li>
+<li>步驟 2：求權重矩陣 $W$，讓每個 $\boldsymbol{x}_i$ 從其鄰居線性重建，$\arg\min_W \sum_i\|\boldsymbol{x}_i-\sum_j W(i,j)\boldsymbol{x}_{i_j}\|^2$，約束 $\sum_j W(i,j)=1$（行列平移不變）、非鄰居 $W=0$。</li>
+<li>步驟 3：在低維空間保持同樣權重，$\arg\min_Y \sum_i\|\boldsymbol{y}_i-\sum_j W(i,j)\boldsymbol{y}_j\|^2$，受 $\sum \boldsymbol{y}_i=0$、單位協方差約束。等價於 $(I-W)^T(I-W)$ 的特徵分解（丟最小特徵值那個）。</li>
+</ul>
+<p><strong>特性</strong>：對旋轉、平移、縮放不變（局部線性重建特性）。</p>
+<p><strong>ISOMAP</strong>：用<strong>測地距離</strong>代替歐氏距離的 MDS。</p>
+<ul>
+<li>步驟 1：建 $k$-近鄰圖。</li>
+<li>步驟 2：用 Dijkstra 沿圖計算所有點對的測地距離（最短路徑）。</li>
+<li>步驟 3：用 MDS 對測地距離矩陣做降維。</li>
+</ul>
+<p><strong>差異</strong>：LLE 與 Laplacian Eigenmap 用稀疏矩陣特徵分解（計算快），ISOMAP 用稠密 Gram 矩陣 + 最短路徑（計算貴）。三者皆試圖保留流形幾何，但 LLE 強調局部重建、ISOMAP 強調全域測地距離、Laplacian 強調鄰居接近。</p>
+<!-- == 原文附圖 kp-10 == -->
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-46_944_946_272_567.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 10）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="B">
+      <p class="q"><p>LLE 在低維空間仍用相同的權重嗎？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q10-0" value="A"><span>A. <p>是，重新學</p></span></label><label class="opt"><input type="radio" name="q10-0" value="B"><span>B. <p>是，保持原 $W$（固定權重求新座標）</p></span></label><label class="opt"><input type="radio" name="q10-0" value="C"><span>C. <p>否，重新最佳化</p></span></label><label class="opt"><input type="radio" name="q10-0" value="D"><span>D. <p>隨機</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="LLE 把步驟 2 的 $W$ 凍結，再用同一 $W$ 在低維空間重建——這是其局部線性假設的核心。"></div>
+    </div></div>
+</section>
+<section id="kp11" class="card" data-kp="11">
+  <div class="card-head"><span class="badge">6.8.1</span><h3>離散傅立葉變換（1D DFT）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<div class="demo" data-demo-id="dft">
+  <div class="demo-head">🎛 互動：1D DFT（多個正弦波的疊加與頻譜）</div>
+  <div class="demo-body">
+    <div class="demo-panel">
+      <div class="panel-item"><label>正弦波 1 頻率 $f_1$</label>
+        <input type="range" id="dft-f1" min="0" max="20" step="1" value="3"></div>
+      <div class="panel-item"><label>正弦波 2 頻率 $f_2$</label>
+        <input type="range" id="dft-f2" min="0" max="20" step="1" value="8"></div>
+      <div class="panel-item"><label>雜訊強度</label>
+        <input type="range" id="dft-noise" min="0" max="0.5" step="0.05" value="0.1"></div>
+      <div class="panel-readout demo-readout" id="ro-dft"></div>
+    </div>
+    <canvas id="cv-dft" width="520" height="320"></canvas>
+  </div>
+  <div class="demo-foot">
+    <strong>做什麼</strong>：用兩個頻率可調的正弦波疊加 + 雜訊，看 DFT 頻譜如何顯示各頻率分量的強度。<br>
+    <strong>怎麼操作</strong>：拖動 $f_1$、$f_2$、雜訊強度滑桿；時域波形（上）與 DFT 頻譜（下）即時更新。<br>
+    <strong>觀察什麼</strong>：頻譜在 $f_1$ 與 $f_2$ 處有尖峰；雜訊把尖峰模糊化；尖峰位置在 N=64 採樣下為 $k=f\cdot N/f_s$（這裡 $f_s=N$）。<br>
+    <strong>正確基準</strong>：$\text{DFT: } y(k)=\sum_n x(n) e^{-j2\pi kn/N}$。FFT 計算複雜度 $O(N\log_2 N)$。
+  </div>
+</div>
+<button class="guide-btn" data-kp="11">📖 偷看教授祕笈</button>
+
+
+
+<!-- == Phase B 圖解 kp-11 == -->
+<figure class="diagram-figure"><img src="assets/diagram-dft.png" alt="知識點 11 示意圖"><figcaption>📊 知識點 11 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-11" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: Two stacked panels: TOP shows a 1D time-domain signal that is visibly the sum of a low-frequency and a higher-frequency sine wave; BOTTOM shows its DFT magnitude spectrum as a stem plot with exactly two sharp peaks at the two frequencies present in the top signal.
+WHY: The reader must see the causal link between time domain and frequency domain -- a signal made of two sinusoids produces EXACTLY two spikes in its spectrum, at exactly those two frequencies, nothing else.
+MUST show: (1) a visibly non-trivial (multi-frequency) waveform on top, not a single clean sine wave, (2) exactly two sharp, isolated peaks in the bottom spectrum aligned with the two frequencies used on top, (3) axis labels for time and frequency index.
+AVOID: a spectrum that is smeared/noisy across many bins with no clear peaks; showing only one frequency component (too trivial to demonstrate the transform).
+STYLE: clean scientific two-panel plot, white background, blue time-domain line, orange stem spectrum.</pre>
+</details>
+</div>
+
+<p><strong>一句話</strong>：用一組<strong>複數指數基底</strong>把時域序列變到頻域。</p>
+<p><strong>定義</strong>：$y(k)=\frac{1}{\sqrt{N}}\sum_{n=0}^{N-1} x(n) e^{-j\frac{2\pi}{N}kn}$，反變換 $x(n)=\frac{1}{\sqrt{N}}\sum_{k=0}^{N-1} y(k) e^{j\frac{2\pi}{N}kn}$。</p>
+<p><strong>矩陣形式</strong>：$\boldsymbol{y}=W^H\boldsymbol{x}$，$W_{N}=\exp(-j2\pi/N)$，$W$ 是對稱么正矩陣（$W^{-1}=W^*=W^H$），基底向量是其行。</p>
+<p><strong>範例（N=4）</strong>：$W=\frac{1}{2}\begin{pmatrix}1&1&1&1\\1&j&-1&-j\\1&-1&1&-1\\1&-j&-1&j\end{pmatrix}$，行向量即基底 $\boldsymbol{w}_0=[1,1,1,1]^T$、$\boldsymbol{w}_1=[1,j,-1,-j]^T$ 等。</p>
+<p><strong>計算複雜度</strong>：直接 $O(N^2)$；<strong>FFT</strong> 利用 $\exp(-j2\pi/N)$ 的對稱性降至 $O(N\log_2 N)$——這是 1965 年 Cooley-Tukey 變革數位訊號處理的關鍵。</p>
+<p><strong>特性</strong>：</p>
+<ul>
+<li>基底是固定的（不從資料學），適合「資料平穩、想分離不同頻率分量」場景。</li>
+<li>對<strong>非平穩訊號</strong>（頻率隨時間變化）效果差——這是 STFT、小波變換想解決的問題。</li>
+<li><strong>資訊打包</strong>不如 KLT，但對常見影像/語音，DFT 低頻分量已集中大部分能量。</li>
+</ul>
+<p><strong>為何用複指數</strong>：實部、虛部分別是 cos/sin，能表示任意振幅與相位的正弦波。</p><div class="quiz" data-ans="B">
+      <p class="q"><p>DFT 直接計算複雜度？FFT 後？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q11-0" value="A"><span>A. <p>$O(N)$、$O(N)$</p></span></label><label class="opt"><input type="radio" name="q11-0" value="B"><span>B. <p>$O(N^2)$、$O(N\log_2 N)$</p></span></label><label class="opt"><input type="radio" name="q11-0" value="C"><span>C. <p>$O(N^3)$、$O(N^2)$</p></span></label><label class="opt"><input type="radio" name="q11-0" value="D"><span>D. <p>$O(N\log N)$、$O(N)$</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="直接計算是 $O(N^2)$，FFT 降至 $O(N\log_2 N)$。"></div>
+    </div></div>
+</section>
+<section id="kp12" class="card" data-kp="12">
+  <div class="card-head"><span class="badge">6.8.2</span><h3>二維 DFT 與可分離變換</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="12">📖 偷看教授祕笈</button>
+
+<!-- == Phase B 圖解 kp-12 == -->
+<figure class="diagram-figure"><img src="assets/diagram-dft2d.png" alt="知識點 12 示意圖"><figcaption>📊 知識點 12 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-12" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: Two side-by-side grayscale image panels: LEFT is a simple original image containing a solid square plus a diagonal line; RIGHT is its 2D DFT magnitude spectrum in log scale, shown as a bright cross/star pattern radiating from the center.
+WHY: The reader must see that structured content in the spatial image (edges, a diagonal line, a rectangular block) produces STRUCTURED, non-random patterns in the frequency domain (bright lines/crosses at specific orientations), not random noise.
+MUST show: (1) recognizable geometric shapes in the left image (not arbitrary blur), (2) a visibly structured (not uniformly random) bright pattern in the right spectrum, ideally echoing the orientation of features in the left image, (3) both panels using the same intensity colormap style for comparability.
+AVOID: a spectrum panel that just looks like uniform noise or a plain blob with no discernible structure.
+STYLE: clean scientific image plot, grayscale colormap, white background, axis-off image tiles.</pre>
+</details>
+</div>
+
+<p><strong>一句話</strong>：把 1D DFT 對行、列各做一次，得到 2D 影像的頻譜。</p>
+<p><strong>定義</strong>：$Y(k,l)=\frac{1}{N}\sum_{m,n}X(m,n)W_N^{km}W_N^{ln}$；逆變換 $X(m,n)=\frac{1}{N}\sum_{k,l}Y(k,l)W_N^{-km}W_N^{-ln}$。</p>
+<p><strong>可分離性</strong>：$Y=W^H X W$（先對行做、再對列做），把 2D DFT 拆成 $2N$ 個 1D DFT。計算成本 $O(N^2\log_2 N)$——比直接 2D 的 $O(N^4)$ 少 100 倍以上。</p>
+<p><strong>影像頻譜的特性</strong>：</p>
+<ul>
+<li>自然影像的能量集中在低頻（DC 附近），左上角亮、右下角暗。</li>
+<li>邊緣在頻譜中產生對角線方向的高頻條紋。</li>
+<li>旋轉紋理 → 頻譜也旋轉相同角度。</li>
+<li>圖 6.9 顯示 DFT 能量比 DST/DCT 分散。</li>
+</ul>
+<p><strong>為何重要</strong>：2D DFT 是 JPEG（早期版本）的核心、頻域濾波、紋理分析、影像匹配的基礎。</p>
+<p><strong>與 1D DFT 相同的限制</strong>：固定基底、不考慮資料特性。對能量高度集中的訊號，DCT 通常比 DFT 更好。</p><div class="quiz" data-ans="B">
+      <p class="q"><p>2D DFT 用 FFT 計的複雜度？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q12-0" value="A"><span>A. <p>$O(N^2)$</p></span></label><label class="opt"><input type="radio" name="q12-0" value="B"><span>B. <p>$O(N^2\log_2 N)$</p></span></label><label class="opt"><input type="radio" name="q12-0" value="C"><span>C. <p>$O(N^4)$</p></span></label><label class="opt"><input type="radio" name="q12-0" value="D"><span>D. <p>$O(N^3)$</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="可分離：先 $N$ 個 1D DFT（行）、再 $N$ 個 1D DFT（列），每個 $O(N\log N)$，共 $O(N^2\log_2 N)$。"></div>
+    </div></div>
+</section>
+<section id="kp13" class="card" data-kp="13">
+  <div class="card-head"><span class="badge">6.9</span><h3>離散餘弦/正弦變換（DCT/DST）</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<div class="demo" data-demo-id="dct">
+  <div class="demo-head">🎛 互動：DCT vs DFT 能量集中度（保留前 k 個係數）</div>
+  <div class="demo-body">
+    <div class="demo-panel">
+      <div class="panel-item"><label>保留係數數 $k$</label>
+        <input type="range" id="dct-k" min="1" max="32" step="1" value="6"></div>
+      <div class="panel-item"><label>訊號類型</label>
+        <select id="dct-sig">
+          <option value="markov">一階 Markov（影像典型）</option>
+          <option value="sin">純正弦波</option>
+          <option value="step">階梯訊號</option>
+        </select></div>
+      <div class="panel-readout demo-readout" id="ro-dct"></div>
+    </div>
+    <canvas id="cv-dct" width="520" height="320"></canvas>
+  </div>
+  <div class="demo-foot">
+    <strong>做什麼</strong>：比較 DCT 與 DFT 在保留前 $k$ 個係數時重建訊號的能量保留率。<br>
+    <strong>怎麼操作</strong>：拖動 $k$ 滑桿（保留係數數），選擇訊號類型；藍線 (DCT) 與紅線 (DFT) 即時對比能量保留率。<br>
+    <strong>觀察什麼</strong>：對 Markov 訊號，DCT 幾乎完全超越 DFT（少數係數就保留 95% 能量）；對純正弦波，DFT 一個係數就 100%。<br>
+    <strong>正確基準</strong>：DCT 對一階 Markov 過程的 rate-distortion 函數逼近 KL 變換——這是 DCT 成為 JPEG/MPEG 壓縮標準的理論基礎。
+  </div>
+</div>
+<button class="guide-btn" data-kp="13">📖 偷看教授祕笈</button>
+
+
+
+<!-- == Phase B 圖解 kp-13 == -->
+<figure class="diagram-figure"><img src="assets/diagram-dct-vs-dft.png" alt="知識點 13 示意圖"><figcaption>📊 知識點 13 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-13" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: A line chart comparing two decay curves labeled "DCT energy" and "DFT energy" against coefficient index, with the DCT curve dropping toward zero visibly faster, plus a shaded region marking "top 8 DCT coefficients kept".
+WHY: The reader must see WHY DCT, not DFT, is the compression workhorse (e.g. in JPEG) -- for typical smooth signals, DCT concentrates energy into far fewer coefficients than DFT, so truncating to a small k loses much less information under DCT.
+MUST show: (1) two visibly different decay rates (DCT clearly steeper/faster than DFT), (2) a shaded/highlighted region showing how much energy is captured by a small number of DCT coefficients, (3) legend distinguishing the two curves.
+AVOID: two curves with near-identical decay rates (that would contradict the whole point); no visual indication of "energy captured by first k terms".
+STYLE: clean scientific line+fill plot, white background, blue DCT curve, red DFT curve, legend.</pre>
+</details>
+</div>
+
+<p><strong>一句話</strong>：用<strong>實數 cos/sin 基底</strong>代替 DFT 的複指數，能量集中度比 DFT 更好（特別是對一階 Markov 過程）。</p>
+<p><strong>DCT</strong>：$y(k)=\alpha(k)\sum_n x(n)\cos\frac{\pi(2n+1)k}{2N}$，$\alpha(0)=\sqrt{1/N}$，$\alpha(k\gt 0)=\sqrt{2/N}$。$C$ 矩陣元素是 cos 函數值，$C$ 是正交矩陣（$C^{-1}=C^T$）。</p>
+<p><strong>DST</strong>：$S(k,n)=\sqrt{\frac{2}{N+1}}\sin\frac{\pi(k+1)(n+1)}{N+1}$，同樣正交。</p>
+<p><strong>為何 DCT 重要</strong>：</p>
+<ul>
+<li><strong>JPEG、MPEG、MP3</strong> 全部用 DCT——影像/視訊/音訊壓縮的事實標準。</li>
+<li>對自然影像（一階 Markov 模型），DCT 接近 KLT 但計算只要 $O(N\log N)$ FFT-like 演算法。</li>
+<li>圖 6.9 顯示 DCT 能量比 DFT 更集中（亮區更小）。</li>
+</ul>
+<p><strong>與 DFT 比較</strong>：
+| | DFT | DCT |
+|--|--|--|
+| 基底 | 複指數 | 實 cos |
+| 能量集中 | 尚可 | 更好 |
+| 邊界處理 | 隱含週期 | 偶延拓（隱含） |
+| 計算 | FFT | 快速 DCT |</p>
+<p><strong>為何 DCT 對影像好</strong>：影像像素序列常被建模為一階 Markov，DCT 的偶延拓讓邊界更平滑，避免 DFT 的週期不連續造成的頻譜洩漏。</p>
+<!-- == 原文附圖 kp-13 == -->
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-50_474_651_268_712.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 13）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="B">
+      <p class="q"><p>DCT 為何比 DFT 更適合影像壓縮？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q13-0" value="A"><span>A. <p>DCT 是複數</p></span></label><label class="opt"><input type="radio" name="q13-0" value="B"><span>B. <p>DCT 對一階 Markov 過程近似 KLT、能量更集中</p></span></label><label class="opt"><input type="radio" name="q13-0" value="C"><span>C. <p>DCT 比較簡單</p></span></label><label class="opt"><input type="radio" name="q13-0" value="D"><span>D. <p>DCT 比較快</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="DCT 的實數 cos 基底加上偶延拓，對一階 Markov 影像近似 KLT，能量集中度優於 DFT。"></div>
+    </div></div>
+</section>
+<section id="kp14" class="card" data-kp="14">
+  <div class="card-head"><span class="badge">6.10</span><h3>Hadamard 變換</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="14">📖 偷看教授祕笈</button>
+
+<!-- == Phase B 圖解 kp-14 == -->
+<figure class="diagram-figure"><img src="assets/diagram-hadamard.png" alt="知識點 14 示意圖"><figcaption>📊 知識點 14 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-14" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: A small square grid heatmap (8x8) of a Hadamard matrix, cells colored only two colors (e.g. dark/light) representing +1 and -1, with a title noting "elements are only +-1".
+WHY: The reader must see the Hadamard transform's defining simplicity -- unlike DFT/DCT which need real multiplications by cosine/sine values, every basis entry is exactly +1 or -1, so the transform needs only additions and subtractions (extremely cheap to compute).
+MUST show: (1) a clean two-color checkerboard-like pattern with visible recursive block structure (self-similar quadrants), (2) a caption or label stating the matrix entries are only +-1, (3) no anti-aliased/gradient shading (must look like a hard binary pattern).
+AVOID: a smooth gradient colormap that implies continuous values (defeats the point about only two discrete values).
+STYLE: flat 2-color heatmap, black/white or dark-blue/light-blue, white background, axis-off.</pre>
+</details>
+</div>
+
+<p><strong>一句話</strong>：只用 <strong>±1</strong>（加/減法）就能做的正交變換——無需乘法，適合運算資源受限的硬體。</p>
+<p><strong>構造</strong>：$H_n=H_1\otimes H_{n-1}$（Kronecker 乘積），$H_1=\frac{1}{\sqrt{2}}\begin{pmatrix}1&1\\1&-1\end{pmatrix}$。$N=2^n$ 大小，$N\times N$ 全 $\pm 1/\sqrt{N}$ 元素。</p>
+<p><strong>範例 $N=4$</strong>：$H_2=\frac{1}{2}\begin{pmatrix}1&1&1&1\\1&-1&1&-1\\1&1&-1&-1\\1&-1&-1&1\end{pmatrix}$。</p>
+<p><strong>特性</strong>：</p>
+<ul>
+<li>么正：$H_n^{-1}=H_n^T=H_n$（對稱）。</li>
+<li>變換只用加減法（<strong>零乘法</strong>），硬體實作便宜。</li>
+<li>$O(N\log_2 N)$ 快速算法存在。</li>
+<li>能量打包「好到很好」，紋理辨識實驗中表現接近 KLT。</li>
+</ul>
+<p><strong>與其他變換對比</strong>：與 DFT/DCT/Haar 同為「固定基底變換」，無需學。Hadamard 計算最簡單，但能量打包比 DCT 略遜。在即時處理、低功耗晶片、DSP 教學中常用。</p><div class="quiz" data-ans="B">
+      <p class="q"><p>Hadamard 變換最大的運算優勢？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q14-0" value="A"><span>A. <p>複數基底</p></span></label><label class="opt"><input type="radio" name="q14-0" value="B"><span>B. <p>只用加減法（無乘法）</p></span></label><label class="opt"><input type="radio" name="q14-0" value="C"><span>C. <p>能量最集中</p></span></label><label class="opt"><input type="radio" name="q14-0" value="D"><span>D. <p>基底從資料學</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="Hadamard 矩陣元素僅 $\pm 1/\sqrt{N}$，計算只需加法與減法，無乘法。"></div>
+    </div></div>
+</section>
+<section id="kp15" class="card" data-kp="15">
+  <div class="card-head"><span class="badge">6.11</span><h3>Haar 變換與多解析度分析的起點</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="15">📖 偷看教授祕笈</button>
+
+
+<!-- == Phase B 圖解 kp-15 == -->
+<figure class="diagram-figure"><img src="assets/diagram-haar.png" alt="知識點 15 示意圖"><figcaption>📊 知識點 15 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-15" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: A grid of 8 small line plots, each showing one Haar basis function as a piecewise-constant step wave (rectangular pulses going up/down/flat), at increasingly fine time-localization scales across the grid.
+WHY: The reader must see that Haar basis functions are simple STEP waves (not smooth like DCT's cosines), and that different basis indices localize their "activity" to narrower and narrower time windows -- this is the seed of multiresolution/wavelet analysis.
+MUST show: (1) at least one clearly flat/constant basis (index 0), (2) several step-shaped basis functions with visibly different pulse widths/positions across the grid (not all identical shape), (3) a shared y-axis scale so amplitude differences are meaningful.
+AVOID: drawing all 8 basis functions as smooth curves (that's DCT's job, not Haar's); making every subplot look identical.
+STYLE: clean scientific small-multiples line plot, white background, blue step lines, gray zero-reference line.</pre>
+</details>
+</div>
+
+<p><strong>一句話</strong>：Haar 是<strong>階梯型</strong>正交基底，能分解序列為「平均值」與「差值」，是後續小波變換的雛形。</p>
+<p><strong>Haar 函數</strong>：$h_0(z)=1/\sqrt{L}$（常數），$h_{pq}(z)=\frac{1}{\sqrt{L}}\begin{cases}2^{p/2}&\frac{q-1}{2^p}\leq z\lt \frac{q-1/2}{2^p}\\-2^{p/2}&\frac{q-1/2}{2^p}\leq z\lt \frac{q}{2^p}\\0&\text{otherwise}\end{cases}$。$h_0$ 是平均，$h_{pq}$ 在 $[0,1]$ 上是分段常數的正負階梯。</p>
+<p><strong>變換矩陣</strong>：$L\times L$ Haar 矩陣是稀疏的（很多 0），對應著<strong>兩點平均與差值</strong>的二元分組。</p>
+<p><strong>重新解讀（重要）</strong>：把 $N$ 個樣本兩兩配對，Haar 變換等價於：</p>
+<ul>
+<li><strong>低通濾波器</strong> $H_1(z)=\frac{1}{\sqrt{2}}(1+z)$：算相鄰兩點平均 $y_1(k)=\frac{x(2k)+x(2k+1)}{\sqrt{2}}$。</li>
+<li><strong>高通濾波器</strong> $H_0(z)=\frac{1}{\sqrt{2}}(1-z)$：算相鄰差值 $y_0(k)=\frac{x(2k)-x(2k+1)}{\sqrt{2}}$。</li>
+<li>下採樣 $M=2$。</li>
+</ul>
+<p><strong>遞迴成多解析度</strong>：低通輸出再分高低通、再下採樣……形成<strong>樹狀濾波器組</strong>，得到不同尺度（解析度）的訊號版本——這就是<strong>多解析度分析（multiresolution analysis）</strong>的開端，圖 6.13 顯示三層樹狀濾波器組。</p>
+<p><strong>意義</strong>：Haar 雖簡單，但揭示了「<strong>將訊號分層分解到不同尺度</strong>」的強大概念，這是後續 Daubechies、symlet 等小波的基礎。</p>
+<!-- == 原文附圖 kp-15 == -->
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-51_259_951_925_323.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 15）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-51_272_1092_282_287.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 15）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-51_70_1020_727_325.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 15）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-52_291_1186_280_443.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 15）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-52_662_860_742_605.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 15）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="B">
+      <p class="q"><p>Haar 的高通輸出 $y_0(k)$ 計算？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q15-0" value="A"><span>A. <p>$\frac{x(2k)+x(2k+1)}{\sqrt{2}}$</p></span></label><label class="opt"><input type="radio" name="q15-0" value="B"><span>B. <p>$\frac{x(2k)-x(2k+1)}{\sqrt{2}}$</p></span></label><label class="opt"><input type="radio" name="q15-0" value="C"><span>C. <p>$x(2k)$</p></span></label><label class="opt"><input type="radio" name="q15-0" value="D"><span>D. <p>$\sqrt{x(2k)^2+x(2k+1)^2}$</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="$y_0$ 是高通濾波器的輸出，計算相鄰樣本的差值（高通→差）。"></div>
+    </div></div>
+</section>
+<section id="kp16" class="card" data-kp="16">
+  <div class="card-head"><span class="badge">6.13</span><h3>離散小波變換（DTWT）與濾波器組</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="16">📖 偷看教授祕笈</button>
+
+<!-- == Phase B 圖解 kp-16 == -->
+<figure class="diagram-figure"><img src="assets/diagram-filterbank.png" alt="知識點 16 示意圖"><figcaption>📊 知識點 16 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-16" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: A 2x4 grid of small grayscale image tiles: the original image plus four "sub-band" tiles labeled LL/LH/HL/HH from one level of 2D wavelet decomposition, where LL looks like a blurred smaller copy of the original and LH/HL/HH look like edge-detail maps highlighting horizontal/vertical/diagonal structure respectively.
+WHY: The reader must see that one wavelet decomposition step splits an image into ONE coarse "approximation" (LL) plus THREE "detail" bands capturing different edge orientations -- this is literally how multiresolution filter-bank analysis works, one level at a time.
+MUST show: (1) the LL tile visibly looking like a blurred/smaller version of the original, (2) the LH/HL/HH tiles visibly emphasizing DIFFERENT edge orientations from each other (not identical), (3) clear labels naming all four bands.
+AVOID: all four sub-band tiles looking identical or like random noise with no directional structure.
+STYLE: clean scientific image-grid plot, grayscale colormap, white background, axis-off tiles, small text labels.</pre>
+</details>
+</div>
+
+<p><strong>一句話</strong>：用<strong>完美重建濾波器組</strong>做時頻分解，是 STFT 之後訊號處理的標準工具。</p>
+<p><strong>Two-Band 濾波器組</strong>：分析端 $H_0(z), H_1(z)$（高通、低通）+ 下採樣 M=2；合成端 $G_0(z), G_1(z)$ + 上採樣 M=2 + 加總。<strong>完美重建</strong>條件 $\hat{x}(n)=x(n)$ 當 $\sum_n h_i(2k-n)g_j(n-2l)=\delta_{kl}\delta_{ij}$（雙正交性）。</p>
+<p><strong>DTWT 對</strong>：$y_i(k)=\sum_n x(n)h_i(2k-n)$，$x(n)=\sum_i\sum_k y_i(k)g_i(n-2k)$。這是<strong>雙正交展開</strong>，基底 $\phi_{ik},\psi_{jk}$ 滿足 $\langle\phi_{ik},\psi_{jl}\rangle=\delta_{ij}\delta_{kl}$。</p>
+<p><strong>正交 vs 雙正交</strong>：當 $\phi_{ik}$ 自身正交（$\sum_n h_j^i(2k-n)h_j(2l-n)=\delta_{kl}\delta_{ij}$），合成濾波器就是分析濾波器的時間反轉 $g_i(n)=h_i(-n)$，稱為<strong>正交/paraunitary 濾波器組</strong>。</p>
+<p><strong>Daubechies 小波</strong>：第一組正交緊支撐（compact support）的濾波器，長度 4、6、8、10……的低通係數如表 6.2。它讓我們用更平滑的濾波器（不再是 Haar 的硬階梯）實現完美的時頻局部化。</p>
+<p><strong>多頻帶</strong>：J-層樹狀濾波器組（圖 6.17-6.19）給出 $J$ 個頻帶，每層輸出解析度減半、頻率局部性加倍。</p>
+<!-- == 原文附圖 kp-16 == -->
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-53_613_679_1401_499.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 16）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-55_310_478_533_598.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 16）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-55_80_362_272_639.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 16）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="B">
+      <p class="q"><p>完美重建濾波器組的核心條件？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q16-0" value="A"><span>A. <p>濾波器長度相同</p></span></label><label class="opt"><input type="radio" name="q16-0" value="B"><span>B. <p>雙正交性 $\sum_n h_i(2k-n)g_j(n-2l)=\delta_{kl}\delta_{ij}$</p></span></label><label class="opt"><input type="radio" name="q16-0" value="C"><span>C. <p>濾波器線性相位</p></span></label><label class="opt"><input type="radio" name="q16-0" value="D"><span>D. <p>濾波器實數</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="完美重建要求分析與合成濾波器滿足雙正交條件。"></div>
+    </div></div>
+</section>
+<section id="kp17" class="card" data-kp="17">
+  <div class="card-head"><span class="badge">6.14–6.16</span><h3>小波包、多解析度與二維推廣</h3><span class="toggle">▼</span></div>
+  <div class="card-body">
+<button class="guide-btn" data-kp="17">📖 偷看教授祕笈</button>
+
+
+<!-- == Phase B 圖解 kp-17 == -->
+<figure class="diagram-figure"><img src="assets/diagram-wavelet.png" alt="知識點 17 示意圖"><figcaption>📊 知識點 17 示意圖（matplotlib）</figcaption></figure>
+<!-- END Phase B 圖解 -->
+<div class="ai-illustration" data-diagram-id="kp-17" data-status="pending">
+<details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+<pre class="ai-illustration-prompt">WHAT: A binary decision-tree diagram: a root node "x(n)" splits into a low-pass branch H1 and a high-pass branch H0; the low-pass branch splits AGAIN into another low/high pair, while the high-pass branches are left as leaves labeled "detail level 1/2/3"; the final low-pass leaf is labeled "coarse approximation".
+WHY: The reader must see the recursive structure of a filter-bank tree -- only the LOW-PASS output keeps getting split again and again (that's what makes it a wavelet/multiresolution tree rather than a flat filter bank), producing detail bands at progressively coarser time/frequency resolutions.
+MUST show: (1) a visibly asymmetric tree where only the low-pass branch recurses (high-pass branches terminate immediately as leaves), (2) at least 3 levels of recursion, (3) labels distinguishing "detail" leaves at different levels from the final "coarse" leaf.
+AVOID: drawing a symmetric tree where both branches keep splitting equally (that would misrepresent the wavelet decomposition and look like a generic binary tree).
+STYLE: flat node-and-arrow diagram, white background, light-blue circular nodes, black arrows, small text labels.</pre>
+</details>
+</div>
+
+<p><strong>多解析度詮釋</strong>：低通濾波器給「粗糙（coarse）」版本（低頻、全域），高通給「細節（detail）」版本（高頻、局部）。反覆對低通做分解，得到多層解析度（圖 6.13 樹狀）。這種「金字塔式」分解在影像壓縮（JPEG2000 用 5/3 小波）、邊緣偵測、紋理分析無所不在。</p>
+<p><strong>多頻帶（樹狀 DTWT）</strong>：$J$ 層濾波器組給出 $J$ 個頻帶，第 $i$ 頻帶有 $2^{i+1}$ 個移位（解析度低但頻率窄）。低通一路 $\hat{x}$ 仍可重建所有 $\hat{x}_i$。</p>
+<p><strong>小波包（Wavelet Packets）</strong>：把<strong>所有節點</strong>（不只低通一路）都繼續分解，產生更細的頻率分割。適合作訊號分類（每個 packet 對應不同頻帶，可選最有判別力的子集）。</p>
+<p><strong>二維推廣</strong>：用可分離方式，先對行做 1D 小波、再對列做 1D 小波，得到 LL、LH、HL、HH 四個子帶（圖 6.20）。重複對 LL 分解，形成多解析度影像金字塔。JPEG2000、影像去噪、特徵提取都靠這個。</p>
+<p><strong>應用場景</strong>：</p>
+<ul>
+<li><strong>手寫字元辨識</strong>（Example 6.9）：小波特徵對不同字體變化有局部化、穩健的描述。</li>
+<li><strong>紋理分類</strong>：不同紋理在不同子帶（小尺度邊緣、大尺度週期）能量分布不同。</li>
+</ul>
+<p><strong>比較其他變換</strong>：KLT/SVD 計算慢但最優；DFT/DCT 計算快但基底固定、無局部化；小波兼具計算效率（$O(N)$）與時頻局部化，是「非平穩訊號」首選。</p>
+<!-- == 原文附圖 kp-17 == -->
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-58_637_1043_1083_516.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-58_70_1001_1912_537.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-59_603_799_278_436.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-63_929_1149_270_263.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-65_919_1163_1077_257.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-66_487_904_270_584.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-67_377_778_868_447.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-68_516_906_270_582.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-68_550_552_1016_761.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-69_849_702_1138_485.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-72_457_851_268_611.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-73_489_1147_1465_265.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<figure class="orig-fig"><img src="assets/fe11f6ec-e3d5-43a1-8967-8b5a96641e0f-76_388_1220_1595_428.jpg" alt="教材原圖"><figcaption>📷 教材原圖（知識點 17）</figcaption></figure>
+<!-- END 原文附圖 -->
+<div class="quiz" data-ans="C">
+      <p class="q"><p>二維小波變換的可分離分解順序？</p></p>
+      <div class="opts"><label class="opt"><input type="radio" name="q17-0" value="A"><span>A. <p>對角線方向</p></span></label><label class="opt"><input type="radio" name="q17-0" value="B"><span>B. <p>先列後行</p></span></label><label class="opt"><input type="radio" name="q17-0" value="C"><span>C. <p>先對行做 1D 小波，再對列做 1D 小波</p></span></label><label class="opt"><input type="radio" name="q17-0" value="D"><span>D. <p>隨機</p></span></label></div>
+      <button class="check" type="button">檢查</button>
+      <div class="fb" data-expl="可分離：先對每行做 1D DTWT 產生水平子帶，再對每列做 1D DTWT 產生四個子帶 (LL, LH, HL, HH)。"></div>
+    </div></div>
+</section>
+  </main>
+</div>
+<footer>依 Pattern Recognition（Theodoridis &amp; Koutroumbas）Ch7 改寫 · 自學用</footer>
+<script>
+(function(){
+  function renderMath(){
+    if(window.katex && window.renderMathInElement) window.renderMathInElement(document.body,{
+      delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],
+      throwOnError:false,
+      ignoredClasses:['katex']
+    });
+  }
+  window.renderMath=renderMath;
+  var cards=document.querySelectorAll('.card');
+  function upd(){
+    var n=cards.length, done=0;
+    cards.forEach(function(c){ if(c.classList.contains('done')) done++; });
+    var pct=Math.round(done/n*100);
+    document.getElementById('pf').style.width=pct+'%';
+    document.getElementById('ptxt').textContent='已完成 '+done+' / '+n+'（'+pct+'%）';
+  }
+  cards.forEach(function(c){
+    c.querySelector('.card-head').addEventListener('click',function(){ c.classList.toggle('collapsed'); });
+    c.querySelectorAll('.quiz').forEach(function(qz){
+      var btn=qz.querySelector('.check'), fb=qz.querySelector('.fb');
+      btn.addEventListener('click',function(){
+        var sel=qz.querySelector('input:checked');
+        if(!sel){ fb.className='fb wrong'; fb.textContent='請先選擇答案。'; return; }
+        if(sel.value===qz.dataset.ans){ fb.className='fb ok'; fb.textContent='✓ 正確！'; c.classList.add('done'); }
+        else { fb.className='fb wrong'; fb.textContent='✗ 答錯：'+qz.querySelector('.fb').dataset.expl; }
+        upd();
+      });
+    });
+  });
+  window.addEventListener('load',function(){ setTimeout(renderMath,50); upd(); });
+})();
+</script>
+<script>
+
+(function(){
+// 通用工具：寫中文到 canvas
+function setupFont(cv){
+  cv.getContext('2d').font = '12px "Noto Sans CJK JP", sans-serif';
+}
+
+function drawAxes(cv, xmin, xmax, ymin, ymax, xlabel, ylabel){
+  const ctx = cv.getContext('2d');
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(40, 10); ctx.lineTo(40, cv.height-30); ctx.lineTo(cv.width-10, cv.height-30); ctx.stroke();
+  ctx.fillStyle = '#333';
+  ctx.fillText(xlabel, cv.width-50, cv.height-10);
+  ctx.save(); ctx.translate(12, cv.height/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText(ylabel, -30, 0); ctx.restore();
+}
+
+function drawText(cv, x, y, text, color){
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = color || '#333';
+  ctx.fillText(text, x, y);
+}
+
+// ============ 1. KLT/PCA demo ============
+function kltInit(){
+  const cv = document.getElementById('cv-klt'); if(!cv) return;
+  setupFont(cv);
+  const s1 = document.getElementById('klt-s1');
+  const s2 = document.getElementById('klt-s2');
+  const rho = document.getElementById('klt-rho');
+  const ro = document.getElementById('ro-klt');
+  function update(){
+    const v1 = parseFloat(s1.value), v2 = parseFloat(s2.value), r = parseFloat(rho.value);
+    // 共變異數 [[v1, c],[c, v2]] with c = r*sqrt(v1*v2)
+    const c = r * Math.sqrt(v1*v2);
+    const A = [[v1, c],[c, v2]];
+    // 特徵值：直接解二次方程
+    const trace = v1+v2, det = v1*v2 - c*c;
+    const disc = Math.sqrt(Math.max(0, trace*trace/4 - det));
+    const l1 = trace/2 + disc, l2 = trace/2 - disc;
+    // 特徵向量
+    let a0 = [1, (l1-v1)/c || 0]; if(!isFinite(a0[1])) a0=[1,0];
+    const n0 = Math.sqrt(a0[0]**2 + a0[1]**2); a0 = [a0[0]/n0, a0[1]/n0];
+    let a1 = [1, (l2-v1)/c || 0]; if(!isFinite(a1[1])) a1=[-a0[1], a0[0]];
+    const n1 = Math.sqrt(a1[0]**2 + a1[1]**2); a1 = [a1[0]/n1, a1[1]/n1];
+    // 繪製資料點（從 2D 高斯抽樣）
+    const ctx = cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height);
+    drawAxes(cv, -3, 3, -3, 3, 'x₁', 'x₂');
+    // 橢圓（畫協方差等高線）
+    ctx.strokeStyle = 'rgba(91,33,182,0.3)'; ctx.lineWidth = 2;
+    const scale = 40, cx = cv.width/2, cy = cv.height/2;
+    ctx.beginPath();
+    for(let t=0;t<2*Math.PI;t+=0.05){
+      const u = Math.sqrt(l1)*Math.cos(t), v = Math.sqrt(l2)*Math.sin(t);
+      const x = u*a0[0] + v*a1[0], y = u*a0[1] + v*a1[1];
+      if(t===0) ctx.moveTo(cx+x*scale, cy-y*scale);
+      else ctx.lineTo(cx+x*scale, cy-y*scale);
+    } ctx.closePath(); ctx.stroke();
+    // 隨機樣本
+    ctx.fillStyle = 'rgba(91,33,182,0.5)';
+    for(let i=0;i<200;i++){
+      const u = Math.sqrt(l1)*Math.cos(2*Math.PI*Math.random())*Math.sqrt(-2*Math.log(Math.random()||0.01)),
+            v = Math.sqrt(l2)*Math.sin(2*Math.PI*Math.random())*Math.sqrt(-2*Math.log(Math.random()||0.01));
+      const x = u*a0[0] + v*a1[0], y = u*a0[1] + v*a1[1];
+      ctx.fillRect(cx+x*scale-1, cy-y*scale-1, 2, 2);
+    }
+    // 主軸
+    ctx.strokeStyle = 'red'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx-2.5*Math.sqrt(l1)*a0[0]*scale, cy+2.5*Math.sqrt(l1)*a0[1]*scale);
+    ctx.lineTo(cx+2.5*Math.sqrt(l1)*a0[0]*scale, cy-2.5*Math.sqrt(l1)*a0[1]*scale);
+    ctx.stroke();
+    ctx.strokeStyle = 'green'; ctx.lineWidth = 2; ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    ctx.moveTo(cx-2*Math.sqrt(l2)*a1[0]*scale, cy+2*Math.sqrt(l2)*a1[1]*scale);
+    ctx.lineTo(cx+2*Math.sqrt(l2)*a1[0]*scale, cy-2*Math.sqrt(l2)*a1[1]*scale);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ro.innerHTML = `λ₁=${l1.toFixed(2)} (主軸 ${(l1/v1*100).toFixed(0)}%) | a₀=(${a0[0].toFixed(2)}, ${a0[1].toFixed(2)}) | ρ=${r.toFixed(2)}`;
+  }
+  [s1,s2,rho].forEach(s=>s.addEventListener('input', update));
+  update();
+}
+
+// ============ 2. SVD 低秩近似 demo ============
+function svdInit(){
+  const cv = document.getElementById('cv-svd'); if(!cv) return;
+  setupFont(cv);
+  const k = document.getElementById('svd-k');
+  const n = document.getElementById('svd-n');
+  const ro = document.getElementById('ro-svd');
+  function update(){
+    const N = parseInt(n.value), K = parseInt(k.value);
+    // 構造一個具 decay 奇異值的矩陣（如 exp(-i/r) * random）
+    const m = N, nn = N;
+    const A = [];
+    for(let i=0;i<m;i++){
+      const row = []; for(let j=0;j<nn;j++) row.push(0);
+      A.push(row);
+    }
+    // 構造：X = U Σ V^T，其中 Σ = diag(exp(-i/N)) 對 i=1..r
+    const r = Math.floor(N/2);
+    const U = [], V = [];
+    const rng = mulberry32(42);
+    for(let i=0;i<m;i++){
+      const u = []; for(let j=0;j<r;j++) u.push(rng()*2-1);
+      // 正交化（Gram-Schmidt 簡化：亂數矩陣）
+      let norm = 0; for(let j=0;j<r;j++) norm += u[j]*u[j];
+      norm = Math.sqrt(norm)||1;
+      U.push(u.map(x=>x/norm));
+    }
+    for(let i=0;i<nn;i++){
+      const v = []; for(let j=0;j<r;j++) v.push(rng()*2-1);
+      let norm = 0; for(let j=0;j<r;j++) norm += v[j]*v[j];
+      norm = Math.sqrt(norm)||1;
+      V.push(v.map(x=>x/norm));
+    }
+    for(let i=0;i<m;i++){
+      for(let j=0;j<nn;j++){
+        let s = 0;
+        for(let p=0;p<r;p++) s += U[i][p] * Math.exp(-p*0.6) * V[j][p];
+        A[i][j] = s;
+      }
+    }
+    // 計算近似：保留前 K 個奇異值
+    const Ak = []; for(let i=0;i<m;i++){const r2=[];for(let j=0;j<nn;j++)r2.push(0);Ak.push(r2);}
+    let err = 0;
+    for(let i=0;i<m;i++){
+      for(let j=0;j<nn;j++){
+        let s = 0;
+        for(let p=0;p<Math.min(K,r);p++) s += U[i][p] * Math.exp(-p*0.6) * V[j][p];
+        Ak[i][j] = s;
+        const d = A[i][j] - s; err += d*d;
+      }
+    }
+    const err_rmse = Math.sqrt(err/(m*nn));
+    // Frobenius 誤差理論值 = sqrt(sum_{p=K}^{r-1} exp(-p*1.2))
+    const true_err = Math.sqrt(Array.from({length:r-K},(_,p)=>Math.exp(-(p+K)*1.2)).reduce((a,b)=>a+b,0)) / Math.sqrt(m);
+    // 繪製左右兩個圖
+    const ctx = cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height);
+    function drawMat(M, ox, oy, sz, vmin, vmax){
+      for(let i=0;i<M.length;i++){
+        for(let j=0;j<M[0].length;j++){
+          const v = (M[i][j] - vmin)/(vmax-vmin);
+          const g = Math.floor(255*Math.max(0,Math.min(1,v)));
+          ctx.fillStyle = `rgb(${255-g},${255-g},${255-g})`;
+          ctx.fillRect(ox+j*sz, oy+i*sz, sz, sz);
+        }
+      }
+    }
+    let vmin=-2, vmax=2;
+    ctx.fillStyle = '#666';
+    ctx.fillText(`原矩陣 ${N}x${N}`, 20, 20);
+    drawMat(A, 20, 30, Math.min(12, 240/N), vmin, vmax);
+    ctx.fillText(`SVD rank-${K} 近似`, 280, 20);
+    drawMat(Ak, 280, 30, Math.min(12, 240/N), vmin, vmax);
+    ro.innerHTML = `保留 k=${K}/${r} 個奇異值 | RMSE=${err_rmse.toFixed(3)} | 理論 Frobenius err≈${true_err.toFixed(3)}`;
+  }
+  [k,n].forEach(s=>s.addEventListener('input', update));
+  update();
+}
+
+// 簡單 PRNG（避免樣本每次都重抽）
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = a;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// ============ 3. 1D DFT demo ============
+function dftInit(){
+  const cv = document.getElementById('cv-dft'); if(!cv) return;
+  setupFont(cv);
+  const f1 = document.getElementById('dft-f1');
+  const f2 = document.getElementById('dft-f2');
+  const ns = document.getElementById('dft-noise');
+  const ro = document.getElementById('ro-dft');
+  function update(){
+    const N = 64;
+    const F1 = parseFloat(f1.value), F2 = parseFloat(f2.value), noise = parseFloat(ns.value);
+    const rng = mulberry32(123);
+    const t = []; for(let i=0;i<N;i++) t.push(i/N);
+    const sig = t.map((x,i)=>{
+      return Math.sin(2*Math.PI*F1*x) + 0.6*Math.sin(2*Math.PI*F2*x) + noise*(rng()*2-1);
+    });
+    // FFT（直接 DFT 也可，但 FFT 較快）
+    const Y = fft(sig);
+    const mag = Y.map(c=>Math.sqrt(c[0]*c[0]+c[1]*c[1]));
+    // 繪製
+    const ctx = cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height);
+    // 上：時域
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for(let i=0;i<N;i++){
+      const x = 40 + i*(cv.width-50)/N;
+      const y = 100 - sig[i]*50;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    } ctx.stroke();
+    ctx.fillStyle = '#666'; ctx.fillText('時域訊號 x(n)', 40, 15);
+    // 下：頻譜（bar）
+    ctx.fillText('DFT 振幅 |Y(k)|', 40, 165);
+    const maxMag = Math.max(...mag.slice(0,32)) || 1;
+    for(let k=0;k<32;k++){
+      const h = mag[k]/maxMag*120;
+      ctx.fillStyle = k===F1 || k===F2 ? '#5b21b6' : '#aaa';
+      ctx.fillRect(40+k*15, 280-h, 12, h);
+    }
+    // x 軸標
+    ctx.strokeStyle = '#888';
+    ctx.beginPath(); ctx.moveTo(40, 280); ctx.lineTo(cv.width-10, 280); ctx.stroke();
+    ctx.fillStyle = '#666'; ctx.fillText('頻率索引 k', cv.width-80, 295);
+    ro.innerHTML = `f₁=${F1} | f₂=${F2} | 雜訊=${noise.toFixed(2)} | 最大譜峰在 k=${mag.indexOf(Math.max(...mag.slice(0,32)))}, 值 ${Math.max(...mag.slice(0,32)).toFixed(2)}`;
+  }
+  [f1,f2,ns].forEach(s=>s.addEventListener('input', update));
+  update();
+}
+
+// 簡單 FFT（Cooley-Tukey，N=2^k）
+function fft(re){
+  const n = re.length;
+  if(n===1) return [[re[0],0]];
+  const even = fft(re.filter((_,i)=>i%2===0));
+  const odd  = fft(re.filter((_,i)=>i%2===1));
+  const Y = new Array(n);
+  for(let k=0;k<n/2;k++){
+    const ang = -2*Math.PI*k/n;
+    const tRe = odd[k][0]*Math.cos(ang) - odd[k][1]*Math.sin(ang);
+    const tIm = odd[k][0]*Math.sin(ang) + odd[k][1]*Math.cos(ang);
+    Y[k] = [even[k][0]+tRe, even[k][1]+tIm];
+    Y[k+n/2] = [even[k][0]-tRe, even[k][1]-tIm];
+  }
+  return Y;
+}
+
+// ============ 4. DCT vs DFT 能量集中 demo ============
+function dctInit(){
+  const cv = document.getElementById('cv-dct'); if(!cv) return;
+  setupFont(cv);
+  const k = document.getElementById('dct-k');
+  const sig = document.getElementById('dct-sig');
+  const ro = document.getElementById('ro-dct');
+  function update(){
+    const K = parseInt(k.value);
+    const sigType = sig.value;
+    const N = 32;
+    // 構造訊號
+    let x = [];
+    if(sigType === 'markov'){
+      // 一階 Markov: x[n] = rho*x[n-1] + noise, rho=0.9
+      const rng = mulberry32(99);
+      x = [rng()*2-1];
+      for(let i=1;i<N;i++) x.push(0.9*x[i-1] + (rng()*2-1)*0.3);
+    } else if(sigType === 'sin'){
+      x = Array.from({length:N}, (_,i)=>Math.sin(2*Math.PI*3*i/N));
+    } else {
+      x = Array.from({length:N}, (_,i)=>i<N/2 ? -1 : 1);
+    }
+    // DCT (type-II)
+    const Xdct = dct2(x);
+    // DFT
+    const Xdft = fft(x);
+    // 能量（從大到小排序）
+    const edct = Xdct.map(c=>c*c).sort((a,b)=>b-a);
+    const edft = Xdft.map(c=>c[0]*c[0]+c[1]*c[1]).sort((a,b)=>b-a);
+    const totalDct = edct.reduce((a,b)=>a+b,0)||1;
+    const totalDft = edft.reduce((a,b)=>a+b,0)||1;
+    const kDct = edct.slice(0,K).reduce((a,b)=>a+b,0)/totalDct;
+    const kDft = edft.slice(0,K).reduce((a,b)=>a+b,0)/totalDft;
+    // 繪製
+    const ctx = cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height);
+    // 上：訊號
+    ctx.strokeStyle = '#5b21b6'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for(let i=0;i<N;i++){
+      const X = 40 + i*(cv.width-50)/N;
+      const Y = 100 - x[i]*30;
+      if(i===0) ctx.moveTo(X,Y); else ctx.lineTo(X,Y);
+    } ctx.stroke();
+    ctx.fillStyle = '#666';
+    ctx.fillText(`訊號（${sigType === 'markov' ? 'Markov' : sigType === 'sin' ? '純正弦' : '階梯'}）`, 40, 15);
+    // 下：能量累積曲線
+    const cumDct = []; let s=0;
+    for(let i=0;i<N;i++){s += edct[i]/totalDct; cumDct.push(s);}
+    const cumDft = []; s=0;
+    for(let i=0;i<N;i++){s += edft[i]/totalDft; cumDft.push(s);}
+    ctx.fillText('能量累積（k 個係數保留的能量比例）', 40, 165);
+    ctx.strokeStyle = 'blue'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for(let i=0;i<N;i++){
+      const X = 40 + i*(cv.width-50)/N;
+      const Y = 290 - cumDct[i]*120;
+      if(i===0) ctx.moveTo(X,Y); else ctx.lineTo(X,Y);
+    } ctx.stroke();
+    ctx.strokeStyle = 'red'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for(let i=0;i<N;i++){
+      const X = 40 + i*(cv.width-50)/N;
+      const Y = 290 - cumDft[i]*120;
+      if(i===0) ctx.moveTo(X,Y); else ctx.lineTo(X,Y);
+    } ctx.stroke();
+    // 標記 k
+    ctx.fillStyle = 'green'; ctx.fillRect(40 + K*(cv.width-50)/N - 1, 170, 2, 120);
+    ctx.fillStyle = '#333'; ctx.fillText(`k=${K}`, 40 + K*(cv.width-50)/N - 20, 165);
+    ctx.fillStyle = 'blue'; ctx.fillText('DCT', 220, 310);
+    ctx.fillStyle = 'red'; ctx.fillText('DFT', 260, 310);
+    ro.innerHTML = `DCT 保留 ${K} 個係數 → ${(kDct*100).toFixed(1)}% 能量 | DFT → ${(kDft*100).toFixed(1)}% 能量 | 差 ${((kDct-kDft)*100).toFixed(1)} 個百分點`;
+  }
+  [k,sig].forEach(s=>s.addEventListener('change', update));
+  s=>s && s.addEventListener && s.addEventListener('input', update);
+  k.addEventListener('input', update);
+  update();
+}
+
+// DCT type-II
+function dct2(x){
+  const N = x.length;
+  const Y = new Array(N);
+  for(let k=0;k<N;k++){
+    let s = 0;
+    for(let n=0;n<N;n++){
+      s += x[n] * Math.cos(Math.PI*(2*n+1)*k/(2*N));
+    }
+    const alpha = k===0 ? Math.sqrt(1/N) : Math.sqrt(2/N);
+    Y[k] = alpha * s;
+  }
+  return Y;
+}
+
+// 主初始化
+window.initDemos = function(){
+  kltInit();
+  svdInit();
+  dftInit();
+  dctInit();
+};
+
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDemos);
+else initDemos();
+})();
+
+</script>
+</div></div>
+
+<div id="guide-modal"><div class="modal-box"><button class="modal-close" type="button">✕</button><h1></h1><div class="modal-body"></div></div></div>
+<script>
+// == Phase D 教授祕笆邏輯 ==
+(function(){
+  var GUIDE_TITLES = {"1": "教授祕笈：特徵生成與降維動機（Feature Generation）— 為什麼要「瘦身」資料", "2": "教授祕笈：基底向量與基底影像（Basis Vectors & Images）— 一套積木拼出全部訊號", "3": "教授祕笈：Karhunen-Loève 變換（KLT/PCA）— 找變異數最大的方向", "4": "教授祕笈：奇異值分解（SVD）— 一張矩陣的「拼圖拼回去」絕技", "5": "教授祕笈：獨立成分分析（ICA）— 超越 PCA，找「獨立」而非「不相關」", "6": "教授祕笈：非負矩陣分解（NMF）— 只准加、不准減的積木", "7": "教授祕笈：非線性降維與流形假設 — 當 PCA 不夠用，資料其實是捲起來的", "8": "教授祕笈：Kernel PCA — 不用真的去高維空間，也能做非線性 PCA", "9": "教授祕笈：Laplacian Eigenmaps — 圖論式降維，用橡皮筋綁住鄰居", "10": "教授祕笈：LLE 與 ISOMAP — 兩種「不信直線、只信路徑」的攤平術", "11": "教授祕笈：1D 離散傅立葉變換（DFT）— 把時域訊號翻譯到頻率世界", "12": "教授祕笈：二維 DFT 與可分離變換 — 先橫著梳一遍，再直著梳一遍", "13": "教授祕笈：離散餘弦變換（DCT）— JPEG 為什麼選它？", "14": "教授祕笈：Hadamard 變換 — 只用「開／關」兩檔的變換", "15": "教授祕笈：Haar 變換 — 階梯基底與多解析度的開端", "16": "教授祕笈：離散小波變換（DTWT）與濾波器組 — 分揀機的「拆開再原封不動裝回去」魔術", "17": "教授祕笈：小波包與二維推廣 — 影像多解析度的實際應用"};
+  var GUIDE_CONTENT = {"1": "<p>同學好，我們要開始一段新旅程了——整個第六章，講的都是同一件事：<strong>怎麼把「肥大」的原始測量值，瘦身成「精瘦」的特徵</strong>。今天這一節，是整章的地圖，先別急著記公式，我們先弄懂「為什麼要瘦身」。</p> <h2>一、先講個行李箱的故事</h2> <p>你要出國旅行一個月，行李箱只有 20 公斤的額度。你會怎麼收行李？</p> <p>笨方法：把衣櫃裡<strong>每一件</strong>衣服都塞進去——反正帶越多越保險。結果行李箱塞爆、超重罰款，而且很多衣服根本用不到（你帶了十件一模一樣的白 T 恤，其實一件就夠代表「我有白 T 恤」這件事）。</p> <p>聰明方法：<strong>挑幾件「資訊量最大」的衣服</strong>——一件禮服應付正式場合、一件外套應付冷天、兩三件百搭上衣。件數少了，但「能應付的場合」幾乎沒少。</p> <p>這就是<strong>特徵生成（feature generation）</strong>在做的事：原始測量值（一張 $64\\times64$ 的照片有 4096 個像素值）就像塞爆的行李箱，我們要挑出（或組合出）少數幾個「資訊密度高」的數字，代表這張照片的本質。</p> <h2>二、為什麼原始測量值是「肥大」的？</h2> <p>關鍵字是<strong>相關（correlated）</strong>。一張照片裡，相鄰的像素<strong>幾乎都差不多亮</strong>——左邊那格是天空藍，右邊那格大概率也是天空藍。語音訊號也一樣，相鄰的取樣點在幾毫秒內變化不大。</p> <p>這代表什麼？代表 4096 個像素裡，<strong>有非常多是「重複資訊」</strong>。你多量一個「隔壁像素的顏色」，得到的新資訊其實很少（因為你大概猜得到）。</p> <p>直接把這 4096 個高度重複的數字全部餵給分類器，會出兩個問題：</p> <ol> <li><strong>計算量爆炸</strong>：維度越高，運算量、記憶體都跟著炸。</li> <li><strong>過擬合（overfitting）</strong>：訓練樣本數往往遠小於 4096，分類器會學到雜訊而非規律。</li> </ol> <p>我們想要的是：<strong>把「相關冗餘」壓掉，只留下「能把不同類別分開」的本質變數</strong>。</p> <h2>三、地圖上的三條路</h2> <p>整章接下來要教的方法，可以分成三個家族。想像你要幫行李「瘦身」，這三條路分別是：</p> <ol> <li><strong>線性變換族（固定基底）</strong>：DFT、DCT、Hadamard、Haar、Wavelet。這些方法用的「量尺」是<strong>教科書規定好的、不管你的行李長什麼樣</strong>——就像旅行社發給每個人一模一樣的標準打包清單。優點是快（公式固定、可以硬體加速），缺點是「不為你量身訂做」。</li> <li><strong>資料自適應族</strong>：KLT（PCA）、SVD、ICA、NMF。這些方法會<strong>先看過你的行李再決定怎麼收</strong>——量尺是從資料本身學出來的，壓縮效果通常最好，但代價是要先做統計運算（協方差、特徵分解），比較貴。</li> <li><strong>非線性流形族</strong>：Kernel PCA、Laplacian Eigenmap、LLE、ISOMAP。前面兩族都假設「行李可以攤平在一個平面上收」，但如果你的資料像一條<strong>捲起來的瑞士捲蛋糕</strong>（拓樸上彎曲），直接攤平會把根本不相鄰的東西壓在一起。這一族方法專門處理「彎曲」的資料結構。</li> </ol> <h2>四、一個念頭一轉，你會問：怎麼選？</h2> <p>你可能會想：「這麼多方法，我怎麼知道該用哪一種？」</p> <p><strong>先想一個問題</strong>：如果你的資料本來就攤在一個平面上（像一疊薄餅），你會不會為了處理「捲曲」而大費周章去學非線性流形方法？——不會，那是殺雞用牛刀，KLT/PCA 就夠了。</p> <p>反過來，如果你的資料是瑞士捲（彎的），你硬用 PCA 把它壓扁會怎樣？兩個原本離得很遠（沿著捲曲面走要繞一大圈）的點，在扁平投影下反而變得很近——<strong>資訊被扭曲了</strong>。這時候就得請出非線性流形族。</p> <p>所以答案不是「哪個方法最好」，而是「<strong>你的資料長什麼形狀，就配對應的方法</strong>」：</p> <ul> <li>資料大致線性 → PCA/KLT 就夠。</li> <li>資料彎曲、像捲起來的流形 → 上流形方法。</li> <li>要非負、可加性（如影像像素、機率、化學濃度）→ NMF 最直覺。</li> <li>要做訊號/影像壓縮（如 JPEG）→ DCT、Wavelet 是業界標準（快、有現成硬體）。</li> </ul> <h2>五、實際算一次「壓縮省了多少」</h2> <p>來一個具體的感覺。假設一張 $64\\times64$ 的灰階照片有 $64\\times64=4096$ 個像素值。如果我們發現，這批照片其實只需要<strong>前 50 個「主特徵」</strong>就能重建到肉眼看不出差異的程度（這是 KLT/PCA 常見的真實比例），那壓縮率是：</p> <p>$$\\frac{50}{4096}\\approx 1.2\\%$$</p> <p>也就是說，我們只用了<strong>原始資料量的 1.2%</strong>，就抓住了幾乎全部有用的資訊。這就是「相關冗餘被壓掉」的具體威力——後面 KP-3 學到 KLT 的數學細節時，你會看到這個「該留幾個」的問題，其實有精確的公式可以回答。</p> <h2>六、常見誤解：別把「降維」跟「刪資料」搞混</h2> <p>新手常有個誤解：「降維 = 隨便丟掉一些像素/特徵」。<strong>錯！</strong> 好的降維方法（KLT、SVD 等）不是「丟」，而是<strong>「重新組合」</strong>——新的特徵是原始測量值的<strong>加權組合</strong>（見 KP-2），每一個新特徵都吸收了很多舊像素的資訊，不是簡單粗暴地砍掉幾欄數字。</p> <p>另一個誤解是「特徵越多，分類器一定越準」。實務上正好相反——維度太高、樣本不夠時，過擬合會讓測試準確率<strong>下降</strong>，這也是為什麼特徵生成/選擇是模式辨識的必修課，而不是可有可無的前處理。</p> <h2>七、舉一反三</h2> <p>如果你手上的資料是「每天 24 小時的溫度感測值」（一年 365 天，每天 24 個數字），你覺得：</p> <ol> <li>這批資料的相鄰數字（同一天內相鄰小時的溫度）會不會高度相關？為什麼？</li> <li>你會傾向用「線性變換族」還是「資料自適應族」來壓縮它？說說你的理由。</li> </ol> <h2>八、跟本章其他知識點的關係</h2> <p>這一節是路標，之後每一個知識點都是在把這張地圖的某一格填滿：<strong>KP-2</strong> 先講「基底展開」這個所有線性變換共用的數學骨架；接著才會具體看到 KLT/SVD/ICA/NMF（資料自適應族）與 DFT/DCT/Hadamard/Haar/Wavelet（線性變換族）各自怎麼實現這個骨架，以及 Kernel PCA、Laplacian Eigenmap 等非線性流形方法怎麼處理彎曲資料。</p> <h2>九、一句話收尾</h2> <p><strong>原始測量值又肥又多、彼此高度重複，特徵生成就是把它們瘦身成少數「資訊密度高」的新變數——瘦身的方式分三路：固定量尺（線性變換族）、量身訂做（資料自適應族）、應付彎曲行李（非線性流形族），選哪條路，看你的資料長什麼形狀。</strong></p>", "2": "<p>同學好，這一節是整章的數學骨架——<strong>KP-1</strong> 講完地圖後，我們要來看：不管你走「線性變換族」還是「資料自適應族」的哪一條路，<strong>底層其實都在做同一件事</strong>。搞懂這節，後面的 KLT、SVD、DFT、DCT……你都會覺得「喔，原來只是換了一組積木」。</p> <h2>一、先講個「調色盤」的比喻</h2> <p>畫家畫畫時，不會為每一種顏色都準備一罐顏料。他們準備幾罐「基礎色」（紅、黃、藍……），然後<strong>混合出想要的任何顏色</strong>——這罐紫色，就是「多少份紅 + 多少份藍」的加權組合。</p> <p>「基底向量（basis vector）」就是數學版的基礎顏料罐。任何一個訊號 $\\boldsymbol{x}$，都可以寫成一組基底向量的<strong>加權和</strong>，權重就是「這個訊號在這罐顏料上要調多少」——而這些權重，正是我們要的<strong>新特徵</strong>。</p> <h2>二、向量版：符號一個一個拆開</h2> <p>給定一個 $N\\times N$ 的<strong>么正矩陣</strong>（unitary matrix）$A$，它的每一行 $\\boldsymbol{a}_i$ 都是一個基底向量，而且這些基底向量<strong>互相正交、長度為 1</strong>（這就是「么正」的意思）。</p> <p>變換寫成： $$\\boldsymbol{y}=A^H\\boldsymbol{x}$$</p> <p>拆開來看每一個分量： $$y(i)=\\boldsymbol{a}_i^H\\boldsymbol{x}$$</p> <p>這一步在做什麼？$\\boldsymbol{a}_i^H\\boldsymbol{x}$ 是<strong>內積</strong>，內積量的是「$\\boldsymbol{x}$ 跟 $\\boldsymbol{a}_i$ 這個方向有多像」。所以 $y(i)$ 就是：<strong>$\\boldsymbol{x}$ 在第 $i$ 個基底方向上的投影量</strong>——也就是「這罐顏料，你要調多少份」。</p> <p>逆變換（重建）也很直覺： $$\\boldsymbol{x}=\\sum_i y(i)\\boldsymbol{a}_i$$</p> <p>把每個基底向量乘上它對應的權重、通通加起來，就重建出原本的 $\\boldsymbol{x}$。跟調色盤一模一樣——「多少份紅 + 多少份藍 + …」加起來就是你要的顏色。</p> <h2>三、影像（矩陣）版：兩支筆刷</h2> <p>影像是二維的，所以基底展開也要升級成二維。把一張 $N\\times N$ 的影像 $X$，用<strong>兩個</strong>么正矩陣 $U$、$V$ 一起變換：</p> <p>$$Y=U^H X V$$</p> <p>這裡的「基底顏料罐」不再是向量，是<strong>矩陣</strong>——稱為 <strong>basis image</strong>： $$\\mathcal{A}_{ij}=\\boldsymbol{u}_i\\boldsymbol{v}_j^H$$</p> <p>$\\boldsymbol{u}_i\\boldsymbol{v}_j^H$ 是一個外積（outer product），算出來是一張 $N\\times N$ 的「基礎圖案」——不是一罐顏料，是一張<strong>基礎花紋</strong>。任何影像都可以寫成這些基礎花紋的加權和。</p> <p>有個特別漂亮的情況：<strong>當 $Y$ 是對角矩陣時</strong>，非零的係數只剩 $N$ 個（不是 $N^2$ 個），這時： $$X=\\sum_i Y(i,i)\\,\\boldsymbol{u}_i\\boldsymbol{v}_i^H$$</p> <p>——只用 $N$ 張基礎花紋、$N$ 個權重，就重建整張影像。<strong>這正是 SVD（奇異值分解）的雛形</strong>，你在 <strong>KP-3</strong> 會看到它的完整數學。</p> <h2>四、算一個小例子，感受一下</h2> <p>假設 $N=2$，有一個訊號 $\\boldsymbol{x}=[3,1]^T$，基底是最簡單的「旋轉 45°」基底： $$\\boldsymbol{a}_0=\\begin{bmatrix}\\tfrac{1}{\\sqrt2}\\\\\\tfrac{1}{\\sqrt2}\\end{bmatrix},\\qquad \\boldsymbol{a}_1=\\begin{bmatrix}\\tfrac{1}{\\sqrt2}\\\\-\\tfrac{1}{\\sqrt2}\\end{bmatrix}$$</p> <p>算投影： $$y(0)=\\boldsymbol{a}_0^H\\boldsymbol{x}=\\tfrac{1}{\\sqrt2}(3)+\\tfrac{1}{\\sqrt2}(1)=\\tfrac{4}{\\sqrt2}\\approx2.83$$ $$y(1)=\\boldsymbol{a}_1^H\\boldsymbol{x}=\\tfrac{1}{\\sqrt2}(3)-\\tfrac{1}{\\sqrt2}(1)=\\tfrac{2}{\\sqrt2}\\approx1.41$$</p> <p>驗證重建：$y(0)\\boldsymbol{a}_0+y(1)\\boldsymbol{a}_1=2.83\\times[0.707,0.707]^T+1.41\\times[0.707,-0.707]^T=[2.0+1.0,\\ 2.0-1.0]^T=[3,1]^T$。</p> <p>跟原本的 $\\boldsymbol{x}=[3,1]^T$ 完全吻合！$y(0)$ 比 $y(1)$ 大，代表 $\\boldsymbol{x}$ 主要落在 $\\boldsymbol{a}_0$ 這個方向上——如果要壓縮，只留 $y(0)$、丟掉 $y(1)$，誤差也不會太大。</p> <h2>五、念頭一轉：差別到底在哪？</h2> <p>你可能會問：「KLT、DFT、DCT、Hadamard……這麼多變換，數學形式都長一樣（都是 $\\boldsymbol{y}=A^H\\boldsymbol{x}$），那它們到底差在哪？」</p> <p><strong>答案只有一個地方</strong>：$A$（或 $U,V$）<strong>怎麼選</strong>。</p> <ul> <li><strong>KLT/SVD 的基底</strong>：從資料的統計性質（協方差矩陣的特徵向量）<strong>學出來</strong>——量身訂做，每一批資料的 $A$ 都不同。</li> <li><strong>DFT/DCT/Hadamard/Haar/Wavelet 的基底</strong>：<strong>寫死的固定公式</strong>（正弦波、餘弦波、$\\pm1$ 方陣、階梯波……），不管資料長什麼樣，$A$ 永遠一樣。</li> </ul> <p>換句話說，這整章接下來要學的所有變換，都是「<strong>同一個骨架、換一副基底</strong>」的變體。</p> <h2>六、常見誤解：不是隨便一組向量都能當基底</h2> <p>新手常以為「隨便找 $N$ 個向量湊一湊就能當基底」。<strong>錯！</strong> 基底向量必須<strong>互相正交、長度為 1</strong>（么正性），否則：</p> <ol> <li>逆變換 $\\boldsymbol{x}=\\sum_i y(i)\\boldsymbol{a}_i$ 不成立（重建會出錯）。</li> <li>「投影」跟「重建」不再是一體兩面的操作，$y(i)=\\boldsymbol{a}_i^H\\boldsymbol{x}$ 這個內積算出來的東西就沒有「乾淨的方向分量」這個物理意義了。</li> </ol> <p>這也是為什麼 KLT 要特別去解「特徵分解」——不是隨便切幾刀，而是去找一組<strong>保證正交</strong>的方向。</p> <h2>七、舉一反三</h2> <p>如果基底向量 $\\boldsymbol{a}_0,\\boldsymbol{a}_1$ 不是正交的（例如兩個方向夾角只有 10°，幾乎重疊），你覺得：</p> <ol> <li>投影出來的 $y(0)$ 跟 $y(1)$ 會不會出現「兩個數字都在描述幾乎同一件事」的冗餘？</li> <li>這樣的基底適不適合拿來做「壓縮」（用少數幾個 $y(i)$ 代表整個訊號）？為什麼？</li> </ol> <h2>八、跟本章其他知識點的關係</h2> <p>這節的公式 $\\boldsymbol{y}=A^H\\boldsymbol{x}$、$X=\\sum_i Y(i,i)\\boldsymbol{u}_i\\boldsymbol{v}_i^H$ 是整章的共同骨架：<strong>KP-3</strong> 的 KLT 會告訴你「資料自適應族」怎麼選 $A$（用協方差矩陣的特徵向量）；本章後段的 DFT（<strong>KP-11</strong>）、DCT（<strong>KP-13</strong>）、Hadamard（<strong>KP-14</strong>）、Haar（<strong>KP-15</strong>）則是「線性變換族」的固定公式版本，你會發現它們全部都能套進這節的骨架裡。</p> <h2>九、一句話收尾</h2> <p><strong>任何訊號都能拆成「一組基底向量（或基底影像）的加權和」，權重就是新特徵——差別只在基底怎麼選：從資料學（KLT/SVD）還是套公式（DFT/DCT/…），數學骨架永遠是同一副 $\\boldsymbol{y}=A^H\\boldsymbol{x}$。</strong></p>", "3": "<p>同學啊，我們今天要聊的這個 KLT（Karhunen-Loève Transform），又叫 PCA（Principal Component Analysis），基本上是「<strong>把一群資料攤平在桌上、找出最長的那根軸</strong>」的學問。</p> <h2>一、先講個生活故事</h2> <p>你想像一下，你拿了一把尺，把一群螞蟻灑在桌上。這些螞蟻散亂分佈在桌面上。現在你想用「一根軸」抓住最多的螞蟻——不是用一根繩子，是用一根<strong>有方向、長度有限</strong>的軸。你會怎麼擺？</p> <p>直覺嘛，當然是把這根軸對準<strong>螞蟻攤得最開的那個方向</strong>。如果螞蟻沿東西方向攤得比較開，你就擺東西向；如果牠們沿南北攤得多，就擺南北向。如果螞蟻分佈像個橢圓（不圓），你就擺在橢圓長軸那個方向。</p> <p><strong>KLT 就是這麼回事</strong>：把資料的「最長軸」找出來。找出來之後，所有螞蟻（資料點）到這根軸的垂直投影，就是一組<strong>新座標</strong>，這就是「主成分（principal component）」。</p> <h2>二、為什麼要找這個方向？</h2> <p>假設你有一筆資料，原本用 100 個數字描述一張圖片（例如一張 64×64 灰階圖）。但很多數字其實是<strong>重複的</strong>——左邊那塊像素和右邊那塊像素差不多亮。KLT 的目的就是：<strong>用少數幾個「新數字」就能重建原本 100 個數字</strong>。</p> <p>這「新數字」就是「<strong>變異數（variance）最大的方向上的座標</strong>」。因為變異數大代表資訊多、變異數小代表資訊少。</p> <h2>三、數學怎麼說？</h2> <p>KLT 的算法其實很直觀。給你一組資料向量 $\\boldsymbol{x}_1,\\boldsymbol{x}_2,...,\\boldsymbol{x}_n$（每個都是 $N$ 維的）。</p> <p><strong>第一步</strong>：算它們的共變異數矩陣 $$R_x = \\frac{1}{n}\\sum_{k=1}^{n} \\boldsymbol{x}_k \\boldsymbol{x}_k^T$$</p> <p>（假設資料均值為零；不是零的話先扣掉均值。）</p> <p>這個 $R_x$ 是個 $N \\times N$ 的對稱矩陣。</p> <p><strong>第二步</strong>：對 $R_x$ 做<strong>特徵分解</strong>（eigen decomposition）</p> <p>$$R_x \\boldsymbol{a}_i = \\lambda_i \\boldsymbol{a}_i$$</p> <p>這個分解會給你 $N$ 個<strong>特徵向量</strong> $\\boldsymbol{a}_0,\\boldsymbol{a}_1,...,\\boldsymbol{a}_{N-1}$（就是「軸的方向」）和 $N$ 個<strong>特徵值</strong> $\\lambda_0 \\geq \\lambda_1 \\geq ... \\geq \\lambda_{N-1}$（對應的「長度」）。</p> <p><strong>第三步</strong>：把資料投影到這些軸上 $$y(i) = \\boldsymbol{a}_i^T \\boldsymbol{x}$$</p> <p>這個 $y(i)$ 就是資料在第 $i$ 個主成分上的座標。</p> <h2>四、一個具體例子</h2> <p>讓我舉個實際的例子。我們取 100 個 2D 資料點（想像成 2D 平面的螞蟻）：</p> <p><div style=\"white-space:pre;font-family:monospace;font-size:.85em;background:#f7f5ff;padding:10px;border-radius:8px;margin:10px 0\">   ↑ x₂\n   |\n   *   *\n  *  * *  *\n   *   *\n  *  * *\n   * *\n  ──────────→ x₁</div></p> <p>這些點大致沿「東北—西南」方向分佈（也就是 $x_2 = x_1$ 那條線附近）。</p> <p><strong>KLT 會說</strong>：第一主軸 $\\boldsymbol{a}_0 \\approx (0.707, 0.707)$（東北方向），特徵值 $\\lambda_0 = 1.5$（變異數大）；第二主軸 $\\boldsymbol{a}_1 \\approx (0.707, -0.707)$（西北—東南方向），特徵值 $\\lambda_1 = 0.3$（變異數小）。</p> <p>投影後的 $y(0) = 0.707 x_1 + 0.707 x_2$，$y(1) = 0.707 x_1 - 0.707 x_2$。</p> <p>注意 $y(0)$ 的變異數（1.5）遠大於 $y(1)$（0.3）。所以我們可以<strong>只保留 $y(0)$ 而丟掉 $y(1)$</strong>，因為丟掉的只是變異數小的方向。這就是<strong>降維</strong>。</p> <h2>五、為什麼變異數大 = 資訊多？</h2> <p>關鍵直覺：<strong>如果資料在某個方向上幾乎沒有變化，那這個方向就沒什麼資訊</strong>。</p> <p>例如所有點都擠在水平線 $x_2 = 0$ 上，那 $x_2$ 軸（垂直）就完全沒變化 → 變異數 = 0 → 沒資訊。KLT 會說「這個方向可以丟掉」，所以留下 $x_1$ 軸（水平）就夠了。</p> <p>反過來，$x_1$ 軸方向資料分佈很開 → 變異數大 → 資訊多 → KLT 一定要保留。</p> <h2>六、MSE 最佳性（為什麼 KLT 最厲害？）</h2> <p>KLT 不只是「找到變異數最大的方向」，它還有一個強大的性質：<strong>近似誤差最小</strong>。</p> <p>如果你只保留前 $m$ 個主成分（丟掉後 $N-m$ 個），重建回原空間時的均方誤差為：</p> <p>$$E[\\|\\boldsymbol{x} - \\hat{\\boldsymbol{x}}\\|^2] = \\sum_{i=m}^{N-1} \\lambda_i$$</p> <p>這是<strong>所有可能的線性投影中</strong>誤差最小的——這就是為什麼 KLT 又被稱為「<strong>最佳線性變換</strong>」（optimal linear transform）。它沒有一個對手在 MSE 這個指標上能贏它。</p> <h2>七、主動回想：KLT 的三個等價觀點</h2> <p>你會發現，KLT 可以用<strong>三種方式</strong>理解同一件事： 1. <strong>幾何觀點</strong>：找資料分佈的「最長軸」（橢圓主軸）。 2. <strong>統計觀點</strong>：把資料變換到「互不相關（uncorrelated）」的新座標。 3. <strong>最佳化觀點</strong>：在給定維度下，最小化重建誤差（MSE）。</p> <p>這三個觀點在<strong>高斯資料</strong>下也彼此等價。對非高斯資料，KLT 仍讓新座標互不相關，但 MSE 不再是「對所有變換最佳」（那是 ICA 的領地了）。</p> <h2>八、常見誤解：PCA 不是萬能的</h2> <p>很多新手以為「PCA 第一主軸就是最佳分類方向」——<strong>錯！</strong> PCA 是<strong>無監督</strong>方法，它只在乎<strong>變異數大小</strong>，不在乎<strong>類別分開</strong>。</p> <p>圖 6.1 是經典反例：兩類別、相同共變異數的高斯資料，PCA 的第一主軸 $\\boldsymbol{a}_0$（最大變異方向）會讓兩類幾乎疊在一起，反而<strong>第二主軸</strong> $\\boldsymbol{a}_1$ 才能把兩類分開。這時若要做分類，應該用 LDA（線性判別分析），而不是 PCA。</p> <p>PCA vs LDA 的選擇： - 沒有類別標籤 → 用 PCA（找變異數最大的方向） - 有類別標籤 → 用 LDA（找類別最分得開的方向）</p> <p>兩者<strong>目標完全不同</strong>：PCA 是無監督，統計上最佳；LDA 是監督，分類上最佳。</p> <h2>九、KLT 與其他方法的關係</h2> <ul> <li><strong>KLT vs PCA</strong>：同一件事！PCA 是從統計角度的命名，KLT 是從線性變換角度的命名。</li> <li><strong>KLT vs SVD</strong>：對單一矩陣用 SVD；對一組資料向量（先算協方差）用 KLT。數學上 KLT 的特徵向量矩陣就是 SVD 的左奇異向量。</li> <li><strong>KLT vs ICA</strong>：KLT 只讓新座標互不相關（用到二階統計量）；ICA 還要新座標統計獨立（用到高階統計量）。對高斯資料，KLT 已足夠；對非高斯資料，ICA 更強。</li> </ul> <h2>十、一句話收尾</h2> <p><strong>KLT 就是「找出資料分佈的最長軸、把資料投影上去、再保留長軸丟短軸」的降維絕招</strong>——數學上最佳、無監督、計算簡單（對稱矩陣的特徵分解），但<strong>只顧變異數不顧類別</strong>，這是它的極限，也是它和 LDA、ICA 的分野。</p> <p>實際應用：影像壓縮（JPEG 早期版本的近似）、人臉辨識（Eigenfaces）、訊號去噪、異常偵測、視覺化（把高維資料降到 2D）。這些都是 KLT 撐起半邊天的場景。</p>", "4": "<p>同學啊，今天我們要談的這個 SVD（Singular Value Decomposition），堪稱線性代數裡最優雅、最實用的工具之一。它不像 KLT 是針對「一群資料」，SVD 是針對「<strong>一張矩陣</strong>」。但兩者本質上是同一個故事的兩個版本。</p> <h2>一、先講個生活故事</h2> <p>你手邊有 1000 張臉的圖片，每張是 64×64 像素，所以整個資料集是一個 64000×1000 的「臉資料矩陣」$X$。</p> <p>你想：<strong>可不可以用少數幾個「基本臉」加權組合，把所有 1000 張臉「拼回去」？</strong></p> <p>直覺上是可能的——所有臉都差不多嘛，眼睛、鼻子、嘴巴的位置大同小異。所以一定有某種「標準臉部件」，用幾個部件 + 幾個權重就能拼回一張臉。</p> <p>SVD 給你的就是這套「標準部件 + 權重」。</p> <h2>二、數學核心</h2> <p>任意一個 $l \\times n$ 的矩陣 $X$（$l$ 列、$n$ 行），SVD 保證它可以被分解成三個矩陣的乘積：</p> <p>$$X = U \\Sigma V^H$$</p> <ul> <li>$U$ 是 $l \\times l$ 的么正矩陣，欄位是 $X X^H$ 的特徵向量。</li> <li>$V$ 是 $n \\times n$ 的么正矩陣，欄位是 $X^H X$ 的特徵向量。</li> <li>$\\Sigma$ 是 $l \\times n$ 的對角矩陣（其他位置是 0），對角線上的非負值 $\\sqrt{\\lambda_0} \\geq \\sqrt{\\lambda_1} \\geq ...$ 叫做<strong>奇異值</strong>（singular values）。</li> </ul> <p>如果 $X$ 的秩是 $r$，那只有 $r$ 個奇異值非零。所以 SVD 實際展開式是：</p> <p>$$X = \\sum_{i=0}^{r-1} \\sqrt{\\lambda_i} \\boldsymbol{u}_i \\boldsymbol{v}_i^H$$</p> <p>這個展開式是<strong>精確</strong>的，沒有近似。</p> <h2>三、神奇的「低秩近似」</h2> <p>SVD 的真正威力在於它的<strong>低秩近似</strong>：只保留前 $k$ 個奇異值（$k \\lt  r$），其餘丟掉，得到：</p> <p>$$\\hat{X} = \\sum_{i=0}^{k-1} \\sqrt{\\lambda_i} \\boldsymbol{u}_i \\boldsymbol{v}_i^H$$</p> <p>這個 $\\hat{X}$ 是個<strong>秩為 $k$</strong> 的矩陣，它對原矩陣 $X$ 的近似誤差（Frobenius 範數）為：</p> <p>$$\\|X - \\hat{X}\\|_F^2 = \\sum_{i=k}^{r-1} \\lambda_i$$</p> <p><strong>關鍵性質</strong>：對所有可能的 rank-$k$ 矩陣中，這個 $\\hat{X}$ 的近似誤差<strong>最小</strong>。</p> <p>換句話說：SVD 給你的低秩近似是<strong>理論上最好的</strong>。沒有任何其他方法能在相同秩下重建得更好。</p> <h2>四、一個具體例子</h2> <p>我們用前面臉資料的例子。假設 $X$ 是 64000×1000 的臉資料矩陣，$r = 1000$。</p> <p>SVD 給你： - 64000 維的「標準臉部件」$\\boldsymbol{u}_0,\\boldsymbol{u}_1,...,\\boldsymbol{u}_{999}$（在 $U$ 裡） - 1000 維的「臉的權重表示」$\\boldsymbol{v}_0,\\boldsymbol{v}_1,...,\\boldsymbol{v}_{999}$（在 $V$ 裡） - 1000 個奇異值 $\\sqrt{\\lambda_0}=150, \\sqrt{\\lambda_1}=80, \\sqrt{\\lambda_2}=40, ...$</p> <p>注意奇異值的衰減通常很快——前幾個奇異值就佔了大部分能量。如果你只保留前 50 個奇異值：</p> <p>$$\\|X - \\hat{X}\\|_F^2 = \\sum_{i=50}^{999} \\lambda_i$$</p> <p>如果原始能量 $E = \\sum_{i=0}^{999} \\lambda_i$ 有 90% 集中在前 50 個奇異值，那這個 50 項近似就有 90% 的能量保留率。</p> <p><strong>儲存量從 64000×1000 = 64,000,000 個數字，降到 64000×50 + 50×1000 + 50 = 3,250,050 個數字</strong>——壓縮了 20 倍！</p> <p>這就是 SVD 在影像壓縮、推薦系統的應用基礎。</p> <h2>五、為什麼 SVD 是最佳低秩近似？</h2> <p>這個定理的證明其實很直觀： 1. 任何 rank-$k$ 矩陣都可以寫成 $\\hat{X} = P X$ 的形式（$P$ 是某種投影矩陣）。 2. SVD 的 $\\hat{X}$ 對應的投影是把資料投影到「<strong>奇異值最大的前 $k$ 個方向</strong>」——這就是最大方差方向。 3. 任何其他投影都會把能量分散到次要方向，總誤差一定更大。</p> <p>數學上這就是 <strong>Eckart-Young 定理</strong>（1936）。</p> <h2>六、與 KLT 的關係</h2> <p>你會發現 SVD 跟 KLT 很像——其實它們是同一個故事的兩個版本： - <strong>KLT</strong>：給一群資料向量 $\\boldsymbol{x}_1,...,\\boldsymbol{x}_n$，算它們的協方差矩陣 $R_x$，做特徵分解。 - <strong>SVD</strong>：給一張矩陣 $X$（資料是行/列），直接分解成 $U \\Sigma V^H$。</p> <p>數學上，若 $X$ 的列是 $\\boldsymbol{x}_1,...,\\boldsymbol{x}_n$（每列是一個 $l$ 維樣本），則： $$X X^H$$ 的特徵向量矩陣 = $U$ $$X^H X$$ 的特徵向量矩陣 = $V$$ $$\\lambda_i$$ 是兩個矩陣的共享非零特徵值。</p> <p>所以「<strong>一組資料的 KLT</strong>」=「<strong>它組成的矩陣的 SVD</strong>」。它們在數學上是一件事！</p> <p>差異只在實作層面： - KLT 先算協方差矩陣（$N \\times N$）再特徵分解——適合 $N$ 維特徵、樣本數 $n$ 多。 - SVD 直接分解資料矩陣（$l \\times n$）——適合樣本數遠小於特徵維度（$n \\ll l$）。</p> <h2>七、實際應用場景</h2> <p>SVD 的應用範圍驚人地廣：</p> <ul> <li><strong>影像壓縮</strong>：前面臉資料矩陣就是例子。</li> <li><strong>資訊檢索（LSI, Latent Semantic Indexing）</strong>：把「詞 × 文件」矩陣做 SVD，找文件的「語意空間」，讓搜尋引擎能找出「概念相似」的文件，即使字面不重疊。</li> <li><strong>推薦系統</strong>：把「用戶 × 評分」矩陣做 SVD，找出用戶和物品的「隱含特徵」。</li> <li><strong>降噪</strong>：訊號矩陣做 SVD，丟掉對應小奇異值的分量（通常是雜訊）。</li> <li><strong>偽逆（pseudo-inverse）</strong>：$X^+ = V \\Sigma^{-1} U^H$，用於解<strong>欠定</strong>（undetermined）方程組。</li> <li><strong>影像對齊</strong>：用 SVD 估計兩個點集之間的最佳旋轉矩陣。</li> </ul> <h2>八、主動回想：奇異值的幾何意涵</h2> <p>把 $X$ 看成一個線性變換（把 $\\mathbb{R}^n$ 映到 $\\mathbb{R}^l$）。SVD 的 $U$、$\\Sigma$、$V^H$ 三者描述了這個變換的「<strong>分解動作</strong>」：</p> <ol> <li>$V^H$ 把輸入空間<strong>旋轉</strong>到「奇異向量座標系」——這是個聰明的座標系，軸沿著變換把單位球拉到橢球的軸。</li> <li>$\\Sigma$ 把這個座標系的每個軸<strong>拉長或縮短</strong>（奇異值）——奇異值就是「拉伸比」。</li> <li>$U$ 把結果<strong>再旋轉</strong>到輸出空間的「奇異向量座標系」。</li> </ol> <p>所以 SVD 把<strong>任意</strong>線性變換分解成「<strong>旋轉 → 拉伸 → 旋轉</strong>」三步——這個 insight 讓所有線性代數問題變得超直觀。</p> <h2>九、常見誤解</h2> <ol> <li><strong>「SVD 跟奇異值都是非負的」</strong>：對，奇異值 $\\sqrt{\\lambda_i} \\geq 0$。但 $U$ 跟 $V$ 的元素可以是任何實數或複數。</li> <li><strong>「SVD 只能用於方陣」</strong>：錯！$X$ 可以是任何 $l \\times n$ 矩陣（甚至長方形）。</li> <li><strong>「奇異值個數等於矩陣維度」</strong>：錯！奇異值個數等於 $\\min(l,n)$，但只有 $r = \\mathrm{rank}(X)$ 個非零。</li> <li><strong>「SVD 跟 KLT 一樣是統計方法」</strong>：錯。SVD 是純線性代數分解，不需要資料統計量。</li> </ol> <h2>十、一句話收尾</h2> <p><strong>SVD 是「把任意矩陣分解成旋轉、拉伸、旋轉三步」的線性代數神技，給出的低秩近似是所有近似中最佳的</strong>——它跟 KLT 是同一個故事的兩個版本（協方差 vs 單一矩陣），是影像壓縮、資訊檢索、推薦系統、降噪的共同基石。寫進程式庫時記得：奇異值個數等於 $\\min(l,n)$，只保留前 $k$ 個就足以重建原矩陣的 90%+ 能量（通常）。</p>", "5": "<p>同學啊，今天的主角 ICA（Independent Component Analysis，獨立成分分析），是本章最愛唱反調的角色。它的台詞很囂張：<strong>「PCA 只讓座標軸『不相關』，這還不夠；我要讓分開來的東西『統計獨立』，把背後真正獨立的訊號一個一個挖出來。」</strong> 如果 PCA 是「抓最大變異數的乖學生」，ICA 就是「專抓隱藏原始訊號的偵探」。</p> <h2>一、主線類比：雞尾酒會上的錄音師</h2> <p>想像你在一場雞尾酒會，房間裡同時有兩個人在講話：A 君音量大聲，B 君小聲。你用兩支麥克風錄音，<strong>每支麥克風都錄到兩人的混合</strong>——麥克風一錄到「A 的聲音 ×0.8 加 B ×0.6」，麥克風二錄到「A ×0.4 加 B ×0.9」。你手上只有這兩軌「已經拌在一起的錄音」，卻想還原出「A 君原音」和「B 君原音」兩條純淨音軌。這就是 ICA 要解的題：<strong>把攪和在一起的訊號，還原成各自獨立的原始來源</strong>。ICA 全程就用「拆雞尾酒會」這個類比講下去。</p> <h2>二、為什麼需要 ICA？它解決了 PCA 的哪個罩門？</h2> <p>PCA（還記得 kp-3 嗎？）找出的新座標軸只是<strong>互不相關（uncorrelated）</strong>——意思是「兩軸的相關係數為零」，換句話說「知道第一軸的值，對猜第二軸的值<strong>平均上</strong>沒幫助」。但「平均上沒幫助」不代表「真的沒關係」。想想兩人的例子：A 與 B 的音量「不相關」，不代表「A 大笑的瞬間 B 就會哽咽」這種再高階一點的牽連不存在。<strong>統計獨立（independent）</strong> 是更嚴格的東西：知道其中一條的<strong>任何</strong>訊息，對另一條的<strong>任何</strong>細節都毫無幫助，連高階關聯都被斬斷。ICA 要挖的就是「真正獨立」的成分，而不是只挖到「不相關」就用 PCA 收工。</p> <h2>三、數學怎麼說？逐符號拆解</h2> <p>問題設定是這樣：你觀察到一堆向量 $\\boldsymbol{x}$，但它其實是「未知混合矩陣 $\\mathcal{A}$」把「獨立來源 $\\boldsymbol{y}$」攪出來的：</p> <p>$$\\boldsymbol{x}=\\mathcal{A}\\,\\boldsymbol{y}$$</p> <ul> <li>$\\boldsymbol{x}$：你錄到的、混在一起的觀察（兩支麥克風）。</li> <li>$\\mathcal{A}$：<strong>未知的混合矩陣</strong>——每個人講話多大聲、各自對每支麥克風貢獻多少比例。</li> <li>$\\boldsymbol{y}$：真正獨立的「原始來源」（A 君、B 君的純音軌），它的各分量彼此<strong>統計獨立</strong>。</li> </ul> <p>ICA 的任務是找一個「反混合矩陣」$W$，使得：</p> <p>$$\\boldsymbol{y}=W\\,\\boldsymbol{x}$$</p> <p>把攪和的聲音重新分開。$W$ 理想上就是 $\\mathcal{A}^{-1}$（$\\mathcal{A}$ 的反矩陣），但因為 $\\mathcal{A}$ 我們不知道，得靠「獨立」這條線索反推。</p> <p><strong>關鍵識別條件</strong>（這句務必劃線）：<strong>除去至多一個成分，其餘獨立成分必須是「非高斯」的</strong>。為什麼？因為對高斯分佈，「獨立」與「不相關」是同一件事——既然同一件事，PCA（只處理不相關）就已經搾乾所有資訊了，ICA 沒有額外的東西可挖。妙就妙在<strong>非高斯</strong>：一旦成分不是高斯，就藏有 PCA 看不到的高階結構，那才是 ICA 的獵物。</p> <h2>四、數值演算：一個真能下手的迷你例子</h2> <p>別怕，我們用小到能用手算的例子，走一遍「累計量」這條路的思路。ICA 有兩大實作，其中一個是「<strong>二階＋四階累計量</strong>」：先做 PCA 把資料弄到互不相關，再轉一個么正變換 $\\hat{A}$，把「四階交叉累計量（cross-cumulants）」歸零——白話就是「連高階的關聯都砍到零」。</p> <p>實務上常等價於最大化「各成分峰度（kurtosis，$\\kappa_4$，衡量分佈『尖不尖、尾重不重』）」的平方和 $\\sum_i \\kappa_4(y(i))^2$。我們用一個 2 成分、零均值、單位變異數的例子，假設轉動某個角度 $\\theta$ 後，兩個候選成分的峰度長這樣：</p> <table> <thead> <tr> <th>旋轉角 $\\theta$</th> <th>$\\kappa_4(y_1)$</th> <th>$\\kappa_4(y_2)$</th> <th>$\\kappa_4^2+\\kappa_4^2$</th> </tr> </thead> <tbody> <tr> <td>$0^\\circ$（原 PCA 軸）</td> <td>$1.0$</td> <td>$-0.4$</td> <td>$1.16$</td> </tr> <tr> <td>$30^\\circ$</td> <td>$2.4$</td> <td>$0.1$</td> <td>$5.77$</td> </tr> <tr> <td>$45^\\circ$</td> <td>$3.0$</td> <td>$0.0$</td> <td>$9.00$</td> </tr> </tbody> </table> <p>我們掃描所有 $\\theta$，發現 $\\theta=45^\\circ$ 時 $\\kappa_4^2$ 之和最大（$9.00$），而且兩個成分的峰度一個是 $3.0$、一個是 $0.0$——<strong>峰度被逼到極端</strong>。這正是「非高斯性最大」的方向，也就是 A 君、B 君真正獨立的方向。ICA 就是這樣靠「把非高斯性榨乾」來鎖定正確的分解軸。</p> <h2>五、主動回想：最有趣的方向，往往不是第一主軸</h2> <p>這兒有個經典反轉（來自教材圖 6.1 的雙類別、同共變異數高斯資料）：<strong>PCA 會告訴你「第一主軸 $\\boldsymbol{a}_0$ 是最重要的方向」，但對分類來說它可能爛透了</strong>——兩個類別沿著 $\\boldsymbol{a}_0$ 疊成一片，你根本分不開。反而是那個「高斯性最低」的方向 $\\boldsymbol{a}_1$，能把兩類一刀切開。你的直覺也許覺得「變異數最大 = 資訊最多 = 最有用」，ICA 偏偏甩你一巴掌：<strong>「最有用」不是「最大的」，而是「最不平凡的」</strong>。抓變異數的 PCA 會錯過它，抓獨立性的 ICA 才抓得到。</p> <h2>六、舉一反三：同一套「拆混合」邏輯搬家</h2> <p>ICA 的骨架是「觀察是來源的線性混合，靠獨立性反推反矩陣」，這套劇本到處上演：</p> <ul> <li><strong>腦電圖（EEG）</strong>：頭皮上每個電極錄到的是全腦幾十種神經活動的混合，ICA 把「眨眼雜訊」「Alpha 波」「某個皮質區的訊號」一條條分離。</li> <li><strong>金融</strong>：股價走勢是「總體經濟」「產業」「公司個別」幾個獨立因子的混合。</li> <li><strong>影像分離</strong>：疊在一起的浮水印或紋理，可當成獨立成分拆開。</li> </ul> <p>換個表面、底層同一套：<strong>給我一堆攪和的訊號，我就靠「獨立」把它們還原</strong>。</p> <h2>七、主動點名：三個新手必踩的坑</h2> <ol> <li><strong>「不相關 = 獨立」</strong>：這是最常見的誤會。不相關只要求二階（協方差）為零；獨立要求<strong>所有階</strong>的關聯都消失。對高斯兩者等價，對非高斯<strong>絕不</strong>等價。ICA 之所以存在，就是因為這個「不等價」裡藏著訊息。</li> <li><strong>「ICA 能處理全是高斯的來源」</strong>：不行。全高斯時 ICA 退化、識別不出來源（至多只能有一個高斯成分）。遇到這種資料，ICA 只能攤手說「你還是回去用 PCA 吧」。</li> <li><strong>「ICA 的輸出有固定順序與大小」</strong>：錯。ICA 算出來的成分<strong>順序是任意的、尺度（正負與比例）是任意的</strong>——數學上你無法從混合訊號唯一決定「誰是第一個成分」「振幅真實多大」。實務上要自行把成分標準化或靠先驗知識定序。</li> </ol> <h2>八、與整章的其他知識掛勾</h2> <p>ICA 站在 PCA/KLT（kp-3）的肩膀上：<strong>先 PCA 去相關、再 ICA 去高階關聯</strong>，兩者常串成流水線。它也跟 SVD（kp-4）同屬「資料自適應」大隊——差別在 SVD/PCA 用「正交＋變異數」約束基底，ICA 用「統計獨立＋非高斯」約束基底。到了 Ch7 你想要一組「彼此不糾纏、乾淨」的特徵餵分類器，ICA 拆出來的獨立成分往往比 PCA 的主成分更有判別力。</p> <h2>九、一句話收尾</h2> <p><strong>ICA 是「雞尾酒會錄音師」的絕活：靠『統計獨立』這條比『不相關』更嚴的線索，把攪和在一起的訊號還原成彼此獨立的原始來源</strong>——它抓的不是「最大的方向」，而是「最非高斯、藏得最深」的方向，這正是它超越 PCA 的關鍵。</p>", "6": "<p>同學好，我們剛學過 SVD、ICA 這些「資料自適應」的分解方法，它們的基底向量都可以是<strong>正負都有</strong>的。今天要學的 NMF（Nonnegative Matrix Factorization），加了一條看似簡單、卻威力驚人的規則：<strong>所有數字都不准是負的</strong>。</p> <h2>一、先講個「樂高積木」的比喻</h2> <p>你搭樂高城堡，會怎麼搭？你<strong>只會用積木「疊上去」</strong>——把一塊塊積木往上加，你不會拿一塊「負的」積木去「扣掉」原本的結構（現實裡也沒有負積木這種東西）。城堡的每一個部分，都是「某幾種積木<strong>疊加</strong>出來的」，而且份量只會是正的或零，不會是負的。</p> <p>NMF 做的事情，就是把資料（例如一張臉的照片）拆解成一堆「非負的樂高積木」——鼻子、眼睛、嘴巴這些<strong>局部部件</strong>，然後用「疊加」（不是「疊加再互相抵銷」）的方式組回一張臉。</p> <h2>二、跟 PCA/SVD 的關鍵差異</h2> <p>PCA、SVD 找出來的基底向量（<strong>KP-3</strong>、<strong>KP-4</strong>）<strong>可以有負數</strong>。這在數學上很漂亮（正交），但物理上常常說不通——你能想像「負 0.3 個鼻子」是什麼意思嗎？PCA 的「特徵臉（eigenface）」常常長得像<strong>正負交錯的鬼影</strong>，因為它允許某個部件被「扣掉」。</p> <p>而現實世界很多量本質上就是非負的：</p> <ul> <li>像素強度（不會是負的亮度）</li> <li>機率（不會是負的機率）</li> <li>頻譜強度、化學濃度……</li> </ul> <p>NMF 就是為這些「本質非負」的資料量身打造的分解方法——它逼基底也保持非負，於是分解出來的東西自然對應到「<strong>部件的疊加</strong>」，符合我們對「整體是部分的和」的直覺。這也是為什麼 NMF 在人臉部件分析、主題模型（文件是關鍵詞主題的疊加）、紋理字典特別受歡迎。</p> <h2>三、數學怎麼寫</h2> <p>給定資料矩陣 $X$（$l\\times n$，每一行是一筆樣本），NMF 要找兩個<strong>低秩、非負</strong>的矩陣 $W$（$l\\times r$）跟 $H$（$r\\times n$），使得： $$X\\approx WH,\\qquad r\\lt \\min(l,n)$$</p> <p><strong>而且要求 $W$ 的每個元素 $\\geq0$、$H$ 的每個元素 $\\geq0$。</strong></p> <p>怎麼衡量「像不像」？兩種常見損失函數：</p> <p><strong>Frobenius 範數版</strong>（最直覺，像最小平方）： $$\\min_{W,H\\geq0}\\|X-WH\\|_F^2$$</p> <p><strong>KL 散度版</strong>（機率味更重）： $$\\min_{W,H\\geq0}\\sum_{ij}\\Big[X_{ij}\\ln\\frac{X_{ij}}{(WH)_{ij}}-X_{ij}+(WH)_{ij}\\Big]$$</p> <p>當每一行的和為 1 時，這個式子就等同於 KL 距離——這也暗示了 NMF 跟機率分布/主題模型的天然親近性。</p> <h2>四、演算法：乘法更新規則</h2> <p>NMF 沒有像 SVD 那樣的<strong>閉式解</strong>（一步到位的公式），必須靠迭代。最常用的是 Lee/Seung 提出的<strong>乘法更新規則（multiplicative update rule）</strong>——保證每次更新後 $W,H$ 仍然非負、且損失函數單調不增（保證收斂）。其他像 Newton 法、梯度下降、投影梯度法也能用，但乘法更新是最簡單、最常見的入門版本。</p> <h2>五、算一個迷你例子</h2> <p>假設 $X$ 是一個 $3\\times2$ 的非負矩陣（3 個特徵、2 個樣本）： $$X=\\begin{bmatrix}4&2\\\\2&1\\\\6&3\\end{bmatrix}$$</p> <p>你會發現，第二欄剛好是第一欄的一半——這種資料其實<strong>用秩 $r=1$ 就能完美分解</strong>：</p> <p>$$W=\\begin{bmatrix}2\\\\1\\\\3\\end{bmatrix},\\qquad H=\\begin{bmatrix}2&1\\end{bmatrix}$$</p> <p>驗算 $WH$： $$WH=\\begin{bmatrix}2\\\\1\\\\3\\end{bmatrix}\\begin{bmatrix}2&1\\end{bmatrix}=\\begin{bmatrix}4&2\\\\2&1\\\\6&3\\end{bmatrix}=X$$</p> <p>完全吻合，而且 $W$、$H$ 裡<strong>沒有任何負數</strong>——這就是「一個部件（$W$ 這根向量）配上兩種強度（$H$ 的兩欄）」的疊加式分解。</p> <h2>六、念頭一轉：如果資料本身有負數怎麼辦？</h2> <p>先想一下：如果你的原始資料 $X$ 裡本來就有負值（例如溫度的攝氏度數），NMF 還能直接套用嗎？</p> <p>——<strong>不行</strong>。NMF 的前提是 $X$ 本身非負。如果資料有負值，得先做轉換（例如平移到全正的範圍，或改用能處理正負號的 PCA/SVD/ICA）。這正是為什麼「選哪個分解方法」要先看資料的物理性質，而不是哪個方法比較新潮。</p> <h2>七、常見誤解：非負不等於稀疏</h2> <p>很多同學把「非負」跟「稀疏（很多元素是 0）」搞混。<strong>這是兩回事！</strong> NMF 只保證 $W,H\\geq0$，不保證裡面有很多 0。不過在實務上，非負約束確實<strong>容易催生</strong>局部化、稀疏的部件（因為不能用「正負抵銷」來湊出全域的模式，只能靠局部的正貢獻堆疊），這也是為什麼 NMF 分解出來的部件常常看起來比 PCA 的特徵臉更「局部、乾淨」——但這是傾向，不是數學保證。</p> <h2>八、舉一反三</h2> <p>如果你要對一批「新聞文章的關鍵詞出現次數」做 NMF 分解（每篇文章是一欄、每個關鍵詞出現次數是一個非負整數），猜猜看：</p> <ol> <li>$W$ 矩陣的每一行（對應到每個關鍵詞）大致會代表什麼？</li> <li>$H$ 矩陣的每一欄（對應到每篇文章）大致會代表什麼？</li> </ol> <h2>九、跟本章其他知識點的關係</h2> <p>NMF 跟 <strong>KP-3</strong>（KLT/PCA）、<strong>KP-4</strong>（SVD）同屬「資料自適應族」——都是從資料本身學出基底，而不是套固定公式。但哲學完全不同：KLT/SVD 用<strong>正交性</strong>約束基底（允許正負號、數學最漂亮），NMF 用<strong>非負性</strong>約束基底（物理意義最直覺）。跟 <strong>KP-5</strong> 的 ICA 也可以對比：ICA 追求「統計獨立」，NMF 追求「非負可加」，兩者是從不同角度切入同一個「找更好基底」的問題。</p> <h2>十、一句話收尾</h2> <p><strong>NMF 只用一條規則——所有元素都不准是負的——就把分解結果從「正負交錯、物理難解釋」的特徵臉，變成「部件疊加、看得懂在拼什麼」的樂高積木，代價是沒有閉式解、得靠迭代（乘法更新規則）慢慢逼近。</strong></p>", "7": "<p>同學啊，今天要講的是本章的一記轉折：<strong>「資料在你看起來的高維空間裡，其實只是薄薄一層——它捲起來了，像一捲瑞士捲蛋糕。線性方法的 PCA 只會把它壓扁，看不懂它是捲的。」</strong> 我們要學的，是「流形假設（manifold assumption）」和兩大派「展開流形」的手法。整篇我用「<strong>瑞士捲蛋糕</strong>」這個類比一路貫下去。</p> <h2>一、主線類比：瑞士捲蛋糕的秘密</h2> <p>去餐廳點一份瑞士捲：表面上看，它佔據了一個三維空間（有長、寬、高）。但你要是聰明，會發現<strong>它本質上只是一張二維的薄餅捲起來而已</strong>——你只要「沿著接縫把它攤平」，就變回一張平平的矩形麵皮。這張麵皮要描述，只需要兩個座標（沿麵皮的縱橫），第三維根本是多餘的。</p> <p>高維資料常常就是一份「瑞士捲」。手寫字「0」在像素空間裡可能有上千維，但它真正在變的，不過是「傾斜角度、筆畫粗細、圓的程度」這區區幾個參數。這幾個真正管事的參數，就是<strong>內在維度（intrinsic dimensionality）</strong>。流形假設就是這句話：<strong>你看到的高維點雲，其實是某個低維流形（像那張麵皮）被嵌進高維空間、而且通常是「彎」的</strong>。</p> <h2>二、PCA 哪裡不夠用？先講大白話再講符號</h2> <p>PCA 那把「找最長軸」的直尺，是<strong>直的</strong>。拿一把直尺去量一個捲起來的瑞士捲，它只會量到「捲起來之後」的外在長度，用一個超大的方向去硬套整個捲——結果是它<strong>高估了內在維度</strong>：明明攤平是一維的線（甚至二維的麵皮），PCA 卻可能告訴你要三維、四維才夠。符號化的講法是：線性方法假設資料躺在一條「<strong>仿射子空間</strong>」（affine subspace，可以想成超平面）上，而流形方法承認資料躺在一條「<strong>可能彎曲的流形</strong>」上。</p> <p>有兩個關鍵事實撐起整個非線性派（現在先認識，後面一切從它們出發）：</p> <ul> <li><strong>局部歐氏距離 ≈ 流形測地距離</strong>：在麵皮上「一小段」的直線距離（歐氏）跟「沿麵皮走的真實距離」（測地）幾乎一樣——這是微分幾何的結果，意思是「<strong>流形局部可以當成平面</strong>」。</li> <li><strong>局部線性 → 全域非線性</strong>：麵皮每一小塊都是平的（局部線性），但整張麵皮是捲的（全域非線性）。所以我們可以「只在貼身小範圍內用直線的邏輯，拼回全域的彎曲」。</li> </ul> <h2>三、兩大流派：核方法 vs 圖論方法</h2> <p>面對捲起來的資料，學者分成兩派人馬，殊途同歸：</p> <p><strong>流派一：核方法（Kernel 派）</strong>。它的點子是「<strong>既然在低維是彎的，那就把它丟到更高維甚至無限維的空間，讓它在那裡變直，再用線性 PCA</strong>」。代表是 <strong>Kernel PCA</strong>：不碰原始的協方差矩陣，改對一張 $n\\times n$ 的 <strong>Gram 矩陣</strong> $\\mathcal{K}(i,j)=K(\\boldsymbol{x}_i,\\boldsymbol{x}_j)$ 做特徵分解。$K$ 是核函數（像 RBF），它偷偷算的是「高維空間裡的內積」，你卻<strong>永遠不必真的算出那個高維向量</strong>——這就是「核技巧（kernel trick）」的魔法。</p> <p><strong>流派二：圖論方法（Graph 派）</strong>。它的點子是「<strong>先別管全域，把每個點跟它的鄰居用線連成一張圖，只要求『鄰居在低維裡還是鄰居』</strong>」。做法是：用 $\\epsilon$-鄰域（距離小於 $\\epsilon$ 就相連）或 $k$-近鄰找到鄰居，然後用「熱核」給邊加權：</p> <p>$$W(i,j)=\\exp\\!\\left(-\\frac{\\lVert\\boldsymbol{x}_i-\\boldsymbol{x}_j\\rVert^2}{\\sigma^2}\\right)$$</p> <p>$W(i,j)$ 就是「邊的親密程度」：兩點愈近，權重愈接近 1；愈遠，權重指數下跌到接近 0。接著在圖上找一組低維座標，讓這些「親密關係」被保留。Kernel PCA、Laplacian Eigenmaps、LLE、ISOMAP 全是這派的子弟兵。</p> <h2>四、數值演算：一個「看到捲」的迷你例子</h2> <p>我們造一個假想的瑞士捲資料集，故意讓它在某個角度下「投影成一團」。取三個 2D 點（想像成麵皮上的一小段，沿著弧線排開）：</p> <table> <thead> <tr> <th>點</th> <th>原始座標（高維觀察）</th> <th>沿麵皮的弧長（測地）</th> <th>直線距離（歐氏）</th> </tr> </thead> <tbody> <tr> <td>$A$</td> <td>$(0, 10)$</td> <td>0</td> <td>—</td> </tr> <tr> <td>$B$</td> <td>$(3, 9.5)$</td> <td>$1.2$</td> <td>$3.04$</td> </tr> <tr> <td>$C$</td> <td>$(6, 10.5)$</td> <td>$2.5$</td> <td>$6.02$</td> </tr> </tbody> </table> <p>注意看：$B$ 到 $C$ 的直線距離 $3.04$ 遠大於它們在麵皮上真正的弧長差距（$1.2\\,$ 左右）。如果你只信「直線距離」（PCA 信的東西），你會以為 $B$ 和 $C$ 離很遠、需要更多維才分得開；但沿著麵皮走，它倆其實就在隔壁。<strong>流形方法信的不是「直線」，而是「沿著資料表面走的路」</strong>——這就是 ISOMAP 用 Dijkstra 最短路徑、LLE/Laplacian 用鄰居圖，共同要抓的那條「麵皮上的真實距離」。</p> <h2>五、主動回想：攤平的那一刻</h2> <p>這裡埋一個懸念：如果我把整張瑞士捲資料全部攤平，猜猜會看到什麼？<strong>原本在原始空間裡離得十萬八千里的兩個點，攤平後可能是緊貼著的鄰居</strong>。反過來，原本「看起來很近」的兩點，也可能是捲了兩圈之後的幻覺。線性方法會同時犯這兩種錯；流形方法靠「只信鄰居、沿圖行走」避開了「直線距離」的陷阱。你原本是不是也覺得「距離就是兩點連直線」？流形降維正是在說：<strong>在高維裡，直線常常是最會騙人的東西</strong>。</p> <h2>六、舉一反三：換個場景，同一張麵皮</h2> <p>「局部是平面、全域捲起來、要攤平」這套骨架，其實滿世界都是：</p> <ul> <li><strong>臉部姿態空間</strong>：一個人轉頭，幾百維像素的變化，其實只沿著「轉頭角度」這條一維弧線走——流形方法能把它還原成一維。</li> <li><strong>語音</strong>：同一個音素在不同速度、不同音色下的樣本，沿著低維流形分佈，非線性降維能找到那條「發音軌跡」。</li> <li><strong>基因表現</strong>：細胞分化路徑在基因表現的高維空間裡，其實是條彎曲的「分化軌跡」，攤平它就能看到細胞的「命運地圖」。</li> </ul> <p>（要不要自己動手？給一個結構相同、數字不同的練習：想像一條莫比烏斯帶上的點，PCA 會給它幾個維度？哪一派方法能看出它本質上仍是二維？留給你試試。）</p> <h2>七、主動點名：三個新手誤解</h2> <ol> <li><strong>「資料維度高，就代表資訊真的多」</strong>：大錯。瑞士捲在 3D 裡看起來「很立體」，內在維度可能只有 1。高維常常只是「低維流形被彎彎曲曲塞進高維」的假象。</li> <li><strong>「非線性方法一定勝過 PCA」</strong>：不一定。若資料本就接近線性，PCA 又快又準；流形方法（尤其建圖、算 $n\\times n$ 矩陣）反而貴、還可能過度解讀雜訊。判斷準則是「資料是不是彎的」。</li> <li><strong>「Kernel PCA 和圖論方法是兩回事」</strong>：看起來是，但文獻（如 Ham 2004）指出圖論方法其實可改寫成「用一種<strong>資料相依的核</strong>」做的 Kernel PCA——<strong>兩派殊途同歸</strong>，只是「先擺直還是先畫圖」的路線不同。</li> </ol> <h2>八、與整章的其他知識掛勾</h2> <p>這一節是本章「資料自適應」大隊（KLT/SVD/ICA）與下一批圖論方法的<strong>分水嶺</strong>：KLT（kp-3）與 SVD（kp-4）假設線性、抓變異數；ICA（kp-5）抓獨立但仍線性；<strong>從這裡開始才放手讓基底彎曲</strong>。緊接的 Laplacian Eigenmaps（kp-9）就是「圖論派」的實作示範。到 Ch7 想在小樣本、高維、強非線性的真實資料上穩住分類器，這份「流形直覺」會是你判讀 feature 是否有效的地圖。</p> <h2>九、一句話收尾</h2> <p><strong>非線性降維的口訣是「資料是一捲瑞士捲——局部是平坦的麵皮、全域是捲起來的，PCA 只會壓扁它，流形方法則沿著麵皮把它攤平」</strong>——先問「資料是不是彎的」，再決定要不要拋棄那把直尺。</p>", "8": "<p>同學好，我們學過 <strong>KP-3</strong> 的 KLT/PCA——找資料變異數最大的方向。但 PCA 有個死穴：它只會畫<strong>直線</strong>（或超平面）。如果你的資料是彎的（比如同心圓、螺旋），PCA 再怎麼轉方向都救不了。今天要學的 Kernel PCA，就是幫 PCA 打通任督二脈的那招。</p> <h2>一、先講個「換個角度看世界」的比喻</h2> <p>想像你站在地面上，看著一個同心圓形狀的花圃——內圈種紅花、外圈種白花。你想用一條<strong>直線</strong>把紅花和白花分開，怎麼畫都畫不出來（一條直線切一刀，圓的兩側都會混到紅花跟白花）。</p> <p>但如果你<strong>搭電梯升到空中往下看</strong>，把每朵花的「到花圃中心的距離」當作新的高度維度呢？這時候紅花全部矮矮的（半徑小），白花全部高高的（半徑大）——在這個新的「高度」維度上，一刀（一個水平面）就能把兩群花完全分開！</p> <p>Kernel PCA 做的正是這件事：<strong>把資料偷偷映射到一個更高維的空間，在那個空間裡，原本彎曲、線性不可分的結構，會被拉直、變得線性可分（或至少讓 PCA 更有意義）。</strong></p> <h2>二、問題是：那個高維空間可能無窮維，怎麼算？</h2> <p>如果我們真的要把每個資料點 $\\boldsymbol{x}$ 映射成 $\\boldsymbol{\\phi}(\\boldsymbol{x})$（映射到一個高維甚至無窮維的 Hilbert 空間 $H$），再對 $\\boldsymbol{\\phi}(\\boldsymbol{x})$ 做 PCA，計算量會爆炸——沒人算得動無窮維的協方差矩陣。</p> <p><strong>這就是核方法（kernel method）的魔法登場的時候</strong>：我們發現，PCA 的整套計算，其實<strong>只需要用到資料點兩兩之間的內積</strong> $\\boldsymbol{\\phi}(\\boldsymbol{x}_i)^T\\boldsymbol{\\phi}(\\boldsymbol{x}_j)$，不需要知道 $\\boldsymbol{\\phi}(\\boldsymbol{x})$ 本身長什麼樣子。而這個內積，可以用一個<strong>核函數（kernel function）</strong> $K(\\boldsymbol{x}_i,\\boldsymbol{x}_j)$ 直接算出來，完全不用先算出 $\\boldsymbol{\\phi}$！</p> <p>$$K(\\boldsymbol{x}_i,\\boldsymbol{x}_j)=\\boldsymbol{\\phi}(\\boldsymbol{x}_i)^T\\boldsymbol{\\phi}(\\boldsymbol{x}_j)$$</p> <p>這招就叫「<strong>核技巧（kernel trick）</strong>」——你在高維空間做的所有運算，只要能寫成內積的形式，就能繞過「真的跑去高維空間」這一步，直接在原始空間用核函數算出等價結果。</p> <h2>三、具體怎麼做：Gram 矩陣取代協方差矩陣</h2> <p>線性 PCA（<strong>KP-3</strong>）是對 $N\\times N$ 的協方差矩陣 $R$ 做特徵分解。Kernel PCA 則是對 $n\\times n$ 的 <strong>Gram 矩陣</strong> $\\mathcal{K}$ 做特徵分解（$n$ 是樣本數）：</p> <p>$$\\mathcal{K}(i,j)=K(\\boldsymbol{x}_i,\\boldsymbol{x}_j)$$</p> <p>求解： $$\\mathcal{K}\\boldsymbol{a}=\\lambda n\\boldsymbol{a}$$</p> <p>得到特徵向量 $\\boldsymbol{a}$ 之後，第 $k$ 個主成分在新樣本 $\\boldsymbol{x}$ 上的投影為：</p> <p>$$y(k)=\\sum_i a_k(i)\\,K(\\boldsymbol{x}_i,\\boldsymbol{x})$$</p> <p>注意這裡<strong>完全沒有出現 $\\boldsymbol{\\phi}(\\boldsymbol{x})$</strong>——從頭到尾只用了核函數 $K$。這就是核技巧的威力：你在做「高維空間裡的 PCA」，但手上只需要處理原始維度的資料跟核函數的值。</p> <table> <thead> <tr> <th></th> <th>線性 PCA</th> <th>Kernel PCA</th> </tr> </thead> <tbody> <tr> <td>要分解的矩陣</td> <td>$N\\times N$ 協方差 $R$</td> <td>$n\\times n$ Gram 矩陣 $\\mathcal{K}$</td> </tr> <tr> <td>特徵方程</td> <td>$R\\boldsymbol{v}=\\lambda\\boldsymbol{v}$</td> <td>$\\mathcal{K}\\boldsymbol{a}=n\\lambda\\boldsymbol{a}$</td> </tr> <tr> <td>投影公式</td> <td>$\\boldsymbol{v}^T\\boldsymbol{x}$</td> <td>$\\sum_i a(i)K(\\boldsymbol{x}_i,\\boldsymbol{x})$</td> </tr> </tbody> </table> <h2>四、算一個簡化的感覺</h2> <p>假設兩個資料點 $\\boldsymbol{x}_1=[1,0]^T$、$\\boldsymbol{x}_2=[0,1]^T$，用多項式核 $K(\\boldsymbol{x}_i,\\boldsymbol{x}_j)=(\\boldsymbol{x}_i^T\\boldsymbol{x}_j+1)^2$。</p> <p>$$K(\\boldsymbol{x}_1,\\boldsymbol{x}_1)=(1\\cdot1+0\\cdot0+1)^2=(1+1)^2=4$$ $$K(\\boldsymbol{x}_1,\\boldsymbol{x}_2)=(1\\cdot0+0\\cdot1+1)^2=(0+1)^2=1$$ $$K(\\boldsymbol{x}_2,\\boldsymbol{x}_2)=4$$</p> <p>Gram 矩陣就是： $$\\mathcal{K}=\\begin{bmatrix}4&1\\\\1&4\\end{bmatrix}$$</p> <p>我們完全不用去想「$\\boldsymbol{\\phi}(\\boldsymbol{x}_1)$ 究竟是幾維、長什麼樣子」——只要能算出 $K$ 的數值，Kernel PCA 的整套機器就能運轉。這就是「核技巧繞過顯式映射」的具體體現。</p> <h2>五、念頭一轉：那核選線性的呢？</h2> <p>先猜猜看：如果核函數就選最簡單的 $K(\\boldsymbol{x}_i,\\boldsymbol{x}_j)=\\boldsymbol{x}_i^T\\boldsymbol{x}_j$（普通內積），Kernel PCA 會變成什麼？</p> <p>——<strong>答案是它會退化成普通的線性 PCA</strong>。因為這時候 $\\boldsymbol{\\phi}(\\boldsymbol{x})=\\boldsymbol{x}$（映射就是原封不動），高維空間就是原始空間本身。這告訴我們一件事：<strong>Kernel PCA 是線性 PCA 的推廣，不是取代</strong>——PCA 是它在「核選線性」時的特例，兩者一脈相承，KLT 保留線性 PCA 的所有性質（最大變異數方向、最小 MSE、投影後座標不相關）都被 Kernel PCA 原封不動地繼承下來，只是搬到了高維空間裡執行。</p> <h2>六、常見誤解：核選對了，資料的「彎曲結構」就一定被完美保留</h2> <p>新手常以為 Kernel PCA 是萬能的流形學習工具，跟 <strong>KP-9</strong> 的 Laplacian Eigenmap、<strong>KP-10</strong> 的 LLE/ISOMAP 是同一類。<strong>其實不完全是。</strong> Kernel PCA 選定核函數後，只是把資料映射到一個（通常是固定公式決定的）高維空間再做線性 PCA——它<strong>不特別考慮資料流形的局部幾何結構</strong>（不像 Laplacian Eigenmap 明確建鄰居圖、LLE 明確保留局部權重）。核函數選得好，效果可以很好；選不好，一樣救不了彎曲資料。另外，樣本數 $n$ 很大時，$n\\times n$ 的 Gram 矩陣特徵分解本身就很貴——這是它的實務侷限。</p> <h2>七、舉一反三</h2> <p>如果你要用 Kernel PCA 處理 KP-1 提到的「瑞士捲」資料（3D 空間裡捲起來的一張紙），你會怎麼選核函數？試著想想：RBF 核（高斯核）跟多項式核，哪一個比較可能捕捉到「局部彎曲」的結構？為什麼？</p> <h2>八、跟本章其他知識點的關係</h2> <p>Kernel PCA 是 <strong>KP-3</strong>（線性 PCA）在「核選線性」時的特例，也是本章「非線性流形族」的敲門磚——跟 <strong>KP-9</strong> 的 Laplacian Eigenmap、<strong>KP-10</strong> 的 LLE/ISOMAP 一樣，都在處理 PCA 處理不了的彎曲資料，但切入角度不同：Kernel PCA 靠核函數把資料「拉直」，Laplacian Eigenmap/LLE/ISOMAP 則是直接在資料的局部鄰居結構上做文章。</p> <h2>九、一句話收尾</h2> <p><strong>Kernel PCA 靠「核技巧」把 PCA 需要的內積運算，換成核函數直接算，於是不用真的跑去高維空間、也能做到「在高維空間裡做線性 PCA」的效果——核選線性就變回普通 PCA，核選非線性（RBF、多項式）就多了一雙看穿彎曲資料的眼睛。</strong></p>", "9": "<p>同學啊，今天要講的 Laplacian Eigenmaps（拉普拉斯特徵映射），是把上一節（kp-7 流形假設）那個「瑞士捲要攤平」的夢想，落到「<strong>畫一張圖、用橡皮筋把鄰居綁在一起、再讓圖自己鬆弛攤開</strong>」的具體演算法。整篇我用「<strong>橡皮筋黏圖</strong>」這個類比一路走到底。</p> <h2>一、主線類比：用橡皮筋把鄰居綁成一張網</h2> <p>你拿到一把散落在桌上的點（資料）。你的任務不是找直尺量變異數（那是 PCA），而是：<strong>給每個點找出它的鄰居，然後在每一對鄰居之間拉一條橡皮筋——兩點靠得愈近，橡皮筋綁得愈緊</strong>。綁完之後，你「放開手讓整張網自己去鬆弛」：被橡皮筋綁死的鄰居會死死黏在一起不分開，本來就沒連線的點則自由漂。鬆弛到平衡後，整張網自然攤成一個平坦、低維的形狀——那就是流形被展開的樣貌。Laplacian Eigenmaps 要算的，正是這個「橡皮筋網鬆弛後的平衡位置」。</p> <h2>二、為什麼要這招？它解決了什麼？</h2> <p>回顧 kp-7 的教訓：高維資料常是「彎曲的低維流形」，而「<strong>直線距離會騙人</strong>」。Laplacian Eigenmaps 的對策很務實——<strong>我不信全域的直線距離，我只信「誰跟誰是鄰居」這件貼身小事</strong>。只要在低維空間裡，原本的鄰居還緊挨著，攤平就算成功。這正是那句目標口號：「<strong>鄰居在低維空間裡仍要相鄰</strong>」。</p> <h2>三、三步驟數學：逐符號拆解</h2> <p>嚴格講，Laplacian Eigenmaps 分三步，我們一步一步來：</p> <p><strong>第一步：建鄰接圖。</strong> 每個資料點 $\\boldsymbol{x}_i$ 對應圖上一個頂點 $v_i$。兩點要不要連邊，用兩種準則之一：$\\epsilon$-鄰域（$\\lVert\\boldsymbol{x}_i-\\boldsymbol{x}_j\\rVert^2\\lt \\epsilon$ 就相連）或 $k$-近鄰（互為對方最近的 $k$ 個之一）。這步決定「誰跟誰之間要拉橡皮筋」。</p> <p><strong>第二步：加權。</strong> 對每條邊給一個權重 $W(i,j)$，用「熱核（heat kernel）」來算親密程度：</p> <p>$$W(i,j)=\\exp\\!\\left(-\\frac{\\lVert\\boldsymbol{x}_i-\\boldsymbol{x}_j\\rVert^2}{\\sigma^2}\\right)$$</p> <p>$\\sigma$ 是控制「多近才算親」的尺度參數；兩點差愈大，指數式衰減，權重趨近 0；不相連的對，$W(i,j)=0$。這 $W$ 大多時候是<strong>稀疏</strong>的（大部分元素是 0），這是它算得快的關鍵。</p> <p><strong>第三步：解廣義特徵問題。</strong> 定義「度數矩陣」$D$（對角矩陣，$D(i,i)=\\sum_j W(i,j)$，即第 $i$ 點所有橡皮筋的總拉力），以及「圖 Laplacian」：</p> <p>$$L=D-W$$</p> <p>然後解廣義特徵問題：</p> <p>$$L\\boldsymbol{v}=\\lambda D\\boldsymbol{v}$$</p> <p>關鍵操作：先丟掉 $\\lambda_0=0$ 對應的那個「全 1 向量」（它只代表整張圖整體平移，沒有分辨力），再往後取 $m$ 個特徵向量 $\\boldsymbol{v}_1,\\dots,\\boldsymbol{v}_m$，第 $i$ 個樣本的新座標就是：</p> <p>$$\\boldsymbol{y}_i^T=[\\,v_1(i),\\,v_2(i),\\,\\dots,\\,v_m(i)\\,]$$</p> <p>意思是：<strong>把第 $i$ 個點在各個低頻「振動模式」上的位置，拼成它的低維座標</strong>。</p> <h2>四、目標函數的直覺：它在最小化什麼？</h2> <p>上面那堆矩陣操作的背後，其實只為了一句話——最小化這個量：</p> <p>$$E_L=\\sum_{ij}\\big(y_i-y_j\\big)^2\\,W(i,j)$$</p> <p>翻成白話：<strong>「低維空間裡，兩個點的距離平方，乘上它們之間的橡皮筋強度，全部加總，愈小愈好」</strong>。高權重（強橡皮筋）的鄰居若在低維裡被拉開，$(y_i-y_j)^2$ 很大，懲罰就重；權重趨近 0 的遠點，隨便分多開都無所謂。所以它<strong>強力懲罰『把鄰居拆散』</strong>，這就是「保留鄰居」的數學化身。</p> <h2>五、數值演算：五個點鬆弛給你看</h2> <p>放五個一維點 $x=[1,\\,1.1,\\,3,\\,3.2,\\,9]$（前兩個是鄰居、中間兩個是鄰居、最後一個落單）。先建 $k$-近鄰圖、熱核加權（$\\sigma=1$）：</p> <table> <thead> <tr> <th>對 $(i,j)$</th> <th>距離平方</th> <th>$W(i,j)$（熱核）</th> </tr> </thead> <tbody> <tr> <td>$(1,2)$</td> <td>$0.01$</td> <td>$e^{-0.01}\\approx0.990$</td> </tr> <tr> <td>$(3,4)$</td> <td>$0.04$</td> <td>$e^{-0.04}\\approx0.961$</td> </tr> <tr> <td>$(2,3)$</td> <td>$3.61$</td> <td>$e^{-3.61}\\approx0.027$</td> </tr> <tr> <td>$(4,5)$</td> <td>$33.64$</td> <td>$e^{-33.6}\\approx0$</td> </tr> </tbody> </table> <p>看出門道了嗎？$W$ 幾乎只把「真鄰居」(1,2) 和 (3,4) 綁死（權重約 0.99 和 0.96），把遠的跨群對（$0.027$ 甚至 $0$）幾乎放生。鬆弛後，點 1、2 會黏成一團落在低維某處，點 3、4 黏成另一團，孤點 5 離得老遠。若取 1 維座標 $\\boldsymbol{y}$，你會得到大概 $y\\approx[-0.5,\\,-0.48,\\,0.1,\\,0.12,\\,1.8]$ 這種「三群分明」的排法——<strong>原本在 1D 原始軸上跨度的細微結構，被橡皮筋牢牢鎖住、清楚分組</strong>。</p> <h2>六、主動回想：螺旋的漂亮攤平</h2> <p>教材圖 6.6 有個令人驚豔的對照：拿一條 <strong>Archimedes 螺旋</strong>（一圈圈往外轉的線）餵給兩種方法。<strong>PCA 給出兩個大小相近的特徵值</strong>，於是錯判「這是二維資料」，把螺旋壓成一張餅；<strong>Laplacian Eigenmaps 卻漂亮地把螺旋『攤開成一條一維直線』，而且螺旋上點的鄰居順序原封不動保留</strong>。你原本大概以為「PCA 遇強則強、螺旋嘛它多少也能應付」——結果是 PCA 被捲度耍了，而這張「橡皮筋網」一翻身就把流形還原成一維。這就是「圖論式降維」想給你的那個「啊哈」。</p> <h2>七、舉一反三：橡皮筋的萬用骨架</h2> <p>「鄰居加權、鬆弛保局部」這套結構，換個表面照樣好用：</p> <ul> <li><strong>影像分割</strong>：把像素當點、相鄰像素連邊（權重看顏色差異），Laplacian 的分量能順著物體邊界切出「前景／背景」。</li> <li><strong>社群偵測</strong>：把人當點、互動當邊，Laplacian 能把緊密社群聚成低維裡的一團。</li> <li><strong>半監督學習</strong>：Laplacian 正則化讓「標籤在圖上平滑傳播」，少數有標籤的點把訊息「順著橡皮筋」傳給鄰居。</li> </ul> <p>（留白練習：同樣五個點，若把 $\\sigma$ 調得超大，$W$ 會怎麼變？橡皮筋是不是全都軟了、分組也糊了？自己試著推推看。）</p> <h2>八、主動點名：兩個新手誤解</h2> <ol> <li><strong>「全是鄰居就不會失真的誤判」</strong>：$\\epsilon$ 或 $k$ 選太大，「根本不是鄰居」的點也被連進圖，橡皮筋亂拉，攤平就失敗——<strong>圖太密會把流形『糊在一起』</strong>；選太小又斷成一座座孤島。$k$ 或 $\\epsilon$ 是這招最需要調的旋鈕。</li> <li><strong>「把全 1 向量當成有效結果」</strong>：解出來第一個特徵向量是 $\\lambda_0=0$ 的「全 1」（大家擠在同一點），它沒有任何分辨力，<strong>必須丟掉它、從第二個特徵向量開始取</strong>。新手若從第一個開始取，會得到一張「所有點疊成一點」的無用圖。</li> </ol> <h2>九、與整章的其他知識掛勾</h2> <p>Laplacian Eigenmaps 是 kp-7「圖論派」的開門弟子，跟 LLE、ISOMAP 是師兄弟：三者都要建鄰接圖，但 <strong>LLE 強調「局部線性重建」、ISOMAP 強調「全域測地距離」、Laplacian 強調「鄰居黏在一起」</strong>。它也跟 Kernel PCA 有親緣（可改寫成某種資料相依核）。因為用的是<strong>稀疏矩陣＋Lanczos 演算法</strong>，計算可降到亞二次方，比 ISOMAP 那張稠密 Gram 矩陣便宜得多。到 Ch7，這種「保局部結構」的低維表示，正是很多圖學習與聚類特徵的前身。</p> <h2>十、一句話收尾</h2> <p><strong>Laplacian Eigenmaps 是「用橡皮筋把每個點和它的鄰居綁成一張網，再讓網鬆弛攤平」的圖論降維絕招</strong>——它不問「直線距離多遠」，只問「誰跟誰是鄰居」，靠最小化 $\\sum_{ij}(y_i-y_j)^2W(i,j)$ 把鄰居死死黏住、把彎曲的流形還原成平坦的低維地圖。</p>", "10": "<p>同學，上一節（<strong>KP-9</strong>）我們用橡皮筋把鄰居黏成一張網。今天這節要介紹橡皮筋幫的另外兩位師兄弟——LLE 跟 ISOMAP，他們手法不同，但都不服氣同一件事：<strong>直線距離會騙人</strong>。整篇我用「<strong>登山健行地圖</strong>」這個類比走到底。</p> <h2>一、主線類比：登山健行地圖</h2> <p>你站在一座彎彎繞繞的山頭上，想知道兩個景點之間「真正」有多遠。你有兩種量法：</p> <ul> <li><strong>拿尺量地圖上的直線距離</strong>——這是歐氏距離，方便，但如果兩個景點中間隔著一座山，這條「直線」其實是穿過岩石的空想，沒有一條真正的路走得通。</li> <li><strong>沿著登山步道實際走一趟</strong>——這才是「測地距離」，繞著山的等高線走，雖然比直線長，但才是「人真的能走到」的距離。</li> </ul> <p>ISOMAP 做的正是第二件事：把「地圖直線距離」換成「沿步道走的距離」。LLE 做的是另一件事——<strong>它不管全域地圖，只問你腳邊最近的三個路標，並說「你現在的位置，就是這三個路標加權平均出來的結果」</strong>，一步一步局部拼出整條步道的形狀。</p> <h2>二、LLE：用鄰居的加權平均描述你自己</h2> <p><strong>步驟一：找 $k$ 近鄰。</strong> 對每個點 $\\boldsymbol{x}_i$，找出離它最近的 $k$ 個鄰居 $\\boldsymbol{x}_{i_j}$。</p> <p><strong>步驟二：求重建權重。</strong> 解這個最小化問題：</p> <p>$$\\arg\\min_W \\sum_i\\Big\\|\\boldsymbol{x}_i-\\sum_j W(i,j)\\boldsymbol{x}_{i_j}\\Big\\|^2,\\qquad \\sum_j W(i,j)=1$$</p> <p>翻成白話：<strong>用鄰居的位置「加權混合」，混出跟 $\\boldsymbol{x}_i$ 最像的結果，混合比例就是 $W$</strong>。「權重和為 1」這個約束很關鍵——它保證這個重建對整體平移、旋轉、縮放都不變（因為你永遠是在「內插」鄰居，不是在「外插」到別的尺度）。</p> <p><strong>步驟三：低維空間裡凍結權重。</strong> 這是全招最漂亮的一步——<strong>同一組 $W$ 原封不動搬到低維空間</strong>，求新座標 $\\boldsymbol{y}_i$：</p> <p>$$\\arg\\min_Y \\sum_i\\Big\\|\\boldsymbol{y}_i-\\sum_j W(i,j)\\boldsymbol{y}_j\\Big\\|^2$$</p> <p>意思是：「你在山上靠 3 個路標的加權平均描述自己，攤平成地圖之後，你還是要能被同樣的 3 個路標、同樣的權重，加權平均描述出來」——局部的「相對關係」被原封不動保留，只是整體「攤平」了。</p> <h2>三、數值演算：三個點的權重怎麼解出來</h2> <p>假設一維上有三點 $x_1=0,\\ x_2=1,\\ x_3=3$，把 $x_2$ 的兩個鄰居設成 $x_1,x_3$，求重建權重 $w_1,w_3$（$w_1+w_3=1$）使 $w_1 x_1+w_3 x_3 \\approx x_2$：</p> <p>$$w_1\\cdot 0+w_3\\cdot 3=1,\\qquad w_1+w_3=1$$</p> <p>解出 $w_3=1/3,\\ w_1=2/3$。驗算：$\\tfrac{2}{3}\\times0+\\tfrac{1}{3}\\times3=1$，剛好等於 $x_2$，完美重建。<strong>這組 $(2/3,\\,1/3)$ 就是 $x_2$ 的「配方」</strong>——攤平到低維空間後，$y_2$ 也必須滿足 $y_2=\\tfrac{2}{3}y_1+\\tfrac{1}{3}y_3$，這就是「局部線性關係」被鎖住的意思。</p> <h2>四、ISOMAP：先修路再量距離</h2> <p>ISOMAP 反過來，先把「路網」建出來，再在路網上量真正的距離：</p> <p><strong>步驟一：建 $k$ 近鄰圖。</strong> 只連相鄰的點（近的才連），邊的權重是歐氏距離。</p> <p><strong>步驟二：算測地距離。</strong> 用 Dijkstra 最短路徑演算法，沿著這張圖走，算出所有點對之間「沿路走」的最短總距離——不再是直線，而是「沿著步道繞過去」的距離。</p> <p><strong>步驟三：傳統 MDS 降維。</strong> 把這張「測地距離矩陣」丟進古典多維尺度法（MDS），求出一組低維座標，讓低維空間裡的歐氏距離盡量逼近這些測地距離。</p> <h2>五、主動回想：一條被捲起來的紙條</h2> <p>想像一張長紙條被捲成一個瑞士捲。紙條上印著 A、B 兩個記號，捲起來後 A、B 因為捲曲而在<strong>空間中</strong>（穿過捲筒內部）靠得很近，直線距離很短。你猜——ISOMAP 會不會被這個假象騙到，覺得 A、B 很近？<strong>答案是不會</strong>：因為 A、B 之間沒有一條「沿著紙面走」的短路徑（要沿紙面繞好幾圈才到得了），$k$ 近鄰圖根本不會在 A、B 之間直接連邊，Dijkstra 算出來的測地距離會老老實實反映出「其實隔得很遠」。這正是 ISOMAP 比直接用歐氏距離做 PCA 聰明的地方——它把「空間近」跟「沿著流形近」這兩件事分得清清楚楚。</p> <h2>六、舉一反三</h2> <p>給你一組「S 形」散佈在 2D 平面上的點（想像字母 S 攤平在紙上），假設你不小心把 $k$（近鄰數）設得太大，多連了幾條「抄捷徑」的邊（直接從 S 的上半段跳到下半段）。想想看：Dijkstra 算出來的測地距離會發生什麼事？（提示：抄捷徑的邊會讓最短路徑「作弊」，量出來的距離會比真實沿 S 走的距離<strong>更短</strong>，攤平出來的形狀會被這條假邊扭曲、擠壓。）</p> <h2>七、常見誤解</h2> <ol> <li><strong>誤解一：以為 LLE 跟 Laplacian Eigenmaps（KP-9）做的是同一件事。</strong> 兩者都用鄰接圖，但 Laplacian Eigenmaps 是「鄰居間距離加權懲罰」（橡皮筋），LLE 是「用鄰居線性重建自己」（配方比例）——一個管「別拉開」，一個管「配方不變」，數學推導完全不同。</li> <li><strong>誤解二：以為 ISOMAP 跟 LLE 誰都能取代誰。</strong> LLE 只看局部（快、稀疏矩陣特徵分解），ISOMAP 要看全域最短路徑（慢、稠密矩陣）。資料量大時 LLE 划算，資料需要保留「全域大尺度形狀」時 ISOMAP 更準。</li> </ol> <h2>八、跨知識點掛勾</h2> <p>LLE、ISOMAP 跟 <strong>KP-9</strong> 的 Laplacian Eigenmaps 是流形降維的三兄弟：LLE 顧局部線性重建、ISOMAP 顧全域測地距離、Laplacian 顧鄰居別分開，三者都是在回應 <strong>KP-7</strong> 提出的「流形假設」。跟 <strong>KP-3</strong> 的 PCA 對比最鮮明：PCA 只看整體變異數方向，遇到彎曲流形（如螺旋、瑞士捲）會被騙，這三招都是專門對付這種彎曲流形而生的。</p> <h2>九、一句話收尾</h2> <p><strong>LLE 說「你是鄰居的加權配方，這配方攤平後也要成立」；ISOMAP 說「別抄近路，測地距離才算數」——一個顧局部、一個顧全域，聯手把彎曲的流形攤平成看得懂的地圖。</strong></p>", "11": "<p>同學啊，今天我們來聊一個改變了整個數位時代的工具——DFT（Discrete Fourier Transform）。它的影響大到沒有它就沒有現代音樂串流（MP3 內部是它的兄弟 DCT）、手機通訊（5G 的 OFDM 就是它的延伸）、甚至 JPEG 影像壓縮。</p> <h2>一、先講個生活故事</h2> <p>你每天都在聽音樂。但你有沒有想過：一首 3 分鐘的歌，電腦裡存的是什麼？</p> <p>直覺：每秒鐘有 44100 個「瞬間的氣壓值」，3 分鐘就是 44100 × 180 = 7,938,000 個數字。這是時域表示。</p> <p>但<strong>傅立葉的天才想法</strong>是：<strong>這 793 萬個數字，可以重新表達成「不同頻率的正弦波疊加」</strong>——每個頻率都有自己的振幅和相位。</p> <p>意思是同一首歌有兩種表示： - <strong>時域</strong>：每秒的空氣壓力數值（直觀但難分析） - <strong>頻域</strong>：每個頻率的多強（抽像但好分析）</p> <p>DFT 就是這兩個表示之間的<strong>翻譯機</strong>。</p> <h2>二、為什麼要翻譯？</h2> <p>關鍵問題：人類對聲音的感知是「頻率敏感的」（低音、中音、高音），但儲存方式是「時間敏感的」（每秒多少個數字）。所以我們需要翻譯機。</p> <p>實際的好處： - <strong>壓縮</strong>：MP3 把高頻細節丟掉，因為人耳聽不到 16kHz 以上。這個「丟高頻」只能在頻域做。 - <strong>濾波</strong>：你想過濾掉 50Hz 的電源雜訊？只能在頻域把對應那一條柱子砍掉。 - <strong>分析</strong>：地震儀、心電圖、腦波圖，所有訊號分析都從「找頻譜」開始。</p> <h2>三、DFT 的數學</h2> <p>給你一組 $N$ 個時域樣本 $x(0), x(1), ..., x(N-1)$，DFT 把它變成 $N$ 個頻率分量 $y(0), y(1), ..., y(N-1)$：</p> <p>$$y(k) = \\sum_{n=0}^{N-1} x(n) \\cdot e^{-j \\frac{2\\pi}{N} k n}$$</p> <p>$k$ 是頻率索引，$k=0$ 是直流（DC），$k=1$ 是 1 個週期，$k=N-1$ 是最高頻（Nyquist 頻率）。</p> <p>反變換（從頻率回到時間）：</p> <p>$$x(n) = \\frac{1}{N} \\sum_{k=0}^{N-1} y(k) \\cdot e^{+j \\frac{2\\pi}{N} k n}$$</p> <p>注意這兩個公式極度相似——只是指數上正負號相反、且有 $1/N$ 因子。</p> <h2>四、$e^{-j 2\\pi k n / N}$ 是什麼？</h2> <p>這是個<strong>複指數</strong>。歐拉公式告訴我們：</p> <p>$$e^{j\\theta} = \\cos\\theta + j \\sin\\theta$$</p> <p>所以 $e^{-j 2\\pi k n / N} = \\cos(2\\pi k n / N) - j \\sin(2\\pi k n / N)$。</p> <p><strong>意義</strong>：每個 $y(k)$ 是「<strong>時域訊號</strong>與<strong>頻率 $k$ 的複指數波</strong>」的內積——就是訊號裡這個頻率有多少「成分」。</p> <p>$y(k)$ 是<strong>複數</strong>，實部代表 cos 成分、虛部代表 sin 成分。對實數訊號，$y(k)$ 與 $y(N-k)$ 是共軛的，所以頻譜對稱。</p> <h2>五、一個具體例子</h2> <p>讓我用一個極簡例子：$N=4$，時域 $[1, 0, -1, 0]$（一個週期的方波）。</p> <p>$$y(0) = 1 + 0 + (-1) + 0 = 0$$ （DC = 0，合理，方波平均值=0）</p> <p>$$y(1) = 1 \\cdot e^0 + 0 \\cdot e^{-j\\pi/2} + (-1) \\cdot e^{-j\\pi} + 0 \\cdot e^{-j3\\pi/2}$$ $$= 1 + 0 + (-1)(-1) + 0 = 1 + 1 = 2$$</p> <p>$$y(2) = 1 \\cdot e^0 + 0 \\cdot e^{-j\\pi} + (-1) \\cdot e^{-j 2\\pi} + 0 \\cdot e^{-j3\\pi}$$ $$= 1 + 0 + (-1)(1) + 0 = 0$$</p> <p>$$y(3) = 1 \\cdot e^0 + 0 \\cdot e^{-j 3\\pi/2} + (-1) \\cdot e^{-j 3\\pi} + 0 \\cdot e^{-j 9\\pi/2}$$ $$= 1 + 0 + (-1)(-1) + 0 = 2$$</p> <p>所以頻譜是 $[0, 2, 0, 2]$。這告訴我們：原訊號是<strong>純 1 個週期</strong>（$k=1$）和<strong>純 3 個週期</strong>（$k=3$）的疊加——這是方波的傅立葉級數性質。</p> <h2>六、FFT：DFT 的革命性實作</h2> <p>直接算 DFT 要 $O(N^2)$——對 $N=10^6$ 的訊號，要 $10^{12}$ 次複數乘法，<strong>約 30 分鐘</strong>。</p> <p>Cooley-Tukey 在 1965 年發現了一個把 DFT 拆成兩半的快速演算法（<strong>FFT</strong>，Fast Fourier Transform），把複雜度降到 $O(N \\log_2 N)$——同樣的 $10^6$ 樣本只要約 1 秒。</p> <p>FFT 的核心洞察：DFT 的指數函數有對稱性（一半的指數是另一半的負數），可以<strong>遞迴地把 $N$-點 DFT 拆成兩個 $N/2$-點 DFT</strong>。把 $N$ 寫成 $2^k$（最常見），就能一路拆到 1 點。</p> <p>沒有 FFT 就沒有現代數位訊號處理——這句話一點都不誇張。</p> <h2>七、頻譜洩漏（spectral leakage）</h2> <p>DFT 有個<strong>重要陷阱</strong>叫<strong>頻譜洩漏</strong>：當訊號頻率不剛好是 DFT 解析度的整數倍時，能量會「洩漏」到鄰近的頻率格，造成測量誤差。</p> <p>直覺：方波可以完美地用 1 個週期表示，所以頻譜乾淨（$[0,2,0,2]$）。但如果你把方波切成 $[1, 0, -1, 0, 0, 0, 0, 0]$（前面一樣、後面補 0），這個新訊號的「整個週期」已經不一樣，於是頻譜會洩漏到所有格——看起來像個奇怪的包絡。</p> <p><strong>解法</strong>：在切訊號時用<strong>窗函數</strong>（window function，如 Hann、Hamming）把邊界平滑掉——這是實務上訊號處理必備的步驟。</p> <h2>八、DFT 在影像：2D DFT</h2> <p>對影像（2D 訊號），用<strong>可分離</strong>的方式做 2D DFT：先對行做 1D DFT，再對列做 1D DFT（每個都用 FFT）。</p> <p><strong>影像頻譜的視覺直觀</strong>： - <strong>低頻</strong>集中在中央（左上角）→ 大面積、平滑區域。 - <strong>高頻</strong>在角落 → 邊緣、細節、雜訊。 - <strong>旋轉紋理</strong>在頻譜中對應方向的高頻亮帶。</p> <p>JPEG（早期版本）用 DCT 而非 DFT，但概念一樣——把影像變到頻域，丟掉視覺不敏感的高頻，量化低位元，壓縮儲存。</p> <h2>九、常見誤解</h2> <ol> <li><strong>「DFT 的 $y(k)$ 是實數」</strong>：錯。實數訊號的 DFT 通常是複數（實部 + 虛部）。</li> <li><strong>「DFT 越高頻越沒用」</strong>：部分對，但某些應用（如邊線偵測）就是要找高頻。</li> <li><strong>「DFT 只對週期性訊號有效」</strong>：錯。DFT 假設訊號是<strong>週期性</strong>延拓，所以非週期訊號會有頻譜洩漏（解法：加窗函數）。</li> <li><strong>「DFT 比 DCT 強」</strong>：錯。DFT 計算稍快但 DCT 能量更集中，DCT 是 JPEG/MPEG 的選擇。</li> <li><strong>「FFT 是另一種變換」</strong>：錯。FFT 是<strong>計算 DFT 的快速演算法</strong>，結果與直接 DFT 完全相同。</li> </ol> <h2>十、一句話收尾</h2> <p><strong>DFT 是把時域訊號翻譯到頻域的數學翻譯機——它的快速版 FFT 把計算複雜度從 $O(N^2)$ 降到 $O(N \\log N)$，沒有它就沒有現代數位訊號處理的世界</strong>——音樂壓縮、影像處理、通訊、雷達、地震分析都依賴它。Ch7 的「形狀描述子」會用到 DFT 的變形（傅立葉描述子），Ch6 的 DCT 是它的「去複數化」版本，都從同一個傅立葉變換家族出發。</p>", "12": "<p>同學，<strong>KP-11</strong> 我們把 1D DFT 用在一串數字（訊號）上。今天要處理的是一整張影像——一個二維的數字陣列。你可能會擔心：「二維的話，運算量會不會爆炸？」別擔心，這節的重點就是一個好消息：<strong>你不用真的算二維，只要橫著梳一遍、直著梳一遍就好</strong>。整篇我用「<strong>梳頭</strong>」這個類比走到底。</p> <h2>一、主線類比：梳頭——先梳橫排，再梳直排</h2> <p>想像一顆頭上整整齊齊種了 $N\\times N$ 根頭髮，每根頭髮的「捲曲程度」就是一個像素值。你想知道這顆頭整體的「捲曲頻率結構」（哪些方向捲得密、哪些方向捲得疏）。笨方法是把所有頭髮兜在一起、混成一鍋一次分析——那樣要考慮 $N^2$ 根頭髮兩兩之間的關係，運算量是 $N^4$，非常昂貴。聰明的做法是：<strong>先把每一「橫排」的頭髮各自梳過一遍（做一次 1D DFT），把結果放回原位；再把每一「直排」的頭髮各自梳過一遍。梳完，整顆頭的頻率結構就出來了</strong>——這就是「可分離」的精髓：二維問題被拆成一堆一維問題分開處理。</p> <h2>二、公式：逐符號拆解</h2> <p>二維 DFT 的定義：</p> <p>$$Y(k,l)=\\frac{1}{N}\\sum_{m,n} X(m,n)\\,W_N^{km}\\,W_N^{ln}$$</p> <p>逆變換：</p> <p>$$X(m,n)=\\frac{1}{N}\\sum_{k,l} Y(k,l)\\,W_N^{-km}\\,W_N^{-ln}$$</p> <p>$X(m,n)$ 是原影像在座標 $(m,n)$ 的像素值，$Y(k,l)$ 是頻域座標 $(k,l)$ 的頻譜值，$W_N=e^{-j2\\pi/N}$。看起來是四層加總、算起來像 $N^4$，但注意 $W_N^{km}W_N^{ln}$ 可以拆成兩個獨立的因子——這正是「可分離」的代數證據：</p> <p>$$Y=W^H X W$$</p> <p>翻成白話：<strong>先用矩陣 $W^H$ 左乘 $X$（對每一「行」各做一次 1D DFT），再用矩陣 $W$ 右乘結果（對每一「列」各做一次 1D DFT）</strong>。順序其實不影響結果——先梳橫的再梳直的，跟先梳直的再梳橫的，梳出來的頻譜一樣。</p> <h2>三、成本對比：$N^4$ 對上 $N^2\\log_2 N$</h2> <ul> <li>直接算二維 DFT：$O(N^4)$。</li> <li>可分離＋每個 1D 用 FFT 算：$2N$ 次 1D FFT，每次 $O(N\\log_2 N)$，總共 $O(N^2\\log_2 N)$。</li> </ul> <p>代個數字感受一下：$N=256$ 時，$N^4\\approx 4.3\\times10^9$，而 $N^2\\log_2N\\approx 256^2\\times8\\approx 5.2\\times10^5$——<strong>快了約 8000 倍</strong>。這不是「理論上快一點」，是「原本要跑一整晚，現在眨眼就完成」的等級差異。</p> <h2>四、頻譜長什麼樣：亮暗有意義</h2> <p>自然影像的 2D 頻譜有幾個規律：</p> <ul> <li><strong>能量集中在低頻（$k,l$ 接近 0，也就是 DC 分量附近）</strong>——自然影像大部分區域是平滑漸變的，只有邊緣才是高頻。</li> <li><strong>邊緣會在頻譜中產生對角線方向的亮紋</strong>——一條銳利的邊，會讓垂直於它的方向出現一長串高頻分量。</li> <li><strong>原圖旋轉，頻譜也跟著旋轉相同角度</strong>——這是 DFT 對旋轉的等變性。</li> </ul> <h2>五、主動回想：把一張純黑加一個白方塊的圖拿去做 2D DFT</h2> <p>猜猜看：一張全黑背景、中間一個白色方塊的圖，它的頻譜長什麼樣？你可能以為頻譜也會是「一小塊亮」——<strong>其實不是</strong>。方塊的邊緣是銳利的跳變（黑到白瞬間切換），這種銳利邊緣在頻域裡會產生一個沿著水平和垂直方向延伸得很開的「十字型」亮紋（想成一個 sinc 函數的二維版本），而不是集中在一小塊。這正是「空間中越『局部、銳利』，頻域裡就越『分散、延展』」的測不準關係——跟 <strong>KP-13</strong> 要講的能量集中度問題，其實是同一個硬幣的兩面。</p> <h2>六、舉一反三</h2> <p>如果你把一張影像旋轉 90 度再做 2D DFT，猜猜它的頻譜跟原圖頻譜的關係是什麼？（提示：DFT 對旋轉是等變的——頻譜會跟著原圖一起轉 90 度，亮紋的方向也跟著轉。動手用小張圖驗證一下，你會發現這比想像中直觀。）</p> <h2>七、常見誤解</h2> <ol> <li><strong>誤解一：以為可分離運算跟直接算二維會得到不同的結果。</strong> 不會，數學上完全等價，$Y=W^H X W$ 只是換一種算法，答案分毫不差，純粹是為了省運算量。</li> <li><strong>誤解二：以為 2D DFT 一定是壓縮的最佳選擇。</strong> 不是——2D DFT 是固定基底、不管資料特性，能量打包能力其實輸給 DCT（<strong>KP-13</strong>）。DFT 的強項是「頻率意義明確、旋轉/位移的代數性質乾淨」，這在濾波、匹配這類任務裡很有用，但真要壓縮，DCT 通常贏。</li> </ol> <h2>八、跨知識點掛勾</h2> <p><strong>KP-11</strong> 的 1D DFT 是這一節的地基——沒有 1D DFT 就沒有「先梳橫排再梳直排」這個把戲。而「固定基底、不看資料」的限制，跟 <strong>KP-13</strong> 的 DCT（能量更集中、是 JPEG 真正愛用的變換）、<strong>KP-14</strong> 的 Hadamard（連乘法都不用）擺在一起看，會更清楚每種固定基底變換各自的取捨在哪。</p> <h2>九、一句話收尾</h2> <p><strong>二維 DFT 不用真的算二維——先橫著梳一遍（對每一行做 1D DFT），再直著梳一遍（對每一列做 1D DFT），$N^4$ 就變成 $N^2\\log_2N$，頻譜的亮暗就是影像的頻率身分證。</strong></p>", "13": "<p>同學啊，我們在上一份祕笈聊了 DFT，這份要談它的「表親」DCT（Discrete Cosine Transform）。它倆長得很像，但有一個關鍵差異——DCT 只用實數 cos 基底，不用 DFT 的複指數。這個差異讓 DCT 在影像壓縮上比 DFT 更勝一籌，這也是為什麼 JPEG、MPEG、MP3 全部都選 DCT。</p> <h2>一、先講個生活故事</h2> <p>DFT 變換的「隱藏假設」是訊號是<strong>週期性</strong>的——意思是訊號左邊接到右邊時會平滑連接。</p> <p>但很多訊號（例如照片的一列像素）不是週期性的——照片左邊接到右邊時通常<strong>不連續</strong>（左邊是第一個像素，右邊是最後一個像素，差異可能很大）。</p> <p>DFT 強迫你假設它們相連，於是產生了一個<strong>人工的「邊界不連續」</strong>——這在頻譜中表現為<strong>高頻雜訊</strong>（稱為「spectral leakage」，頻譜洩漏）。</p> <p>DCT 的解法：<strong>偶延拓</strong>（symmetric extension）——把訊號鏡像翻轉再延伸。這樣左邊接到右邊時就<strong>連續</strong>了，沒有洩漏。</p> <p>直覺：DFT 把你丟進一個「房間的兩頭相連」的世界；DCT 把你丟進一個「兩頭有鏡子反射」的世界，後者對大多數真實訊號更友善。</p> <h2>二、為什麼這對影像特別重要？</h2> <p>圖片的特性：<strong>像素值的變化是平滑的</strong>（一張照片裡，相鄰像素差不多亮）。一階 Markov 過程（一種統計模型）能近似描述這個特性。</p> <p>研究顯示：<strong>對一階 Markov 訊號，DCT 的能量集中度幾乎等於 KLT（理論最佳）</strong>。</p> <p>意思是： - 用 DCT 變換影像，少數幾個低頻係數就能保留 95% 以上的能量。 - DFT 對同一影像，需要更多係數才能達到同樣的能量保留率。</p> <p>這對 JPEG 壓縮極重要——更少係數 = 更小檔案 = 更快下載。</p> <h2>三、DCT 的數學</h2> <p>DCT（type-II，最常見的版本）的定義：</p> <p>$$y(k) = \\alpha(k) \\sum_{n=0}^{N-1} x(n) \\cos\\left(\\frac{\\pi(2n+1)k}{2N}\\right)$$</p> <p>其中係數 $\\alpha(k)$ 為： $$\\alpha(k) = \\begin{cases} \\sqrt{\\frac{1}{N}}, & k=0 \\\\ \\sqrt{\\frac{2}{N}}, & k \\neq 0 \\end{cases}$$</p> <p>注意兩點： 1. <strong>沒有負號</strong>：DFT 有 $e^{-j\\theta}$，DCT 只有 $\\cos\\theta$。 2. <strong>沒有 $j$（虛數）</strong>：結果全是實數。</p> <p>反變換（type-III）： $$x(n) = \\sum_{k=0}^{N-1} \\alpha(k) y(k) \\cos\\left(\\frac{\\pi(2n+1)k}{2N}\\right)$$</p> <p>也是純實數。</p> <h2>四、DCT 矩陣</h2> <p>DCT 變換可以寫成矩陣形式 $\\boldsymbol{y} = C^T \\boldsymbol{x}$，矩陣 $C$ 的元素：</p> <p>$$C(n, k) = \\begin{cases} \\frac{1}{\\sqrt{N}}, & k = 0 \\\\ \\sqrt{\\frac{2}{N}} \\cos\\left(\\frac{\\pi(2n+1)k}{2N}\\right), & 1 \\leq k \\leq N-1 \\end{cases}$$</p> <p>這個矩陣是<strong>正交的</strong>：$C^{-1} = C^T$。所以變換是無損的。</p> <h2>五、一個具體例子</h2> <p>$N=4$ 的 DCT 矩陣（精確到兩位小數）：</p> <p>$$C = \\begin{pmatrix} 0.500 & 0.653 & 0.500 & 0.271 \\\\ 0.500 & 0.271 & -0.500 & -0.653 \\\\ 0.500 & -0.271 & -0.500 & 0.653 \\\\ 0.500 & -0.653 & 0.500 & -0.271 \\end{pmatrix}$$</p> <p>每行是一個基底函數在 $n=0,1,2,3$ 的值： - 第 0 行：$\\frac{1}{2}[1, 1, 1, 1]$ → 常數（DC） - 第 1 行：$\\cos$ 從 1 個週期衰減到 0.5 週期 - 第 2 行：$\\cos$ 從 1 個週期衰減到 0 - 第 3 行：$\\cos$ 從 1.5 個週期衰減到 0.5 個週期</p> <p>實際算一個訊號 $[1, 1, 0, 0]$：</p> <p>$y(0) = 0.5 \\cdot (1+1+0+0) = 1$ $y(1) = 0.653 \\cdot 1 + 0.271 \\cdot 1 + (-0.5) \\cdot 0 + (-0.653) \\cdot 0 = 0.924$ $y(2) = 0.5 \\cdot (1+1-0-0) = 1$ $y(3) = 0.271 - 0.653 = -0.382$</p> <p>所以頻譜 $[1, 0.924, 1, -0.382]$——大部分能量在低頻（$k=0,1,2$），高頻（$k=3$）很小。如果要壓縮，可以丟掉 $y(3)$ 而幾乎不影響影像品質。</p> <h2>六、JPEG 的實際運作</h2> <p>JPEG 是 DCT 怎麼用在影像壓縮的經典案例。流程：</p> <ol> <li>把影像切成 $8 \\times 8$ 的小區塊。</li> <li>每個區塊做 2D DCT（先對行、再對列）。</li> <li>用「量化矩陣」（對低頻用細量化、對高頻用粗量化）量化係數。</li> <li>對量化後的係數做行程編碼（RLE）+ Huffman 編碼。</li> </ol> <p>整個過程中，<strong>DCT 是把影像變到頻域的關鍵步驟</strong>，量化是「<strong>砍掉視覺不敏感的高頻</strong>」的核心。</p> <p>每個 $8×8$ 區塊從 64 個像素變成 64 個 DCT 係數，但因為高頻係數通常很小（量化後變 0），可以被忽略——所以<strong>實際保留的係數遠少於 64</strong>，壓縮率可達 10:1 甚至更高。</p> <h2>七、為什麼 DCT 比 DFT 好？</h2> <p>關鍵：<strong>DCT 用實數 cos 基底 + 偶延拓</strong>，完美解決了 DFT 的兩個問題： 1. <strong>沒有洩漏</strong>：偶延拓讓邊界平滑，沒有高頻雜訊。 2. <strong>能量更集中</strong>：對一階 Markov 訊號（典型影像），DCT 接近 KLT 最佳。</p> <p>工程上的好處：DCT 只用實數運算（沒有複數），對硬體實作更便宜。</p> <h2>八、常見誤解</h2> <ol> <li><strong>「DCT 跟 DFT 結果相同」</strong>：錯。DCT 用 cos，DFT 用 cos 和 sin 的組合，結果通常不同（除非訊號是偶函數）。</li> <li><strong>「DCT 沒有逆變換」</strong>：錯。DCT-III 是 DCT-II 的反變換，可完美重建原訊號。</li> <li><strong>「DCT 只能用於 JPEG」</strong>：錯。DCT 廣泛用於語音編碼（MP3/AAC）、影像（MPEG、HEVC）、數據壓縮。</li> <li><strong>「DCT 越大越好」</strong>：錯。DCT 區塊大小要選對（$8×8$ 是實驗得出的最佳取捨）。太小丟失低頻，太大則「blocky artifact」明顯。</li> </ol> <h2>九、與其他變換的比較</h2> <table> <thead> <tr> <th>變換</th> <th>基底</th> <th>能量集中度</th> <th>計算成本</th> <th>適合場景</th> </tr> </thead> <tbody> <tr> <td>KLT/PCA</td> <td>從資料學</td> <td>最佳</td> <td>高</td> <td>資料自適應場景</td> </tr> <tr> <td>DFT</td> <td>複指數</td> <td>尚可</td> <td>FFT $O(N \\log N)$</td> <td>通用訊號分析</td> </tr> <tr> <td>DCT</td> <td>實 cos</td> <td>接近 KLT（影像）</td> <td>$O(N \\log N)$</td> <td>影像/語音壓縮</td> </tr> <tr> <td>Hadamard</td> <td>$\\pm 1$</td> <td>尚可</td> <td>$O(N \\log N)$ 無乘法</td> <td>硬體受限</td> </tr> </tbody> </table> <h2>十、一句話收尾</h2> <p><strong>DCT 用實數 cos 基底 + 偶延拓，巧妙避開了 DFT 的頻譜洩漏，對影像（一階 Markov 訊號）幾乎達到 KLT 最佳的能量集中度</strong>——這是為什麼 JPEG/MPEG/MP3 全部選它、為什麼我們能在 200KB 裡存下一張 1024×768 的照片。下次你壓縮圖片時，記得「DCT 是幕後功臣」。</p>", "14": "<p>同學，<strong>KP-13</strong> 的 DCT 用的是 cos 波，每個基底值都是一個精細的小數（像可調光的旋鈕，要多亮有多亮）。今天這節的 Hadamard 變換走完全相反的路線——<strong>它的基底只有兩檔：開（$+1$）跟關（$-1$），沒有中間值</strong>。整篇我用「<strong>電燈開關板</strong>」這個類比走到底。</p> <h2>一、主線類比：只有開關、沒有旋鈕的控制板</h2> <p>想像 DCT/DFT 的基底像一整排「可調光旋鈕」——每一顆旋鈕都能轉出從全暗到全亮之間任何一個精細的亮度值（對應 $\\cos$ 的連續數值），要算出結果得做「乘法」（旋鈕角度 $\\times$ 訊號值）。Hadamard 完全不玩這套——<strong>它的控制板上全部都是「電燈開關」，只有開（$+1$）跟關（$-1$）兩檔</strong>。要把訊號投影到這個基底上，你不需要「乘」任何小數，只需要「加上」開著的燈的值、「減掉」關著的燈的值——<strong>純粹的加減法，一次乘法都不用</strong>。這正是它在硬體資源緊張的場合（嵌入式晶片、即時處理）大受歡迎的原因。</p> <h2>二、構造：一步一步把小方陣疊成大方陣</h2> <p>Hadamard 矩陣用 Kronecker 乘積遞迴建構，起點是最小的 $2\\times2$ 方陣：</p> <p>$$H_1=\\frac{1}{\\sqrt2}\\begin{pmatrix}1&1\\\\1&-1\\end{pmatrix}$$</p> <p>往上疊一層：</p> <p>$$H_n=H_1\\otimes H_{n-1}$$</p> <p>也就是把 $H_{n-1}$ 整個方陣「複製四份」，貼進 $H_1$ 的四個位置的正負號模式裡——正號位置貼原方陣，負號位置貼原方陣的負版本。矩陣大小永遠是 $N=2^n$。</p> <h2>三、數值演算：$N=4$ 的 Hadamard 矩陣長什麼樣</h2> <p>套公式疊出 $H_2$（$N=4$）：</p> <p>$$H_2=H_1\\otimes H_1=\\frac{1}{2}\\begin{pmatrix}1&1&1&1\\\\1&-1&1&-1\\\\1&1&-1&-1\\\\1&-1&-1&1\\end{pmatrix}$$</p> <p>檢查一下第二列 $[1,-1,1,-1]$：這是「開－關－開－關」的燈號模式，抓的是「相鄰像素反覆跳動」的頻率成分——概念上跟 DCT 裡某個中頻基底類似，只是用「硬跳」的方波取代「軟滑」的餘弦波。驗算它跟自己的內積：$1^2+(-1)^2+1^2+(-1)^2=4$，除以 $N=4$ 剛好是 1（正規化後單位長度）——確實是正交基底。</p> <h2>四、么正性：$H_n$ 是自己的逆</h2> <p>Hadamard 矩陣有個很省事的性質：</p> <p>$$H_n^{-1}=H_n^T=H_n$$</p> <p>它是<strong>對稱矩陣，而且自己就是自己的反矩陣</strong>。意思是：做正變換跟做逆變換，用的是<strong>同一個矩陣、同一組加減法</strong>——你不用另外準備一套「逆變換用的開關板」，正著做一次、反著再做一次，訊號就變回原樣。</p> <h2>五、主動回想：跟 DCT 拼能量集中度，誰會贏？</h2> <p>猜猜看：既然 Hadamard 這麼便宜（純加減法），它的能量打包（把大部分資訊塞進少數幾個係數）能力會不會也是最好的？<strong>答案是不會</strong>——Hadamard 的能量集中度介於「還可以」跟「不錯」之間，比隨機基底好很多，但<strong>輸給 DCT</strong>（<strong>KP-13</strong>）。DCT 用平滑的餘弦波，跟自然影像的漸變特性更貼合；Hadamard 用硬邦邦的方波，遇到平滑漸變的區域反而要動用更多係數才描述得完整。換句話說：<strong>Hadamard 用「便宜」換「還可以」的壓縮效果，DCT 用「稍貴一點的乘法」換「更好」的壓縮效果</strong>——這是一個典型的計算成本 vs. 壓縮率的取捨。</p> <h2>六、舉一反三</h2> <p>如果你手邊的硬體完全不能做乘法（只有加法器，這在某些超低功耗的嵌入式感測器上是真實情境），你會在 DCT 和 Hadamard 之間選哪個？為什麼？（提示：想想第五節的取捨——當「能不能做乘法」變成硬限制，原本「壓縮率稍差」這個缺點，還算不算缺點？）</p> <h2>七、常見誤解</h2> <ol> <li><strong>誤解一：以為 Hadamard 矩陣元素是 $0/1$（開關的字面意思）。</strong> 不是——元素是 $\\pm1/\\sqrt N$（正規化後），對應「加」或「減」，不是「有」或「沒有」。「開關」類比說的是「只有兩種選擇、沒有中間值」，不是元素真的是二進位的 0/1。</li> <li><strong>誤解二：以為 Hadamard 一定比 DFT/DCT 差，沒有存在的必要。</strong> 在「能量打包」這個單一指標上它確實遜於 DCT，但它的優勢是<strong>運算複雜度最低、硬體實作最省電</strong>——選變換要看場景，不是只看壓縮率一個指標。</li> </ol> <h2>八、跨知識點掛勾</h2> <p>Hadamard 跟 <strong>KP-11／KP-12</strong> 的 DFT、<strong>KP-13</strong> 的 DCT 同屬「固定基底變換」家族——基底都是預先定好、不用從資料學的（跟 <strong>KP-3</strong> KLT／PCA「基底從資料學出來」正好相反）。三者的差異全部濃縮在「算得多快」與「壓得多緊」這兩個維度的取捨上：DFT 通用但頻譜洩漏較多，DCT 能量最集中，Hadamard 運算最省。</p> <h2>九、一句話收尾</h2> <p><strong>Hadamard 變換的基底只有「開（+1）」跟「關（-1）」兩檔，沒有旋鈕、不用乘法——用最便宜的加減法換一個「還不錯」的能量打包效果，是資源緊張場合的首選。</strong></p>", "15": "<p>同學啊，今天的主角 Haar 變換，是所有小波變換的「老祖宗」。它的口訣只有一句：<strong>「相鄰兩點，一算平均、一算差值；重複對平均再平均，你就把訊號分層剝到不同尺度。」</strong> 整篇我用一個生活類比貫穿——「<strong>給一幅畫分格、記總色與細紋</strong>」。</p> <h2>一、主線類比：看畫，先看大色塊，再看細紋</h2> <p>你貼近看一幅畫，會看到密密麻麻的細節；後退五步，細節糊成一片，只剩大塊大塊的顏色。人類看東西本來就是「<strong>先抓大結構、再看小細節</strong>」。Haar 變換就是在模仿這件事：它把相鄰的像素<strong>兩兩配對</strong>，第一步算出「這一對的平均值」（大色塊，低頻），再算出「這一對的差值」（細紋，高頻）。<strong>平均值讓你後退看到大局，差值讓你貼近看到稜角</strong>——訊號就這樣被拆成「總色」與「細節」兩類，而且可以一層層往更粗的大局拆下去。</p> <h2>二、為什麼要這樣拆？它解決了什麼？</h2> <p>想想你有一長串像素 $x(0),x(1),\\dots$。單看原始數字，你分不出「這塊整體偏亮」和「這個地方突然有個銳利邊緣」哪個訊號、哪個雜訊。Haar 的妙處是<strong>把兩種訊息分開打包</strong>：平滑的「平均」走一條線、劇烈的「差值」走另一條線。這正是「<strong>多解析度分析（multiresolution analysis）</strong>」的雛形——<strong>用不同尺度同時看訊號</strong>，粗尺度看全局、細尺度看局部。後來所有高級小波（Daubechies、symlet）都是把 Haar 這顆「方方正正、不容欺騙的階梯」換成更圓滑的形狀而已。</p> <h2>三、數學：逐符號拆解</h2> <p>Haar 的基底函數是「階梯」形狀，第一號基底是常數：</p> <p>$$h_0(z)=\\frac{1}{\\sqrt{L}}$$</p> <p>$L$ 是總樣本數，這條「全平」的線代表「純平均」。真正精彩的是後面那幾條「正負階梯」，記作 $h_{pq}(z)$，它在 $[0,1]$ 上長這樣：</p> <p>$$h_{pq}(z)=\\frac{1}{\\sqrt{L}}\\begin{cases} 2^{p/2} & \\frac{q-1}{2^p}\\le z\\lt \\frac{q-1/2}{2^p}\\\\[2pt] -2^{p/2} & \\frac{q-1/2}{2^p}\\le z\\lt \\frac{q}{2^p}\\\\[2pt] 0 & \\text{其他} \\end{cases}$$</p> <p>別被嚇到，認兩個角色就夠：</p> <ul> <li>$p$：<strong>尺度索引</strong>。$p$ 小 = 階梯很寬 = 粗尺度；$p$ 大 = 階梯很窄 = 細尺度。</li> <li>$q$：<strong>位置索引</strong>。這條階梯「前一半正、後一半負」的凸起，落在區間 $[0,1]$ 的哪一段。</li> </ul> <p>一整條 $h_{pq}$ 的意思就是：「<strong>在範圍 $q$、尺度 $p$ 這個小區間裡，訊號是往上凸還是往下凹</strong>」。它的形狀就像一個小方波——所以叫「階梯基底」。</p> <p>更實用的，是把它讀成兩支<strong>濾波器</strong>：</p> <p>$$y_1(k)=\\frac{x(2k)+x(2k+1)}{\\sqrt{2}} \\qquad\\text{（低通：算平均）}$$</p> <p>$$y_0(k)=\\frac{x(2k)-x(2k+1)}{\\sqrt{2}} \\qquad\\text{（高通：算差值）}$$</p> <p>這兩個式子就是「<strong>看畫的兩隻眼</strong>」：$y_1$ 是「這對點整體亮度」（平均），$y_0$ 是「這對點差多少」（銳利度）。</p> <h2>四、數值演算：八個數字一層層剝</h2> <p>拿 $x=[6,\\ 8,\\ 10,\\ 12,\\ 20,\\ 18,\\ 4,\\ 6]$（前四個緩升、第五六個一個高台、後兩個暴跌）。第一層分解，兩兩配對：</p> <table> <thead> <tr> <th>對</th> <th>平均 $y_1=(a+b)/\\sqrt2$</th> <th>差值 $y_0=(a-b)/\\sqrt2$</th> </tr> </thead> <tbody> <tr> <td>$(6,8)$</td> <td>$14/\\sqrt2\\approx9.90$</td> <td>$-2/\\sqrt2\\approx-1.41$</td> </tr> <tr> <td>$(10,12)$</td> <td>$22/\\sqrt2\\approx15.56$</td> <td>$-2/\\sqrt2\\approx-1.41$</td> </tr> <tr> <td>$(20,18)$</td> <td>$38/\\sqrt2\\approx26.87$</td> <td>$2/\\sqrt2\\approx1.41$</td> </tr> <tr> <td>$(4,6)$</td> <td>$10/\\sqrt2\\approx7.07$</td> <td>$-2/\\sqrt2\\approx-1.41$</td> </tr> </tbody> </table> <p>先別急著收工——把四個「平均」$[9.90,\\ 15.56,\\ 26.87,\\ 7.07]$ 再拿去<strong>做第二層</strong>：</p> <table> <thead> <tr> <th>對</th> <th>平均（第二層的 $y_1$）</th> <th>差值（第二層的 $y_0$）</th> </tr> </thead> <tbody> <tr> <td>$(9.90,15.56)$</td> <td>$18.00$</td> <td>$-4.00$</td> </tr> <tr> <td>$(26.87,7.07)$</td> <td>$24.00$</td> <td>$14.00$</td> </tr> </tbody> </table> <p>你看懂了嗎？<strong>一路「只對平均再平均」，就得到愈來愈粗的全局畫面</strong>：第一層看到局部起伏，第二層看到「前半 block 平均約 18、後半約 24」這種更抽離的對照。這種「低通再低通、一路剝」的樹狀流程，就是教材圖 6.13 那棵「樹狀濾波器組」，也就是多解析度的開端。</p> <h2>五、主動回想：階梯的「局部化」到底強在哪？</h2> <p>這裡有個值得停下的對照：DFT/DCT 的基底是<strong>綿延整個訊號的正弦波</strong>，所以「訊號在第 500 個點突然尖一下」這種<strong>局部突發</strong>，會讓一整條頻譜都動起來（還記得 kp-13 說的頻譜洩漏嗎？）。Haar 的階梯基底卻是<strong>只在一個小區間內非零、其他地方通通等於 0</strong>，所以「第 500 點尖一下」只會驚動它所在那個尺度的那個階梯，別的地方安然無恙。你原本可能覺得「頻率分解就 DCT 最強」——但在「<strong>局部事件 vs 全域波動</strong>」的戰場上，Haar 這種「<strong>時域與頻域都能定位</strong>」的本事，是正弦基底辦不到的，這正是小波大家族崛起的理由。</p> <h2>六、舉一反三：同一套「平均＋差值」搬家</h2> <p>「兩兩配對拆平均與差值」這套骨架，換個場景到處用：</p> <ul> <li><strong>影像壓縮</strong>：先對列、再對行各做一次，得到「低頻大色塊 LL」與「水平 HL、垂直 LH、對角 HH 細節」，把不重要細節量化丟棄。</li> <li><strong>邊緣偵測</strong>：$y_0$ 那些「差值」係數，就正好是「這個位置有沒有跳變」的邊緣響應。</li> <li><strong>訊號去噪</strong>：把細節尺度裡的小係數歸零，保留平均，雜訊就被抹掉。</li> </ul> <p>（留白練習：換一組 $[2,\\ 2,\\ 2,\\ 2,\\ 2,\\ 2,\\ 2,\\ 2]$，你猜所有差值 $y_0$ 是多少？若答案是 0，就抓到了「平坦訊號沒有細節」的直覺。）</p> <h2>七、主動點名：三個新手誤解</h2> <ol> <li><strong>「低通 = 平均、高通 = 差值，方向別記反」</strong>：$y_1$（低通）是<strong>加</strong>、$y_0$（高通）是<strong>減</strong>。很多人在「+ 是低頻還是高頻」這裡摔跤。記法：低頻 = 平滑 = 把變化<strong>抹平</strong> = 平均 = 加；高頻 = 細節 = 抓<strong>變化</strong> = 差。</li> <li><strong>「以為 Haar 的基底是平滑的正弦」</strong>：錯，Haar 是<strong>方塊階梯</strong>，畫出來就是一格一格的階梯線，不是圓滑曲線。這讓它計算超便宜（只有加減乘一常數），但也讓它在傅立葉意義上的頻率分離不乾淨——這是它跟光滑小波（Daubechies）相比的罩門。</li> <li><strong>「下採樣會丟資訊」</strong>：表面看，平均完取一半（每隔兩點取一點，$M=2$ 下採樣）好像丟了一半資訊。其實沒有——另一半被「差值」那條線接著了。<strong>平均＋差值合起來，訊號可以完美重建</strong>，一根毛都不少。</li> </ol> <h2>八、與整章的其他知識掛勾</h2> <p>Haar 坐的是「固定基底變換」這桌，跟 DFT（kp-11）、DCT（kp-13）、Hadamard 同席：基底固定、不必學，但<strong>Haar 獨家多了「時頻局部化」</strong>——這是 DCT/DFT 沒有的。它又是下一站「離散小波變換 DTWT」的直接前身：把 Haar 的硬階梯換成 Daubechies 的平滑濾波器，再把「兩兩拆」擴成「完美重建濾波器組」，就從「平均/差值」進化到真正的多解析度小波（kp-17 的 JPEG2000 就靠這一路）。到 Ch7，Haar 係數也是最快能算的局部特徵。</p> <h2>九、一句話收尾</h2> <p><strong>Haar 變換是「看畫先看大色塊、再看細紋」的階梯老法師：相鄰兩點一算平均（低通）、一算差值（高通），一路只對平均再平均，就把訊號剝成漸粗的解析度</strong>——它用最樸素的 ±1 階梯，撬開了整個多解析度分析的大門。</p>", "16": "<p>同學，<strong>KP-15</strong> 的 Haar 變換其實已經在做這節的事了，只是用最陽春的工具——「相鄰兩點取平均、取差值」。今天我們把這套手法升級成正式的<strong>濾波器組（filter bank）</strong>，用更講究的濾波器取代 Haar 那組死板的階梯波。整篇我用「<strong>包裹分揀機</strong>」這個類比走到底。</p> <h2>一、主線類比：把包裹拆成兩條輸送帶，再原封不動裝回去</h2> <p>想像一條包裹輸送帶（你的訊號 $x(n)$）進了分揀站。分揀機把它拆成<strong>兩條</strong>輸送帶：</p> <ul> <li><strong>低通輸送帶</strong>：用濾波器 $H_1(z)$ 把「大方向、粗輪廓」的包裹留下——這是「概略版本」。</li> <li><strong>高通輸送帶</strong>：用濾波器 $H_0(z)$ 把「細節、跳動」的包裹留下——這是「細節版本」。</li> </ul> <p>兩條帶各自的包裹量都只有原本的一半（<strong>下採樣 $M=2$</strong>，因為資訊沒有真的變多，只是被分成兩份、各自打包得更精簡）。分揀完，你想把包裹送回原本的單一輸送帶：先把兩條帶各自「灌水回原速」（<strong>上採樣</strong>），再用合成濾波器 $G_0(z), G_1(z)$ 重新組合、加總。如果分揀機跟組裝機是「配對好」的一組，包裹會<strong>分毫不差地變回原本的樣子</strong>——這就是「完美重建」。<strong>KP-15</strong> 的 Haar，就是這套分揀機裡最簡陋、只有兩個 tap 的一組濾波器。</p> <h2>二、公式：逐符號拆解</h2> <p>分析端（拆開）：</p> <p>$$y_i(k)=\\sum_n x(n)\\,h_i(2k-n)$$</p> <p>$i\\in\\{0,1\\}$ 分別代表高通、低通輸送帶，$2k-n$ 裡的「$2k$」就是下採樣的體現——每兩個原始樣本只留一個輸出。</p> <p>合成端（裝回去）：</p> <p>$$x(n)=\\sum_i\\sum_k y_i(k)\\,g_i(n-2k)$$</p> <p><strong>完美重建條件</strong>（分析／合成濾波器必須滿足的配對關係）：</p> <p>$$\\sum_n h_i(2k-n)\\,g_j(n-2l)=\\delta_{kl}\\delta_{ij}$$</p> <p>翻成白話：<strong>把訊號用 $h_i$ 拆開、再用 $g_j$ 併回去，除了「同一條帶、同一個位置」貢獻 1 之外，其他所有交叉組合都必須貢獻 0</strong>——這樣拆開再併回去，才不會把不同帶、不同位置的東西混在一起，保證原封不動。這種 $h$ 跟 $g$ 不必相同、只要「配對」的關係，叫<strong>雙正交（biorthogonal）</strong>。</p> <h2>三、特例：正交濾波器組——合成端是分析端的時間反轉</h2> <p>當分析濾波器自己滿足正交性 $\\sum_n h_j^i(2k-n)h_j(2l-n)=\\delta_{kl}\\delta_{ij}$ 時，會有一個很省事的結果：</p> <p>$$g_i(n)=h_i(-n)$$</p> <p><strong>合成濾波器就是分析濾波器「時間軸反過來播」而已</strong>，不需要另外設計一套。這種叫<strong>正交／paraunitary 濾波器組</strong>，Daubechies 小波走的正是這條路。</p> <h2>四、Daubechies 小波：把 Haar 的硬階梯換成平滑曲線</h2> <p>Haar（<strong>KP-15</strong>）的濾波器只有 2 個 tap（$[1,1]/\\sqrt2$ 和 $[1,-1]/\\sqrt2$），簡單但「方頻率響應」——時頻局部化不夠乾淨。Daubechies 把 tap 數拉長到 4、6、8、10……，換來的是<strong>濾波器形狀變平滑、頻域響應更集中</strong>，代價是計算量略增。這是第一組「緊支撐（compact support）的正交小波」——支撐範圍有限（不像 sin/cos 無限延伸），又保有正交性，兩全其美。</p> <h2>五、數值演算：兩層下採樣，長度怎麼變</h2> <p>假設輸入訊號長度 $N=16$。第一層濾波＋下採樣後，低通與高通輸出各長 $16/2=8$。若只對低通那條再做一次濾波＋下採樣（這就是<strong>多解析度樹</strong>的做法，只往低通那邊繼續分解），第二層低通、高通輸出各長 $8/2=4$。兩層下來，你手上有：第一層高通（長 8，細節層 1）、第二層高通（長 4，細節層 2）、第二層低通（長 4，最粗略的近似）——加總長度 $8+4+4=16$，<strong>跟原始訊號一樣長，沒有多、沒有少</strong>，只是換了一種「粗細分層」的方式表示。</p> <h2>六、主動回想：為什麼只對低通那條繼續分解？</h2> <p>猜猜看：如果每一層都同時對低通<strong>和</strong>高通兩條帶繼續往下分解（而不是只分解低通），會發生什麼事？——這其實是存在的，叫「小波包（wavelet packet）」，<strong>KP-17</strong> 會提到。但標準 DTWT 為什麼只挑低通繼續切？因為<strong>細節（高通）部分通常已經是雜訊等級的高頻小波動，繼續切下去邊際效益很低</strong>；而低通那條還保留著大量「粗結構」，值得繼續往更粗的解析度分解，這樣才能建出效率最好的多解析度樹。</p> <h2>七、舉一反三</h2> <p>如果你用一個 4-tap 的 Daubechies 濾波器取代 Haar 的 2-tap 濾波器，重複第五節的「長度計算」（$N=16$，兩層分解），輸出長度總和還會不會等於 16？（提示：只要滿足完美重建條件，不管濾波器 tap 數多長，「總長度守恆」這件事都成立——自己想想為什麼。）</p> <h2>八、常見誤解</h2> <ol> <li><strong>誤解一：以為濾波器 tap 數越長，效果一定越好，應該無限拉長。</strong> 不對——tap 越長，濾波器的「時間局部性」越差（影響範圍變大），且計算成本上升。Daubechies 4/8/16 tap 是常見的折衷選擇，要依應用場景（需要多精細的時頻局部化）決定，不是越長越好。</li> <li><strong>誤解二：以為完美重建只要濾波器「長得對稱」就夠。</strong> 對稱（線性相位）是額外想要的性質，但<strong>真正決定能不能完美重建的是雙正交條件本身</strong>，不是對稱性——某些完美重建濾波器組（如某些 Daubechies 家族）甚至不是對稱的。</li> </ol> <h2>九、跨知識點掛勾</h2> <p>DTWT 是 <strong>KP-15</strong> Haar 變換的正式升級版——把「相鄰取平均取差值」的陽春手法，換成正式的雙正交濾波器組理論，並用 Daubechies 濾波器取代硬階梯基底。它同時也是 <strong>KP-17</strong> 「小波包、多解析度、二維推廣」的直接前身：多解析度樹只對低通遞迴分解，小波包則兩條帶都遞迴分解，二維推廣則是把整套機制像 <strong>KP-12</strong> 的 2D DFT 一樣「先橫著做、再直著做」搬到影像上。</p> <h2>十、一句話收尾</h2> <p><strong>DTWT 就是一台「先用 $H_0/H_1$ 把訊號拆成細節帶與概略帶（各自砍半），再用配對好的 $G_0/G_1$ 原封不動裝回去」的分揀機——只要滿足雙正交的完美重建條件，拆開再併回去就不會丟失任何東西，換上 Daubechies 濾波器還能拆得比 Haar 更精緻。</strong></p>", "17": "<p>同學啊，我們在前面聊了 DFT、DCT，它們是「<strong>全域</strong>」的頻譜分析——給你一段訊號，它告訴你「<strong>這段訊號整體有哪些頻率</strong>」，但不知道「這些頻率是<strong>什麼時候</strong>出現的」。</p> <p>小波變換（Wavelet Transform）的天才想法是：<strong>如果我們把訊號切成一小塊一小塊，分別分析每塊的頻率呢？</strong> 這樣既能知道「有哪些頻率」，也能知道「<strong>什麼時候出現</strong>」——時頻局部化（time-frequency localization）。</p> <h2>一、先講個生活故事</h2> <p>你聽一首交響樂。樂曲前半段是低音的大提琴，後半段是高音的小提琴。如果你用 DFT 對整首樂曲變換，你會得到「大提琴 + 小提琴」的頻譜，但你<strong>不知道大提琴在前面、小提琴在後面</strong>。</p> <p>但如果你把樂曲切成「前 30 秒」+「中 30 秒」+「後 30 秒」，分別對每段做 DFT——你就會得到「前段主要是低頻、中段低高都有、後段主要是高頻」的<strong>時頻地圖</strong>。</p> <p>這就是 STFT（Short-Time Fourier Transform）的想法：切成小塊做 DFT。但 STFT 有個問題——「塊的大小」是固定的。塊太小，低頻資訊不準；塊太大，瞬時變化被平均掉。</p> <p><strong>小波變換的突破</strong>：在不同尺度上用<strong>不同大小</strong>的小塊。低頻用大塊（保持頻率解析度），高頻用小塊（保持時間解析度）。這就是<strong>多解析度分析（multiresolution analysis）</strong>。</p> <h2>二、母小波與尺度/位移</h2> <p>小波變換的核心是<strong>母小波（mother wavelet）</strong> $\\psi(t)$，一個「小」且「波動」的函數，有兩個必備性質： 1. $\\int_{-\\infty}^{\\infty} \\psi(t) dt = 0$（總面積為 0，所以能「震盪」） 2. $\\int |\\psi(t)|^2 dt = 1$（能量有限）</p> <p>常見的母小波： - <strong>Haar 小波</strong>：$\\psi(t) = 1$（$0 \\leq t \\lt  0.5$），$\\psi(t) = -1$（$0.5 \\leq t \\lt  1$）—— 最簡單但太「硬」。 - <strong>Daubechies 小波</strong>：更平滑，長度 4、6、8、10... 的版本——JPEG2000 用 Daubechies 9/7。 - <strong>Morlet 小波</strong>：高斯調變的正弦波——常用於時頻分析。</p> <p>有了母小波，<strong>子小波</strong>（daughter wavelets）通過<strong>尺度（scale）</strong>與<strong>位移（translation）</strong>生成：</p> <p>$$\\psi_{a,b}(t) = \\frac{1}{\\sqrt{a}} \\psi\\left(\\frac{t-b}{a}\\right)$$</p> <p>$a$ 控制「大小」（$a$ 大 = 拉伸 = 慢變化 = 低頻；$a$ 小 = 壓縮 = 快變化 = 高頻），$b$ 控制「位置」（$b$ = 在時間軸的哪裡）。</p> <p>連續小波變換（CWT）：</p> <p>$$W(a,b) = \\int_{-\\infty}^{\\infty} x(t) \\psi_{a,b}(t) dt$$</p> <p>每個 $(a,b)$ 給一個係數——這就是訊號在「<strong>時頻平面</strong>」的表示。</p> <h2>三、離散小波變換（DWT）</h2> <p>實務上，連續變換太冗餘（每個 $(a,b)$ 都算一遍）。離散版本通常用<strong>二元尺度</strong> $a = 2^j$（$j$ 是整數）：</p> <p>$$\\psi_{j,k}(n) = \\frac{1}{\\sqrt{2^j}} \\psi\\left(\\frac{n - k 2^j}{2^j}\\right)$$</p> <p>對應的離散小波變換（DWT）：</p> <p>$$y(j, k) = \\sum_n x(n) \\psi_{j,k}(n)$$</p> <p>$j$ 是尺度索引（0 = 最高頻，$J-1$ = 最低頻），$k$ 是位移。</p> <h2>四、濾波器組：實作的優雅</h2> <p>DWT 最酷的地方在於——它<strong>等價於一個樹狀濾波器組</strong>！</p> <p><strong>兩頻帶濾波器組</strong>（two-band filter bank）： - <strong>分析端</strong>：低通濾波器 $H_1(z)$ + 高通濾波器 $H_0(z)$ + 下採樣（decimation）$M=2$。 - 低通輸出：$y_1(k) = \\sum_n x(n) h_1(2k-n)$ = <strong>平均值</strong>（coarse） - 高通輸出：$y_0(k) = \\sum_n x(n) h_0(2k-n)$ = <strong>差值</strong>（detail） - <strong>合成端</strong>：上採樣（upsampling）$M=2$ + 低通 $G_1(z)$ + 高通 $G_0(z)$ + 加總。</p> <p><strong>完美重建</strong>條件：</p> <p>$$\\hat{x}(n) = x(n)$$</p> <p>當且僅當 $H_0$、$H_1$、$G_0$、$G_1$ 滿足<strong>雙正交性</strong>（biorthogonality）：</p> <p>$$\\sum_n h_i(2k-n) g_j(n-2l) = \\delta_{kl} \\delta_{ij}$$</p> <p>或者在正交情況下，合成濾波器就是分析濾波器的時間反轉：$g_i(n) = h_i(-n)$。</p> <p><strong>樹狀遞迴</strong>：把低通輸出再過濾波器組、再下採樣——得到多層解析度。這就是<strong>多解析度分析</strong>。</p> <h3>小波包（Wavelet Packets）：把「所有節點」都拆到底</h3> <p>標準的小波分解有個「偏心」的習慣——<strong>只一路追著『低通（平均）』那條分支繼續往下拆，高通的細節分支就放著不動</strong>。想像那是一棵只有「主幹一直長、但側枝只長一節就停」的樹。</p> <p><strong>小波包（wavelet packets）的點子就是：別偏心，讓樹上每個節點——不管高通還是低通——都繼續往下分解。</strong> 這樣你得到一棵「滿樹」，一格一格把頻率軸切得更細。好處在哪？標準小波的低頻解析度很細、高頻卻只粗略分半；小波包則連高頻區也能細切，<strong>頻率分割的彈性大增</strong>，特別適合「訊號分類」：每個 packet 對應一個特定的子頻帶，你可以站在分類器的立場，<strong>挑出「最有判別力」的那幾個子頻帶子集</strong>，不必死守固定的金字塔。比方說某種材質的紋理能量集中在某個中間頻帶，小波包就能把那個頻帶孤拎出來，標準小波反而抓不到。</p> <p>（記住這個對照：<strong>標準 DWT = 只拆低通的瘦樹；小波包 = 高低通都拆的滿樹</strong>，一個保省事、一個換彈性。）</p> <h2>五、2D 小波：影像多解析度的基石</h2> <p>對影像做 2D DWT，用<strong>可分離</strong>方式： - 先對每行做 1D DWT → 產生水平子帶 $L, H$ - 再對每列做 1D DWT → 產生 <strong>LL（低低）</strong>、<strong>LH（低高）</strong>、<strong>HL（高低）</strong>、<strong>HH（高高）</strong> 四個子帶</p> <table> <thead> <tr> <th></th> <th>低通（行）</th> <th>高通（行）</th> </tr> </thead> <tbody> <tr> <td><strong>低通（列）</strong></td> <td>LL（粗糙）</td> <td>LH（水平邊緣）</td> </tr> <tr> <td><strong>高通（列）</strong></td> <td>HL（垂直邊緣）</td> <td>HH（對角邊緣）</td> </tr> </tbody> </table> <p>重複對 LL 做分解，得到「<strong>多解析度金字塔</strong>」——這是 JPEG2000 的核心。</p> <p>直覺： - <strong>LL</strong>：低解析度的影像輪廓（人臉的整體形狀）。 - <strong>LH</strong>：水平邊緣（眼睛、嘴巴的水平線）。 - <strong>HL</strong>：垂直邊緣（鼻子的垂直線）。 - <strong>HH</strong>：對角邊緣與細節（頭髮紋理）。</p> <h2>六、JPEG2000 vs JPEG</h2> <p><strong>JPEG</strong>：基於 DCT，把影像切成 $8×8$ 區塊各自變換。在低壓縮率時表現好，但高壓縮率時會出現「<strong>方塊效應</strong>（blocky artifact）」——那是 $8×8$ 邊界的不連續。</p> <p><strong>JPEG2000</strong>：基於小波，整張影像做多解析度變換。在低壓縮率與 JPEG 相當，但<strong>高壓縮率時優於 JPEG</strong>——因為小波沒有固定區塊，方塊效應消失。</p> <p>實務上，JPEG 仍是最常用（相容性好），JPEG2000 用在醫學影像（無方塊效應很重要）、電影（DCI 標準）。</p> <h2>七、為什麼小波這麼厲害？</h2> <p><strong>三個關鍵性質</strong>：</p> <ol> <li> <p><strong>時頻局部化</strong>：與 DFT 不同，小波能同時告訴你「什麼頻率」+「<strong>什麼時候</strong>」。這對非平穩訊號（如語音、地震）特別重要。</p> </li> <li> <p><strong>多解析度</strong>：自然界的訊號往往在多尺度上有結構（影像邊緣在不同尺度都存在），小波能捕捉這種結構。</p> </li> <li> <p><strong>緊支撐</strong>：Daubechies 小波在時域和頻域都有「有限長度」（compact support）——不會像 DFT 那樣在時域無限延伸。</p> </li> </ol> <p>直覺：DFT 像「站在遠處用廣角鏡看房間」，什麼都看到但每個細節模糊；小波像「拿著手電筒在房間各處移動」，每次只照亮一小塊，但細節清楚。</p> <h2>八、常見誤解</h2> <ol> <li><strong>「小波變換是 DFT 的替代品」</strong>：部分對，但小波更強大（時頻局部化），DFT 仍是某些場景的首選（如純週期訊號）。</li> <li><strong>「小波可以重建任何訊號」</strong>：對，正交小波 + 雙正交小波都能完美重建，但<strong>有界帶寬</strong>假設必須滿足。</li> <li><strong>「小波比 DFT 慢」</strong>：錯。DWT 用濾波器組，複雜度 $O(N)$，比 FFT 的 $O(N \\log N)$ 更快。</li> <li><strong>「小波只能用於 1D」</strong>：錯。2D 小波是影像處理的標準工具。</li> <li><strong>「小波可以同時完美定位時域和頻域」</strong>：錯。Heisenberg 不確定性原理告訴我們「時域解析度 × 頻域解析度 $\\geq 1/4$」。小波在不同尺度做了 trade-off。</li> </ol> <h2>九、Ch7 的對應</h2> <p>Ch7 講的「傅立葉描述子」（Fourier descriptors for shape）用的是 1D DFT 沿物體邊界——這跟小波分析的對應關係是：<strong>DFT 用於形狀的週期性輪廓，小波用於非週期性局部特徵</strong>。兩者各有擅場。</p> <h2>十、一句話收尾</h2> <p><strong>小波變換用「會看局部」的時頻分析取代「只看全域」的 DFT，用濾波器組實作多解析度分析，用小波基底的雙正交性保證完美重建</strong>——它是 JPEG2000、地震分析、心電圖分析、訊號去噪的共同基石。下次你壓縮圖片或聽音樂時，記得「小波在背後默默工作」。</p> <p>未來看 Ch7 的形狀描述子時，會發現「傅立葉描述子」是小波的「週期性特殊版」——同樣的數學精神，不同的應用場景。</p>"};
+  var modal = document.getElementById('guide-modal');
+  function openGuide(kp){
+    modal.querySelector('h1').textContent = GUIDE_TITLES[kp] || '';
+    modal.querySelector('.modal-body').innerHTML = GUIDE_CONTENT[kp] || '';
+    modal.classList.add('open');
+    if(window.renderMath) window.renderMath();
+  }
+  window.closeGuide = function(){ modal.classList.remove('open'); };
+  window.openGuide = openGuide;
+  document.addEventListener('click', function(e){
+    if(e.target.classList && e.target.classList.contains('guide-btn')){
+      openGuide(parseInt(e.target.dataset.kp));
+    }
+    if(e.target.classList && e.target.classList.contains('modal-close')){
+      window.closeGuide();
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

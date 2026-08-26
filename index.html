@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CCC 課程講義</title>
+<style>
+  :root{
+    --bg:#f7f7f5; --card-bg:#ffffff; --text:#1f2328; --muted:#6b7280;
+    --accent:#2563eb; --accent-soft:#eef2ff; --border:#e5e7eb;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.6;
+  }
+  header{
+    padding:3rem 1.5rem 2rem; text-align:center;
+    background:linear-gradient(180deg,#ffffff,var(--bg));
+    border-bottom:1px solid var(--border);
+  }
+  header h1{margin:0 0 .5rem; font-size:1.9rem;}
+  header p{margin:0; color:var(--muted); font-size:.95rem;}
+  main{max-width:920px; margin:0 auto; padding:2rem 1.5rem 4rem;}
+  .course{margin-bottom:2.5rem;}
+  .course h2{
+    font-size:1.25rem; margin:0 0 1rem; padding-bottom:.5rem;
+    border-bottom:2px solid var(--accent-soft);
+  }
+  .grid{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+    gap:.9rem;
+  }
+  .card{
+    display:block; padding:1rem 1.1rem; background:var(--card-bg);
+    border:1px solid var(--border); border-radius:10px; text-decoration:none;
+    color:var(--text); transition:border-color .15s, transform .15s, box-shadow .15s;
+  }
+  .card:hover{
+    border-color:var(--accent); transform:translateY(-2px);
+    box-shadow:0 4px 14px rgba(37,99,235,.12);
+  }
+  .card .badge{
+    display:inline-block; font-size:.72rem; font-weight:600; color:var(--accent);
+    background:var(--accent-soft); padding:.15rem .5rem; border-radius:99px; margin-bottom:.5rem;
+  }
+  .card .title{font-size:.95rem; font-weight:500;}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; padding:1.5rem; border-top:1px solid var(--border);}
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0f1117; --card-bg:#171a23; --text:#e6e8eb; --muted:#9aa1ab;
+      --accent:#7aa2ff; --accent-soft:#1c2333; --border:#262b36;
+    }
+    header{background:linear-gradient(180deg,#171a23,var(--bg));}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>課程講義總覽</h1>
+  <p>互動式自學講義 · 點選章節即可開啟</p>
+</header>
+<main>
+  <section class="course">
+    <h2>Pattern Recognition（PR 115）</h2>
+    <div class="grid">
+      <a class="card" href="PR_115/Ch01-introduction/index.html"><span class="badge">Ch01</span><div class="title">導論（Introduction）</div></a>
+      <a class="card" href="PR_115/Ch02-bayes-classifiers/index.html"><span class="badge">Ch02</span><div class="title">以貝氏決策理論為基礎的分類器</div></a>
+      <a class="card" href="PR_115/Ch03-linear-classifiers/index.html"><span class="badge">Ch03</span><div class="title">線性分類器</div></a>
+      <a class="card" href="PR_115/Ch04-nonlinear-classifiers/index.html"><span class="badge">Ch04</span><div class="title">非線性分類器（Nonlinear Classifiers）</div></a>
+      <a class="card" href="PR_115/Ch05-feature-selection/index.html"><span class="badge">Ch05</span><div class="title">特徵選擇（Feature Selection）</div></a>
+      <a class="card" href="PR_115/Ch06-feature-generation-i/index.html"><span class="badge">Ch06</span><div class="title">特徵生成 I：資料轉換與降維</div></a>
+      <a class="card" href="PR_115/Ch07-feature-generation-ii/index.html"><span class="badge">Ch07</span><div class="title">特徵生成 II：影像與音訊特徵</div></a>
+      <a class="card" href="PR_115/Ch08-template-matching/index.html"><span class="badge">Ch08</span><div class="title">樣板匹配（Template Matching）</div></a>
+      <a class="card" href="PR_115/Ch09-context-dependent-classification/index.html"><span class="badge">Ch09</span><div class="title">情境相關分類（Context-Dependent Classification）</div></a>
+      <a class="card" href="PR_115/Ch10-supervised-epilogue/index.html"><span class="badge">Ch10</span><div class="title">監督式學習終章（Supervised Learning: The Epilogue）</div></a>
+      <a class="card" href="PR_115/Ch11-clustering-basic-concepts/index.html"><span class="badge">Ch11</span><div class="title">分群：基本概念（Clustering: Basic Concepts）</div></a>
+      <a class="card" href="PR_115/Ch12-clustering-sequential/index.html"><span class="badge">Ch12</span><div class="title">循序分群演算法（Sequential Algorithms）</div></a>
+      <a class="card" href="PR_115/Ch13-hierarchical-clustering/index.html"><span class="badge">Ch13</span><div class="title">階層式分群演算法（Hierarchical Algorithms）</div></a>
+      <a class="card" href="PR_115/Ch14-function-optimization-clustering/index.html"><span class="badge">Ch14</span><div class="title">函數最佳化分群</div></a>
+      <a class="card" href="PR_115/Ch15-clustering-iv/index.html"><span class="badge">Ch15</span><div class="title">其它分群演算法（Clustering Algorithms IV）</div></a>
+      <a class="card" href="PR_115/Ch16-cluster-validity/index.html"><span class="badge">Ch16</span><div class="title">叢集效度（Cluster Validity）</div></a>
+    </div>
+  </section>
+</main>
+<footer>更多課程陸續加入中</footer>
+</body>
+</html>
