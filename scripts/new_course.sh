@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # 用途：在根目錄 index.html 新增一個空的課程區塊，並建立對應資料夾。
+# 課程代號（如 PR 115）會自動從 <課程資料夾> 參數轉換顯示（底線變空白），標題只需放課程全名，不用重複寫代號。
 # 用法：scripts/new_course.sh <課程資料夾> "<課程顯示標題>"
-# 範例：scripts/new_course.sh NLP_115 "自然語言處理（NLP 115）"
+# 範例：scripts/new_course.sh NLP_115 "自然語言處理"
 set -euo pipefail
 
 COURSE="${1:?用法：scripts/new_course.sh <課程資料夾> \"<課程顯示標題>\"}"
@@ -32,9 +33,11 @@ path, course, title = sys.argv[1], sys.argv[2], sys.argv[3]
 with open(path, encoding="utf-8") as f:
     content = f.read()
 
+course_code = course.replace("_", " ")
 block = (
     f'  <!-- COURSE:{course} -->\n'
     f'  <section class="course">\n'
+    f'    <p class="course-code">{course_code}</p>\n'
     f'    <h2>{title}</h2>\n'
     f'    <div class="grid">\n'
     f'    </div>\n'

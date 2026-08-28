@@ -6,64 +6,177 @@
 <title>CCC 課程講義</title>
 <style>
   :root{
-    --bg:#f7f7f5; --card-bg:#ffffff; --text:#1f2328; --muted:#6b7280;
-    --accent:#2563eb; --accent-soft:#eef2ff; --border:#e5e7eb;
+    --bg:#f6f3ec;
+    --text:#1d1b18;
+    --muted:#736a5c;
+    --accent:#2f3e5c;
+    --accent-soft:#e9e4d6;
+    --divider:rgba(29,27,24,0.1);
+
+    --font-serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,"Songti TC","PMingLiU",serif;
+    --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
+    --font-mono:"SF Mono","Cascadia Code",Consolas,"Courier New",monospace;
   }
+
   *{box-sizing:border-box;}
+
   body{
-    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
-    background:var(--bg); color:var(--text); line-height:1.6;
+    margin:0;
+    font-family:var(--font-sans);
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.65;
   }
+
   header{
-    padding:3rem 1.5rem 2rem; text-align:center;
-    background:linear-gradient(180deg,#ffffff,var(--bg));
-    border-bottom:1px solid var(--border);
+    padding:clamp(3rem,7vw,5.5rem) 1.5rem 3rem;
+    text-align:center;
+    border-bottom:1px solid var(--divider);
   }
-  header h1{margin:0 0 .5rem; font-size:1.9rem;}
-  header p{margin:0; color:var(--muted); font-size:.95rem;}
-  main{max-width:920px; margin:0 auto; padding:2rem 1.5rem 4rem;}
-  .course{margin-bottom:2.5rem;}
+  .kicker{
+    font-family:var(--font-mono);
+    font-size:.72rem;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0 0 1.1rem;
+  }
+  header h1{
+    font-family:var(--font-serif);
+    font-weight:500;
+    font-size:clamp(2.1rem,4.5vw,2.9rem);
+    letter-spacing:-.01em;
+    margin:0 0 .9rem;
+  }
+  header p{
+    margin:0;
+    color:var(--muted);
+    font-size:.98rem;
+  }
+
+  main{
+    max-width:760px;
+    margin:0 auto;
+    padding:clamp(2.5rem,6vw,4rem) 1.5rem 5rem;
+  }
+
+  .course{margin-bottom:4rem;}
+  .course:last-child{margin-bottom:0;}
+
+  .course-code{
+    font-family:var(--font-mono);
+    font-size:.72rem;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin:0 0 .4rem;
+  }
   .course h2{
-    font-size:1.25rem; margin:0 0 1rem; padding-bottom:.5rem;
-    border-bottom:2px solid var(--accent-soft);
+    font-family:var(--font-serif);
+    font-weight:500;
+    font-size:clamp(1.35rem,3vw,1.7rem);
+    margin:0 0 1.4rem;
+    padding-bottom:1rem;
+    border-bottom:1px solid var(--divider);
   }
+
   .grid{
-    display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
-    gap:.9rem;
+    display:flex;
+    flex-direction:column;
   }
+
   .card{
-    display:block; padding:1rem 1.1rem; background:var(--card-bg);
-    border:1px solid var(--border); border-radius:10px; text-decoration:none;
-    color:var(--text); transition:border-color .15s, transform .15s, box-shadow .15s;
+    display:flex;
+    align-items:baseline;
+    gap:1.1rem;
+    padding:.95rem .25rem;
+    border-bottom:1px solid var(--divider);
+    text-decoration:none;
+    color:var(--text);
+    transition:padding-left .2s ease, background-color .2s ease;
   }
-  .card:hover{
-    border-color:var(--accent); transform:translateY(-2px);
-    box-shadow:0 4px 14px rgba(37,99,235,.12);
+  .card:last-child{border-bottom:none;}
+  .card:hover, .card:focus-visible{
+    padding-left:.6rem;
+    background:var(--accent-soft);
   }
+
   .card .badge{
-    display:inline-block; font-size:.72rem; font-weight:600; color:var(--accent);
-    background:var(--accent-soft); padding:.15rem .5rem; border-radius:99px; margin-bottom:.5rem;
+    font-family:var(--font-mono);
+    font-size:.78rem;
+    color:var(--accent);
+    min-width:2.6rem;
+    flex-shrink:0;
   }
-  .card .title{font-size:.95rem; font-weight:500;}
-  footer{text-align:center; color:var(--muted); font-size:.8rem; padding:1.5rem; border-top:1px solid var(--border);}
-  @media (prefers-color-scheme: dark){
+
+  .card .title{
+    font-size:.98rem;
+    font-weight:400;
+    flex:1;
+    padding-bottom:2px;
+    background-image:linear-gradient(var(--text),var(--text));
+    background-size:0% 1px;
+    background-repeat:no-repeat;
+    background-position:left bottom;
+    transition:background-size .25s ease;
+  }
+  .card:hover .title, .card:focus-visible .title{
+    background-size:100% 1px;
+  }
+
+  .card::after{
+    content:"\2192";
+    color:var(--accent);
+    font-size:.85rem;
+    opacity:0;
+    transform:translateX(-4px);
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .card:hover::after, .card:focus-visible::after{
+    opacity:1;
+    transform:translateX(0);
+  }
+
+  footer{
+    text-align:center;
+    color:var(--muted);
+    font-size:.82rem;
+    padding:2rem 1.5rem 3rem;
+    border-top:1px solid var(--divider);
+  }
+
+  @media (prefers-color-scheme:dark){
     :root{
-      --bg:#0f1117; --card-bg:#171a23; --text:#e6e8eb; --muted:#9aa1ab;
-      --accent:#7aa2ff; --accent-soft:#1c2333; --border:#262b36;
+      --bg:#171511;
+      --text:#ece6d9;
+      --muted:#9c9384;
+      --accent:#a9bcdb;
+      --accent-soft:#232019;
+      --divider:rgba(236,230,217,0.12);
     }
-    header{background:linear-gradient(180deg,#171a23,var(--bg));}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .card, .card .title, .card::after{transition:none;}
+  }
+
+  @media (max-width:480px){
+    .card{gap:.7rem;}
+    .card .badge{min-width:2.2rem; font-size:.72rem;}
   }
 </style>
 </head>
 <body>
 <header>
+  <p class="kicker">Course Library</p>
   <h1>課程講義總覽</h1>
   <p>互動式自學講義 · 點選章節即可開啟</p>
 </header>
 <main>
   <!-- COURSE:PR_115 -->
   <section class="course">
-    <h2>Pattern Recognition（PR 115）</h2>
+    <p class="course-code">PR 115</p>
+    <h2>Pattern Recognition</h2>
     <div class="grid">
       <a class="card" href="PR_115/Ch01-introduction/index.html"><span class="badge">Ch01</span><div class="title">導論（Introduction）</div></a>
       <a class="card" href="PR_115/Ch02-bayes-classifiers/index.html"><span class="badge">Ch02</span><div class="title">以貝氏決策理論為基礎的分類器</div></a>
@@ -85,7 +198,8 @@
   </section>
   <!-- COURSE:IDL_115 -->
   <section class="course">
-    <h2>Elements of Deep Learning（IDL 115）</h2>
+    <p class="course-code">IDL 115</p>
+    <h2>Elements of Deep Learning</h2>
     <div class="grid">
       <a class="card" href="IDL_115/Ch01-introduction-history/index.html"><span class="badge">Ch01</span><div class="title">Introduction and History</div></a>
     </div>

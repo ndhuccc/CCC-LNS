@@ -44,7 +44,7 @@ CCC-LNS/
 |---|---|
 | `scripts/sync_chapter.sh <來源章節資料夾> <課程>/<章節>` | 只複製該章的 `index.html` + `assets/`，其餘生產檔案自動略過 |
 | `scripts/add_link.sh <課程> <章節> <badge> <標題>` | 在根目錄 `index.html` 對應課程區塊裡加入一張連結卡片 |
-| `scripts/new_course.sh <課程資料夾> "<課程顯示標題>"` | 建立新課程的資料夾與空的導覽區塊 |
+| `scripts/new_course.sh <課程資料夾> "<課程顯示標題>"` | 建立新課程的資料夾與空的導覽區塊（課程代號會自動從資料夾名稱轉換，標題只需放課程全名，如 `scripts/new_course.sh NLP_115 "自然語言處理"`） |
 | `scripts/check_links.sh [課程資料夾]` | 檢查上線網站有沒有 404（頁面本身 + 頁內圖片），不給參數就全站檢查 |
 | `scripts/publish.sh "commit 訊息"` | commit + push + 等待 GitHub Pages 重新部署 + 自動跑 `check_links.sh` |
 
