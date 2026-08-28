@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Introduction and History</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="setTimeout(function(){if(window.renderMath)renderMath();},200);"></script>
+<style>
+:root{--accent:#0d9488;--accent2:#065f56;--bg:#f2f7f6;--card:#fff;--ink:#1f2430;--muted:#6b7280;--line:#e5e7eb;}
+*{box-sizing:border-box;}
+body{margin:0;font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.75;}
+header{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:30px 20px;text-align:center;}
+header h1{margin:0 0 8px;font-size:1.55rem;}header p{margin:0;opacity:.92;font-size:.92rem;}
+.wrap{max-width:1120px;margin:0 auto;display:flex;gap:24px;padding:22px;}
+nav{width:280px;position:sticky;top:16px;align-self:flex-start;max-height:90vh;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;}
+nav h2{font-size:.8rem;color:var(--muted);margin:0 0 10px;text-transform:uppercase;letter-spacing:.5px;}
+nav .toc-item{display:block;padding:6px 10px;border-radius:8px;color:var(--ink);text-decoration:none;font-size:.84rem;}nav .toc-item:hover{background:#e6f5f2;color:var(--accent);}
+main{flex:1;min-width:0;}
+.progress{position:sticky;top:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:18px;display:flex;align-items:center;gap:12px;z-index:10;}
+.progress .bar{flex:1;height:8px;background:#eee;border-radius:99px;overflow:hidden;}.progress .fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s;}.progress .txt{font-size:.85rem;color:var(--muted);white-space:nowrap;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:18px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);scroll-margin-top:90px;}
+.card-head{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;background:#f7fbfa;border-bottom:1px solid var(--line);}.card-head:hover{background:#ecf7f5;}
+.card-head .badge{background:var(--accent);color:#fff;font-size:.75rem;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap;}
+.card-head h3{margin:0;font-size:1.05rem;flex:1;}.card-head .toggle{transition:transform .2s;color:var(--muted);}
+.card.collapsed .toggle{transform:rotate(-90deg);}.card-body{padding:16px 18px;}.card.collapsed .card-body{display:none;}
+.card-body h4{margin:.9em 0 .4em;color:var(--accent2);}.card-body p{margin:.6em 0;}.card-body strong{color:var(--accent2);}.card-body ul,.card-body ol{margin:.6em 0;padding-left:1.5em;}.card-body li{margin:.3em 0;}
+.diagram-figure{margin:18px 0;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;text-align:center;}.diagram-figure img{max-width:100%;height:auto;border-radius:8px;}.diagram-figure figcaption{margin-top:8px;font-size:.85rem;color:#6b7280;}
+.orig-fig{margin:18px 0;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;text-align:center;}.orig-fig img{max-width:100%;height:auto;border-radius:8px;}.orig-fig figcaption{margin-top:8px;font-size:.85rem;color:#6b7280;}
+.quiz{margin-top:18px;border:1px dashed var(--line);border-radius:12px;padding:14px;background:#fbfdfd;}.quiz .q{font-weight:600;margin-bottom:10px;}.quiz .opts{display:grid;gap:8px;margin-bottom:10px;}.quiz .opt{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;cursor:pointer;background:#fff;}.quiz .opt:hover{border-color:var(--accent);}.quiz .check{background:var(--accent);color:#fff;border:none;padding:7px 16px;border-radius:8px;cursor:pointer;font-weight:600;}.quiz .check:hover{background:var(--accent2);}.quiz .fb{margin-top:8px;font-size:.9rem;display:none;}.quiz .fb.ok{display:block;color:#059669;}.quiz .fb.wrong{display:block;color:#dc2626;}
+footer{text-align:center;color:var(--muted);font-size:.8rem;padding:24px;}
+@media(max-width:760px){.wrap{flex-direction:column;}nav{width:auto;position:static;max-height:none;}}
+</style>
+</head>
+<body>
+<header><h1>Introduction and History</h1><p>Chapter 1 · IDL 115 · 互動式自學講義</p></header>
+<div class="wrap"><nav><h2>目錄</h2><a class="toc-item" href="#kp1">1 Introduction：模型是地圖，不是實地</a><a class="toc-item" href="#kp2">2 Machine Learning Model：把世界變成向量</a><a class="toc-item" href="#kp3">3.1 Supervised Learning：用有標籤的資料學習</a><a class="toc-item" href="#kp4">3.2 Unsupervised Learning：從無標籤資料找結構</a><a class="toc-item" href="#kp5">3.3 監督 vs 無監督降維與強化學習</a><a class="toc-item" href="#kp6">4.1 統計分類的六大方法家族</a><a class="toc-item" href="#kp7">4.2 統計回歸與降維</a><a class="toc-item" href="#kp8">5.1 早期史：從 McCulloch-Pitts 到 Perceptron 與 ADALINE</a><a class="toc-item" href="#kp9">5.4 CNN 與現代史：冬眠、復興、生成式與 Transformer</a><a class="toc-item" href="#kp10">6 結論：三步流程、任務分類與神經網路時間軸</a></nav><main><div class="progress"><div class="bar"><div class="fill" id="pf"></div></div><div class="txt" id="ptxt"></div></div><section id="kp1" class="card" data-kp="1"><div class="card-head"><span class="badge">1</span><h3>Introduction：模型是地圖，不是實地</h3><span class="toggle">▼</span></div><div class="card-body"><h4>地圖不是實地：模型是世界的「替代品」</h4>
+<p>當我們想理解周遭世界時，免不了會動手建模型。但沒有一個模型就是世界本身——它們都只是「替代品」（surrogate），只是有些比較好用、有些比較難用。在科學裡，我們常常無法確定模型到底符不符合真實，唯一能可靠檢驗的標準是：<strong>這個模型有沒有用</strong>。一個模型算「有用」，要滿足兩件事：</p>
+<ul>
+<li>(a) 它能好好解釋目前的觀測；</li>
+<li>(b) 它能準確預測未來的觀測。</li>
+</ul>
+<p>這個原則正是實證科學與機器學習的共同核心。</p>
+<p>Karl Popper 曾強調：科學探究不是從「純觀察」開始，而是從「猜想」（conjecture）開始——先對世界怎麼運作提出假設，再用觀測去檢驗它，透過不斷修正與否證，慢慢增進我們對世界的理解 [178]。機器學習幾乎完全呼應這套哲學：我們先提出一個建模假設，再用資料去檢驗、修正它。</p>
+<h4>機器學習的三步：假設、評分、搜尋</h4>
+<p>機器學習的演算法五花八門，但所有方法都共享同一個骨架。我們先對「資料可能長什麼樣」做一個假設（呼應 Popper 的猜想精神），再用資料去修正它。整個過程包含三個核心步驟：</p>
+<ol>
+<li><strong>假設類別（Hypothesis Class，猜想）</strong>：先定義一個假設類別，代表我們對資料的建模假設。例如選線性模型，就等於假設輸入與輸出之間是線性關係；樹狀模型則假設資料可以依特徵切分、層層分割；神經網路則假設底層關係是「組合式／分層式」的，能透過學到的特徵階層捕捉複雜模式。這個假設類別，就是我們對資料底層結構的初始猜想。</li>
+<li><strong>評分機制（Loss Function，損失函數）</strong>：有了假設類別後，我們需要比較裡面的成員——也就是判斷哪個模型比較好。做法是用一個評分機制，替每個模型算一個數值（常叫「損失」），量化它在資料上的表現。常見的損失函數包括均方誤差（MSE，量測預測值與真實值之間的平均平方差）與交叉熵損失（常用於分類任務）。這一步讓我們能依「模型多貼合資料」來排名。</li>
+<li><strong>搜尋策略（Optimization，最佳化）</strong>：最後，我們要依評分機制挑出最好的模型——也就是損失最低的那一個。這靠最佳化方法完成，方法會隨假設類別與損失函數的結構而不同。如果最佳化問題是凸的，可能有高效率的解析或數值方法找到全域最佳解；如果問題非凸（神經網路常如此），通常用梯度下降這類迭代技巧搜尋好解，但可能只找到局部最小值。所以最佳化方法的選擇，關鍵取決於問題本質與損失地形的性質。</li>
+</ol>
+<p>把整個機器學習流程濃縮成一句話：</p>
+<ol>
+<li>選一個假設類別，記作 $\mathcal{F}$。</li>
+<li>定義評分機制，記作 $S(f)$，其中 $f \in \mathcal{F}$，分數越低代表模型越好；多數情況下 $S(f)$ 就是損失函數。</li>
+<li>解最佳化問題，找出最好的模型：</li>
+</ol>
+<p>$$
+\widehat{f}:=\arg \min _{f \in \mathcal{F}} S(f) . \tag{1}
+$$</p>
+<h4>沒有免費午餐：沒有假設就沒有學習</h4>
+<p>這個流程點出了機器學習裡的「沒有免費午餐定理」（No Free Lunch Theorem）[249]：沒有任何學習演算法能在「所有可能問題」上都表現良好，除非它先做了假設。換句話說，<strong>沒有假設，就沒有學習</strong>。我們選定一個假設類別，其實就是對「解長什麼樣」施加了一種偏見——這叫做模型的<strong>歸納偏置</strong>（inductive bias）。評分機制與最佳化策略，則定義了我們如何在這個假設類別裡評估與搜尋。這些選擇——包括損失函數、最佳化地形、停止條件——共同塑造了模型如何從已觀測資料推廣到未見過的新情境，是學習過程的根本一環。</p>
+<h4>訓練誤差與測試誤差</h4>
+<p>就像科學的目標是建出既能解釋又能預測世界的模型，機器學習的目標也一樣。一個模型算「有用」，要滿足：</p>
+<ul>
+<li>(a) 它能把目前的資料解釋得好——對應到<strong>低的訓練誤差</strong>（training error）；</li>
+<li>(b) 它能有效預測未來或未見過的資料——對應到<strong>低的測試誤差</strong>（test error）。</li>
+</ul>
+<p>所以機器學習裡「有用的模型」這個概念，正是科學「建構既能描述當前現象、又能預期未來現象的模型」原則的直接延伸。這兩者之間的平衡——貼合已知資料（fit）與推廣到新資料（generalization）——決定了模型最終的實用價值。</p><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#2b6cb0"/>
+    </marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#38a169"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="720" height="340" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="360" y="28" text-anchor="middle" font-size="17" font-weight="bold" fill="#1a202c">假設 → 評分 → 搜尋 → 泛化 的學習循環</text>
+
+  <!-- Node 1: Hypothesis space F (top-left) -->
+  <g>
+    <ellipse cx="150" cy="95" rx="95" ry="52" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="2"/>
+    <text x="150" y="82" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b6cb0">假設空間 F</text>
+    <!-- candidate curves -->
+    <path d="M95 108 q15 -14 30 0 q15 14 30 0" fill="none" stroke="#2b6cb0" stroke-width="1.6"/>
+    <path d="M105 118 q15 -14 30 0 q15 14 30 0" fill="none" stroke="#63b3ed" stroke-width="1.6"/>
+    <path d="M115 100 q15 -14 30 0 q15 14 30 0" fill="none" stroke="#90cdf4" stroke-width="1.6"/>
+    <text x="150" y="132" text-anchor="middle" font-size="11" fill="#4a5568">所有候選函數</text>
+  </g>
+
+  <!-- Node 2: Scoring (top-right) -->
+  <g>
+    <rect x="470" y="55" width="200" height="80" rx="10" fill="#fefcbf" stroke="#d69e2e" stroke-width="2"/>
+    <text x="570" y="78" text-anchor="middle" font-size="14" font-weight="bold" fill="#975a16">評分 S(f) / Loss</text>
+    <!-- ranking bars -->
+    <rect x="490" y="90" width="40" height="10" fill="#ecc94b"/>
+    <rect x="540" y="90" width="60" height="10" fill="#ecc94b"/>
+    <rect x="610" y="90" width="30" height="10" fill="#ecc94b"/>
+    <text x="570" y="122" text-anchor="middle" font-size="11" fill="#975a16">越小越好 → 排序</text>
+  </g>
+
+  <!-- Node 3: Search argmin (bottom-right) -->
+  <g>
+    <rect x="470" y="225" width="200" height="80" rx="10" fill="#f0fff4" stroke="#38a169" stroke-width="2"/>
+    <text x="570" y="250" text-anchor="middle" font-size="14" font-weight="bold" fill="#276749">搜尋 argmin</text>
+    <!-- funnel -->
+    <path d="M540 262 L600 262 L585 282 L555 282 Z" fill="#68d391" stroke="#38a169" stroke-width="1.5"/>
+    <circle cx="570" cy="290" r="5" fill="#38a169"/>
+    <text x="570" y="298" text-anchor="middle" font-size="11" fill="#276749">挑出最佳 f*</text>
+  </g>
+
+  <!-- Node 4: Generalization (bottom-left) -->
+  <g>
+    <ellipse cx="150" cy="245" rx="95" ry="52" fill="#faf5ff" stroke="#805ad5" stroke-width="2"/>
+    <text x="150" y="232" text-anchor="middle" font-size="14" font-weight="bold" fill="#6b46c1">泛化</text>
+    <!-- target -->
+    <circle cx="150" cy="252" r="14" fill="none" stroke="#805ad5" stroke-width="1.5"/>
+    <circle cx="150" cy="252" r="7" fill="#b794f4"/>
+    <text x="150" y="278" text-anchor="middle" font-size="11" fill="#6b46c1">對新資料也有效</text>
+  </g>
+
+  <!-- Loop arrows -->
+  <path d="M245 95 C 330 60, 400 60, 465 80" fill="none" stroke="#2b6cb0" stroke-width="2.4" marker-end="url(#arr)"/>
+  <text x="360" y="58" text-anchor="middle" font-size="11" fill="#2b6cb0">排序</text>
+
+  <path d="M570 137 C 570 170, 570 195, 570 222" fill="none" stroke="#2b6cb0" stroke-width="2.4" marker-end="url(#arr)"/>
+  <text x="588" y="180" text-anchor="middle" font-size="11" fill="#2b6cb0">搜尋</text>
+
+  <path d="M468 265 C 400 290, 330 290, 250 268" fill="none" stroke="#38a169" stroke-width="2.4" marker-end="url(#arrG)"/>
+  <text x="360" y="300" text-anchor="middle" font-size="11" fill="#38a169">泛化</text>
+
+  <path d="M150 193 C 150 160, 150 150, 150 150" fill="none" stroke="#805ad5" stroke-width="2.4" marker-end="url(#arr)"/>
+  <text x="168" y="172" text-anchor="middle" font-size="11" fill="#805ad5">回到 F</text>
+
+  <!-- Inductive bias vortex (center) -->
+  <g>
+    <path d="M360 170 m0 -34 a34 34 0 1 1 -34 34 a34 34 0 1 1 34 34 a34 34 0 1 1 34 -34 a34 34 0 1 1 -34 -34"
+          fill="none" stroke="#e53e3e" stroke-width="2.2"/>
+    <path d="M360 170 m0 -20 a20 20 0 1 1 -20 20 a20 20 0 1 1 20 20 a20 20 0 1 1 20 -20 a20 20 0 1 1 -20 -20"
+          fill="none" stroke="#fc8181" stroke-width="1.8"/>
+    <circle cx="360" cy="170" r="6" fill="#e53e3e"/>
+    <text x="360" y="128" text-anchor="middle" font-size="12" font-weight="bold" fill="#c53030">歸納偏置</text>
+    <text x="360" y="216" text-anchor="middle" font-size="11" fill="#c53030">先驗限制搜尋方向</text>
+  </g>
+
+  <!-- No Free Lunch dashed line -->
+  <line x1="60" y1="330" x2="660" y2="20" stroke="#a0aec0" stroke-width="1.6" stroke-dasharray="7 5"/>
+  <g>
+    <rect x="470" y="8" width="210" height="26" rx="6" fill="#ffffff" stroke="#a0aec0" stroke-width="1.2"/>
+    <text x="575" y="25" text-anchor="middle" font-size="11" font-weight="bold" fill="#718096">No Free Lunch：無免費午餐</text>
+  </g>
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-1" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 一個四節點循環示意圖，展示監督式學習的核心流程：假設空間 F（候選函數集合）→ 用評分函數 S(f)/Loss 排序 → 搜尋 argmin 挑出最佳 f* → 泛化到新資料，再回到假設空間。中央放置「歸納偏置」漩渦，一條對角虛線標示 No Free Lunch 定理。
+
+WHY（因果或反直覺）: 因果鏈是「假設空間越大 → 排序越難 → 需要歸納偏置來收窄搜尋」。反直覺點：沒有免費午餐——沒有一個演算法在所有問題上都最好，必須靠先驗（歸納偏置）取捨；漩渦象徵偏置把搜尋「吸」向特定方向，既是限制也是效率來源。
+
+MUST show（必備要素）: ① 假設空間 F 用雲朵/多條候選曲線表示；② 評分 S(f)/Loss 用長短不一的排序條表示「越小越好」；③ 搜尋 argmin 用漏斗收斂到一個點；④ 泛化用靶心表示「對新資料有效」；⑤ 中央歸納偏置漩渦（螺旋）；⑥ 對角虛線 No Free Lunch 標籤；⑦ 四段循環箭頭標註「排序/搜尋/泛化/回到 F」。
+
+AVOID（禁止）: 不要畫成純方框互連；不要出現任何數學公式或 LaTeX 反斜線；不要用真實函數曲線或座標軸；不要讓漩渦遮住箭頭與節點文字。
+
+STYLE: flat vector, scientific, white background, 藍綠紫黃四色調（藍=假設、黃=評分、綠=搜尋、紫=泛化、紅=偏置、灰=No Free Lunch），圓角、粗箭頭、無陰影、無漸層。</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">示意：地圖與假設╱評分╱搜尋三步循環（包含歸納偏置）</figcaption></figure></div>
+<div class="quiz" data-ans="B"><p class="q"><p>機器學習流程中，三個核心步驟的正確順序是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q1-0" value="A"><span>A. <p>評分 → 假設 → 搜尋</p></span></label><label class="opt"><input type="radio" name="q1-0" value="B"><span>B. <p>假設 → 評分 → 搜尋</p></span></label><label class="opt"><input type="radio" name="q1-0" value="C"><span>C. <p>搜尋 → 評分 → 假設</p></span></label><label class="opt"><input type="radio" name="q1-0" value="D"><span>D. <p>假設 → 搜尋 → 評分</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="先定義假設類別（猜想），再用評分機制比較成員，最後用最佳化搜尋出最好的模型。"></div></div><div class="quiz" data-ans="C"><p class="q"><p>式(1) 中的 $\widehat{f}$ 代表什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q1-1" value="A"><span>A. <p>假設類別 $\mathcal{F}$</p></span></label><label class="opt"><input type="radio" name="q1-1" value="B"><span>B. <p>損失函數 $S(f)$</p></span></label><label class="opt"><input type="radio" name="q1-1" value="C"><span>C. <p>使 $S(f)$ 最小的最佳模型</p></span></label><label class="opt"><input type="radio" name="q1-1" value="D"><span>D. <p>資料集</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="$\widehat{f}:=\arg \min_{f \in \mathcal{F}} S(f)$，也就是在假設類別裡讓評分（損失）最低的那個模型。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>「沒有免費午餐定理」告訴我們什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q1-2" value="A"><span>A. <p>所有演算法在所有問題上都一樣好</p></span></label><label class="opt"><input type="radio" name="q1-2" value="B"><span>B. <p>沒有假設，就沒有學習</p></span></label><label class="opt"><input type="radio" name="q1-2" value="C"><span>C. <p>損失函數越低越好</p></span></label><label class="opt"><input type="radio" name="q1-2" value="D"><span>D. <p>資料越多越好</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="定理指出沒有演算法能在所有問題上都表現良好，除非先做假設；選定假設類別就是施加歸納偏置。"></div></div><div class="quiz" data-ans="A"><p class="q"><p>一個模型算「有用」的兩個條件是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q1-3" value="A"><span>A. <p>訓練誤差低、測試誤差低</p></span></label><label class="opt"><input type="radio" name="q1-3" value="B"><span>B. <p>訓練誤差高、測試誤差低</p></span></label><label class="opt"><input type="radio" name="q1-3" value="C"><span>C. <p>參數多、速度快</p></span></label><label class="opt"><input type="radio" name="q1-3" value="D"><span>D. <p>假設類別大、損失高</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="有用 = (a) 解釋目前資料好（低訓練誤差）+ (b) 預測未來資料準（低測試誤差）。"></div></div></div><button class="guide-btn" type="button" data-kp="1" onclick="window.openGuide(1)">📖 教授祕笈</button>
+</section>
+<section id="kp2" class="card" data-kp="2"><div class="card-head"><span class="badge">2</span><h3>Machine Learning Model：把世界變成向量</h3><span class="toggle">▼</span></div><div class="card-body"><h4>資料集：把世界變成向量</h4>
+<p>在機器學習裡，假設類別中的每個模型都定義了一個「從輸入到輸出的函數（映射）」，並由可學習的參數來參數化。學習，就是用選定的損失函數與搜尋策略，找出能對給定輸入產生期望輸出的最佳參數值。</p>
+<p>先看資料怎麼表示。假設我們量測了某個量——這個量可以是任何資料或訊號，例如個人健康資料（血壓、血糖）、多張圖片，或像天氣溫度、股價那樣的時間序列。在機器學習中，資料通常表示成<strong>向量</strong>：如果一個物件可以用 $d$ 個特徵來描述，那它就能表示成 $d$ 維空間裡的一個向量。令資料向量所在的空間維度為 $d$，也就是說每個量都是 $d$ 維歐氏空間 $\mathbb{R}^{d}$ 裡的一個 $d$ 維向量。這 $d$ 個值就叫做這個量的<strong>特徵</strong>（features）。這組 $d$ 維資料點合起來，就叫做<strong>資料集</strong>（dataset）。一組圖片、或幾個人的健康資料，都是資料集的例子。</p>
+<h4>學習模型：從資料空間到輸出空間</h4>
+<p>考慮一個有 $n$ 個資料點的資料集 $\left\{\boldsymbol{x}_{i} \in \mathbb{R}^{d}\right\}_{i=1}^{n}$，其中每個點都是歐氏空間 $\mathbb{R}^{d}$ 裡的 $d$ 維向量。這些向量可以按「行」排成一個矩陣 $\boldsymbol{X} \in \mathbb{R}^{d \times n}$。</p>
+<p>學習模型 $f$ 是一個從資料空間到輸出空間的函數（映射）：</p>
+<p>$$
+\begin{align*}
+& f_{\theta}: \mathbb{R}^{d} \rightarrow \mathbb{R}^{p},  \tag{2}\\
+& \boldsymbol{x} \mapsto f_{\theta}(\boldsymbol{x}),
+\end{align*}
+$$</p>
+<p>其中 $\theta$ 代表函數 $f$ 的參數，這些參數是從資料中學來的。通常（但不一定）$p \leq d$。下圖（Fig. 1）示意了學習模型的概念。</p>
+<!-- FIG1 -->
+
+<p>機器學習演算法會搜尋能讓輸出符合期望任務的參數值 $\theta$。這些「期望輸出」的性質取決於具體任務：例如在分類任務中，期望輸出就是每個輸入資料實例的正確類別標籤。</p><figure class="orig-fig"><img src="assets/orig-kp2-fig1.jpg" alt="圖 1 學習模型：從輸入 x 經參數化函數 fθ 映射到輸出╱標籤/嵌入/動作" style="max-width:86%;height:auto;border:1px solid #e5e7eb;border-radius:8px;"><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">圖 1 學習模型：從輸入 x 經參數化函數 fθ 映射到輸出╱標籤/嵌入/動作</figcaption></figure>
+<div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#2b6cb0"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="720" height="340" fill="#ffffff"/>
+
+  <text x="360" y="26" text-anchor="middle" font-size="17" font-weight="bold" fill="#1a202c">資料集：向量 → 矩陣 X → 模型 fθ → 輸出</text>
+
+  <!-- Left: individual vectors x1..xn in R^d -->
+  <g>
+    <text x="120" y="60" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6cb0">樣本向量 x_i ∈ R^d</text>
+    <!-- three columns -->
+    <g transform="translate(70,70)">
+      <rect x="0" y="0" width="26" height="150" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="1.5"/>
+      <line x1="0" y1="30" x2="26" y2="30" stroke="#90cdf4" stroke-width="1"/>
+      <line x1="0" y1="60" x2="26" y2="60" stroke="#90cdf4" stroke-width="1"/>
+      <line x1="0" y1="90" x2="26" y2="90" stroke="#90cdf4" stroke-width="1"/>
+      <line x1="0" y1="120" x2="26" y2="120" stroke="#90cdf4" stroke-width="1"/>
+      <text x="13" y="20" text-anchor="middle" font-size="9" fill="#2b6cb0">x₁</text>
+    </g>
+    <g transform="translate(110,70)">
+      <rect x="0" y="0" width="26" height="150" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="1.5"/>
+      <line x1="0" y1="30" x2="26" y2="30" stroke="#90cdf4" stroke-width="1"/>
+      <line x1="0" y1="60" x2="26" y2="60" stroke="#90cdf4" stroke-width="1"/>
+      <line x1="0" y1="90" x2="26" y2="90" stroke="#90cdf4" stroke-width="1"/>
+      <line x1="0" y1="120" x2="26" y2="120" stroke="#90cdf4" stroke-width="1"/>
+      <text x="13" y="20" text-anchor="middle" font-size="9" fill="#2b6cb0">x₂</text>
+    </g>
+    <g transform="translate(150,70)">
+      <rect x="0" y="0" width="26" height="150" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="1.5"/>
+      <line x1="0" y1="30" x2="26" y2="30" stroke="#90cdf4" stroke-width="1"/>
+      <line x1="0" y1="60" x2="26" y2="60" stroke="#90cdf4" stroke-width="1"/>
+      <line x1="0" y1="90" x2="26" y2="90" stroke="#90cdf4" stroke-width="1"/>
+      <line x1="0" y1="120" x2="26" y2="120" stroke="#90cdf4" stroke-width="1"/>
+      <text x="13" y="20" text-anchor="middle" font-size="9" fill="#2b6cb0">x₃</text>
+    </g>
+    <text x="188" y="150" text-anchor="middle" font-size="12" fill="#2b6cb0">…</text>
+    <text x="188" y="170" text-anchor="middle" font-size="11" fill="#2b6cb0">xₙ</text>
+    <text x="120" y="240" text-anchor="middle" font-size="11" fill="#4a5568">每個樣本有 d 個特徵</text>
+  </g>
+
+  <!-- Arrow to matrix -->
+  <path d="M205 150 C 250 150, 255 150, 285 150" fill="none" stroke="#2b6cb0" stroke-width="2.4" marker-end="url(#arr)"/>
+
+  <!-- Matrix X : d x n -->
+  <g>
+    <text x="360" y="60" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6cb0">資料矩陣 X ∈ R^(d×n)</text>
+    <g transform="translate(300,70)">
+      <rect x="0" y="0" width="120" height="150" fill="#fefcbf" stroke="#d69e2e" stroke-width="2"/>
+      <!-- grid lines -->
+      <line x1="0" y1="30" x2="120" y2="30" stroke="#ecc94b" stroke-width="1"/>
+      <line x1="0" y1="60" x2="120" y2="60" stroke="#ecc94b" stroke-width="1"/>
+      <line x1="0" y1="90" x2="120" y2="90" stroke="#ecc94b" stroke-width="1"/>
+      <line x1="0" y1="120" x2="120" y2="120" stroke="#ecc94b" stroke-width="1"/>
+      <line x1="30" y1="0" x2="30" y2="150" stroke="#ecc94b" stroke-width="1"/>
+      <line x1="60" y1="0" x2="60" y2="150" stroke="#ecc94b" stroke-width="1"/>
+      <line x1="90" y1="0" x2="90" y2="150" stroke="#ecc94b" stroke-width="1"/>
+      <!-- d label (rows) -->
+      <text x="-8" y="80" text-anchor="end" font-size="12" font-weight="bold" fill="#975a16">d</text>
+      <text x="-8" y="95" text-anchor="end" font-size="10" fill="#975a16">特徵</text>
+      <!-- n label (columns) -->
+      <text x="60" y="168" text-anchor="middle" font-size="12" font-weight="bold" fill="#975a16">n 個樣本</text>
+    </g>
+  </g>
+
+  <!-- Arrow to fθ -->
+  <path d="M425 150 C 460 150, 470 150, 495 150" fill="none" stroke="#2b6cb0" stroke-width="2.4" marker-end="url(#arr)"/>
+
+  <!-- fθ box -->
+  <g>
+    <rect x="500" y="105" width="110" height="90" rx="12" fill="#f0fff4" stroke="#38a169" stroke-width="2"/>
+    <text x="555" y="140" text-anchor="middle" font-size="15" font-weight="bold" fill="#276749">fθ</text>
+    <text x="555" y="160" text-anchor="middle" font-size="11" fill="#276749">模型</text>
+    <text x="555" y="178" text-anchor="middle" font-size="10" fill="#276749">參數 θ</text>
+  </g>
+
+  <!-- Arrow to output -->
+  <path d="M612 150 C 640 150, 645 150, 660 150" fill="none" stroke="#2b6cb0" stroke-width="2.4" marker-end="url(#arr)"/>
+
+  <!-- Output -->
+  <g>
+    <rect x="665" y="120" width="45" height="60" rx="8" fill="#faf5ff" stroke="#805ad5" stroke-width="2"/>
+    <text x="687" y="150" text-anchor="middle" font-size="12" font-weight="bold" fill="#6b46c1">輸出</text>
+    <text x="687" y="168" text-anchor="middle" font-size="10" fill="#6b46c1">y</text>
+  </g>
+
+  <!-- p label -->
+  <g>
+    <rect x="500" y="215" width="110" height="34" rx="8" fill="#fff5f5" stroke="#e53e3e" stroke-width="1.5"/>
+    <text x="555" y="236" text-anchor="middle" font-size="11" font-weight="bold" fill="#c53030">p = 參數個數</text>
+  </g>
+  <line x1="555" y1="215" x2="555" y2="197" stroke="#e53e3e" stroke-width="1.2" stroke-dasharray="4 3"/>
+
+  <!-- bottom summary -->
+  <text x="360" y="300" text-anchor="middle" font-size="12" fill="#4a5568">d = 特徵數（列）　·　n = 樣本數（欄）　·　p = 模型參數數</text>
+  <text x="360" y="322" text-anchor="middle" font-size="11" fill="#718096">把 n 個 d 維向量併成一個 d×n 矩陣，餵給參數為 θ 的模型</text>
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-2" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 一條水平管線示意圖，展示資料集如何被組織成矩陣並餵給模型：左側是 n 個 d 維樣本向量 x₁…xₙ（每個樣本一根垂直柱，柱內 d 格代表特徵）→ 中間是資料矩陣 X ∈ R^(d×n)（d 列 × n 欄的格子）→ 右側是模型 fθ（含參數 θ）→ 最右是輸出 y。
+
+WHY（因果或反直覺）: 因果是「把分散的樣本向量併成一個矩陣，才能一次餵給模型做批次運算」。反直覺點：d（特徵/列）、n（樣本/欄）、p（參數）三個符號常被混淆——用「列=特徵、欄=樣本」的格子與「參數個數」的獨立標籤把三者釘清楚。
+
+MUST show（必備要素）: ① 至少三根垂直樣本柱 x₁、x₂、x₃ 與省略號 xₙ，柱內有 d 格；② 標註「R^d」與「每個樣本有 d 個特徵」；③ 中間 d×n 矩陣格子，明確標 d（列/特徵）與 n（欄/樣本）；④ 模型方框 fθ 標 θ；⑤ 輸出 y；⑥ 獨立標籤 p = 參數個數；⑦ 三段粗箭頭串起管線；⑧ 底部一行總結 d/n/p 定義。
+
+AVOID（禁止）: 不要畫成純方框互連；不要出現任何數學公式或 LaTeX 反斜線；不要用真實數值填格子；不要漏掉 d/n/p 任一標籤；不要讓箭頭與格子重疊。
+
+STYLE: flat vector, scientific, white background, 藍（向量）→黃（矩陣）→綠（模型）→紫（輸出）漸進色調，紅標 p，圓角、粗箭頭、無陰影、無漸層。</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">示意：數據集向量 R^d、資料矩陣 X 與映射 fθ：R^d→R^p</figcaption></figure></div>
+
+<div class="demo" data-demo-id="kp2">
+  <style>
+    [data-demo-id="kp2"] { border: 1px solid #cbd5e1; border-radius: 14px; overflow: hidden; background: #fff; font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    [data-demo-id="kp2"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#0f766e,#115e59); color: #fff; font-weight: 700; font-size: 1.02rem; }
+    [data-demo-id="kp2"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #f0fdfa; }
+    [data-demo-id="kp2"] .demo-panel { flex: 1 1 300px; min-width: 280px; display: flex; flex-direction: column; gap: 10px; }
+    [data-demo-id="kp2"] .demo-stage { flex: 1 1 460px; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+    [data-demo-id="kp2"] canvas { border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; max-width: 100%; cursor: crosshair; }
+    [data-demo-id="kp2"] .kp2-block-title { font-size: 0.82rem; font-weight: 700; color: #115e59; margin-bottom: 2px; }
+    [data-demo-id="kp2"] .kp2-row { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #1e293b; }
+    [data-demo-id="kp2"] .kp2-row label { min-width: 44px; font-weight: 600; }
+    [data-demo-id="kp2"] input[type="range"].kp2-range { flex: 1 1 auto; }
+    [data-demo-id="kp2"] input.kp2-num { width: 52px; font-size: 0.82rem; padding: 2px 4px; border: 1px solid #94a3b8; border-radius: 4px; text-align: center; }
+    [data-demo-id="kp2"] .kp2-btnrow { display: flex; flex-wrap: wrap; gap: 6px; }
+    [data-demo-id="kp2"] button.kp2-btn { appearance: none; border: 1px solid #14b8a6; background: #ccfbf1; color: #0f766e; font-weight: 600; font-size: 0.78rem; padding: 6px 9px; border-radius: 7px; cursor: pointer; }
+    [data-demo-id="kp2"] button.kp2-btn:hover { background: #99f6e4; }
+    [data-demo-id="kp2"] .demo-readout { min-height: 10em; padding: 10px 12px; border: 1px solid #99f6e4; border-radius: 8px; background: #f0fdfa; color: #134e4a; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.78rem; line-height: 1.55; white-space: pre-wrap; }
+    [data-demo-id="kp2"] .demo-theory { padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #eef2ff; color: #1e293b; font-size: 0.84rem; line-height: 1.7; }
+    [data-demo-id="kp2"] .demo-instruction { padding: 12px 18px; border-top: 1px solid #e2e8f0; background: #fff; font-size: 0.85rem; line-height: 1.7; color: #1e293b; }
+  </style>
+
+  <div class="demo-head">🧪 Demo：參數化映射實驗室 — 線性 fθ(x) = W·x + b（d=2 → p=1）</div>
+
+  <div class="demo-body">
+    <div class="demo-panel">
+      <div class="kp2-block-title">模型參數 θ = (w₁, w₂, b)</div>
+      <div class="kp2-row"><label>w₁</label><input type="range" class="kp2-range" id="kp2-w1-range" min="-3" max="3" step="0.1" value="1"><input type="number" class="kp2-num" id="kp2-w1-num" min="-3" max="3" step="0.1" value="1"></div>
+      <div class="kp2-row"><label>w₂</label><input type="range" class="kp2-range" id="kp2-w2-range" min="-3" max="3" step="0.1" value="1"><input type="number" class="kp2-num" id="kp2-w2-num" min="-3" max="3" step="0.1" value="1"></div>
+      <div class="kp2-row"><label>b</label><input type="range" class="kp2-range" id="kp2-b-range" min="-5" max="5" step="0.1" value="0"><input type="number" class="kp2-num" id="kp2-b-num" min="-5" max="5" step="0.1" value="0"></div>
+      <div class="kp2-block-title">資料與操作</div>
+      <div class="kp2-btnrow">
+        <button class="kp2-btn" id="kp2-preset" type="button">載入點雲</button>
+        <button class="kp2-btn" id="kp2-random" type="button">🎲 隨機 θ</button>
+        <button class="kp2-btn" id="kp2-reset" type="button">↺ 重置 θ</button>
+        <button class="kp2-btn" id="kp2-hand" type="button">✋ 手算 fθ</button>
+      </div>
+      <div class="kp2-block-title">提示</div>
+      <div class="kp2-row">拖動畫布上的點可移動輸入；調滑桿看輸出移動。</div>
+      <div class="demo-readout" id="kp2-ro"></div>
+    </div>
+    <div class="demo-stage">
+      <div class="kp2-block-title">輸入空間 R²（左）→ 輸出空間 R¹（右，色階=輸出值）</div>
+      <canvas id="kp2-cv" width="620" height="360"></canvas>
+    </div>
+  </div>
+
+  <div class="demo-theory">
+    <strong>原理</strong>：學習模型是從資料空間到輸出空間的映射 $f_{\theta}: \mathbb{R}^{d} \rightarrow \mathbb{R}^{p}$（式 2）。
+    這裡取 $d=2$、$p=1$ 的<strong>線性</strong>特例：$f_{\theta}(\boldsymbol{x}) = \boldsymbol{W}\cdot\boldsymbol{x} + b = w_{1}x_{1} + w_{2}x_{2} + b$，
+    其中 $\theta = (w_{1}, w_{2}, b)$ 是從資料學來的參數。每個輸入點 $\boldsymbol{x}$ 都被壓成一個<strong>標量</strong>輸出。
+    調滑桿改變 $\theta$，觀察整片點雲在輸出軸上的移動與伸縮。
+  </div>
+  <div class="demo-instruction">
+    <strong>操作：</strong>用滑桿（或直接輸入數值）調整 $w_{1}$、$w_{2}$、$b$；也可拖動畫布上的點改變輸入。
+    「載入點雲」載入一組預設 2D 點；「🎲 隨機 θ」隨機抽一組參數；「↺ 重置 θ」回到 $w_{1}=w_{2}=1,b=0$；
+    「✋ 手算 fθ」在 readout 逐點列出 $f_{\theta}(\boldsymbol{x}) = w_{1}x_{1}+w_{2}x_{2}+b$ 的展開與數值。
+    <strong>觀察什麼：</strong>輸出值 = 點在 $w$ 方向上的投影 + 平移 $b$；$w$ 決定「伸縮與方向」，$b$ 決定「整體平移」。
+    <strong>正確基準：</strong>readout 中每個 $f_{\theta}$ 值都等於 $w_{1}x_{1}+w_{2}x_{2}+b$ 的手算結果（閉式一致）。
+  </div>
+
+  <script>
+  (function(){
+    var $ = function(id){ return document.getElementById(id); };
+    var cv = $('kp2-cv');
+    var ctx = cv.getContext('2d');
+    var ro = $('kp2-ro');
+
+    // 輸入空間 [0,10] x [0,10]；輸出軸範圍 [-12,12]
+    var XMIN=0, XMAX=10, YMIN=0, YMAX=10, OMIN=-12, OMAX=12;
+
+    var presetData = [
+      [1.5,2.0],[2.5,2.5],[2.0,3.5],[3.5,3.0],[1.0,4.0],
+      [7.0,6.5],[8.0,7.5],[7.5,5.5],[9.0,7.0],[8.0,8.0],
+      [4.5,5.0],[5.5,4.5]
+    ];
+    var labels = ['x₁','x₂','x₃','x₄','x₅','x₆','x₇','x₈','x₉','x₁₀','x₁₁','x₁₂'];
+
+    var points = presetData.map(function(p){ return [p[0],p[1]]; });
+    var w1=1, w2=1, b=0;
+    var dragIdx = -1;
+
+    function ftheta(x){ return w1*x[0] + w2*x[1] + b; }
+
+    // 色階：輸出值 → 藍(低)…紅(高)
+    function outColor(v){
+      var t = (v - OMIN)/(OMAX-OMIN); t = Math.max(0, Math.min(1, t));
+      // 藍 #2563eb → 白 → 紅 #dc2626
+      var r,g,bl;
+      if (t<0.5){ var u=t*2; r=Math.round(37+ (255-37)*u); g=Math.round(99+(255-99)*u); bl=Math.round(235+(255-235)*u); }
+      else { var u=(t-0.5)*2; r=Math.round(255+(220-255)*u); g=Math.round(255+(38-255)*u); bl=Math.round(255+(38-255)*u); }
+      return 'rgb('+r+','+g+','+bl+')';
+    }
+
+    function fmt(x){ return (Math.round(x*100)/100).toString(); }
+
+    // 版面：左輸入區、右輸出區
+    var mL=46, mR=30, mT=26, mB=34;
+    var splitX = 400; // 輸入區右界
+    var outL = splitX + 46, outR = cv.width - mR;
+
+    function sx(x){ return mL + (x-XMIN)/(XMAX-XMIN)*(splitX-mL); }
+    function sy(y){ return mT + (YMAX-y)/(YMAX-YMIN)*(cv.height-mT-mB); }
+    function oy(v){ return mT + (OMAX-v)/(OMAX-OMIN)*(cv.height-mT-mB); }
+
+    function draw(){
+      var Wd=cv.width, H=cv.height;
+      ctx.clearRect(0,0,Wd,H);
+      ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,Wd,H);
+
+      // 輸入區網格
+      ctx.strokeStyle='#eef2f7'; ctx.lineWidth=1;
+      for (var gx=0;gx<=10;gx++){ ctx.beginPath(); ctx.moveTo(sx(gx),mT); ctx.lineTo(sx(gx),mT+(H-mT-mB)); ctx.stroke(); }
+      for (var gy=0;gy<=10;gy++){ ctx.beginPath(); ctx.moveTo(mL,sy(gy)); ctx.lineTo(splitX,sy(gy)); ctx.stroke(); }
+      ctx.strokeStyle='#cbd5e1';
+      ctx.beginPath(); ctx.moveTo(mL,mT+(H-mT-mB)); ctx.lineTo(splitX,mT+(H-mT-mB)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mL,mT); ctx.lineTo(mL,mT+(H-mT-mB)); ctx.stroke();
+      ctx.fillStyle='#475569'; ctx.font='11px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('x₁', splitX-4, mT+(H-mT-mB)+14);
+      ctx.textAlign='left'; ctx.fillText('x₂', mL+4, mT+10);
+
+      // 輸出軸
+      ctx.strokeStyle='#94a3b8'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(outL,mT); ctx.lineTo(outL,mT+(H-mT-mB)); ctx.stroke();
+      ctx.fillStyle='#475569'; ctx.font='10px monospace'; ctx.textAlign='left';
+      ctx.fillText('0', outL+4, oy(0)+3);
+      ctx.fillText('+'+OMAX, outL+4, mT+10);
+      ctx.fillText(''+OMIN, outL+4, mT+(H-mT-mB));
+      ctx.fillText('R¹', outL+4, mT+(H-mT-mB)+14);
+
+      // 連線 + 輸出點
+      for (var i=0;i<points.length;i++){
+        var v = ftheta(points[i]);
+        var px=sx(points[i][0]), py=sy(points[i][1]);
+        var ox=outL, oy2=oy(v);
+        ctx.strokeStyle='rgba(100,116,139,0.35)'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(ox,oy2); ctx.stroke();
+        // 輸出點
+        ctx.beginPath(); ctx.arc(ox,oy2,5,0,Math.PI*2);
+        ctx.fillStyle=outColor(v); ctx.fill();
+        ctx.strokeStyle='#0f172a'; ctx.lineWidth=1; ctx.stroke();
+      }
+
+      // 輸入點
+      for (var j=0;j<points.length;j++){
+        var v2 = ftheta(points[j]);
+        var px2=sx(points[j][0]), py2=sy(points[j][1]);
+        ctx.beginPath(); ctx.arc(px2,py2,6,0,Math.PI*2);
+        ctx.fillStyle=outColor(v2); ctx.fill();
+        ctx.strokeStyle='#0f172a'; ctx.lineWidth=1.2; ctx.stroke();
+        ctx.fillStyle='#1e293b'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
+        ctx.fillText(labels[j], px2, py2-9);
+      }
+
+      // 標題
+      ctx.fillStyle='#334155'; ctx.font='bold 11px sans-serif'; ctx.textAlign='left';
+      ctx.fillText('fθ(x) = '+fmt(w1)+'·x₁ + '+fmt(w2)+'·x₂ + '+fmt(b), mL+6, mT+12);
+    }
+
+    function updateReadout(why){
+      var lines=[];
+      lines.push('θ = (w₁='+fmt(w1)+', w₂='+fmt(w2)+', b='+fmt(b)+')');
+      lines.push('fθ(x) = '+fmt(w1)+'·x₁ + '+fmt(w2)+'·x₂ + '+fmt(b));
+      lines.push('');
+      if (why==='hand'){
+        lines.push('—— 手算 fθ（閉式 W·x+b）——');
+        for (var i=0;i<points.length;i++){
+          var x=points[i];
+          var v = w1*x[0]+w2*x[1]+b;
+          lines.push('  '+labels[i]+'=('+fmt(x[0])+','+fmt(x[1])+') → '+fmt(w1)+'·'+fmt(x[0])+'+'+fmt(w2)+'·'+fmt(x[1])+'+'+fmt(b)+' = '+fmt(v));
+        }
+      } else {
+        lines.push('—— 各點輸出值 ——');
+        for (var j=0;j<points.length;j++){
+          var x2=points[j];
+          lines.push('  '+labels[j]+'=('+fmt(x2[0])+','+fmt(x2[1])+') → fθ = '+fmt(ftheta(x2)));
+        }
+      }
+      lines.push('');
+      lines.push('輸出空間維度 p=1：每個 2D 點被壓成一個標量。');
+      ro.textContent = lines.join('\n');
+    }
+
+    function setW1(v){ w1=Math.max(-3,Math.min(3,parseFloat(v))); if(isNaN(w1))w1=1;
+      $('kp2-w1-range').value=w1; $('kp2-w1-num').value=w1; draw(); updateReadout('param'); }
+    function setW2(v){ w2=Math.max(-3,Math.min(3,parseFloat(v))); if(isNaN(w2))w2=1;
+      $('kp2-w2-range').value=w2; $('kp2-w2-num').value=w2; draw(); updateReadout('param'); }
+    function setB(v){ b=Math.max(-5,Math.min(5,parseFloat(v))); if(isNaN(b))b=0;
+      $('kp2-b-range').value=b; $('kp2-b-num').value=b; draw(); updateReadout('param'); }
+
+    function loadPreset(){
+      points = presetData.map(function(p){ return [p[0],p[1]]; });
+      draw(); updateReadout('preset');
+    }
+    function randomTheta(){
+      w1 = Math.round((Math.random()*6-3)*10)/10;
+      w2 = Math.round((Math.random()*6-3)*10)/10;
+      b  = Math.round((Math.random()*10-5)*10)/10;
+      $('kp2-w1-range').value=w1; $('kp2-w1-num').value=w1;
+      $('kp2-w2-range').value=w2; $('kp2-w2-num').value=w2;
+      $('kp2-b-range').value=b;   $('kp2-b-num').value=b;
+      draw(); updateReadout('random');
+    }
+    function resetTheta(){
+      w1=1; w2=1; b=0;
+      $('kp2-w1-range').value=w1; $('kp2-w1-num').value=w1;
+      $('kp2-w2-range').value=w2; $('kp2-w2-num').value=w2;
+      $('kp2-b-range').value=b;   $('kp2-b-num').value=b;
+      draw(); updateReadout('reset');
+    }
+
+    // 拖點
+    function canvasPos(e){
+      var r = cv.getBoundingClientRect();
+      var x = e.clientX - r.left, y = e.clientY - r.top;
+      var px = XMIN + (x-mL)/(splitX-mL)*(XMAX-XMIN);
+      var py = YMIN + (mT+(cv.height-mT-mB)-y)/(cv.height-mT-mB)*(YMAX-YMIN);
+      return [px,py];
+    }
+    cv.addEventListener('mousedown', function(e){
+      var p = canvasPos(e);
+      var best=-1, bd=1e9;
+      for (var i=0;i<points.length;i++){
+        var d=Math.hypot(points[i][0]-p[0], points[i][1]-p[1]);
+        if (d<bd){ bd=d; best=i; }
+      }
+      if (best>=0 && bd<0.6){ dragIdx=best; }
+    });
+    cv.addEventListener('mousemove', function(e){
+      if (dragIdx<0) return;
+      var p = canvasPos(e);
+      points[dragIdx][0]=Math.max(XMIN,Math.min(XMAX,p[0]));
+      points[dragIdx][1]=Math.max(YMIN,Math.min(YMAX,p[1]));
+      draw(); updateReadout('drag');
+    });
+    cv.addEventListener('mouseup', function(){ dragIdx=-1; });
+    cv.addEventListener('mouseleave', function(){ dragIdx=-1; });
+
+    $('kp2-w1-range').addEventListener('input', function(e){ setW1(e.target.value); });
+    $('kp2-w1-num').addEventListener('input', function(e){ setW1(e.target.value); });
+    $('kp2-w2-range').addEventListener('input', function(e){ setW2(e.target.value); });
+    $('kp2-w2-num').addEventListener('input', function(e){ setW2(e.target.value); });
+    $('kp2-b-range').addEventListener('input', function(e){ setB(e.target.value); });
+    $('kp2-b-num').addEventListener('input', function(e){ setB(e.target.value); });
+    $('kp2-preset').addEventListener('click', loadPreset);
+    $('kp2-random').addEventListener('click', randomTheta);
+    $('kp2-reset').addEventListener('click', resetTheta);
+    $('kp2-hand').addEventListener('click', function(){ draw(); updateReadout('hand'); });
+
+    draw(); updateReadout('init');
+  })();
+  </script>
+</div>
+<div class="quiz" data-ans="B"><p class="q"><p>一個物件用 $d$ 個特徵描述，可表示成哪個空間裡的向量？</p></p><div class="opts"><label class="opt"><input type="radio" name="q2-0" value="A"><span>A. <p>$\mathbb{R}^{p}$</p></span></label><label class="opt"><input type="radio" name="q2-0" value="B"><span>B. <p>$\mathbb{R}^{d}$</p></span></label><label class="opt"><input type="radio" name="q2-0" value="C"><span>C. <p>$\mathbb{R}^{n}$</p></span></label><label class="opt"><input type="radio" name="q2-0" value="D"><span>D. <p>$\mathbb{R}^{d \times n}$</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="有 $d$ 個特徵的物件，就是 $d$ 維歐氏空間 $\mathbb{R}^{d}$ 裡的一個向量。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>資料矩陣 $\boldsymbol{X}$ 的維度是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q2-1" value="A"><span>A. <p>$n \times d$</p></span></label><label class="opt"><input type="radio" name="q2-1" value="B"><span>B. <p>$d \times n$</p></span></label><label class="opt"><input type="radio" name="q2-1" value="C"><span>C. <p>$d \times d$</p></span></label><label class="opt"><input type="radio" name="q2-1" value="D"><span>D. <p>$n \times n$</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="資料點按「行」排列，$n$ 個 $d$ 維向量排成 $\boldsymbol{X} \in \mathbb{R}^{d \times n}$。"></div></div><div class="quiz" data-ans="C"><p class="q"><p>式(2) 中 $f_{\theta}: \mathbb{R}^{d} \rightarrow \mathbb{R}^{p}$ 的 $\theta$ 代表什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q2-2" value="A"><span>A. <p>資料點個數</p></span></label><label class="opt"><input type="radio" name="q2-2" value="B"><span>B. <p>特徵維度</p></span></label><label class="opt"><input type="radio" name="q2-2" value="C"><span>C. <p>函數的參數</p></span></label><label class="opt"><input type="radio" name="q2-2" value="D"><span>D. <p>輸出維度</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="$\theta$ 是函數 $f$ 的參數，這些參數是從資料中學來的。"></div></div><div class="quiz" data-ans="A"><p class="q"><p>式(2) 中，$p$ 與 $d$ 的關係通常是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q2-3" value="A"><span>A. <p>$p \leq d$</p></span></label><label class="opt"><input type="radio" name="q2-3" value="B"><span>B. <p>$p \gt  d$</p></span></label><label class="opt"><input type="radio" name="q2-3" value="C"><span>C. <p>$p = d$ 恆成立</p></span></label><label class="opt"><input type="radio" name="q2-3" value="D"><span>D. <p>兩者無關</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="原文指出「通常（但不一定）$p \leq d$」，輸出維度一般不大於輸入維度。"></div></div></div><button class="guide-btn" type="button" data-kp="2" onclick="window.openGuide(2)">📖 教授祕笈</button>
+</section>
+<section id="kp3" class="card" data-kp="3"><div class="card-head"><span class="badge">3.1</span><h3>Supervised Learning：用有標籤的資料學習</h3><span class="toggle">▼</span></div><div class="card-body"><h4>監督式學習：用「有標籤」的資料學習</h4>
+<p>機器學習的任務大致分成監督式、非監督式與強化學習三大類。監督式學習包含分類與回歸，演算法從「有標籤」的資料學習，以便對新的、沒見過的輸入做預測。</p>
+<h4>分類：教小孩分蘋果與黃瓜</h4>
+<p>假設你想教一個小孩分辨蘋果和黃瓜。你可以各收集 5 個例子，一個一個拿給小孩看，並說「這是蘋果」或「這是黃瓜」。透過這些有標籤的例子，小孩慢慢學會依特徵來認出蘋果和黃瓜。</p>
+<p>這個情境正是機器學習裡<strong>分類</strong>（classification）的基本任務：把每個資料實例分派到幾個預先定義好的類別之一。</p>
+<p><strong>技術定義</strong>：考慮一個有 $n$ 個資料點的資料集 $\left\{\left(\boldsymbol{x}_{i}, y_{i}\right)\right\}_{i=1}^{n}$，其中 $\boldsymbol{x}_{i} \in \mathbb{R}^{d}$ 是輸入向量，$y_{i}$ 是對應的標籤。標籤 $y_{i}$ 取值於一個有限的類別標籤集合 $\left\{\ell_{1}, \ell_{2}, \ldots, \ell_{m}\right\}$。分類的任務是學一個函數 $f_{\theta}$，使得對新的輸入 $\boldsymbol{x}$，模型預測出標籤 $y=f_{\theta}(\boldsymbol{x})$：</p>
+<p>$$
+f_{\theta}: \mathbb{R}^{d} \rightarrow\left\{\ell_{1}, \ell_{2}, \ldots, \ell_{m}\right\} . \tag{3}
+$$</p>
+<p>分類的機器學習演算法，目標就是找出能讓輸出盡量貼合期望標籤的參數值 $\theta$。</p>
+<h4>回歸：教小孩估蘋果直徑</h4>
+<p><strong>回歸</strong>（regression）是另一個基本任務，目標是依輸入特徵預測一個<strong>連續值</strong>。</p>
+<p>假設你想教小孩估計蘋果的直徑。你可以收集 5 顆蘋果、量好它們的直徑，再拿給小孩看並對應它們的大小。有了這些有標籤的例子，小孩學會把蘋果的視覺特徵（顏色、質地、形狀）跟它的直徑連結起來。</p>
+<p><strong>技術定義</strong>：考慮一個有 $n$ 個資料點的資料集 $\left\{\left(\boldsymbol{x}_{i}, y_{i}\right)\right\}_{i=1}^{n}$，其中 $\boldsymbol{x}_{i} \in \mathbb{R}^{d}$ 是輸入向量，$y_{i}$ 是對應的標籤。跟分類不同——分類的 $y_{i}$ 取值於有限集合——回歸的 $y_{i}$ 取值於 $\mathbb{R}$。回歸的任務是學一個函數 $f_{\theta}$，使得對新的輸入 $\boldsymbol{x}$，模型預測出一個實數輸出 $y=f_{\theta}(\boldsymbol{x})$：</p>
+<p>$$
+f_{\theta}: \mathbb{R}^{d} \rightarrow \mathbb{R} . \tag{4}
+$$</p>
+<p>回歸的機器學習演算法，目標是找出能讓輸出盡量接近真實值的參數值 $\theta$，以便對新的、沒見過的資料做預測。這讓模型能推廣到訓練時沒看過的輸入。</p>
+<h4>離散標籤 vs 連續值</h4>
+<p>分類與回歸最大的差別，就在輸出的「型態」：</p>
+<ul>
+<li><strong>分類</strong>：輸出是<strong>離散</strong>的類別標籤（例如「蘋果」或「黃瓜」），來自有限集合 $\left\{\ell_{1}, \ldots, \ell_{m}\right\}$。</li>
+<li><strong>回歸</strong>：輸出是<strong>連續</strong>的實數值（例如直徑 7.2 公分），來自 $\mathbb{R}$。</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#2b6cb0"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="720" height="340" fill="#ffffff"/>
+
+  <!-- divider -->
+  <line x1="360" y1="40" x2="360" y2="320" stroke="#cbd5e0" stroke-width="2" stroke-dasharray="6 5"/>
+
+  <!-- ===== LEFT: Classification ===== -->
+  <g>
+    <text x="180" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#2b6cb0">分類 Classification</text>
+    <!-- apple -->
+    <g transform="translate(180,70)">
+      <circle cx="0" cy="8" r="26" fill="#fc8181" stroke="#e53e3e" stroke-width="2"/>
+      <path d="M0 -18 q6 -12 14 -14" fill="none" stroke="#38a169" stroke-width="3"/>
+      <ellipse cx="-6" cy="2" rx="6" ry="4" fill="#feb2b2" transform="rotate(-20 -6 2)"/>
+    </g>
+    <text x="180" y="118" text-anchor="middle" font-size="11" fill="#4a5568">輸入：蘋果</text>
+
+    <path d="M180 128 C 180 150, 180 160, 180 175" fill="none" stroke="#2b6cb0" stroke-width="2.4" marker-end="url(#arr)"/>
+
+    <!-- discrete labels -->
+    <text x="180" y="196" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6cb0">離散標籤 {l₁, l₂, l₃}</text>
+    <g transform="translate(180,210)">
+      <rect x="-70" y="0" width="40" height="34" rx="6" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="1.6"/>
+      <text x="-50" y="22" text-anchor="middle" font-size="12" fill="#2b6cb0">l₁</text>
+      <rect x="-20" y="0" width="40" height="34" rx="6" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="1.6"/>
+      <text x="0" y="22" text-anchor="middle" font-size="12" fill="#2b6cb0">l₂</text>
+      <rect x="30" y="0" width="40" height="34" rx="6" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="1.6"/>
+      <text x="50" y="22" text-anchor="middle" font-size="12" fill="#2b6cb0">l₃</text>
+    </g>
+    <text x="180" y="270" text-anchor="middle" font-size="11" fill="#4a5568">輸出是「哪一類」</text>
+    <text x="180" y="290" text-anchor="middle" font-size="11" fill="#718096">有限、可數的類別</text>
+  </g>
+
+  <!-- ===== RIGHT: Regression ===== -->
+  <g>
+    <text x="540" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#38a169">回歸 Regression</text>
+    <!-- apple with diameter -->
+    <g transform="translate(540,70)">
+      <circle cx="0" cy="8" r="26" fill="#9ae6b4" stroke="#38a169" stroke-width="2"/>
+      <path d="M0 -18 q6 -12 14 -14" fill="none" stroke="#2f855a" stroke-width="3"/>
+      <line x1="-24" y1="8" x2="24" y2="8" stroke="#2f855a" stroke-width="2.4"/>
+      <circle cx="-24" cy="8" r="2.5" fill="#2f855a"/>
+      <circle cx="24" cy="8" r="2.5" fill="#2f855a"/>
+    </g>
+    <text x="540" y="118" text-anchor="middle" font-size="11" fill="#4a5568">輸入：蘋果直徑</text>
+
+    <path d="M540 128 C 540 150, 540 160, 540 175" fill="none" stroke="#38a169" stroke-width="2.4" marker-end="url(#arr)"/>
+
+    <!-- continuous number line R -->
+    <text x="540" y="196" text-anchor="middle" font-size="12" font-weight="bold" fill="#38a169">連續 R（實數軸）</text>
+    <g transform="translate(540,225)">
+      <line x1="-90" y1="0" x2="90" y2="0" stroke="#38a169" stroke-width="2.4"/>
+      <path d="M90 -6 L100 0 L90 6 Z" fill="#38a169"/>
+      <line x1="-90" y1="-5" x2="-90" y2="5" stroke="#38a169" stroke-width="2"/>
+      <!-- ticks -->
+      <line x1="-60" y1="-4" x2="-60" y2="4" stroke="#68d391" stroke-width="1.4"/>
+      <line x1="-30" y1="-4" x2="-30" y2="4" stroke="#68d391" stroke-width="1.4"/>
+      <line x1="0" y1="-4" x2="0" y2="4" stroke="#68d391" stroke-width="1.4"/>
+      <line x1="30" y1="-4" x2="30" y2="4" stroke="#68d391" stroke-width="1.4"/>
+      <line x1="60" y1="-4" x2="60" y2="4" stroke="#68d391" stroke-width="1.4"/>
+      <!-- a point -->
+      <circle cx="35" cy="0" r="5" fill="#2f855a"/>
+      <text x="35" y="-12" text-anchor="middle" font-size="11" fill="#2f855a">7.3 cm</text>
+    </g>
+    <text x="540" y="270" text-anchor="middle" font-size="11" fill="#4a5568">輸出是「一個數值」</text>
+    <text x="540" y="290" text-anchor="middle" font-size="11" fill="#718096">無限、連續的實數</text>
+  </g>
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-3" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 左右分鏡對比圖，中間以虛線分隔。左半是「分類」：一顆蘋果 → 向下箭頭 → 離散標籤 {l₁, l₂, l₃} 三個獨立格子。右半是「回歸」：一顆標了直徑線的蘋果 → 向下箭頭 → 連續實數軸 R，軸上標一個數值點（如 7.3 cm）。
+
+WHY（因果或反直覺）: 用同一個輸入（蘋果）對照兩種輸出，凸顯「任務決定輸出空間」的因果：分類要回答「是哪一類」（有限可數），回歸要回答「是多少」（無限連續）。反直覺點：分類的輸出是離散格子、彼此無大小順序；回歸的輸出是連續軸、有大小與距離。
+
+MUST show（必備要素）: ① 左半標題「分類 Classification」、右半標題「回歸 Regression」；② 兩邊各一顆蘋果（分類用紅蘋果、回歸用綠蘋果並畫直徑線）；③ 左半離散標籤 {l₁, l₂, l₃} 三個格子；④ 右半連續實數軸 R 帶刻度與一個數值點；⑤ 兩邊各一段向下箭頭；⑥ 底部各一行結論「輸出是哪一類 / 輸出是一個數值」；⑦ 中間虛線分隔。
+
+AVOID（禁止）: 不要畫成純方框互連；不要出現任何數學公式或 LaTeX 反斜線；不要讓左右兩半內容混在一起；不要用真實照片，用向量圖示即可；不要漏掉「離散 vs 連續」的對比。
+
+STYLE: flat vector, scientific, white background, 左半藍色調（分類）、右半綠色調（回歸），圓角、粗箭頭、無陰影、無漸層。</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">示意：分類（離散標籤）與回歸（連續值）對比</figcaption></figure></div>
+
+<div class="demo" data-demo-id="kp3">
+  <style>
+    [data-demo-id="kp3"] { border: 1px solid #cbd5e1; border-radius: 14px; overflow: hidden; background: #fff; font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    [data-demo-id="kp3"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#7c3aed,#5b21b6); color: #fff; font-weight: 700; font-size: 1.02rem; }
+    [data-demo-id="kp3"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #faf5ff; }
+    [data-demo-id="kp3"] .demo-panel { flex: 1 1 300px; min-width: 280px; display: flex; flex-direction: column; gap: 10px; }
+    [data-demo-id="kp3"] .demo-stage { flex: 1 1 460px; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+    [data-demo-id="kp3"] canvas { border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp3"] .kp3-block-title { font-size: 0.82rem; font-weight: 700; color: #5b21b6; margin-bottom: 2px; }
+    [data-demo-id="kp3"] .kp3-row { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #1e293b; }
+    [data-demo-id="kp3"] .kp3-row label { min-width: 44px; font-weight: 600; }
+    [data-demo-id="kp3"] input[type="range"].kp3-range { flex: 1 1 auto; }
+    [data-demo-id="kp3"] input.kp3-num { width: 52px; font-size: 0.82rem; padding: 2px 4px; border: 1px solid #94a3b8; border-radius: 4px; text-align: center; }
+    [data-demo-id="kp3"] .kp3-btnrow { display: flex; flex-wrap: wrap; gap: 6px; }
+    [data-demo-id="kp3"] button.kp3-btn { appearance: none; border: 1px solid #8b5cf6; background: #f5f3ff; color: #5b21b6; font-weight: 600; font-size: 0.78rem; padding: 6px 9px; border-radius: 7px; cursor: pointer; }
+    [data-demo-id="kp3"] button.kp3-btn:hover { background: #ede9fe; }
+    [data-demo-id="kp3"] .demo-readout { min-height: 10em; padding: 10px 12px; border: 1px solid #ddd6fe; border-radius: 8px; background: #f5f3ff; color: #312e81; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.78rem; line-height: 1.55; white-space: pre-wrap; }
+    [data-demo-id="kp3"] .demo-theory { padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #eef2ff; color: #1e293b; font-size: 0.84rem; line-height: 1.7; }
+    [data-demo-id="kp3"] .demo-instruction { padding: 12px 18px; border-top: 1px solid #e2e8f0; background: #fff; font-size: 0.85rem; line-height: 1.7; color: #1e293b; }
+  </style>
+
+  <div class="demo-head">⚖️ Demo：分類 vs 回歸 — 同源點雲的兩種輸出空間（式 3 vs 式 4）</div>
+
+  <div class="demo-body">
+    <div class="demo-panel">
+      <div class="kp3-block-title">共享線性模型 θ = (w₁, w₂, b)</div>
+      <div class="kp3-row"><label>w₁</label><input type="range" class="kp3-range" id="kp3-w1-range" min="-3" max="3" step="0.1" value="1"><input type="number" class="kp3-num" id="kp3-w1-num" min="-3" max="3" step="0.1" value="1"></div>
+      <div class="kp3-row"><label>w₂</label><input type="range" class="kp3-range" id="kp3-w2-range" min="-3" max="3" step="0.1" value="1"><input type="number" class="kp3-num" id="kp3-w2-num" min="-3" max="3" step="0.1" value="1"></div>
+      <div class="kp3-row"><label>b</label><input type="range" class="kp3-range" id="kp3-b-range" min="-5" max="5" step="0.1" value="0"><input type="number" class="kp3-num" id="kp3-b-num" min="-5" max="5" step="0.1" value="0"></div>
+      <div class="kp3-block-title">操作</div>
+      <div class="kp3-btnrow">
+        <button class="kp3-btn" id="kp3-preset" type="button">載入點雲</button>
+        <button class="kp3-btn" id="kp3-random" type="button">🎲 隨機 θ</button>
+        <button class="kp3-btn" id="kp3-reset" type="button">↺ 重置 θ</button>
+        <button class="kp3-btn" id="kp3-hand" type="button">✋ 手算標籤/值</button>
+      </div>
+      <div class="kp3-block-title">提示</div>
+      <div class="kp3-row">左=分類（離散 {l₁,l₂}），右=回歸（連續 R 色階）。</div>
+      <div class="demo-readout" id="kp3-ro"></div>
+    </div>
+    <div class="demo-stage">
+      <div class="kp3-block-title">左：分類 fθ: R²→{l₁,l₂}（式 3）　右：回歸 fθ: R²→R（式 4）</div>
+      <canvas id="kp3-cv" width="620" height="360"></canvas>
+    </div>
+  </div>
+
+  <div class="demo-theory">
+    <strong>原理</strong>：同一組輸入點，可被兩種監督式任務消費。
+    <strong>分類</strong>（式 3）把輸入映射到<strong>離散</strong>標籤集合 $\{\ell_{1},\ell_{2}\}$：這裡用線性判別 $s(\boldsymbol{x})=w_{1}x_{1}+w_{2}x_{2}+b$，
+    取 $s\ge 0 \Rightarrow \ell_{2}$、$s<0 \Rightarrow \ell_{1}$（即 $\arg\max$ 於兩類分數）。
+    <strong>回歸</strong>（式 4）把輸入映射到<strong>連續</strong>實數 $\mathbb{R}$：直接輸出 $f_{\theta}(\boldsymbol{x})=w_{1}x_{1}+w_{2}x_{2}+b$。
+    兩者共用同一 $\theta$，差別只在「輸出空間的型態」。
+  </div>
+  <div class="demo-instruction">
+    <strong>操作：</strong>調滑桿改變共享 $\theta$，左右兩圖同時更新。「載入點雲」載入預設 2D 點；
+    「🎲 隨機 θ」隨機抽參數；「↺ 重置 θ」回到 $w_{1}=w_{2}=1,b=0$；「✋ 手算標籤/值」在 readout 逐點列出分類標籤與回歸值。
+    <strong>觀察什麼：</strong>左圖只有兩種顏色（離散），決策邊界 $w_{1}x_{1}+w_{2}x_{2}+b=0$ 把平面切成兩半；
+    右圖是連續色階（連續值），沒有「邊界」只有「漸層」。
+    <strong>正確基準：</strong>分類標籤 = $\arg\max$（$s\ge0$→l₂，否則 l₁）；回歸值 = $w_{1}x_{1}+w_{2}x_{2}+b$（閉式一致）。
+  </div>
+
+  <script>
+  (function(){
+    var $ = function(id){ return document.getElementById(id); };
+    var cv = $('kp3-cv');
+    var ctx = cv.getContext('2d');
+    var ro = $('kp3-ro');
+
+    var XMIN=0, XMAX=10, YMIN=0, YMAX=10, OMIN=-12, OMAX=12;
+
+    var presetData = [
+      [1.5,2.0],[2.5,2.5],[2.0,3.5],[3.5,3.0],[1.0,4.0],
+      [7.0,6.5],[8.0,7.5],[7.5,5.5],[9.0,7.0],[8.0,8.0],
+      [4.5,5.0],[5.5,4.5]
+    ];
+    var labels = ['x₁','x₂','x₃','x₄','x₅','x₆','x₇','x₈','x₉','x₁₀','x₁₁','x₁₂'];
+
+    var points = presetData.map(function(p){ return [p[0],p[1]]; });
+    var w1=1, w2=1, b=0;
+
+    function score(x){ return w1*x[0] + w2*x[1] + b; }
+    function classify(x){ return score(x) >= 0 ? 'l₂' : 'l₁'; }   // argmax over {l1,l2}
+    function regress(x){ return score(x); }
+
+    function fmt(x){ return (Math.round(x*100)/100).toString(); }
+
+    // 回歸色階：連續值 → 藍(低)…紅(高)
+    function regColor(v){
+      var t = (v - OMIN)/(OMAX-OMIN); t = Math.max(0, Math.min(1, t));
+      var r,g,bl;
+      if (t<0.5){ var u=t*2; r=Math.round(37+ (255-37)*u); g=Math.round(99+(255-99)*u); bl=Math.round(235+(255-235)*u); }
+      else { var u=(t-0.5)*2; r=Math.round(255+(220-255)*u); g=Math.round(255+(38-255)*u); bl=Math.round(255+(38-255)*u); }
+      return 'rgb('+r+','+g+','+bl+')';
+    }
+
+    // 版面：左分類區、右回歸區
+    var mL=46, mR=30, mT=26, mB=34;
+    var splitX = 400;
+
+    function sx(x){ return mL + (x-XMIN)/(XMAX-XMIN)*(splitX-mL); }
+    function sy(y){ return mT + (YMAX-y)/(YMAX-YMIN)*(cv.height-mT-mB); }
+
+    function draw(){
+      var Wd=cv.width, H=cv.height;
+      ctx.clearRect(0,0,Wd,H);
+      ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,Wd,H);
+
+      // 兩區網格
+      ctx.strokeStyle='#eef2f7'; ctx.lineWidth=1;
+      for (var gx=0;gx<=10;gx++){ ctx.beginPath(); ctx.moveTo(sx(gx),mT); ctx.lineTo(sx(gx),mT+(H-mT-mB)); ctx.stroke(); }
+      for (var gy=0;gy<=10;gy++){ ctx.beginPath(); ctx.moveTo(mL,sy(gy)); ctx.lineTo(splitX,sy(gy)); ctx.stroke(); }
+      ctx.strokeStyle='#cbd5e1';
+      ctx.beginPath(); ctx.moveTo(mL,mT+(H-mT-mB)); ctx.lineTo(splitX,mT+(H-mT-mB)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mL,mT); ctx.lineTo(mL,mT+(H-mT-mB)); ctx.stroke();
+      ctx.fillStyle='#475569'; ctx.font='11px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('x₁', splitX-4, mT+(H-mT-mB)+14);
+      ctx.textAlign='left'; ctx.fillText('x₂', mL+4, mT+10);
+
+      // 分隔線
+      ctx.strokeStyle='#cbd5e1'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.moveTo(splitX+20,mT); ctx.lineTo(splitX+20,mT+(H-mT-mB)); ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 左：分類決策邊界 w1x1+w2x2+b=0
+      if (Math.abs(w2) > 1e-9){
+        var y0 = -(w1*XMIN + b)/w2, y1 = -(w1*XMAX + b)/w2;
+        ctx.strokeStyle='#0f172a'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(sx(XMIN), sy(y0)); ctx.lineTo(sx(XMAX), sy(y1)); ctx.stroke();
+      } else if (Math.abs(w1) > 1e-9){
+        var x0 = -b/w1;
+        ctx.strokeStyle='#0f172a'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(sx(x0), mT); ctx.lineTo(sx(x0), mT+(H-mT-mB)); ctx.stroke();
+      }
+
+      // 左：分類點（離散兩色）
+      for (var i=0;i<points.length;i++){
+        var lab = classify(points[i]);
+        var col = (lab==='l₂') ? '#dc2626' : '#2563eb';
+        var px=sx(points[i][0]), py=sy(points[i][1]);
+        ctx.beginPath(); ctx.arc(px,py,6,0,Math.PI*2);
+        ctx.fillStyle=col; ctx.fill();
+        ctx.strokeStyle='#0f172a'; ctx.lineWidth=1.2; ctx.stroke();
+        ctx.fillStyle='#1e293b'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
+        ctx.fillText(lab, px, py-9);
+      }
+
+      // 右：回歸點（連續色階）
+      for (var j=0;j<points.length;j++){
+        var v = regress(points[j]);
+        var px2=sx(points[j][0]), py2=sy(points[j][1]);
+        ctx.beginPath(); ctx.arc(px2,py2,6,0,Math.PI*2);
+        ctx.fillStyle=regColor(v); ctx.fill();
+        ctx.strokeStyle='#0f172a'; ctx.lineWidth=1.2; ctx.stroke();
+        ctx.fillStyle='#1e293b'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
+        ctx.fillText(fmt(v), px2, py2-9);
+      }
+
+      // 標題
+      ctx.fillStyle='#334155'; ctx.font='bold 11px sans-serif'; ctx.textAlign='left';
+      ctx.fillText('分類：s='+fmt(w1)+'x₁+'+fmt(w2)+'x₂+'+fmt(b)+'，s≥0→l₂', mL+6, mT+12);
+      ctx.fillText('回歸：fθ='+fmt(w1)+'x₁+'+fmt(w2)+'x₂+'+fmt(b), splitX+30, mT+12);
+    }
+
+    function updateReadout(why){
+      var lines=[];
+      lines.push('θ = (w₁='+fmt(w1)+', w₂='+fmt(w2)+', b='+fmt(b)+')');
+      lines.push('s(x) = '+fmt(w1)+'·x₁ + '+fmt(w2)+'·x₂ + '+fmt(b));
+      lines.push('');
+      if (why==='hand'){
+        lines.push('—— 手算：分類標籤（argmax）vs 回歸值（線性）——');
+        for (var i=0;i<points.length;i++){
+          var x=points[i];
+          var s = w1*x[0]+w2*x[1]+b;
+          var lab = s>=0 ? 'l₂' : 'l₁';
+          lines.push('  '+labels[i]+'=('+fmt(x[0])+','+fmt(x[1])+')  s='+fmt(s)+'  →  分類 '+lab+' ｜ 回歸 '+fmt(s));
+        }
+      } else {
+        lines.push('—— 各點：分類標籤 ｜ 回歸值 ——');
+        for (var j=0;j<points.length;j++){
+          var x2=points[j];
+          lines.push('  '+labels[j]+'=('+fmt(x2[0])+','+fmt(x2[1])+')  →  '+classify(x2)+' ｜ '+fmt(regress(x2)));
+        }
+      }
+      lines.push('');
+      lines.push('式(3) 輸出離散 {l₁,l₂}；式(4) 輸出連續 R。');
+      ro.textContent = lines.join('\n');
+    }
+
+    function setW1(v){ w1=Math.max(-3,Math.min(3,parseFloat(v))); if(isNaN(w1))w1=1;
+      $('kp3-w1-range').value=w1; $('kp3-w1-num').value=w1; draw(); updateReadout('param'); }
+    function setW2(v){ w2=Math.max(-3,Math.min(3,parseFloat(v))); if(isNaN(w2))w2=1;
+      $('kp3-w2-range').value=w2; $('kp3-w2-num').value=w2; draw(); updateReadout('param'); }
+    function setB(v){ b=Math.max(-5,Math.min(5,parseFloat(v))); if(isNaN(b))b=0;
+      $('kp3-b-range').value=b; $('kp3-b-num').value=b; draw(); updateReadout('param'); }
+
+    function loadPreset(){
+      points = presetData.map(function(p){ return [p[0],p[1]]; });
+      draw(); updateReadout('preset');
+    }
+    function randomTheta(){
+      w1 = Math.round((Math.random()*6-3)*10)/10;
+      w2 = Math.round((Math.random()*6-3)*10)/10;
+      b  = Math.round((Math.random()*10-5)*10)/10;
+      $('kp3-w1-range').value=w1; $('kp3-w1-num').value=w1;
+      $('kp3-w2-range').value=w2; $('kp3-w2-num').value=w2;
+      $('kp3-b-range').value=b;   $('kp3-b-num').value=b;
+      draw(); updateReadout('random');
+    }
+    function resetTheta(){
+      w1=1; w2=1; b=0;
+      $('kp3-w1-range').value=w1; $('kp3-w1-num').value=w1;
+      $('kp3-w2-range').value=w2; $('kp3-w2-num').value=w2;
+      $('kp3-b-range').value=b;   $('kp3-b-num').value=b;
+      draw(); updateReadout('reset');
+    }
+
+    $('kp3-w1-range').addEventListener('input', function(e){ setW1(e.target.value); });
+    $('kp3-w1-num').addEventListener('input', function(e){ setW1(e.target.value); });
+    $('kp3-w2-range').addEventListener('input', function(e){ setW2(e.target.value); });
+    $('kp3-w2-num').addEventListener('input', function(e){ setW2(e.target.value); });
+    $('kp3-b-range').addEventListener('input', function(e){ setB(e.target.value); });
+    $('kp3-b-num').addEventListener('input', function(e){ setB(e.target.value); });
+    $('kp3-preset').addEventListener('click', loadPreset);
+    $('kp3-random').addEventListener('click', randomTheta);
+    $('kp3-reset').addEventListener('click', resetTheta);
+    $('kp3-hand').addEventListener('click', function(){ draw(); updateReadout('hand'); });
+
+    draw(); updateReadout('init');
+  })();
+  </script>
+</div>
+<div class="quiz" data-ans="B"><p class="q"><p>分類任務的標籤 $y_{i}$ 取值於？</p></p><div class="opts"><label class="opt"><input type="radio" name="q3-0" value="A"><span>A. <p>$\mathbb{R}$</p></span></label><label class="opt"><input type="radio" name="q3-0" value="B"><span>B. <p>有限類別集合 $\left\{\ell_{1}, \ldots, \ell_{m}\right\}$</p></span></label><label class="opt"><input type="radio" name="q3-0" value="C"><span>C. <p>$\mathbb{R}^{d}$</p></span></label><label class="opt"><input type="radio" name="q3-0" value="D"><span>D. <p>任意實數</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="分類的標籤來自有限的類別集合，例如「蘋果」或「黃瓜」。"></div></div><div class="quiz" data-ans="C"><p class="q"><p>回歸任務的標籤 $y_{i}$ 取值於？</p></p><div class="opts"><label class="opt"><input type="radio" name="q3-1" value="A"><span>A. <p>有限類別集合</p></span></label><label class="opt"><input type="radio" name="q3-1" value="B"><span>B. <p>$\mathbb{R}^{d}$</p></span></label><label class="opt"><input type="radio" name="q3-1" value="C"><span>C. <p>$\mathbb{R}$</p></span></label><label class="opt"><input type="radio" name="q3-1" value="D"><span>D. <p>布林值</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="回歸預測連續值，$y_{i}$ 取值於 $\mathbb{R}$。"></div></div><div class="quiz" data-ans="C"><p class="q"><p>式(3) 分類的映射是 $f_{\theta}: \mathbb{R}^{d} \rightarrow$ 什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q3-2" value="A"><span>A. <p>$\mathbb{R}$</p></span></label><label class="opt"><input type="radio" name="q3-2" value="B"><span>B. <p>$\mathbb{R}^{p}$</p></span></label><label class="opt"><input type="radio" name="q3-2" value="C"><span>C. <p>$\left\{\ell_{1}, \ell_{2}, \ldots, \ell_{m}\right\}$</p></span></label><label class="opt"><input type="radio" name="q3-2" value="D"><span>D. <p>$\mathbb{R}^{d}$</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="分類把輸入映射到有限的類別標籤集合 $\left\{\ell_{1}, \ldots, \ell_{m}\right\}$。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>教小孩「分辨蘋果或黃瓜」對應哪種任務？</p></p><div class="opts"><label class="opt"><input type="radio" name="q3-3" value="A"><span>A. <p>回歸</p></span></label><label class="opt"><input type="radio" name="q3-3" value="B"><span>B. <p>分類</p></span></label><label class="opt"><input type="radio" name="q3-3" value="C"><span>C. <p>降維</p></span></label><label class="opt"><input type="radio" name="q3-3" value="D"><span>D. <p>分群</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="把每個實例分派到預先定義的類別之一，正是分類任務。"></div></div></div></section>
+<section id="kp4" class="card" data-kp="4"><div class="card-head"><span class="badge">3.2</span><h3>Unsupervised Learning：從無標籤資料找結構</h3><span class="toggle">▼</span></div><div class="card-body"><h4>非監督式學習：從「無標籤」資料找結構</h4>
+<p>非監督式學習包含分群與降維，目標是在<strong>沒有標籤</strong>的資料中找出模式或結構。</p>
+<h4>分群：不告訴名字，自己分組</h4>
+<p><strong>分群</strong>（clustering）的基本任務，是依相似度把資料點分組，完全不用任何標籤。</p>
+<p>假設你想教小孩分辨蘋果和黃瓜，但不告訴他們名字。你可以收集 5 顆蘋果和 5 條黃瓜，打亂後請小孩依外觀把它們分成兩組。小孩可能發現蘋果偏圓、黃瓜偏長，於是自然地把它們分開。這個分組完全只靠物件的模式，沒有任何先驗標籤資訊。</p>
+<p><strong>技術定義</strong>：考慮資料 $\left\{\boldsymbol{x}_{i}\right\}_{i=1}^{n}$，其中 $\boldsymbol{x}_{i} \in \mathbb{R}^{d}$。分群的任務是學一個函數 $f_{\theta}$，使得當我們看到新的輸入 $\boldsymbol{x}$ 時，能把它分派到其中一個群：</p>
+<p>$$
+f_{\theta}(\boldsymbol{x}) \in\left\{\ell_{1}, \ell_{2}, \ldots, \ell_{m}\right\} . \tag{5}
+$$</p>
+<p>數學上，模型可寫成</p>
+<p>$$
+f_{\theta}: \mathbb{R}^{d} \rightarrow\left\{\ell_{1}, \ell_{2}, \ldots, \ell_{m}\right\} . \tag{6}
+$$</p>
+<p>這個形式跟分類很像——模型都把每個輸入映射到有限輸出集合之一。但差別在於：分類有帶標籤的資料 $\left\{\left(\boldsymbol{x}_{i}, y_{i}\right)\right\}_{i=1}^{n}$ 可以訓練，而分群只有輸入資料 $\left\{\boldsymbol{x}_{i}\right\}_{i=1}^{n}$、完全沒有標籤。所以分群的學習過程，完全依賴在輸入資料中發現模式與結構。</p>
+<h4>分群的模糊性</h4>
+<p>分群凸顯了這個任務天生的<strong>模糊性</strong>：一個群常常可以再細分，或跟別的群合併，端看你要多細的粒度。為了處理這種模糊性，分群演算法通常要嘛事先指定群的數量，要嘛用超參數來決定分群結構。</p>
+<h4>降維：把高維資料壓到低維</h4>
+<p><strong>降維</strong>（dimensionality reduction）的基本任務，是把高維資料映射到較低維的空間，同時保留重要的結構或模式。</p>
+<p>想像教小孩理解水果的熟度。與其叫他們記住每個細節（大小、顏色、質地），不如教他們把這些特徵組合成單一指標，來捕捉整體熟度。這個新維度就是關鍵特徵的摘要，簡化了對水果狀態的理解，同時保留重要資訊。</p>
+<p><strong>技術定義</strong>：考慮一個有 $n$ 個資料點的資料集 $\left\{\boldsymbol{x}_{i}\right\}_{i=1}^{n}$，其中每個 $\boldsymbol{x}_{i} \in \mathbb{R}^{d}$。降維的任務是學一個函數 $f_{\theta}$，把每個高維輸入向量 $\boldsymbol{x}$ 映射到較低維的表示 $y=f_{\theta}(\boldsymbol{x})$，通常在 $\mathbb{R}^{p}$ 且 $p\lt d$：</p>
+<p>$$
+f_{\theta}: \mathbb{R}^{d} \rightarrow \mathbb{R}^{p} . \tag{7}
+$$</p>
+<p>這裡，較低維的資料點叫做<strong>嵌入資料</strong>（embedding data）。通常 $p \ll d$ 才能達到顯著的降幅。當 $p=2$ 或 $p=3$ 時，降維可以用來做 2D 或 3D 圖的視覺化 [156, 226]。</p>
+<p>降維可以用線性或非線性映射達成。用非線性映射時，這類技術常被叫做<strong>流形學習</strong>（manifold learning），因為資料可能落在高維空間中一個較低維的流形（manifold）上。值得一提的是，文獻裡降維有時也叫<strong>特徵萃取</strong>（feature extraction）[91]。</p>
+<h4>非監督 vs 監督式降維</h4>
+<p>在<strong>非監督式降維</strong>中，目標是讓相似的資料點彼此靠近、不相似的點彼此遠離，完全只靠資料 $\left\{\boldsymbol{x}_{i}\right\}_{i=1}^{n}$ 中的模式。也就是把相似點推在一起、把不相似點拉開，誇大資料結構中的相似與差異。像<strong>局部線性嵌入</strong>（Locally Linear Embedding, LLE）[78, 195] 就是早期為此發展的方法之一。</p>
+<p><strong>監督式降維</strong>則在輸入資料之外，再加入<strong>輔助資訊</strong>（side information，例如類別標籤、成對相似度或其他相關後設資料）。目標是用這些輔助資訊改善低維嵌入。例如，輔助資訊可能有助於降低類內變異（把相似點拉近）並提高類間變異（把不同群推開），改善降維空間中的類別可分性與可解釋性。一個經典例子是<strong>費雪判別分析</strong>（Fisher discriminant analysis）[52, 76]，它用類別標籤當輔助資訊。</p>
+<p>舉例來說，想像幫一位色盲且視力不佳的人分辨地上的紅球與藍球。把紅球與藍球推開（提高類間變異），再把每群收攏成緊密的小團（降低類內變異），就能讓區分更容易被察覺。</p>
+<p>無論非監督或監督，降維都有助於視覺化、降噪，以及簡化複雜資料集，同時保留有意義的資訊。</p><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#2b6cb0"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="720" height="340" fill="#ffffff"/>
+
+  <!-- divider -->
+  <line x1="360" y1="40" x2="360" y2="320" stroke="#cbd5e0" stroke-width="2" stroke-dasharray="6 5"/>
+
+  <!-- ===== LEFT: clustering ambiguity ===== -->
+  <g>
+    <text x="180" y="30" text-anchor="middle" font-size="15" font-weight="bold" fill="#2b6cb0">同一批點，不同 m 切法</text>
+    <text x="180" y="50" text-anchor="middle" font-size="11" fill="#4a5568">分群結果不唯一 → 模糊性</text>
+
+    <!-- m=2 -->
+    <g transform="translate(60,70)">
+      <rect x="0" y="0" width="240" height="70" rx="8" fill="#f7fafc" stroke="#cbd5e0" stroke-width="1.2"/>
+      <text x="120" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6cb0">m = 2</text>
+      <circle cx="30" cy="40" r="5" fill="#e53e3e"/>
+      <circle cx="50" cy="55" r="5" fill="#e53e3e"/>
+      <circle cx="70" cy="38" r="5" fill="#e53e3e"/>
+      <circle cx="60" cy="60" r="5" fill="#e53e3e"/>
+      <circle cx="120" cy="40" r="5" fill="#3182ce"/>
+      <circle cx="140" cy="55" r="5" fill="#3182ce"/>
+      <circle cx="160" cy="38" r="5" fill="#3182ce"/>
+      <circle cx="180" cy="55" r="5" fill="#3182ce"/>
+    </g>
+
+    <!-- m=3 -->
+    <g transform="translate(60,150)">
+      <rect x="0" y="0" width="240" height="70" rx="8" fill="#f7fafc" stroke="#cbd5e0" stroke-width="1.2"/>
+      <text x="120" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6cb0">m = 3</text>
+      <circle cx="30" cy="40" r="5" fill="#e53e3e"/>
+      <circle cx="50" cy="55" r="5" fill="#e53e3e"/>
+      <circle cx="70" cy="38" r="5" fill="#e53e3e"/>
+      <circle cx="120" cy="40" r="5" fill="#3182ce"/>
+      <circle cx="140" cy="55" r="5" fill="#3182ce"/>
+      <circle cx="160" cy="38" r="5" fill="#3182ce"/>
+      <circle cx="60" cy="60" r="5" fill="#38a169"/>
+      <circle cx="180" cy="55" r="5" fill="#38a169"/>
+    </g>
+
+    <!-- m=5 -->
+    <g transform="translate(60,230)">
+      <rect x="0" y="0" width="240" height="70" rx="8" fill="#f7fafc" stroke="#cbd5e0" stroke-width="1.2"/>
+      <text x="120" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6cb0">m = 5</text>
+      <circle cx="30" cy="40" r="5" fill="#e53e3e"/>
+      <circle cx="50" cy="55" r="5" fill="#dd6b20"/>
+      <circle cx="70" cy="38" r="5" fill="#d69e2e"/>
+      <circle cx="120" cy="40" r="5" fill="#3182ce"/>
+      <circle cx="140" cy="55" r="5" fill="#805ad5"/>
+      <circle cx="160" cy="38" r="5" fill="#38a169"/>
+      <circle cx="60" cy="60" r="5" fill="#e53e3e"/>
+      <circle cx="180" cy="55" r="5" fill="#3182ce"/>
+    </g>
+  </g>
+
+  <!-- ===== RIGHT: high-dim -> manifold ===== -->
+  <g>
+    <text x="540" y="30" text-anchor="middle" font-size="15" font-weight="bold" fill="#38a169">高維點雲 → 低維流形嵌入</text>
+
+    <!-- high-dim cloud -->
+    <g transform="translate(540,90)">
+      <text x="0" y="-8" text-anchor="middle" font-size="11" font-weight="bold" fill="#2b6cb0">高維 R^d</text>
+      <circle cx="-30" cy="10" r="4" fill="#90cdf4"/>
+      <circle cx="-10" cy="-5" r="4" fill="#90cdf4"/>
+      <circle cx="10" cy="15" r="4" fill="#90cdf4"/>
+      <circle cx="30" cy="0" r="4" fill="#90cdf4"/>
+      <circle cx="-20" cy="25" r="4" fill="#90cdf4"/>
+      <circle cx="20" cy="-10" r="4" fill="#90cdf4"/>
+      <circle cx="0" cy="5" r="4" fill="#90cdf4"/>
+      <circle cx="-40" cy="0" r="4" fill="#90cdf4"/>
+      <circle cx="40" cy="20" r="4" fill="#90cdf4"/>
+      <circle cx="5" cy="-20" r="4" fill="#90cdf4"/>
+    </g>
+
+    <!-- arrow -->
+    <path d="M540 150 C 540 175, 540 190, 540 205" fill="none" stroke="#38a169" stroke-width="2.4" marker-end="url(#arr)"/>
+    <text x="560" y="180" text-anchor="middle" font-size="11" font-weight="bold" fill="#38a169">降維</text>
+
+    <!-- low-dim manifold -->
+    <g transform="translate(540,215)">
+      <text x="0" y="-8" text-anchor="middle" font-size="11" font-weight="bold" fill="#38a169">低維流形嵌入</text>
+      <path d="M-70 30 C -40 0, -10 60, 20 20 S 60 10, 80 40" fill="none" stroke="#38a169" stroke-width="2.4"/>
+      <circle cx="-70" cy="30" r="4" fill="#2f855a"/>
+      <circle cx="-40" cy="0" r="4" fill="#2f855a"/>
+      <circle cx="-10" cy="60" r="4" fill="#2f855a"/>
+      <circle cx="20" cy="20" r="4" fill="#2f855a"/>
+      <circle cx="60" cy="10" r="4" fill="#2f855a"/>
+      <circle cx="80" cy="40" r="4" fill="#2f855a"/>
+    </g>
+  </g>
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-4" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 左右分鏡圖，中間以虛線分隔。左半「分群模糊性」：同一組點，分別以 m=2、m=3、m=5 三種切法著色，三個小面板上下排列，點的位置完全相同、只有顏色分組不同。右半「降維」：上方一個高維點雲（R^d 的散點）→ 向下箭頭標「降維」→ 下方一條低維流形曲線，點沿曲線分布。
+
+WHY（因果或反直覺）: 左半凸顯反直覺點：分群數 m 是使用者給的，同一批點可以切出不同結果，沒有「唯一正確」的分群——模糊性來自 m 的選擇。右半凸顯因果：高維資料常隱藏在一條低維流形上，降維把點雲「攤平」到低維曲線，保留結構、去掉冗餘維度。
+
+MUST show（必備要素）: ① 左半三個小面板標 m=2 / m=3 / m=5，點位置一致、顏色分組不同（m 越大顏色越多）；② 左半標題「同一批點，不同 m 切法」與「分群結果不唯一 → 模糊性」；③ 右半高維點雲標「高維 R^d」；④ 右半向下箭頭標「降維」；⑤ 右半低維流形曲線標「低維流形嵌入」，點沿曲線分布；⑥ 中間虛線分隔。
+
+AVOID（禁止）: 不要畫成純方框互連；不要出現任何數學公式或 LaTeX 反斜線；不要讓左右兩半混在一起；不要用真實照片；不要讓 m=2/3/5 三面板的點位置不一致（否則看不出「同一批點」）。
+
+STYLE: flat vector, scientific, white background, 左半藍色調（分群）、右半綠色調（降維），圓點、粗箭頭、無陰影、無漸層。</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">示意：分群模糊性與降維低維流形嵌入</figcaption></figure></div>
+
+<div class="demo" data-demo-id="kp4">
+  <style>
+    [data-demo-id="kp4"] { border: 1px solid #cbd5e1; border-radius: 14px; overflow: hidden; background: #fff; font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    [data-demo-id="kp4"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#0ea5e9,#0369a1); color: #fff; font-weight: 700; font-size: 1.02rem; }
+    [data-demo-id="kp4"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #f8fafc; }
+    [data-demo-id="kp4"] .demo-panel { flex: 1 1 300px; min-width: 280px; display: flex; flex-direction: column; gap: 10px; }
+    [data-demo-id="kp4"] .demo-stage { flex: 1 1 420px; min-width: 360px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    [data-demo-id="kp4"] canvas { border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp4"] .kp4-block-title { font-size: 0.82rem; font-weight: 700; color: #0369a1; margin-bottom: 2px; }
+    [data-demo-id="kp4"] .kp4-row { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #1e293b; flex-wrap: wrap; }
+    [data-demo-id="kp4"] .kp4-row label { min-width: 30px; font-weight: 600; }
+    [data-demo-id="kp4"] select.kp4-input { width: auto; font-size: 0.78rem; padding: 2px 4px; border: 1px solid #94a3b8; border-radius: 4px; }
+    [data-demo-id="kp4"] .kp4-btnrow { display: flex; flex-wrap: wrap; gap: 6px; }
+    [data-demo-id="kp4"] button.kp4-btn { appearance: none; border: 1px solid #0ea5e9; background: #e0f2fe; color: #075985; font-weight: 600; font-size: 0.78rem; padding: 6px 10px; border-radius: 7px; cursor: pointer; }
+    [data-demo-id="kp4"] button.kp4-btn:hover { background: #bae6fd; }
+    [data-demo-id="kp4"] .demo-readout { min-height: 11em; padding: 10px 12px; border: 1px solid #bae6fd; border-radius: 8px; background: #f0f9ff; color: #0c4a6e; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.78rem; line-height: 1.55; white-space: pre-wrap; }
+    [data-demo-id="kp4"] .demo-theory { padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #eef2ff; color: #1e293b; font-size: 0.84rem; line-height: 1.7; }
+    [data-demo-id="kp4"] .demo-instruction { padding: 12px 18px; border-top: 1px solid #e2e8f0; background: #fff; font-size: 0.85rem; line-height: 1.7; color: #1e293b; }
+  </style>
+
+  <div class="demo-head">🔍 Demo：分群模糊性（同一批點，不同粒度 m 的切法）</div>
+
+  <div class="demo-body">
+    <div class="demo-panel">
+      <div class="kp4-block-title">聚類參數</div>
+      <div class="kp4-row"><label>m=</label>
+        <select class="kp4-input" id="kp4-m">
+          <option value="2">2（粗分群）</option>
+          <option value="3" selected>3（中分群）</option>
+          <option value="5">5（細分群）</option>
+        </select>
+        <span>簇數（k-means 固定 seeds）</span>
+      </div>
+      <div class="kp4-btnrow">
+        <button class="kp4-btn" id="kp4-reset" type="button">↺ 重置 seeds</button>
+        <button class="kp4-btn" id="kp4-step" type="button">▶ 一步指派</button>
+        <button class="kp4-btn" id="kp4-run" type="button">⏩ 跑到收斂</button>
+      </div>
+      <div class="demo-readout" id="ro-kp4"></div>
+    </div>
+    <div class="demo-stage">
+      <div class="kp4-block-title">資料點（同色=同簇，×=簇中心）</div>
+      <canvas id="cv-kp4" width="420" height="300"></canvas>
+    </div>
+  </div>
+
+  <div class="demo-theory">
+    <strong>原理</strong>：分群（clustering）的「群」數 $m$ 是使用者給定的，同一批資料點可以依不同 $m$ 被切成不同粒度。這裡用簡易 k-means（固定 seeds、Lloyd 迭代）示範：$m=2$ 把點切成兩大群，$m=3$ 切成三群，$m=5$ 切成五小群——<strong>大群可被細分為更小的群</strong>，這就是「分群模糊性」：沒有唯一正確的切法，答案取決於你想要的粒度。
+  </div>
+  <div class="demo-instruction">
+    <strong>操作：</strong>用選單切換 $m$（2/3/5），按「重置 seeds」把 $m$ 個簇中心放回固定起點；「一步指派」做一次 k-means 迭代（指派→更新中心）；「跑到收斂」迭代到指派不再改變。畫面上同色點屬同一簇，× 是簇中心。
+    <strong>觀察什麼：</strong>同一批 15 個點，$m=2$ 時左邊 9 點是一大群、右邊 6 點是另一大群；$m=3$ 時左大群被細分為「1 點群」與「6 點群」；$m=5$ 時再細分為五個小群。可見「群」的定義依 $m$ 而變，分群結果並非唯一。
+    <strong>正確基準：</strong>每個點必被指派到距離最近的簇中心（k-means 指派閉式）；簇中心 = 其負責點的平均（Lloyd 更新閉式）；收斂後指派不再改變。
+  </div>
+
+  <script>
+  (function(){
+    var $ = function(id){ return document.getElementById(id); };
+    var cv = $('cv-kp4'), ctx = cv.getContext('2d');
+    var ro = $('ro-kp4');
+
+    // 15 點，5 個緊密小群（G1..G5），群間有不同間距 → 可被不同 m 切成不同粒度
+    var DATA = [
+      [1,2],[1,3],[2,2],          // G1
+      [4,2],[4,3],[5,2],          // G2
+      [5.5,2],[5.5,3],[6.5,2],    // G3
+      [10,2],[10,3],[11,2],       // G4
+      [13,2],[13,3],[14,2]        // G5
+    ];
+    // 每 m 的固定 seeds（決定性，避免隨機造成不穩定）
+    var SEEDS = {
+      2: [[1,2.5],[13,2.5]],
+      3: [[1.33,2.33],[5.83,2.33],[13.33,2.33]],
+      5: [[1.33,2.33],[4.33,2.33],[5.83,2.33],[10.33,2.33],[13.33,2.33]]
+    };
+    var PALETTE = ['#2563eb','#ea580c','#059669','#d97706','#7c3aed'];
+
+    var m = 3;
+    var centroids = [];   // 目前簇中心
+    var iter = 0;         // 已做迭代數
+
+    function euclid(a,b){ var s=0; for(var i=0;i<a.length;i++){var d=a[i]-b[i]; s+=d*d;} return Math.sqrt(s); }
+    function fmt(x){ return (Math.round(x*100)/100).toString(); }
+    function sub(n){ var t={'0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉'}; return String(n).split('').map(function(c){return t[c]||c;}).join(''); }
+
+    // 指派：每點到最近簇中心
+    function assign(){
+      var a = new Array(DATA.length).fill(0);
+      for(var i=0;i<DATA.length;i++){
+        var best=0, bd=euclid(DATA[i], centroids[0]);
+        for(var j=1;j<centroids.length;j++){ var d=euclid(DATA[i], centroids[j]); if(d<bd){bd=d;best=j;} }
+        a[i]=best;
+      }
+      return a;
+    }
+    // 更新：簇中心 = 其負責點的平均
+    function updateCentroids(a){
+      var sums = [], cnts = [];
+      for(var j=0;j<centroids.length;j++){ sums.push([0,0]); cnts.push(0); }
+      for(var i=0;i<DATA.length;i++){ var c=a[i]; sums[c][0]+=DATA[i][0]; sums[c][1]+=DATA[i][1]; cnts[c]++; }
+      var nc = [];
+      for(var j=0;j<centroids.length;j++){
+        nc.push(cnts[j]===0 ? centroids[j].slice() : [sums[j][0]/cnts[j], sums[j][1]/cnts[j]]);
+      }
+      return nc;
+    }
+    function sameAssign(a,b){ for(var i=0;i<a.length;i++) if(a[i]!==b[i]) return false; return true; }
+
+    // 一步 k-means 迭代：指派 → 更新中心
+    function oneStep(){
+      var a = assign();
+      centroids = updateCentroids(a);
+      iter++;
+      return a;
+    }
+    function runToConvergence(){
+      var a, prev = null, guard = 0;
+      do {
+        a = assign();
+        var nc = updateCentroids(a);
+        if (prev && sameAssign(a, prev)) break;
+        centroids = nc; prev = a; iter++; guard++;
+      } while (guard < 200);
+      return a;
+    }
+
+    function draw(){
+      var Wpx = cv.width, Hpx = cv.height;
+      ctx.clearRect(0,0,Wpx,Hpx);
+      var pad=40, xmin=0, xmax=15, ymin=0, ymax=5;
+      function sx(x){ return pad + (x-xmin)/(xmax-xmin)*(Wpx-2*pad); }
+      function sy(y){ return pad + (ymax-y)/(ymax-ymin)*(Hpx-2*pad); }
+      // grid
+      ctx.strokeStyle='#e0f2fe'; ctx.lineWidth=1;
+      for(var g=0; g<=15; g++){ ctx.beginPath(); ctx.moveTo(sx(g),pad); ctx.lineTo(sx(g),Hpx-pad); ctx.stroke(); }
+      for(var g=0; g<=5; g++){ ctx.beginPath(); ctx.moveTo(pad,sy(g)); ctx.lineTo(Wpx-pad,sy(g)); ctx.stroke(); }
+      // 資料點（依簇著色）
+      var a = assign();
+      for(var i=0;i<DATA.length;i++){
+        var col = PALETTE[a[i] % PALETTE.length];
+        ctx.beginPath(); ctx.arc(sx(DATA[i][0]), sy(DATA[i][1]), 5, 0, Math.PI*2);
+        ctx.fillStyle = col; ctx.fill();
+        ctx.lineWidth=1; ctx.strokeStyle='#0f172a'; ctx.stroke();
+        ctx.fillStyle='#0f172a'; ctx.font='9px monospace'; ctx.textAlign='center';
+        ctx.fillText('x'+sub(i+1), sx(DATA[i][0]), sy(DATA[i][1])-8);
+      }
+      // 簇中心 ×
+      for(var j=0;j<centroids.length;j++){
+        var col = PALETTE[j % PALETTE.length];
+        var rx = sx(centroids[j][0]), ry = sy(centroids[j][1]);
+        ctx.strokeStyle='#0f172a'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(rx-6,ry-6); ctx.lineTo(rx+6,ry+6); ctx.moveTo(rx+6,ry-6); ctx.lineTo(rx-6,ry+6); ctx.stroke();
+        ctx.fillStyle='#0f172a'; ctx.font='bold 10px sans-serif'; ctx.textAlign='center';
+        ctx.fillText('c'+sub(j+1), rx, ry+18);
+      }
+      // 標籤
+      ctx.fillStyle='#334155'; ctx.font='bold 11px sans-serif'; ctx.textAlign='left';
+      ctx.fillText('m = ' + m + '，迭代 = ' + iter, pad, 16);
+      ctx.fillStyle='#475569'; ctx.font='10px monospace'; ctx.textAlign='center';
+      ctx.fillText('x₁', Wpx/2, Hpx-6);
+      ctx.save(); ctx.translate(10, pad+(Hpx-2*pad)/2); ctx.rotate(-Math.PI/2); ctx.fillText('x₂', 0, 0); ctx.restore();
+    }
+
+    function updateReadout(a){
+      var lines = [];
+      lines.push('m = ' + m + '，迭代 = ' + iter);
+      lines.push('');
+      lines.push('—— 各點所屬簇 ——');
+      var row = [];
+      for(var i=0;i<DATA.length;i++){
+        row.push('x' + sub(i+1) + '→' + (a[i]+1));
+        if(row.length===5){ lines.push('  ' + row.join('  ')); row=[]; }
+      }
+      if(row.length) lines.push('  ' + row.join('  '));
+      lines.push('');
+      lines.push('—— 簇中心（= 其負責點平均）——');
+      var sizes = new Array(centroids.length).fill(0);
+      for(var i=0;i<DATA.length;i++) sizes[a[i]]++;
+      for(var j=0;j<centroids.length;j++){
+        lines.push('  c' + sub(j+1) + '：' + sizes[j] + ' 點，中心=(' + fmt(centroids[j][0]) + ',' + fmt(centroids[j][1]) + ')');
+      }
+      // 指派閉式驗證：每點到最近中心
+      var ok = true;
+      for(var i=0;i<DATA.length;i++){
+        var best=0, bd=euclid(DATA[i], centroids[0]);
+        for(var j=1;j<centroids.length;j++){ var d=euclid(DATA[i], centroids[j]); if(d<bd){bd=d;best=j;} }
+        if(a[i]!==best) ok=false;
+      }
+      lines.push('');
+      lines.push('指派=最近中心：' + (ok ? '✔ 成立' : '✘ 不成立'));
+      ro.textContent = lines.join('\n');
+    }
+
+    function reset(mv){
+      m = mv;
+      centroids = SEEDS[m].map(function(p){ return p.slice(); });
+      iter = 0;
+      draw();
+      updateReadout(assign());
+    }
+
+    $('kp4-m').addEventListener('change', function(){ reset(parseInt($('kp4-m').value,10)); });
+    $('kp4-reset').addEventListener('click', function(){ reset(parseInt($('kp4-m').value,10)); });
+    $('kp4-step').addEventListener('click', function(){ var a=oneStep(); draw(); updateReadout(a); });
+    $('kp4-run').addEventListener('click', function(){ var a=runToConvergence(); draw(); updateReadout(a); });
+
+    reset(3);
+  })();
+  </script>
+</div>
+<div class="quiz" data-ans="A"><p class="q"><p>分群與分類最大的差別是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q4-0" value="A"><span>A. <p>分群沒有標籤可用</p></span></label><label class="opt"><input type="radio" name="q4-0" value="B"><span>B. <p>分群輸出連續值</p></span></label><label class="opt"><input type="radio" name="q4-0" value="C"><span>C. <p>分類不需要資料</p></span></label><label class="opt"><input type="radio" name="q4-0" value="D"><span>D. <p>兩者完全相同</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="分類有帶標籤的資料可訓練，分群只有輸入資料、完全沒有標籤。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>式(7) 降維中，$p$ 與 $d$ 的關係通常是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q4-1" value="A"><span>A. <p>$p \gg d$</p></span></label><label class="opt"><input type="radio" name="q4-1" value="B"><span>B. <p>$p \ll d$</p></span></label><label class="opt"><input type="radio" name="q4-1" value="C"><span>C. <p>$p = d$</p></span></label><label class="opt"><input type="radio" name="q4-1" value="D"><span>D. <p>兩者無關</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="通常 $p \ll d$ 才能達到顯著的降幅。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>用非線性映射做降維，常被稱為什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q4-2" value="A"><span>A. <p>特徵萃取</p></span></label><label class="opt"><input type="radio" name="q4-2" value="B"><span>B. <p>流形學習</p></span></label><label class="opt"><input type="radio" name="q4-2" value="C"><span>C. <p>分類</p></span></label><label class="opt"><input type="radio" name="q4-2" value="D"><span>D. <p>回歸</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="非線性降維常叫流形學習，因為資料可能落在高維空間中較低維的流形上。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>費雪判別分析（FDA）屬於哪種降維？</p></p><div class="opts"><label class="opt"><input type="radio" name="q4-3" value="A"><span>A. <p>非監督式</p></span></label><label class="opt"><input type="radio" name="q4-3" value="B"><span>B. <p>監督式</p></span></label><label class="opt"><input type="radio" name="q4-3" value="C"><span>C. <p>強化學習</p></span></label><label class="opt"><input type="radio" name="q4-3" value="D"><span>D. <p>分群</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="FDA 用類別標籤當輔助資訊，是監督式降維的經典例子。"></div></div></div></section>
+<section id="kp5" class="card" data-kp="5"><div class="card-head"><span class="badge">3.3</span><h3>監督 vs 無監督降維與強化學習</h3><span class="toggle">▼</span></div><div class="card-body"><h3>3.3 監督 vs 無監督降維</h3>
+<p><strong>無監督降維</strong>只依賴資料本身的模式 $\left\{\boldsymbol{x}_{i}\right\}_{i=1}^{n}$，目標是把<strong>相似點推近、相異點拉遠</strong>，誇張化資料結構中的相似與差異。早期方法如 <strong>LLE（Locally Linear Embedding）</strong> 即屬此類。</p>
+<p><strong>監督降維</strong>在輸入資料之外再加入<strong>側資訊（side information）</strong>，例如類別標籤、成對相似度等，用來改善低維嵌入。典型目標是<strong>降低類內變異（intra-class variance）</strong>、<strong>提高類間變異（inter-class variance）</strong>，以提升可分性與可解釋性。經典代表是 <strong>Fisher 判別分析（FDA）</strong>，以類別標籤作為側資訊。</p>
+<blockquote>
+<p>直觀例子：幫色盲者分辨地上的紅球與藍球——把紅、藍兩群<strong>推開</strong>（提高類間變異），再把每群<strong>收攏成緊密團</strong>（降低類內變異），分離就更容易被感知。</p>
+</blockquote>
+<p>無論監督或無監督，降維都有助於視覺化、去噪、簡化複雜資料，同時保留有意義的資訊。</p>
+<h3>3.4 強化學習</h3>
+<p>強化學習（Reinforcement Learning, RL）是監督、無監督之外的第三大類。它不像監督學習用標籤、也不像無監督學習找結構，而是透過<strong>與環境互動</strong>，用<strong>獎勵與懲罰</strong>系統引導學習。</p>
+<blockquote>
+<p>例子：教小孩收拾玩具——不收拾沒獎勵；某次碰巧收拾了，你稱讚或給糖果；之後他學會「收拾→好結果」，而弄亂則被溫和糾正（負獎勵）。透過正負強化，行為逐漸被學到。</p>
+</blockquote>
+<p>在機器學習中，模型稱為<strong>代理（agent）</strong>，它與<strong>環境（environment）</strong>互動，學習採取能<strong>最大化累積獎勵</strong>的行動。起初代理隨機行動，隨互動與獎懲回饋逐步調整行為。</p>
+<p><strong>技術定義</strong>：強化學習中，模型的輸出是從行動集合 $\mathcal{A}$ 中選出的行動 $a$：</p>
+<p>$$
+f_{\theta}(\boldsymbol{x})=a \in \mathcal{A}. \tag{8}
+$$</p>
+<p>RL 已成功應用於超人類水準的圍棋（AlphaGo）、機器人控制最佳化、以及模擬與真實環境中的導航等需要<strong>不確定性下序列決策</strong>的任務。</p><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#2b6cb0"/>
+    </marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#38a169"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="720" height="340" fill="#ffffff"/>
+
+  <text x="360" y="28" text-anchor="middle" font-size="17" font-weight="bold" fill="#1a202c">強化學習迴路</text>
+
+  <!-- Agent box -->
+  <g>
+    <rect x="90" y="120" width="180" height="110" rx="14" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="2.4"/>
+    <text x="180" y="160" text-anchor="middle" font-size="18" font-weight="bold" fill="#2b6cb0">Agent</text>
+    <text x="180" y="185" text-anchor="middle" font-size="11" fill="#4a5568">學習者 / 決策者</text>
+    <text x="180" y="205" text-anchor="middle" font-size="11" fill="#4a5568">選擇動作 a</text>
+  </g>
+
+  <!-- Environment box -->
+  <g>
+    <rect x="450" y="120" width="180" height="110" rx="14" fill="#f0fff4" stroke="#38a169" stroke-width="2.4"/>
+    <text x="540" y="160" text-anchor="middle" font-size="18" font-weight="bold" fill="#276749">Environment</text>
+    <text x="540" y="185" text-anchor="middle" font-size="11" fill="#4a5568">世界 / 環境</text>
+    <text x="540" y="205" text-anchor="middle" font-size="11" fill="#4a5568">回應狀態與獎懲</text>
+  </g>
+
+  <!-- Action arrow: Agent -> Environment (top) -->
+  <path d="M272 150 C 330 120, 400 120, 448 150" fill="none" stroke="#2b6cb0" stroke-width="2.6" marker-end="url(#arr)"/>
+  <g>
+    <rect x="330" y="92" width="90" height="30" rx="8" fill="#ffffff" stroke="#2b6cb0" stroke-width="1.4"/>
+    <text x="375" y="112" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6cb0">動作 a</text>
+  </g>
+
+  <!-- State/reward arrow: Environment -> Agent (bottom) -->
+  <path d="M448 200 C 400 230, 330 230, 272 200" fill="none" stroke="#38a169" stroke-width="2.6" marker-end="url(#arrG)"/>
+  <g>
+    <rect x="330" y="222" width="90" height="30" rx="8" fill="#ffffff" stroke="#38a169" stroke-width="1.4"/>
+    <text x="375" y="242" text-anchor="middle" font-size="12" font-weight="bold" fill="#276749">狀態 s / 獎懲 r</text>
+  </g>
+
+  <!-- positive / negative reward markers -->
+  <g>
+    <circle cx="300" cy="250" r="14" fill="#c6f6d5" stroke="#38a169" stroke-width="1.6"/>
+    <text x="300" y="255" text-anchor="middle" font-size="15" font-weight="bold" fill="#276749">+</text>
+    <text x="300" y="278" text-anchor="middle" font-size="10" fill="#276749">正向獎勵</text>
+
+    <circle cx="420" cy="250" r="14" fill="#fed7d7" stroke="#e53e3e" stroke-width="1.6"/>
+    <text x="420" y="255" text-anchor="middle" font-size="15" font-weight="bold" fill="#c53030">−</text>
+    <text x="420" y="278" text-anchor="middle" font-size="10" fill="#c53030">負向懲罰</text>
+  </g>
+
+  <!-- loop note -->
+  <text x="360" y="320" text-anchor="middle" font-size="11" fill="#718096">Agent 依狀態選動作 → 環境回饋新狀態與獎懲 → 反覆迭代直到學會</text>
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-5" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 一個封閉迴路示意圖：左側 Agent 方框、右側 Environment 方框。上方一條箭頭從 Agent 指向 Environment，標「動作 a」；下方一條箭頭從 Environment 指回 Agent，標「狀態 s / 獎懲 r」。在下方回饋箭頭附近放兩個圓形標記：綠色「+」正向獎勵、紅色「−」負向懲罰。
+
+WHY（因果或反直覺）: 因果是「動作 → 環境改變 → 回饋 → 調整策略 → 再動作」的閉環，Agent 靠獎懲信號學習。反直覺點：Agent 沒有「正確答案」，只有延遲的獎懲信號；正向獎勵（+）鼓勵該動作、負向懲罰（−）抑制該動作，兩者共同塑造策略。
+
+MUST show（必備要素）: ① Agent 方框（學習者/決策者，選擇動作 a）；② Environment 方框（世界/環境，回應狀態與獎懲）；③ 上方箭頭標「動作 a」；④ 下方箭頭標「狀態 s / 獎懲 r」；⑤ 綠色「+」正向獎勵與紅色「−」負向懲罰兩個圓形標記；⑥ 底部一行迴路說明；⑦ 兩段粗箭頭構成閉環。
+
+AVOID（禁止）: 不要畫成純方框互連；不要出現任何數學公式或 LaTeX 反斜線；不要漏掉「+ / −」獎懲標記；不要讓兩條箭頭方向相反或重疊；不要用真實照片。
+
+STYLE: flat vector, scientific, white background, Agent 藍色調、Environment 綠色調，獎懲用綠「+」紅「−」，圓角、粗箭頭、無陰影、無漸層。</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">示意：強化學習 Agent–Environment 獎懲迴路</figcaption></figure></div>
+<div class="quiz" data-ans="B"><p class="q"><p>在無監督降維中，演算法的主要目標是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q5-0" value="A"><span>A. <p>利用類別標籤提高類間變異</p></span></label><label class="opt"><input type="radio" name="q5-0" value="B"><span>B. <p>把相似點推近、相異點拉遠，僅依賴資料本身模式</p></span></label><label class="opt"><input type="radio" name="q5-0" value="C"><span>C. <p>最小化訓練資料的標籤誤差</p></span></label><label class="opt"><input type="radio" name="q5-0" value="D"><span>D. <p>用側資訊降低類內變異</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="無監督降維只依賴資料模式，目標是相似點推近、相異點拉遠；使用類別標籤或側資訊是監督降維的做法。"></div></div><div class="quiz" data-ans="C"><p class="q"><p>監督降維（如 FDA）利用側資訊的主要目的是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q5-1" value="A"><span>A. <p>提高類內變異、降低類間變異</p></span></label><label class="opt"><input type="radio" name="q5-1" value="B"><span>B. <p>完全忽略類別資訊</p></span></label><label class="opt"><input type="radio" name="q5-1" value="C"><span>C. <p>降低類內變異、提高類間變異，以提升可分性</p></span></label><label class="opt"><input type="radio" name="q5-1" value="D"><span>D. <p>只做視覺化而不改變嵌入</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="監督降維用側資訊降低類內變異（把相似點收攏）並提高類間變異（把不同群推開），改善可分性與可解釋性。"></div></div><div class="quiz" data-ans="A"><p class="q"><p>強化學習中，式(8) $f_{\theta}(\boldsymbol{x})=a \in \mathcal{A}$ 的 $a$ 代表什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q5-2" value="A"><span>A. <p>從行動集合 $\mathcal{A}$ 中選出的行動</p></span></label><label class="opt"><input type="radio" name="q5-2" value="B"><span>B. <p>輸入資料的標籤</p></span></label><label class="opt"><input type="radio" name="q5-2" value="C"><span>C. <p>環境的狀態</p></span></label><label class="opt"><input type="radio" name="q5-2" value="D"><span>D. <p>累積獎勵的總和</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="式(8) 中模型的輸出是從行動集合 $\mathcal{A}$ 中選出的行動 $a$，代理藉此與環境互動並最大化累積獎勵。"></div></div><div class="quiz" data-ans="C"><p class="q"><p>下列哪一項最能描述強化學習的學習機制？</p></p><div class="opts"><label class="opt"><input type="radio" name="q5-3" value="A"><span>A. <p>用標籤資料監督式地擬合函數</p></span></label><label class="opt"><input type="radio" name="q5-3" value="B"><span>B. <p>在無標籤資料中尋找結構</p></span></label><label class="opt"><input type="radio" name="q5-3" value="C"><span>C. <p>代理與環境互動，透過獎勵與懲罰回饋調整行為</p></span></label><label class="opt"><input type="radio" name="q5-3" value="D"><span>D. <p>僅靠隨機猜測而不調整</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="RL 透過代理與環境互動，以獎勵/懲罰回饋引導行為，適用於不確定性下的序列決策（如 AlphaGo、機器人控制）。"></div></div></div></section>
+<section id="kp6" class="card" data-kp="6"><div class="card-head"><span class="badge">4.1</span><h3>統計分類的六大方法家族</h3><span class="toggle">▼</span></div><div class="card-body"><h3>4.1 統計分類</h3>
+<h4>4.1.1 Bayes 分類器</h4>
+<p>Thomas Bayes（1702–1761）提出 <strong>Bayes 法則</strong>，連結後驗、似然與先驗：</p>
+<p>$$
+\mathbb{P}\left(x \in \mathcal{C}_{j} \mid X=x\right)=\frac{\mathbb{P}\left(X=x \mid x \in \mathcal{C}_{j}\right) \mathbb{P}\left(x \in \mathcal{C}_{j}\right)}{\mathbb{P}(X=x)}. \tag{9}
+$$</p>
+<p>其中 $\mathbb{P}(x \in \mathcal{C}_{j} \mid X=x)$ 是<strong>後驗</strong>，$\mathbb{P}(X=x \mid x \in \mathcal{C}_{j})$ 是<strong>似然（類條件）</strong>，$\mathbb{P}(x \in \mathcal{C}_{j})$ 是第 $j$ 類的<strong>先驗</strong>，$\mathbb{P}(X=x)$ 是資料的先驗。Bayes 分類器最大化各類後驗，是<strong>最佳分類器（Bayes optimal）</strong>；但後驗通常未知或難算，因此 <strong>naive Bayes</strong> 天真地假設：給定類別標籤後，特徵彼此獨立。</p>
+<h4>4.1.2 LDA 與 QDA</h4>
+<p><strong>LDA</strong> 假設每類資料的似然為單峰高斯，且各類<strong>共變異數相等</strong>；若放寬此假設即得 <strong>QDA</strong>，其類別邊界為二次曲線，而 LDA 為線性邊界。可證明 LDA 等價於 Fisher 判別分析（1936, Fisher）。</p>
+<h4>4.1.3 Logistic 回歸</h4>
+<p>Logistic 回歸是二元分類器，輸出介於 0 與 1 的機率。與 Bayes/LDA/QDA 從似然與先驗處理後驗不同，它<strong>直接建模後驗</strong>，用 logistic（sigmoid）函數把線性回歸壓到 $[0,1]$。可視為神經網路中帶 sigmoid 激活的單一神經元。</p>
+<h4>4.1.4 度量學習與 KNN</h4>
+<p>最簡單的分類器是比較測試點到各類中心的距離，取最小者決定類別。但歐氏距離未必最佳——<strong>度量學習</strong>學習最適合資料的距離度量。<strong>KNN</strong> 則以訓練集中 $k$ 個最近鄰的標籤<strong>多數決</strong>分類；降低類內變異、提高類間變異可改善 KNN（此想法後來發展成 triplet loss）。KNN 也可用於回歸（以最近鄰標籤的均值等摘要統計）。</p>
+<h4>4.1.5 樹、隨機森林與集成學習</h4>
+<p><strong>樹</strong>（決策樹）在每個節點找最佳特徵與切分門檻，以遞迴分割空間；分類以葉節點多數決，回歸以葉節點均值。重要演算法：CHAID(1980)、CART(1984)、ID3(1986)、C4.5(1993)、OC1(1994)、MARS(1991)。<strong>隨機森林</strong>聚合多棵樹，透過<strong>模型平均／集成學習／bagging</strong> 降低變異，尤其當樹彼此不相關時效果佳，因此同時對資料實例與特徵取樣。</p>
+<h4>4.1.6 SVM 與核 SVM</h4>
+<p>1974 年 Vapnik 提出 <strong>SVM</strong>，以最佳化找出與兩類等距的決策邊界，具最佳泛化。其最佳化最終化為<strong>二次規劃</strong>；依 <strong>KKT 條件</strong>，SVM 只在乎最靠近決策邊界的點——<strong>支持向量</strong>，因此是<strong>稀疏</strong>演算法（稀疏原則、Occam 剃刀）。硬邊距 SVM 僅在完全線性可分時收斂；1995 年提出<strong>軟邊距 SVM</strong> 容忍少數誤分。1992 年<strong>核 SVM</strong> 把資料映射到高維 <strong>Hilbert 空間</strong>，使類別在高維線性可分。<strong>RKHS</strong> 是具再生核的 Hilbert 空間特例；<strong>Mercer 核</strong>（1909）即現今機器學習所用。</p><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#2b6cb0"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="720" height="340" fill="#ffffff"/>
+
+  <text x="360" y="26" text-anchor="middle" font-size="17" font-weight="bold" fill="#1a202c">統計分類六大家族譜系</text>
+
+  <!-- Root -->
+  <g>
+    <ellipse cx="360" cy="58" rx="80" ry="24" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="2"/>
+    <text x="360" y="63" text-anchor="middle" font-size="13" font-weight="bold" fill="#2b6cb0">監督式分類</text>
+  </g>
+
+  <!-- trunk -->
+  <line x1="360" y1="82" x2="360" y2="110" stroke="#2b6cb0" stroke-width="2.4"/>
+
+  <!-- branches to six leaves -->
+  <g stroke="#2b6cb0" stroke-width="2">
+    <line x1="360" y1="110" x2="60" y2="150"/>
+    <line x1="360" y1="110" x2="180" y2="150"/>
+    <line x1="360" y1="110" x2="300" y2="150"/>
+    <line x1="360" y1="110" x2="420" y2="150"/>
+    <line x1="360" y1="110" x2="540" y2="150"/>
+    <line x1="360" y1="110" x2="660" y2="150"/>
+  </g>
+
+  <!-- Family 1: Bayes -> LDA/QDA -->
+  <g>
+    <line x1="60" y1="150" x2="60" y2="180" stroke="#2b6cb0" stroke-width="2"/>
+    <rect x="10" y="180" width="100" height="52" rx="8" fill="#fefcbf" stroke="#d69e2e" stroke-width="1.8"/>
+    <text x="60" y="200" text-anchor="middle" font-size="12" font-weight="bold" fill="#975a16">Bayes</text>
+    <text x="60" y="218" text-anchor="middle" font-size="10" fill="#975a16">→ LDA / QDA</text>
+  </g>
+
+  <!-- Family 2: Logistic -->
+  <g>
+    <line x1="180" y1="150" x2="180" y2="180" stroke="#2b6cb0" stroke-width="2"/>
+    <rect x="130" y="180" width="100" height="52" rx="8" fill="#f0fff4" stroke="#38a169" stroke-width="1.8"/>
+    <text x="180" y="200" text-anchor="middle" font-size="12" font-weight="bold" fill="#276749">Logistic</text>
+    <text x="180" y="218" text-anchor="middle" font-size="10" fill="#276749">邏輯回歸</text>
+  </g>
+
+  <!-- Family 3: KNN / metric learning -->
+  <g>
+    <line x1="300" y1="150" x2="300" y2="180" stroke="#2b6cb0" stroke-width="2"/>
+    <rect x="250" y="180" width="100" height="52" rx="8" fill="#faf5ff" stroke="#805ad5" stroke-width="1.8"/>
+    <text x="300" y="200" text-anchor="middle" font-size="12" font-weight="bold" fill="#6b46c1">KNN</text>
+    <text x="300" y="218" text-anchor="middle" font-size="10" fill="#6b46c1">度量學習</text>
+  </g>
+
+  <!-- Family 4: Tree / random forest -->
+  <g>
+    <line x1="420" y1="150" x2="420" y2="180" stroke="#2b6cb0" stroke-width="2"/>
+    <rect x="370" y="180" width="100" height="52" rx="8" fill="#fff5f5" stroke="#e53e3e" stroke-width="1.8"/>
+    <text x="420" y="200" text-anchor="middle" font-size="12" font-weight="bold" fill="#c53030">樹</text>
+    <text x="420" y="218" text-anchor="middle" font-size="10" fill="#c53030">隨機森林</text>
+  </g>
+
+  <!-- Family 5: SVM -> kernel SVM -->
+  <g>
+    <line x1="540" y1="150" x2="540" y2="180" stroke="#2b6cb0" stroke-width="2"/>
+    <rect x="490" y="180" width="100" height="52" rx="8" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="1.8"/>
+    <text x="540" y="200" text-anchor="middle" font-size="12" font-weight="bold" fill="#2b6cb0">SVM</text>
+    <text x="540" y="218" text-anchor="middle" font-size="10" fill="#2b6cb0">→ 核 SVM</text>
+  </g>
+
+  <!-- Family 6: Ensemble / Boosting -->
+  <g>
+    <line x1="660" y1="150" x2="660" y2="180" stroke="#2b6cb0" stroke-width="2"/>
+    <rect x="610" y="180" width="100" height="52" rx="8" fill="#f0fff4" stroke="#38a169" stroke-width="1.8"/>
+    <text x="660" y="200" text-anchor="middle" font-size="12" font-weight="bold" fill="#276749">集成</text>
+    <text x="660" y="218" text-anchor="middle" font-size="10" fill="#276749">Boosting</text>
+  </g>
+
+  <!-- time axis -->
+  <g>
+    <line x1="40" y1="300" x2="680" y2="300" stroke="#a0aec0" stroke-width="2"/>
+    <path d="M680 295 L692 300 L680 305 Z" fill="#a0aec0"/>
+    <line x1="40" y1="295" x2="40" y2="305" stroke="#a0aec0" stroke-width="2"/>
+    <text x="40" y="290" text-anchor="middle" font-size="10" fill="#718096">1950s</text>
+    <text x="200" y="290" text-anchor="middle" font-size="10" fill="#718096">1960s</text>
+    <text x="360" y="290" text-anchor="middle" font-size="10" fill="#718096">1990s</text>
+    <text x="520" y="290" text-anchor="middle" font-size="10" fill="#718096">2000s</text>
+    <text x="680" y="290" text-anchor="middle" font-size="10" fill="#718096">現在</text>
+    <text x="360" y="325" text-anchor="middle" font-size="11" fill="#4a5568">時間脈絡：各家族在不同年代提出，彼此互補</text>
+  </g>
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-6" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 一棵家族譜系樹 + 底部時間軸。頂端根節點「監督式分類」，主幹向下分出六條枝幹，各連到一個家族方框：Bayes→LDA/QDA、Logistic、KNN/度量學習、樹/隨機森林、SVM→核 SVM、集成/Boosting。底部一條水平時間軸標 1950s → 1960s → 1990s → 2000s → 現在。
+
+WHY（因果或反直覺）: 因果是「不同年代提出不同分類家族，各自從不同假設出發，彼此互補而非取代」。反直覺點：這些方法看似獨立，其實共享「監督式分類」這個根；且沒有單一最強家族——SVM 靠核技巧處理非線性、樹靠集成（隨機森林/Boosting）提升穩定，都是歷史演進的結果。
+
+MUST show（必備要素）: ① 根節點「監督式分類」；② 六個家族方框，每個含家族名與子方法（Bayes→LDA/QDA、Logistic、KNN/度量學習、樹/隨機森林、SVM→核 SVM、集成/Boosting）；③ 六條枝幹從主幹分出；④ 底部時間軸標年代刻度；⑤ 底部一行「時間脈絡」說明；⑥ 每個家族用不同色調區分。
+
+AVOID（禁止）: 不要畫成純方框互連；不要出現任何數學公式或 LaTeX 反斜線；不要漏掉六個家族中的任一個；不要讓枝幹交叉或文字重疊；不要用真實照片。
+
+STYLE: flat vector, scientific, white background, 六家族各用一色（黃/綠/紫/紅/藍/綠），圓角、粗枝幹、無陰影、無漸層。</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">示意：統計分類六大家族譜系與 Bayes/LDA/SVM 演進</figcaption></figure></div>
+
+<div class="demo" data-demo-id="kp6">
+  <style>
+    [data-demo-id="kp6"] { border: 1px solid #cbd5e1; border-radius: 14px; overflow: hidden; background: #fff; font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    [data-demo-id="kp6"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#7c3aed,#5b21b6); color: #fff; font-weight: 700; font-size: 1.02rem; }
+    [data-demo-id="kp6"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #f8fafc; }
+    [data-demo-id="kp6"] .demo-panel { flex: 1 1 300px; min-width: 280px; display: flex; flex-direction: column; gap: 10px; }
+    [data-demo-id="kp6"] .demo-stage { flex: 1 1 420px; min-width: 360px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    [data-demo-id="kp6"] canvas { border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp6"] .kp6-block-title { font-size: 0.82rem; font-weight: 700; color: #5b21b6; margin-bottom: 2px; }
+    [data-demo-id="kp6"] .kp6-row { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #1e293b; flex-wrap: wrap; }
+    [data-demo-id="kp6"] .kp6-row label { min-width: 30px; font-weight: 600; }
+    [data-demo-id="kp6"] input.kp6-range { width: 120px; }
+    [data-demo-id="kp6"] .kp6-val { min-width: 34px; text-align: right; font-weight: 600; color: #5b21b6; }
+    [data-demo-id="kp6"] .kp6-btnrow { display: flex; flex-wrap: wrap; gap: 6px; }
+    [data-demo-id="kp6"] button.kp6-btn { appearance: none; border: 1px solid #8b5cf6; background: #f5f3ff; color: #5b21b6; font-weight: 600; font-size: 0.78rem; padding: 6px 10px; border-radius: 7px; cursor: pointer; }
+    [data-demo-id="kp6"] button.kp6-btn:hover { background: #ede9fe; }
+    [data-demo-id="kp6"] .demo-readout { min-height: 11em; padding: 10px 12px; border: 1px solid #ddd6fe; border-radius: 8px; background: #f5f3ff; color: #312e81; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.78rem; line-height: 1.55; white-space: pre-wrap; }
+    [data-demo-id="kp6"] .demo-theory { padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #eef2ff; color: #1e293b; font-size: 0.84rem; line-height: 1.7; }
+    [data-demo-id="kp6"] .demo-instruction { padding: 12px 18px; border-top: 1px solid #e2e8f0; background: #fff; font-size: 0.85rem; line-height: 1.7; color: #1e293b; }
+  </style>
+
+  <div class="demo-head">🎯 Demo：Bayes 後驗計算器（式 9，Bayes classifier）</div>
+
+  <div class="demo-body">
+    <div class="demo-panel">
+      <div class="kp6-block-title">類別 1（C₁）高斯似然</div>
+      <div class="kp6-row"><label>μ₁=</label><input class="kp6-range" id="kp6-mu1" type="range" min="0" max="10" step="0.1" value="3"><span class="kp6-val" id="kp6-mu1-val">3</span></div>
+      <div class="kp6-row"><label>σ₁=</label><input class="kp6-range" id="kp6-sig1" type="range" min="0.5" max="3" step="0.1" value="1"><span class="kp6-val" id="kp6-sig1-val">1</span></div>
+      <div class="kp6-block-title">類別 2（C₂）高斯似然</div>
+      <div class="kp6-row"><label>μ₂=</label><input class="kp6-range" id="kp6-mu2" type="range" min="0" max="10" step="0.1" value="7"><span class="kp6-val" id="kp6-mu2-val">7</span></div>
+      <div class="kp6-row"><label>σ₂=</label><input class="kp6-range" id="kp6-sig2" type="range" min="0.5" max="3" step="0.1" value="1"><span class="kp6-val" id="kp6-sig2-val">1</span></div>
+      <div class="kp6-block-title">先驗與查詢點</div>
+      <div class="kp6-row"><label>P(C₁)=</label><input class="kp6-range" id="kp6-prior" type="range" min="0.05" max="0.95" step="0.01" value="0.5"><span class="kp6-val" id="kp6-prior-val">0.5</span></div>
+      <div class="kp6-row"><label>X=</label><input class="kp6-range" id="kp6-x" type="range" min="0" max="10" step="0.1" value="5"><span class="kp6-val" id="kp6-x-val">5</span></div>
+      <div class="kp6-btnrow">
+        <button class="kp6-btn" id="kp6-calc" type="button">▶ 計算 posterior</button>
+        <button class="kp6-btn" id="kp6-reset" type="button">↺ 重置預設</button>
+      </div>
+      <div class="demo-readout" id="ro-kp6"></div>
+    </div>
+    <div class="demo-stage">
+      <div class="kp6-block-title">類別條件密度（實線）與後驗加權密度（虛線），X 為查詢點</div>
+      <canvas id="cv-kp6" width="420" height="300"></canvas>
+    </div>
+  </div>
+
+  <div class="demo-theory">
+    <strong>原理</strong>：Bayes 定理（式 9）把後驗寫成「似然 × 先驗 ÷ 證據」：
+    $P(C_j|X)=\dfrac{P(X|C_j)\,P(C_j)}{P(X)}$，其中證據 $P(X)=\sum_j P(X|C_j)P(C_j)$。
+    這裡每類的似然 $P(X|C_j)$ 用高斯密度 $N(\mu_j,\sigma_j)$ 給出，$X$ 是查詢點。算出兩類後驗後，取 <strong>argmax</strong> 即為 Bayes classifier 的預測類別。
+  </div>
+  <div class="demo-instruction">
+    <strong>操作：</strong>調 $\mu_1,\sigma_1$（C₁ 的似然）、$\mu_2,\sigma_2$（C₂ 的似然）、先驗 $P(C_1)$（$P(C_2)=1-P(C_1)$）與查詢點 $X$。按「計算 posterior」依式 9 算出兩類後驗並標出 argmax；「重置預設」回到對稱設定。
+    <strong>觀察什麼：</strong>後驗同時受似然與先驗影響——即使 $X$ 靠近某類中心，若該類先驗很低，後驗可能被另一類反超；argmax 給出 Bayes 最優分類。
+    <strong>正確基準：</strong>後驗 = 似然×先驗÷證據（式 9 閉式），兩類後驗和 = 1；argmax 即後驗較大者。
+  </div>
+
+  <script>
+  (function(){
+    var $ = function(id){ return document.getElementById(id); };
+    var cv = $('cv-kp6'), ctx = cv.getContext('2d');
+    var ro = $('ro-kp6');
+
+    function gauss(x, mu, sig){
+      return (1/(sig*Math.sqrt(2*Math.PI))) * Math.exp(-(x-mu)*(x-mu)/(2*sig*sig));
+    }
+    function fmt(x){ return (Math.round(x*10000)/10000).toString(); }
+    function sub(n){ var t={'0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉'}; return String(n).split('').map(function(c){return t[c]||c;}).join(''); }
+
+    function readParams(){
+      return {
+        mu1: parseFloat($('kp6-mu1').value),
+        sig1: parseFloat($('kp6-sig1').value),
+        mu2: parseFloat($('kp6-mu2').value),
+        sig2: parseFloat($('kp6-sig2').value),
+        p1: parseFloat($('kp6-prior').value),
+        x: parseFloat($('kp6-x').value)
+      };
+    }
+    // 式 9：後驗 = 似然×先驗 ÷ 證據
+    function compute(p){
+      var l1 = gauss(p.x, p.mu1, p.sig1);
+      var l2 = gauss(p.x, p.mu2, p.sig2);
+      var p2 = 1 - p.p1;
+      var ev = l1*p.p1 + l2*p2;                 // 證據 P(X)
+      var post1 = (l1*p.p1)/ev;                 // P(C1|X)
+      var post2 = (l2*p2)/ev;                   // P(C2|X)
+      return { l1:l1, l2:l2, p1:p.p1, p2:p2, ev:ev, post1:post1, post2:post2, argmax: post1>=post2 ? 1 : 2 };
+    }
+
+    function draw(p, r){
+      var Wpx = cv.width, Hpx = cv.height;
+      ctx.clearRect(0,0,Wpx,Hpx);
+      var pad=40, xmin=0, xmax=10, ymin=0, ymax=0.9;
+      function sx(x){ return pad + (x-xmin)/(xmax-xmin)*(Wpx-2*pad); }
+      function sy(y){ return pad + (ymax-y)/(ymax-ymin)*(Hpx-2*pad); }
+      // grid
+      ctx.strokeStyle='#eef2ff'; ctx.lineWidth=1;
+      for(var g=0; g<=10; g++){ ctx.beginPath(); ctx.moveTo(sx(g),pad); ctx.lineTo(sx(g),Hpx-pad); ctx.stroke(); }
+      for(var g=0; g<=5; g++){ ctx.beginPath(); ctx.moveTo(pad,sy(g/10)); ctx.lineTo(Wpx-pad,sy(g/10)); ctx.stroke(); }
+      // 兩類高斯密度（實線）
+      function drawCurve(mu, sig, color, dash){
+        ctx.strokeStyle=color; ctx.lineWidth=2; ctx.setLineDash(dash||[]);
+        ctx.beginPath();
+        for(var px=0; px<=Wpx; px++){
+          var x = xmin + (px-pad)/(Wpx-2*pad)*(xmax-xmin);
+          var y = gauss(x, mu, sig);
+          if(px===0) ctx.moveTo(px, sy(y)); else ctx.lineTo(px, sy(y));
+        }
+        ctx.stroke(); ctx.setLineDash([]);
+      }
+      drawCurve(p.mu1, p.sig1, '#2563eb', []);
+      drawCurve(p.mu2, p.sig2, '#ea580c', []);
+      // 後驗加權密度（虛線）：P(X|Cj)·P(Cj)
+      ctx.strokeStyle='#2563eb'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+      ctx.beginPath();
+      for(var px=0; px<=Wpx; px++){
+        var x = xmin + (px-pad)/(Wpx-2*pad)*(xmax-xmin);
+        var y = gauss(x, p.mu1, p.sig1)*p.p1;
+        if(px===0) ctx.moveTo(px, sy(y)); else ctx.lineTo(px, sy(y));
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle='#ea580c'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+      ctx.beginPath();
+      for(var px=0; px<=Wpx; px++){
+        var x = xmin + (px-pad)/(Wpx-2*pad)*(xmax-xmin);
+        var y = gauss(x, p.mu2, p.sig2)*p.p2;
+        if(px===0) ctx.moveTo(px, sy(y)); else ctx.lineTo(px, sy(y));
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+      // 查詢點 X 垂直線
+      var qx = sx(p.x);
+      ctx.strokeStyle='#0f172a'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(qx, pad); ctx.lineTo(qx, Hpx-pad); ctx.stroke();
+      ctx.fillStyle='#0f172a'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('X=' + fmt(p.x), qx, pad-6);
+      // 圖例
+      ctx.font='10px sans-serif'; ctx.textAlign='left';
+      ctx.fillStyle='#2563eb'; ctx.fillText('C₁ 密度', pad, Hpx-6);
+      ctx.fillStyle='#ea580c'; ctx.fillText('C₂ 密度', pad+70, Hpx-6);
+      ctx.fillStyle='#334155'; ctx.fillText('argmax → C' + sub(r.argmax), pad+140, Hpx-6);
+      // 軸標籤
+      ctx.fillStyle='#475569'; ctx.font='10px monospace'; ctx.textAlign='center';
+      ctx.fillText('x', Wpx/2, Hpx-6);
+    }
+
+    function updateReadout(p, r){
+      var lines = [];
+      lines.push('—— 輸入 ——');
+      lines.push('  C₁：N(μ₁=' + fmt(p.mu1) + ', σ₁=' + fmt(p.sig1) + ')，先驗 P(C₁)=' + fmt(p.p1));
+      lines.push('  C₂：N(μ₂=' + fmt(p.mu2) + ', σ₂=' + fmt(p.sig2) + ')，先驗 P(C₂)=' + fmt(p.p2));
+      lines.push('  查詢點 X = ' + fmt(p.x));
+      lines.push('');
+      lines.push('—— 式 9 計算 ——');
+      lines.push('  似然 P(X|C₁) = ' + fmt(r.l1));
+      lines.push('  似然 P(X|C₂) = ' + fmt(r.l2));
+      lines.push('  證據 P(X) = ' + fmt(r.ev));
+      lines.push('  後驗 P(C₁|X) = ' + fmt(r.post1));
+      lines.push('  後驗 P(C₂|X) = ' + fmt(r.post2));
+      lines.push('  後驗和 = ' + fmt(r.post1 + r.post2));
+      lines.push('');
+      lines.push('—— Bayes classifier ——');
+      lines.push('  argmax → C' + sub(r.argmax) + '（後驗較大者）');
+      // 閉式驗證：後驗 = 似然×先驗÷證據
+      var chk1 = (r.l1*p.p1)/r.ev, chk2 = (r.l2*p.p2)/r.ev;
+      var ok = Math.abs(chk1-r.post1)<1e-9 && Math.abs(chk2-r.post2)<1e-9 && Math.abs(r.post1+r.post2-1)<1e-9;
+      lines.push('  式 9 閉式：' + (ok ? '✔ 成立' : '✘ 不成立'));
+      ro.textContent = lines.join('\n');
+    }
+
+    function refresh(){
+      var p = readParams();
+      var r = compute(p);
+      draw(p, r);
+      updateReadout(p, r);
+    }
+
+    // 滑桿即時更新數值標籤
+    var bindings = [
+      ['kp6-mu1','kp6-mu1-val'],['kp6-sig1','kp6-sig1-val'],
+      ['kp6-mu2','kp6-mu2-val'],['kp6-sig2','kp6-sig2-val'],
+      ['kp6-prior','kp6-prior-val'],['kp6-x','kp6-x-val']
+    ];
+    bindings.forEach(function(b){
+      $(b[0]).addEventListener('input', function(){ $(b[1]).textContent = $(b[0]).value; });
+    });
+
+    $('kp6-calc').addEventListener('click', refresh);
+    $('kp6-reset').addEventListener('click', function(){
+      $('kp6-mu1').value=3; $('kp6-sig1').value=1;
+      $('kp6-mu2').value=7; $('kp6-sig2').value=1;
+      $('kp6-prior').value=0.5; $('kp6-x').value=5;
+      bindings.forEach(function(b){ $(b[1]).textContent = $(b[0]).value; });
+      refresh();
+    });
+
+    refresh();
+  })();
+  </script>
+</div>
+<div class="quiz" data-ans="B"><p class="q"><p>Bayes 分類器被稱為「最佳分類器」的原因是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q6-0" value="A"><span>A. <p>它假設特徵彼此獨立</p></span></label><label class="opt"><input type="radio" name="q6-0" value="B"><span>B. <p>它最大化各類的後驗機率</p></span></label><label class="opt"><input type="radio" name="q6-0" value="C"><span>C. <p>它使用線性決策邊界</p></span></label><label class="opt"><input type="radio" name="q6-0" value="D"><span>D. <p>它不需要先驗資訊</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Bayes 分類器最大化後驗，後驗與似然×先驗相關，因此是最佳（Bayes optimal）分類器。"></div></div><div class="quiz" data-ans="A"><p class="q"><p>LDA 與 QDA 的主要差別在於？</p></p><div class="opts"><label class="opt"><input type="radio" name="q6-1" value="A"><span>A. <p>LDA 假設各類共變異數相等，QDA 放寬此假設</p></span></label><label class="opt"><input type="radio" name="q6-1" value="B"><span>B. <p>QDA 假設特徵獨立，LDA 不假設</p></span></label><label class="opt"><input type="radio" name="q6-1" value="C"><span>C. <p>LDA 是核方法，QDA 是線性方法</p></span></label><label class="opt"><input type="radio" name="q6-1" value="D"><span>D. <p>兩者完全相同</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="LDA 假設各類似然為單峰高斯且共變異數相等；放寬共變異數相等假設即得 QDA，其邊界為二次曲線。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>相較於 Bayes/LDA/QDA，Logistic 回歸處理後驗的方式有何不同？</p></p><div class="opts"><label class="opt"><input type="radio" name="q6-2" value="A"><span>A. <p>它透過似然與先驗間接處理後驗</p></span></label><label class="opt"><input type="radio" name="q6-2" value="B"><span>B. <p>它直接建模後驗，用 sigmoid 把輸出壓到 [0,1]</p></span></label><label class="opt"><input type="radio" name="q6-2" value="C"><span>C. <p>它假設後驗為高斯分布</p></span></label><label class="opt"><input type="radio" name="q6-2" value="D"><span>D. <p>它完全不處理後驗</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Logistic 回歸直接建模後驗，用 logistic（sigmoid）函數把線性回歸壓到 [0,1] 以表現機率。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>SVM 為何被稱為「稀疏」演算法？</p></p><div class="opts"><label class="opt"><input type="radio" name="q6-3" value="A"><span>A. <p>它使用所有訓練資料</p></span></label><label class="opt"><input type="radio" name="q6-3" value="B"><span>B. <p>依 KKT 條件，它只在乎最靠近決策邊界的支持向量，忽略其餘點</p></span></label><label class="opt"><input type="radio" name="q6-3" value="C"><span>C. <p>它需要核函數</p></span></label><label class="opt"><input type="radio" name="q6-3" value="D"><span>D. <p>它只適用於線性可分資料</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="依 KKT 條件，SVM 只在乎支持向量（最靠近決策邊界的點），忽略大量其他資料，因此是稀疏演算法。"></div></div></div><button class="guide-btn" type="button" data-kp="6" onclick="window.openGuide(6)">📖 教授祕笈</button>
+</section>
+<section id="kp7" class="card" data-kp="7"><div class="card-head"><span class="badge">4.2</span><h3>統計回歸與降維</h3><span class="toggle">▼</span></div><div class="card-body"><h3>4.2 統計回歸</h3>
+<p><strong>線性回歸</strong>以最小平方誤差擬合超平面，可視為把標籤投影到係數的列空間。它對係數無正則化；為懲罰大係數可用正則化：<strong>Ridge 回歸</strong>用 $\ell_{2}$ 範數（Tikhonov 正則化，1943/1962），<strong>Lasso 回歸</strong>用 $\ell_{1}$ 範數（1996, Tibshirani），其單位球角點含許多零座標，使解<strong>稀疏</strong>（稀疏原則、Occam 剃刀）。<strong>廣義線性回歸</strong>（1972）透過<strong>連結函數</strong>讓線性回歸與預測標籤相關，並允許各點變異數為其預測標籤的函數。<strong>分位數回歸</strong>最小化加權絕對殘差，考慮預測的分位數而非均值。當資料非線性時用<strong>非線性回歸</strong>，如多項式回歸、KNN/樹/隨機森林回歸，以及具非線性激活的神經網路。</p>
+<h3>4.3 統計降維</h3>
+<p>統計降維分為<strong>譜降維</strong>與<strong>機率式降維</strong>。</p>
+<h4>4.3.1 譜降維</h4>
+<p>譜降維以幾何為基礎，通常化為<strong>特徵值問題</strong>。<strong>PCA</strong>（1901 Pearson, 1933 Hotelling）以線性方式找資料最變異的方向。<strong>FDA</strong>（1936 Fisher）是第一個監督譜降維法，最大化類間變異、最小化類內變異。<strong>MDS</strong> 保留點間相似/相異度；<strong>Sammon mapping</strong>（1969）是 MDS 特例，保留距離，是第一個非線性降維法。<strong>核 PCA</strong>（1997-98 Schölkopf）把資料映射到高維再套用線性 PCA。<strong>Isomap</strong>（2000）用<strong>測地距離</strong>（以分段歐氏距離近似）取代歐氏距離；<strong>LLE</strong>（2000 Roweis）「局部擬合、全局思考」，讓每個嵌入點由其在輸入空間的鄰居重建。<strong>SDE/MVU</strong>（2004）以半定規劃學習最佳核以展開流形；<strong>圖嵌入</strong>（2005）推廣 Laplacian 式降維。<strong>HSIC</strong>（2005）以核的線性相關估計兩隨機變數的相依性；<strong>監督 PCA</strong>（2011）最大化類標籤與投影資料的相依性，PCA 是其無標籤特例。</p>
+<h4>4.3.2 機率式降維</h4>
+<p><strong>因子分析</strong>（1950s）假設資料由潛在因子線性投影加雜訊產生，以變分推論（EM）學習投影矩陣與雜訊共變異數。<strong>機率式 PCA（pPCA）</strong>是因子分析特例，假設雜訊為等向（對角共變異數、各維等變異），使解有閉合形式。<strong>Johnson-Lindenstrauss 引理</strong>（1984）證明隨機投影大致保留距離，解釋了神經網路隨機初始化的合理性。<strong>充分維度縮減（SDR）</strong>（1991）找不改變「給定資料下標籤條件分布」的低維投影；<strong>KDR</strong>（2003 Fukumizu/Bach/Jordan）是重要 SDR 演算法。</p><div class="quiz" data-ans="B"><p class="q"><p>Ridge 與 Lasso 回歸的主要差別在於？</p></p><div class="opts"><label class="opt"><input type="radio" name="q7-0" value="A"><span>A. <p>Ridge 用 $\ell_{1}$ 範數，Lasso 用 $\ell_{2}$ 範數</p></span></label><label class="opt"><input type="radio" name="q7-0" value="B"><span>B. <p>Ridge 用 $\ell_{2}$ 範數，Lasso 用 $\ell_{1}$ 範數</p></span></label><label class="opt"><input type="radio" name="q7-0" value="C"><span>C. <p>兩者都用 $\ell_{2}$ 範數</p></span></label><label class="opt"><input type="radio" name="q7-0" value="D"><span>D. <p>兩者都不做正則化</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Ridge 用 $\ell_{2}$ 範數（Tikhonov）正則化，Lasso 用 $\ell_{1}$ 範數正則化，其單位球角點含零座標使解稀疏。"></div></div><div class="quiz" data-ans="A"><p class="q"><p>下列譜降維方法的時間順序何者正確？</p></p><div class="opts"><label class="opt"><input type="radio" name="q7-1" value="A"><span>A. <p>PCA → Sammon mapping → 核 PCA → Isomap/LLE</p></span></label><label class="opt"><input type="radio" name="q7-1" value="B"><span>B. <p>Isomap → PCA → 核 PCA → Sammon</p></span></label><label class="opt"><input type="radio" name="q7-1" value="C"><span>C. <p>核 PCA → PCA → LLE → Sammon</p></span></label><label class="opt"><input type="radio" name="q7-1" value="D"><span>D. <p>Sammon → Isomap → PCA → 核 PCA</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="依序為 PCA(1901) → Sammon(1969) → 核 PCA(1997-98) → Isomap/LLE(2000)。"></div></div><div class="quiz" data-ans="A"><p class="q"><p>Isomap 與 LLE 在處理非線性資料時的核心想法分別是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q7-2" value="A"><span>A. <p>Isomap 用測地距離，LLE 讓嵌入點由鄰居重建</p></span></label><label class="opt"><input type="radio" name="q7-2" value="B"><span>B. <p>兩者都用歐氏距離</p></span></label><label class="opt"><input type="radio" name="q7-2" value="C"><span>C. <p>Isomap 用線性投影，LLE 用核方法</p></span></label><label class="opt"><input type="radio" name="q7-2" value="D"><span>D. <p>兩者都最大化類間變異</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Isomap 以測地距離（分段歐氏近似）取代歐氏距離；LLE「局部擬合、全局思考」，讓嵌入點由輸入空間的鄰居重建。"></div></div><div class="quiz" data-ans="A"><p class="q"><p>機率式 PCA（pPCA）相較於因子分析的主要簡化是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q7-3" value="A"><span>A. <p>假設雜訊為等向（對角共變異數、各維等變異），使解有閉合形式</p></span></label><label class="opt"><input type="radio" name="q7-3" value="B"><span>B. <p>完全不考慮雜訊</p></span></label><label class="opt"><input type="radio" name="q7-3" value="C"><span>C. <p>使用非線性投影</p></span></label><label class="opt"><input type="radio" name="q7-3" value="D"><span>D. <p>需要迭代半定規劃</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="pPCA 假設雜訊等向（對角共變異數、各維等變異），此簡化使解簡單且有閉合形式。"></div></div></div><button class="guide-btn" type="button" data-kp="7" onclick="window.openGuide(7)">📖 教授祕笈</button>
+</section>
+<section id="kp8" class="card" data-kp="8"><div class="card-head"><span class="badge">5.1</span><h3>早期史：從 McCulloch-Pitts 到 Perceptron 與 ADALINE</h3><span class="toggle">▼</span></div><div class="card-body"><p>這一節我們把時間倒回，看看「神經網路」這個點子是怎麼誕生的。整段歷史可以濃縮成一句話：<b>先有神經元的數學模型，再有人想到「讓它自己學」，接著才有能真正訓練多層網路的演算法</b>。下面我們沿著時間軸，一個一個認識這些關鍵人物與里程碑。</p>
+
+<h4>McCulloch-Pitts 模型（1943）：神經元的數學雛形</h4>
+<p>1943 年，神經生理學家 Warren McCulloch 和邏輯學家 Walter Pitts 提出了史上第一個神經元模型。這個「McCulloch-Pitts 神經元」很簡單：它有好幾個<b>二元輸入</b>（每個輸入的權重都固定且相等），當輸入加總超過某個門檻時，輸出才「啟動」變成 1，否則輸出 0。換句話說，它就像一個邏輯閘——可以做出 AND、OR、NOT 這類運算。別小看這個模型，它證明了「用一堆簡單單元連起來，就能表達邏輯運算」，為日後的神經網路打下地基。</p>
+
+<h4>Hebbian 學習（1949）：一起放電就一起接線</h4>
+<p>1949 年，心理學家 Donald Hebb 在《The Organization of Behavior》這本書裡提出一個影響深遠的理論，口訣就是「<b>cells that fire together, wire together</b>」（一起放電的細胞，會一起接線）。意思是：當一個神經元反覆、持續地激發另一個神經元時，兩者之間的連結就會變強。這給了人工神經網路一個重要靈感——<b>權重可以根據神經元之間的相關性來調整</b>，也就是「學習」的雛形。</p>
+
+<h4>Perceptron（1958）：第一個會從例子學習的神經元</h4>
+<p>有了 Hebbian 學習的啟發，1958 年 Frank Rosenblatt 在康乃爾航空實驗室（Cornell Aeronautical Laboratory）實作了 <b>Perceptron（感知機）</b>，這是一個能從範例中學習的單一神經元模型，主要用來做二元分類。Rosenblatt 對它非常樂觀，1958 年的一場記者會上，他甚至讓《紐約時報》寫下「這是一台電子電腦的胚胎，未來它將能走路、說話、看東西、寫字、自我複製，甚至意識到自己的存在」。當時不少人以為真正的 AI 就要誕生了。</p>
+<p>不過，單層 Perceptron 本質上是<b>線性分類器</b>，無法解決像 XOR 這種非線性問題。1969 年，Marvin Minsky 和 Seymour Papert 出版《Perceptrons》一書，用數學證明單層 Perceptron 無法表達 XOR 這類非線性函數，狠狠澆熄了早期的樂觀情緒，也讓神經網路研究陷入低潮。Rosenblatt 其實嘗試過把 Perceptron 鬆散地串起來、調整權重，但這些實驗沒有形成一套有系統的多層模型與明確的訓練演算法——雖然理論上堆疊多層能解 XOR，但當時沒有有效的學習演算法來訓練它。Rosenblatt 在 1962 年出版了《Principles of Neurodynamics》一書，系統整理了他的感知機理論。</p>
+
+<h4>ADALINE 與 MADALINE（1960）：用梯度下降學得更穩</h4>
+<p>1960 年，Widrow 和他的學生 Hoff 提出 <b>ADALINE（Adaptive Linear Neuron，自適應線性神經元）</b>。它跟 Perceptron 最大的差別在於學習規則：Perceptron 只看「分對還是分錯」來更新權重，而 ADALINE 用<b>最小均方誤差（LMS）＋梯度下降</b>，即使分對了也會持續修正誤差，所以泛化能力更好。這個訓練方法又叫 Widrow-Hoff 學習規則。不過跟 Perceptron 一樣，ADALINE 仍然是線性模型。</p>
+<p>為了處理非線性，Widrow 和學生把好幾個 ADALINE 疊起來，做出 <b>MADALINE（Many ADALINEs）</b>，並陸續提出三種學習規則：MR I（1962）無法訓練隱藏層到輸出層之間的權重；MR II（1988）改善了這點；MR III（1990）把二元 signum 激發函數換成 sigmoid，讓輸出變成連續值。MADALINE 在史丹佛大學發展，而多層 Perceptron 則在康乃爾大學並行發展——最後，多層 Perceptron 在反向傳播（backpropagation）突破後成為現代神經網路的基石，蓋過了 ADALINE 系列。</p>
+
+<h4>前三波神經網路簡表</h4>
+<p>回顧歷史，神經網路常被分成「三代」：</p>
+<table>
+<tr><th>世代</th><th>代表</th><th>特徵</th></tr>
+<tr><td>第一代</td><td>單層 Perceptron</td><td>線性分類，無法解 XOR</td></tr>
+<tr><td>第二代</td><td>多層網路＋反向傳播</td><td>能學非線性，現代深度學習的基礎</td></tr>
+<tr><td>第三代</td><td>生物啟發網路（如脈衝神經網路）</td><td>更貼近真實神經元的動態</td></tr>
+</table><div class="quiz" data-ans="B"><p class="q"><p>McCulloch-Pitts 模型（1943）本質上像什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q8-0" value="A"><span>A. <p>一個能從範例學習的分類器</p></span></label><label class="opt"><input type="radio" name="q8-0" value="B"><span>B. <p>一個邏輯閘，可做 AND/OR/NOT</p></span></label><label class="opt"><input type="radio" name="q8-0" value="C"><span>C. <p>一個多層神經網路</p></span></label><label class="opt"><input type="radio" name="q8-0" value="D"><span>D. <p>一個生成模型</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="MP 模型是固定權重的二元單元，輸入加總超過門檻才輸出 1，本質上就是邏輯閘。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>Hebbian 學習（1949）的核心口訣是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q8-1" value="A"><span>A. <p>越大的權重越重要</p></span></label><label class="opt"><input type="radio" name="q8-1" value="B"><span>B. <p>cells that fire together, wire together</p></span></label><label class="opt"><input type="radio" name="q8-1" value="C"><span>C. <p>損失越小越好</p></span></label><label class="opt"><input type="radio" name="q8-1" value="D"><span>D. <p>資料越多越好</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Hebb 提出「一起放電的細胞會一起接線」，反覆激發會讓兩神經元之間的連結變強。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>單層 Perceptron 的致命限制是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q8-2" value="A"><span>A. <p>無法處理大量資料</p></span></label><label class="opt"><input type="radio" name="q8-2" value="B"><span>B. <p>是線性分類器，無法解 XOR 這類非線性問題</p></span></label><label class="opt"><input type="radio" name="q8-2" value="C"><span>C. <p>訓練速度太慢</p></span></label><label class="opt"><input type="radio" name="q8-2" value="D"><span>D. <p>無法做二元分類</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="單層 Perceptron 本質上是線性分類器；Minsky 與 Papert 在 1969 年證明它無法表達 XOR。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>ADALINE 與 Perceptron 的主要差別是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q8-3" value="A"><span>A. <p>ADALINE 是多層網路</p></span></label><label class="opt"><input type="radio" name="q8-3" value="B"><span>B. <p>ADALINE 用 LMS＋梯度下降，即使分對也會持續修正誤差</p></span></label><label class="opt"><input type="radio" name="q8-3" value="C"><span>C. <p>ADALINE 無法學習</p></span></label><label class="opt"><input type="radio" name="q8-3" value="D"><span>D. <p>ADALINE 是非線性模型</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Perceptron 只看分對分錯，ADALINE 則最小化均方誤差（LMS），所以泛化更好；但它仍是線性模型。"></div></div></div></section>
+<section id="kp9" class="card" data-kp="9"><div class="card-head"><span class="badge">5.4</span><h3>CNN 與現代史：冬眠、復興、生成式與 Transformer</h3><span class="toggle">▼</span></div><div class="card-body"><p>這一節是「現代史」：從 1980 年代的卷積神經網路（CNN）一路講到今天的 Transformer、大型語言模型（LLM）與各種新興學習範式。時間跨度大，我們用幾個里程碑把它串起來。</p>
+
+<h4>CNN 的誕生：Neocognitron（1980）與 LeNet（1989）</h4>
+<p>1980 年，日本學者福島邦彦（Kunihiko Fukushima）提出 <b>Neocognitron</b>，這是一個受視覺皮層階層結構啟發的網路，用<b>局部連結（local connectivity）</b>與<b>權重共享（weight sharing）</b>來處理影像，目的是達到平移不變性。這跟早期「把影像攤平成一個長向量」的全連接網路不同——後者會破壞影像的二維空間結構。1980 年代末，Yann LeCun 等人把這些想法延伸，結合卷積層與反向傳播做端到端訓練，最終做出 <b>LeNet-5</b>，在手寫數字辨識（MNIST）上大獲成功。之後 CNN 家族開枝散葉：AlexNet（2012）、VGG（2014）、Inception（2015）、U-Net（2015）、ResNet（2016）、DenseNet（2017）等，都建立在「局部連結＋權重共享」這兩個 1980 年代就有的核心概念上。</p>
+
+<h4>AI 冬眠與 SVM 的興起（1980s–2006）</h4>
+<p>1980 年代神經網路一度很熱，但到了 1980 年代末到 1990 年代，熱度急轉直下，進入所謂的「<b>AI 冬眠</b>」（更精確地說是「神經網路的冬天」），一直持續到約 2006 年。原因有三：第一，訓練深層網路在實務上幾乎不可行——梯度會沿著多層反向傳播時<b>消失或爆炸</b>；第二，當時的硬體算力不足以支撐大型網路訓練；第三，可用資料集太小，無法發揮神經網路的潛力。與此同時，<b>核方法（kernel methods）</b>——尤其是支援向量機（SVM）——在 1990 年代初崛起，靠著把輸入隱式映射到高維空間來處理非線性，數學基礎穩固、在小資料集上又好用，成了當時的主流選擇。</p>
+
+<h4>2006 復興：Deep Belief Networks（DBN）</h4>
+<p>冬眠一直持續到 2006 年，Geoffrey Hinton 和他的學生 Ruslan Salakhutdinov 發表了 <b>Deep Belief Networks（DBN）</b>的里程碑論文：他們用<b>無監督的逐層預訓練（layer-wise pretraining）</b>來初始化權重，再套用反向傳播，成功訓練出深層網路，有效緩解了梯度消失問題，開啟了深度學習復興的浪潮。之後 ReLU 激發函數與 GPU 加速進一步推波助瀾。</p>
+
+<h4>2012 突破：AlexNet</h4>
+<p>2012 年，Alex Krizhevsky 在 Geoffrey Hinton 指導下設計的 <b>AlexNet</b>，在 ImageNet 大規模視覺辨識挑戰賽（ILSVRC）中大幅刷新影像分類成績。它的成功靠三件事：<b>用 GPU 做大規模訓練、用 ReLU 激發函數、加上更好的正則化</b>。AlexNet 點燃了深度學習的全面熱潮，也催生了 TensorFlow、PyTorch 等深度學習框架。</p>
+
+<h4>生成式模型：VAE、GAN 與擴散模型</h4>
+<p>2014 年，Kingma 和 Max Welling 提出 <b>VAE（變分自編碼器）</b>，用變分推論在自編碼器框架裡學習資料分布。同年，Ian Goodfellow 和 Yoshua Bengio 等人提出 <b>GAN（生成對抗網路）</b>，由生成器與判別器對抗訓練，生成品質通常比 VAE 好，但訓練不穩、容易模式崩潰。2020 年，<b>擴散模型（diffusion models）</b>登場，透過「逐步加噪再逆向去噪」來生成樣本，在樣本品質與訓練穩定性上都超越 GAN，成為當代生成式模型的主流。</p>
+
+<h4>Transformer、LLM 與對齊</h4>
+<p>2014–2015 年，Bahdanau 等人與 Luong 等人把<b>注意力機制（attention）</b>引入序列任務，解決了 RNN/LSTM 無法平行化、難以捕捉長距離依賴的問題。2017 年 Transformer 架構問世，2018 年 Google 推出 <b>BERT</b>（用編碼器做雙向語言理解）、OpenAI 推出 <b>GPT</b>（用解碼器做自迴歸生成），開啟了大型語言模型（LLM）時代。隨著模型變大，出現了「對齊」需求：<b>RLHF（2022）</b>用人類偏好訓練獎勵模型、再透過強化學習引導模型行為；<b>DPO（2023）</b>則更直接，不需要額外的獎勵模型。此外，研究者也在探索替代架構，例如<b>狀態空間模型 S4</b> 與 <b>Mamba</b>，它們用線性計算複雜度結合 RNN 與 Transformer 的優點。</p>
+
+<h4>深度強化學習：DQN 與 AlphaGo</h4>
+<p>2013 年 DeepMind 提出 <b>DQN</b>，把深度學習與強化學習結合，2015 年在 Atari 遊戲上達到超人水準；2016 年 <b>AlphaGo</b> 結合深度網路與樹搜尋，擊敗世界棋王李世乭，證明深度強化學習能處理複雜的戰略問題。</p>
+
+<h4>圖神經網路（GNN）</h4>
+<p>傳統神經網路需要向量輸入，難以處理社群網路、分子結構、知識圖譜這類圖結構資料。2016 年 <b>ChebNet</b> 用 Chebyshev 多項式把卷積推廣到圖上，<b>GCN</b> 用一階近似簡化它；2017 年 <b>GAT</b> 引入注意力機制學習節點間的自適應權重。</p>
+
+<h4>新學習範式：少樣本、自監督</h4>
+<p><b>少樣本學習（few-shot learning）</b>與<b>元學習（meta-learning）</b>解決「需要大量標註資料」的根本限制，代表方法有 Matching Networks（2016）、Prototypical Networks（2017）、MAML（2017）。<b>自監督學習（self-supervised learning）</b>則從資料本身產生監督訊號，不需要人工標註，代表方法有 SimCLR、BYOL、SwAV、SimSiam、Barlow Twins、VICReg 等。</p>
+
+<h4>實務與安全：壓縮、聯邦、對抗、可解釋</h4>
+<p>模型變大後，<b>神經網路壓縮</b>（剪枝、量化、矩陣分解、知識蒸餾）成為部署關鍵；<b>聯邦學習</b>（2017 年 Google 正式化）讓多個分散資料源在不集中資料的前提下協同訓練，保護隱私。安全方面，<b>對抗攻擊</b>發現微小、人眼不可見的擾動就能騙過深度網路；<b>可解釋 AI</b>（如 LRP、LIME、Grad-CAM）則試圖理解黑箱模型的決策。此外，<b>捷徑學習（shortcut learning）</b>揭露了模型可能靠虛假相關而非真正模式來達成好表現。</p><div class="quiz" data-ans="A"><p class="q"><p>Neocognitron（1980）的兩個核心概念是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q9-0" value="A"><span>A. <p>局部連結與權重共享</p></span></label><label class="opt"><input type="radio" name="q9-0" value="B"><span>B. <p>注意力與自監督</p></span></label><label class="opt"><input type="radio" name="q9-0" value="C"><span>C. <p>生成與判別</p></span></label><label class="opt"><input type="radio" name="q9-0" value="D"><span>D. <p>強化與獎懲</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Neocognitron 用局部連結與權重共享處理影像，達到平移不變性，是 CNN 的起源。"></div></div><div class="quiz" data-ans="D"><p class="q"><p>下列何者「不是」AI 冬眠的主因？</p></p><div class="opts"><label class="opt"><input type="radio" name="q9-1" value="A"><span>A. <p>梯度消失/爆炸使深層網路難以訓練</p></span></label><label class="opt"><input type="radio" name="q9-1" value="B"><span>B. <p>硬體算力不足</p></span></label><label class="opt"><input type="radio" name="q9-1" value="C"><span>C. <p>可用資料集太小</p></span></label><label class="opt"><input type="radio" name="q9-1" value="D"><span>D. <p>反向傳播尚未被發明</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="反向傳播 1986 年就已成功展示；冬眠主因是梯度問題、算力不足與資料太小。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>2006 年讓深度學習復興的關鍵方法是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q9-2" value="A"><span>A. <p>AlexNet 的 GPU 訓練</p></span></label><label class="opt"><input type="radio" name="q9-2" value="B"><span>B. <p>DBN 的無監督逐層預訓練</p></span></label><label class="opt"><input type="radio" name="q9-2" value="C"><span>C. <p>Transformer 的注意力機制</p></span></label><label class="opt"><input type="radio" name="q9-2" value="D"><span>D. <p>GAN 的對抗訓練</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Hinton 與 Salakhutdinov 的 DBN 用無監督逐層預訓練初始化權重，緩解梯度消失，開啟復興。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>關於 RLHF 與 DPO，何者正確？</p></p><div class="opts"><label class="opt"><input type="radio" name="q9-3" value="A"><span>A. <p>兩者都需要額外的獎勵模型</p></span></label><label class="opt"><input type="radio" name="q9-3" value="B"><span>B. <p>DPO 不需要額外的獎勵模型，更直接地做偏好學習</p></span></label><label class="opt"><input type="radio" name="q9-3" value="C"><span>C. <p>RLHF 不需要人類偏好</p></span></label><label class="opt"><input type="radio" name="q9-3" value="D"><span>D. <p>兩者都用於影像分類</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="RLHF 需要先訓練獎勵模型；DPO（2023）直接做偏好學習，不需要額外的獎勵模型。"></div></div></div></section>
+<section id="kp10" class="card" data-kp="10"><div class="card-head"><span class="badge">6</span><h3>結論：三步流程、任務分類與神經網路時間軸</h3><span class="toggle">▼</span></div><div class="card-body"><p>這一章走到尾聲，我們把整章濃縮成幾張「地圖」，幫你把所有概念收進腦海。</p>
+
+<h4>機器學習的三步流程</h4>
+<p>整章最核心的框架，就是機器學習的<b>三步流程</b>：</p>
+<ol>
+<li><b>定義假設類別（hypothesis class）</b>：對資料結構的建模假設，例如線性模型、樹模型、神經網路。</li>
+<li><b>指定評分機制（loss function）</b>：用損失函數量化每個模型的好壞，例如均方誤差、交叉熵。</li>
+<li><b>套用搜尋策略（optimization）</b>：解最佳化問題，找出損失最低的模型，例如梯度下降。</li>
+</ol>
+<p>換個角度看，機器學習模型就是一個「從輸入資料映射到輸出預測」的函數。</p>
+
+<h4>任務分類</h4>
+<p>傳統上，機器學習任務分成三大類：</p>
+<ul>
+<li><b>監督式學習</b>：用帶標籤的資料學習，包含分類與回歸。</li>
+<li><b>非監督式學習</b>：在無標籤資料中找結構，包含分群與降維。</li>
+<li><b>強化學習</b>：透過與環境互動、以獎懲回饋來學習。</li>
+</ul>
+
+<h4>統計學習的族譜</h4>
+<p>統計學習方法可以分成幾個家族：<b>統計分類</b>（貝氏分類器、LDA、邏輯迴歸、度量學習、隨機森林、SVM）、<b>統計回歸</b>（線性回歸、分位數回歸、非線性回歸）、<b>統計降維</b>（頻譜法與機率法）、<b>boosting</b>、<b>混合模型</b>、<b>馬可夫模型</b>。</p>
+
+<h4>神經網路的時間軸</h4>
+<p>神經網路的歷史可以畫成一條時間軸：</p>
+<table>
+<tr><th>年代</th><th>里程碑</th></tr>
+<tr><td>1943</td><td>McCulloch-Pitts 神經元</td></tr>
+<tr><td>1949</td><td>Hebbian 學習</td></tr>
+<tr><td>1958</td><td>Perceptron（Rosenblatt）</td></tr>
+<tr><td>1960</td><td>ADALINE / MADALINE</td></tr>
+<tr><td>1980</td><td>Neocognitron（CNN 起源）</td></tr>
+<tr><td>1986</td><td>反向傳播（Rumelhart, Hinton, Williams）</td></tr>
+<tr><td>1989</td><td>LeNet（CNN 端到端訓練）</td></tr>
+<tr><td>1990–1997</td><td>RNN（Elman）、LSTM</td></tr>
+<tr><td>2006</td><td>DBN 復興深度學習</td></tr>
+<tr><td>2012</td><td>AlexNet 突破</td></tr>
+<tr><td>2013–2016</td><td>DQN、AlphaGo（深度強化學習）</td></tr>
+<tr><td>2014–2020</td><td>VAE、GAN、擴散模型</td></tr>
+<tr><td>2017–2018</td><td>Transformer、BERT、GPT</td></tr>
+</table>
+<p>之後還有圖神經網路、少樣本/元學習、自監督學習、聯邦學習，以及壓縮、對抗穩健性、可解釋 AI、捷徑學習等重要概念。</p>
+
+<h4>本書地圖</h4>
+<p>這章是整本書的「導覽」。後續章節會逐一深入：第 2 章講模型與 Perceptron 理論，第 3 章講反向傳播與最佳化，第 4 章講現代 CNN 架構，第 5 章講正則化與泛化，第 8 章講序列建模（RNN/LSTM），第 10 章講替代架構（S4/Mamba），第 12/14/15 章講生成式模型，第 16 章講自監督學習，第 17 章講圖神經網路，第 18 章講強化學習，第 19 章講少樣本/元學習，第 20 章講壓縮，第 22 章講深度學習框架。讀完這章，你已經有了整張地圖，接下來就是逐格探索。</p><div class="quiz" data-ans="A"><p class="q"><p>機器學習的三步流程依序是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q10-0" value="A"><span>A. <p>定義假設類別 → 指定評分機制 → 套用搜尋策略</p></span></label><label class="opt"><input type="radio" name="q10-0" value="B"><span>B. <p>收集資料 → 訓練 → 部署</p></span></label><label class="opt"><input type="radio" name="q10-0" value="C"><span>C. <p>定義損失 → 定義模型 → 定義資料</p></span></label><label class="opt"><input type="radio" name="q10-0" value="D"><span>D. <p>監督 → 非監督 → 強化</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="三步流程是：定義假設類別（建模假設）、指定評分機制（損失函數）、套用搜尋策略（最佳化）。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>監督式學習包含哪兩個主要任務？</p></p><div class="opts"><label class="opt"><input type="radio" name="q10-1" value="A"><span>A. <p>分群與降維</p></span></label><label class="opt"><input type="radio" name="q10-1" value="B"><span>B. <p>分類與回歸</p></span></label><label class="opt"><input type="radio" name="q10-1" value="C"><span>C. <p>強化與生成</p></span></label><label class="opt"><input type="radio" name="q10-1" value="D"><span>D. <p>壓縮與蒸餾</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="監督式學習用帶標籤資料學習，主要任務是分類與回歸；分群與降維屬非監督式。"></div></div><div class="quiz" data-ans="D"><p class="q"><p>下列哪個「不」屬於統計學習的家族？</p></p><div class="opts"><label class="opt"><input type="radio" name="q10-2" value="A"><span>A. <p>統計分類（如 SVM）</p></span></label><label class="opt"><input type="radio" name="q10-2" value="B"><span>B. <p>統計回歸</p></span></label><label class="opt"><input type="radio" name="q10-2" value="C"><span>C. <p>統計降維</p></span></label><label class="opt"><input type="radio" name="q10-2" value="D"><span>D. <p>深度強化學習（DQN）</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="統計學習家族包含統計分類、統計回歸、統計降維、boosting、混合模型與馬可夫模型；DQN 屬深度強化學習。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>2006 年復興深度學習的里程碑是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q10-3" value="A"><span>A. <p>AlexNet</p></span></label><label class="opt"><input type="radio" name="q10-3" value="B"><span>B. <p>Deep Belief Networks（DBN）</p></span></label><label class="opt"><input type="radio" name="q10-3" value="C"><span>C. <p>Transformer</p></span></label><label class="opt"><input type="radio" name="q10-3" value="D"><span>D. <p>GAN</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Hinton 與 Salakhutdinov 的 DBN 用無監督逐層預訓練，把神經網路從冬眠中拉出來。"></div></div></div></section></main></div>
+<footer>依 Elements of Deep Learning (Ghojogh & Ghodsi) Ch01 改寫 · 自學用</footer>
+<script>
+(function(){
+function renderMath(){if(window.katex && window.renderMathInElement) window.renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],throwOnError:false,ignoredClasses:['katex']});}
+window.renderMath=renderMath;
+var cards=document.querySelectorAll('.card');
+function upd(){var n=cards.length,done=0;cards.forEach(function(c){if(c.classList.contains('done'))done++;});var pct=Math.round(done/n*100);document.getElementById('pf').style.width=pct+'%';document.getElementById('ptxt').textContent='已完成 '+done+' / '+n+'（'+pct+'%）';}
+cards.forEach(function(c){c.querySelector('.card-head').addEventListener('click',function(){c.classList.toggle('collapsed');});c.querySelectorAll('.quiz').forEach(function(qz){var btn=qz.querySelector('.check'),fb=qz.querySelector('.fb');btn.addEventListener('click',function(){var sel=qz.querySelector('input:checked');if(!sel){fb.className='fb wrong';fb.textContent='請先選擇答案。';return;}if(sel.value===qz.dataset.ans){fb.className='fb ok';fb.textContent='✓ 正確！';c.classList.add('done');} else {fb.className='fb wrong';fb.textContent='✗ 答錯：'+qz.querySelector('.fb').dataset.expl;}upd();});});});
+window.addEventListener('load',function(){setTimeout(renderMath,50);upd();});
+})();
+</script>
+<style>
+.guide-btn{background:#7c3aed;color:#fff;border:none;padding:7px 16px;border-radius:8px;cursor:pointer;font-weight:600;margin-top:10px;}
+.guide-btn:hover{background:#6d28d9;}
+#guide-modal{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;z-index:200;padding:20px;}
+#guide-modal.open{display:flex;}
+#guide-modal .modal{background:#fff;max-width:760px;width:100%;max-height:86vh;overflow:auto;border-radius:14px;padding:22px 26px;box-shadow:0 20px 50px rgba(0,0,0,.25);position:relative;}
+#guide-modal .modal h1{font-size:1.3rem;color:#4c1d95;margin:0 0 12px;padding-right:30px;}
+#guide-modal .close{position:absolute;top:14px;right:18px;background:none;border:none;font-size:26px;cursor:pointer;color:#6b7280;line-height:1;}
+#guide-modal .modal-body{line-height:1.8;}
+#guide-modal .modal-body h2{font-size:1.05rem;color:#1e3a8a;border-bottom:1px solid #e5e7eb;padding-bottom:4px;margin:18px 0 8px;}
+#guide-modal .modal-body strong{color:#0d9488;}
+</style>
+<div id="guide-modal"><div class="modal"><button class="close" onclick="window.closeGuide()" aria-label="關閉">×</button><h1 id="guide-title"></h1><div class="modal-body" id="guide-body"></div></div></div>
+<script>
+window.__GUIDES__={"1": {"title": "教授祕笈：三步流程、No Free Lunch 與式(1) 的祕密", "body": "<p>同學，這一節是整本深度學習書的「開場白」，也是所有機器學習的共同骨架。今天我先扮演一位愛講比喻的教授，帶你走一趟<strong>餐廳點菜</strong>：你走進一家店，先決定「今天吃哪一類菜」（假設），再決定「用什麼標準判斷好不好吃」（打分），最後「在菜單裡挑出分數最高的那道」（搜尋）。就這三步，沒有第四步。</p> <h2>先把任務講成一句人話</h2> <p>機器學習的每一種演算法，不管長得多花俏，骨子裡都是同一件事：<strong>先對資料做一個猜想，再用資料把這個猜想修到最好。</strong> 這跟科學家 Karl Popper 說的完全一樣——科學不是先傻傻觀察，而是先提出「世界可能是這樣運作的」猜想，再拿觀察去驗證、去推翻、去修正。機器學習就是這套哲學的數位版：我們先假設資料長什麼樣，然後讓資料來打分、來挑選。</p> <h2>鷹架式：先直覺，再符號</h2> <p>把上面三步翻成數學，就是書裡的式(1)：</p> <p>$$ \\widehat{f}:=\\arg \\min _{f \\in \\mathcal{F}} S(f) . $$</p> <p>先別怕，這串符號其實就是「在菜單裡挑分數最低的那道菜」。我們一個一個拆。</p> <h2>符號逐個拆</h2> <ul> <li>$\\mathcal{F}$：<strong>假設類別（hypothesis class）</strong>，也就是「菜單」。它代表我們對資料的猜想。選線性模型，就是假設輸入輸出是直線關係；選決策樹，就是假設資料可以一層層切開；選神經網路，就是假設背後的規律是「一層疊一層」的組合式結構。</li> <li>$f$：菜單裡的<strong>一道菜</strong>，也就是某一個具體模型。</li> <li>$S(f)$：<strong>打分機制（scoring / loss）</strong>，給每道菜一個分數，分數越低越好。常見的像是均方誤差（MSE，量「預測和真實差多少的平方平均」）或交叉熵（分類常用）。</li> <li>$\\arg\\min_{f\\in\\mathcal{F}}$：<strong>搜尋策略（optimization）</strong>，意思是「在整個菜單裡，找出讓 $S(f)$ 最小的那一個 $f$」。</li> <li>$\\widehat{f}$：最後挑出來的那道菜，也就是<strong>我們要的模型</strong>。帽子 $\\widehat{\\cdot}$ 在統計裡代表「估計出來的」，不是真值。</li> </ul> <p>所以式(1) 的白話是：<strong>在我們允許的模型集合裡，挑出分數最低的那個，當作答案。</strong></p> <h2>真的算一遍：小懲罰對比</h2> <p>你可能會想：「分數最低？那我把模型弄到超複雜，把訓練資料背得滾瓜爛熟，分數不就最低了？」來，我們真的算一遍。假設有兩個候選模型，$S(f)$ 除了「訓練誤差」還加了一項「複雜度懲罰」：</p> <table> <thead> <tr> <th>模型</th> <th style=\"text-align: right;\">訓練誤差</th> <th style=\"text-align: right;\">參數個數</th> <th style=\"text-align: right;\">懲罰（每參數 $0.1$）</th> <th style=\"text-align: right;\">總分 $S(f)$</th> </tr> </thead> <tbody> <tr> <td>A（超複雜）</td> <td style=\"text-align: right;\">$0.5$</td> <td style=\"text-align: right;\">$10$</td> <td style=\"text-align: right;\">$1.0$</td> <td style=\"text-align: right;\">$1.5$</td> </tr> <tr> <td>B（簡單）</td> <td style=\"text-align: right;\">$1.0$</td> <td style=\"text-align: right;\">$2$</td> <td style=\"text-align: right;\">$0.2$</td> <td style=\"text-align: right;\">$1.2$</td> </tr> </tbody> </table> <p>A 的訓練誤差比較低，看起來很威；但加上懲罰後，總分 $1.5$ 反而輸給 B 的 $1.2$。所以 $\\arg\\min$ 會挑 B。這就告訴你：<strong>「分數最低」不是只看訓練誤差，懲罰項會把太複雜的模型拉下來。</strong></p> <h2>先留一個反轉</h2> <p>看到這裡你可能會問：「那我不做任何假設，讓模型自己通吃所有問題，不就好了？」反轉就在這裡：<strong>沒有假設，就沒有學習。</strong> 這就是著名的 <strong>No Free Lunch Theorem（沒有免費午餐定理）</strong>：沒有任何一個演算法能在所有可能問題上都表現最好。你選了線性假設，就等於賭「資料是線性的」；你選了神經網路，就等於賭「規律是組合式的」。這個「賭」就是模型的<strong>歸納偏置（inductive bias）</strong>——它讓你在某些問題上很強，但也注定在另一些問題上很弱。天下沒有白吃的午餐，你總得先押注。</p> <h2>換個場景，自己找出同一條路</h2> <p>把餐廳換成「挑房子」：你先決定「只看三房兩廳」（假設類別），再決定「用坪數、採光、離捷運多遠來打分」（loss），最後在符合條件的房子裡挑總分最高的（$\\arg\\min$）。你看，買房、選課、挑手機，全都是同一套三步流程。你可以自己想想：如果今天完全不設任何條件，全台灣的房子都拿來比，你反而會比到崩潰——這正是 No Free Lunch 的日常版。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解是「假設越複雜越好」。錯！複雜的假設容易把訓練資料背下來（過擬合），卻在沒看過的新資料上翻車；懲罰項和簡單假設，常常才是贏家。第二個誤解是「$\\arg\\min$ 一定找得到全域最佳」。如果問題是凸的，可以；但神經網路通常非凸，梯度下降可能只找到區域最佳。第三個誤解是「No Free Lunch 說所有演算法一樣爛」。它說的是「不帶假設時沒有通吃演算法」，不是說「帶了假設也一樣」。</p> <h2>跨知識點掛勾</h2> <p>這一步挑出的 $\\widehat{f}$，其實就是下一節（KP-2）的主角 $f_{\\theta}$：一個「帶參數 $\\theta$」的具體函數。$\\mathcal{F}$ 是「所有可能的神經網路」，$f_{\\theta}$ 是「某一組權重下的那一個」。所以式(1) 挑的是「哪一組 $\\theta$ 最好」，這條線會一路貫穿到整本書。</p> <h2>換句話重述</h2> <p>把整節濃縮成一句：<strong>先選菜單（假設類別），再定打分標準（loss），最後挑分數最低的那道（$\\arg\\min$）；因為沒有免費午餐，你必須先押注，而這個押注就是歸納偏置。</strong></p> <p><strong>一句話收尾：</strong> <strong>先猜想、再打分、後挑選；沒有假設就沒有學習，天下沒有白吃的午餐。</strong></p>"}, "2": {"title": "教授祕笈：$f_{\\theta}$ 與形狀推理（式(2)、資料矩陣）", "body": "<p>同學，這一節要回答一個很實際的問題：<strong>機器學習的「模型」到底是什麼形狀？</strong> 今天我先扮演一位有點強迫症的教授，帶你認識一個「形狀控」的世界：所有資料都是向量，所有模型都是函數，而看懂形狀，你就看懂了一半的深度學習。</p> <h2>先把任務講成一句人話</h2> <p>機器學習的模型，本質上就是一台<strong>輸入→輸出</strong>的機器：丟進一個資料點，吐出一筆答案。而這台機器長什麼樣，完全由它的<strong>形狀</strong>決定——輸入是幾維、輸出是幾維、中間有多少個可調的旋鈕（參數）。今天我們就把這些形狀一個一個量清楚。</p> <h2>鷹架式：先直覺，再符號</h2> <p>先想一個生活例子：你要描述一顆蘋果。它可能有「顏色、大小、甜度」三個特徵，那這顆蘋果就是一個<strong>三維向量</strong>。如果我們量了 $n$ 顆蘋果，就有 $n$ 個三維向量。把這些向量排成一張表，就是<strong>資料矩陣</strong>。模型要做的事，就是把「三維的蘋果」變成「一維的甜度分數」——這就是一台形狀為「$3$ 進 $1$ 出」的機器。</p> <h2>符號逐個拆</h2> <ul> <li>$\\mathbb{R}^{d}$：<strong>$d$ 維歐氏空間</strong>。白話就是「所有 $d$ 個數字排成的向量」的集合。一顆蘋果有 $d$ 個特徵，就住在 $\\mathbb{R}^{d}$ 裡。</li> <li>$\\boldsymbol{x}_{i}\\in\\mathbb{R}^{d}$：第 $i$ 筆資料，是一個 $d$ 維向量。下標 $i$ 是「第幾筆」。</li> <li>$\\boldsymbol{X}\\in\\mathbb{R}^{d\\times n}$：<strong>資料矩陣</strong>，把 $n$ 筆資料排成一張 $d$ 列、$n$ 行的表。這裡是重點：<strong>每一「行」是一筆資料，每一「列」是一個特徵。</strong> 所以「列數 = 特徵數 $d$，行數 = 資料筆數 $n$」。</li> <li>$f_{\\theta}:\\mathbb{R}^{d}\\rightarrow\\mathbb{R}^{p}$：<strong>學習模型</strong>，一台「$d$ 維進、$p$ 維出」的機器。$\\theta$ 是它的參數（旋鈕），是從資料裡學出來的。</li> <li>$\\boldsymbol{x}\\mapsto f_{\\theta}(\\boldsymbol{x})$：把輸入 $\\boldsymbol{x}$ 丟進去，得到輸出 $f_{\\theta}(\\boldsymbol{x})$。箭頭 $\\mapsto$ 就是「餵進去」。</li> <li>$p\\le d$：通常輸出維度不大於輸入維度。分類時 $p$ 是類別數，回歸時 $p=1$，降維時 $p\\ll d$。</li> </ul> <h2>真的算一遍：形狀問法</h2> <p>「形狀問法」是這節的殺手鐧——看到任何模型，先問三個問題：<strong>$d$ 是多少？$n$ 是多少？$p$ 是多少？</strong> 我們用一個 2 特徵教學例貫通。假設你要用「甜度、脆度」兩個特徵，預測蘋果「好不好吃」：</p> <table> <thead> <tr> <th>問題</th> <th>答案</th> <th>形狀</th> </tr> </thead> <tbody> <tr> <td>每顆蘋果幾個特徵？</td> <td>$d=2$</td> <td>$\\boldsymbol{x}\\in\\mathbb{R}^{2}$</td> </tr> <tr> <td>量了幾顆蘋果？</td> <td>$n=5$</td> <td>$\\boldsymbol{X}\\in\\mathbb{R}^{2\\times5}$</td> </tr> <tr> <td>輸出是好吃/不好吃？</td> <td>$p=2$（兩類）</td> <td>$f_{\\theta}:\\mathbb{R}^{2}\\rightarrow\\mathbb{R}^{2}$</td> </tr> </tbody> </table> <p>所以資料矩陣是 $2$ 列、$5$ 行：每一行是一顆蘋果的「甜度、脆度」，每一列是「五顆蘋果的甜度」或「五顆蘋果的脆度」。模型則是一台「$2$ 進 $2$ 出」的機器，把每顆蘋果變成「好吃機率、不好吃機率」。</p> <h2>先留一個反轉</h2> <p>你可能會想：「$f_{\\theta}$ 不就是一條公式嗎？有什麼好講的？」反轉在這裡：<strong>$f_{\\theta}$ 不是一條固定的公式，而是一整個家族。</strong> $\\theta$ 一變，機器就變。$\\mathcal{F}$（上一節的假設類別）是「所有可能的神經網路」，而 $f_{\\theta}$ 只是「某一組權重下的那一個」。學習的過程，就是轉動 $\\theta$ 這堆旋鈕，直到輸出對上我們要的答案。</p> <h2>換個場景，自己找出同一條路</h2> <p>把蘋果換成「天氣預報」：輸入是「溫度、濕度、風速」三個特徵（$d=3$），量了 $n$ 天的資料，輸出是「明天降雨機率」（$p=1$）。模型就是一台「$3$ 進 $1$ 出」的機器。你可以自己想想：如果輸入是 $64\\times64$ 的圖片，$d$ 是多少？答案是 $64\\times64=4096$——這就是為什麼圖片資料的維度常常爆炸，也埋下了「降維」的伏筆。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解是「資料矩陣的行列搞反」。記住口訣：<strong>行是資料，列是特徵</strong>，所以 $\\boldsymbol{X}\\in\\mathbb{R}^{d\\times n}$ 是「$d$ 列、$n$ 行」。第二個誤解是「$\\theta$ 是輸入」。錯，$\\theta$ 是模型的參數（旋鈕），不是資料；資料是 $\\boldsymbol{x}$。第三個誤解是「$p$ 一定等於 $1$」。不一定，分類時 $p$ 是類別數，降維時 $p$ 是目標維度。</p> <h2>跨知識點掛勾</h2> <p>這節的 $f_{\\theta}$ 是上一節（KP-1）式(1) 挑出來的 $\\widehat{f}$ 的具體化：$\\arg\\min$ 挑的其實就是「哪一組 $\\theta$ 最好」。而「$p\\le d$」這條線，會一路連到後面的分類（KP-3）、降維（KP-4）——它們全都是「$d$ 進 $p$ 出」的機器，只是 $p$ 的意義不同。</p> <h2>換句話重述</h2> <p>把整節濃縮成一句：<strong>資料是向量，排成「列是特徵、行是資料」的矩陣；模型是一台「$d$ 進 $p$ 出」的機器，參數 $\\theta$ 是它的旋鈕，從資料裡學出來。</strong></p> <p><strong>一句話收尾：</strong> <strong>先問 $d$、$n$、$p$，再看 $\\theta$；行是資料、列是特徵，模型就是一台形狀清楚的機器。</strong></p>"}, "6": {"title": "教授祕笈：Bayes 最優分類器與六大家族譜系", "body": "<p>同學，今天我們把「分類」這座分揀站的地基挖開。主線比喻是<strong>「先驗偏見 + 現場證據 → 修正後的判斷」</strong>：你還沒看到任何線索前，心裡已經對「這東西像不像蘋果」有個底（先驗）；看到顏色、形狀後，你更新這個底（後驗）。Bayes 分類器就是這套「先有底、再更新」的數學化，而它底下養出了六個家族。</p> <h2>先把任務講成一句人話</h2> <p>Bayes 分類器做的事：<strong>對每個類別算「看到這個資料點後，它屬於這一類的機率」，誰最大就判給誰。</strong> 它被證明是「最優」的——只要你能把那些機率算對，沒有任何分類器能比它更準。問題是：那些機率在真實世界幾乎算不出來，於是大家只好各出奇招去「近似」它，這就長出了六大家族。</p> <h2>先直覺，再上符號</h2> <p>想像你撿到一顆又圓又紅的果子。判斷「是不是蘋果」的流程是：先有個底（蘋果在市場上常見，先驗高），再看證據（圓、紅，這很符合蘋果的長相，likelihood 高），兩者相乘再歸一化，得到「看到這顆果子後，它是蘋果」的機率。Bayes 公式就是把這三步寫成一行。</p> <h2>逐符號拆解式 (9)</h2> <p>$$ \\mathbb{P}(x\\in\\mathcal{C}_j\\mid X=x) =\\frac{\\mathbb{P}(X=x\\mid x\\in\\mathcal{C}_j)\\,\\mathbb{P}(x\\in\\mathcal{C}_j)}{\\mathbb{P}(X=x)}. $$</p> <ul> <li>$\\mathcal{C}_j$：第 $j$ 個類別，例如「蘋果」。</li> <li>$\\mathbb{P}(x\\in\\mathcal{C}_j\\mid X=x)$：<strong>後驗</strong>，看到資料 $x$ 之後，它屬於 $\\mathcal{C}_j$ 的機率。這是我們真正想要的答案。</li> <li>$\\mathbb{P}(X=x\\mid x\\in\\mathcal{C}_j)$：<strong>likelihood（類別條件機率）</strong>，已知它是蘋果時，長成 $x$ 這樣的可能性。</li> <li>$\\mathbb{P}(x\\in\\mathcal{C}_j)$：<strong>先驗</strong>，還沒看資料前，這一類本來就出現的機率。</li> <li>$\\mathbb{P}(X=x)$：<strong>資料的先驗</strong>，$x$ 這個樣本整體出現的機率，負責把分子歸一化成真正的機率。</li> </ul> <p>判斷規則：對每個 $j$ 算後驗，取最大者。因為分母 $\\mathbb{P}(X=x)$ 對所有類別都一樣，比較時可以整個丟掉——<strong>「最優」其實是比「likelihood × 先驗」誰大</strong>。</p> <h2>真的算一遍：為什麼算不出來</h2> <p>假設只有兩類，蘋果 $\\mathcal{C}_1$ 與黃瓜 $\\mathcal{C}_2$，先驗各半 $P(\\mathcal{C}_1)=P(\\mathcal{C}_2)=0.5$。likelihood 用「圓度」$x$ 的高斯近似：蘋果 $x\\sim\\mathcal{N}(0.8,0.1^2)$，黃瓜 $x\\sim\\mathcal{N}(0.2,0.1^2)$。來一個 $x=0.7$ 的果子：</p> <table> <thead> <tr> <th>步驟</th> <th style=\"text-align: right;\">蘋果 $\\mathcal{C}_1$</th> <th style=\"text-align: right;\">黃瓜 $\\mathcal{C}_2$</th> </tr> </thead> <tbody> <tr> <td>先驗 $P(\\mathcal{C}_j)$</td> <td style=\"text-align: right;\">$0.5$</td> <td style=\"text-align: right;\">$0.5$</td> </tr> <tr> <td>likelihood $P(x\\mid\\mathcal{C}_j)$</td> <td style=\"text-align: right;\">$\\approx 0.24$</td> <td style=\"text-align: right;\">$\\approx 0.0001$</td> </tr> <tr> <td>分子 $P(x\\mid\\mathcal{C}_j)P(\\mathcal{C}_j)$</td> <td style=\"text-align: right;\">$0.12$</td> <td style=\"text-align: right;\">$0.00005$</td> </tr> <tr> <td>後驗（除以 $0.12005$）</td> <td style=\"text-align: right;\">$\\approx 0.9996$</td> <td style=\"text-align: right;\">$\\approx 0.0004$</td> </tr> </tbody> </table> <p>判給蘋果，合理。<strong>反轉在這裡</strong>：真實資料的 $x$ 是幾十維的向量，likelihood 是「在幾十維空間裡，這類資料長成這個點」的機率——要估計它，你得有天文數字的樣本。所以「最優」是理論天花板，實務上算不出來。</p> <h2>naive 假設如何救場</h2> <p>naive Bayes 的「naive」就是：<strong>假設給定類別後，各特徵彼此獨立</strong>，於是把聯合機率拆成連乘：</p> <p>$$ P(X=x\\mid\\mathcal{C}_j)\\approx\\prod_{k=1}^{d}P(X_k=x_k\\mid\\mathcal{C}_j). $$</p> <p>每個單一特徵的機率好估多了。代價是假設常常是錯的，但實務上常常「錯得夠用」。</p> <h2>六大家族譜系</h2> <ul> <li><strong>LDA</strong>：假設每類 likelihood 是單峰高斯、且各類共變異數相同 → 邊界是直線。</li> <li><strong>QDA</strong>：放寬「共變異數相同」→ 邊界變二次曲面。</li> <li><strong>Logistic 回歸</strong>：不碰 likelihood/先驗，直接對後驗建模，用 sigmoid 把線性輸出壓到 $[0,1]$。</li> <li><strong>KNN</strong>：不建模，直接看測試點最近的 $k$ 個鄰居，多數決。</li> <li><strong>樹 / bagging</strong>：用遞迴切分空間，多棵樹平均（bagging）降變異數。</li> <li><strong>SVM</strong>：找離兩類等距的最佳邊界，只靠「支持向量」。</li> </ul> <h2>SVM 的稀疏與 KKT 直覺</h2> <p>SVM 的最佳化最後是二次規劃。<strong>KKT 條件</strong>告訴我們：最優解只被「離邊界最近的那些點」撐住，這些點叫<strong>支持向量</strong>；其他點完全不影響解。所以 SVM 是<strong>稀疏</strong>的——它賭「稀疏版通常比稠密版好」（sparsity 原則），也符合 Occam 剃刀：能忽略一堆資料，就別全記著。</p> <h2>核 SVM 的 RKHS 橋段</h2> <p>資料完全線性不可分時，核 SVM 把資料<strong>映射到更高維的 Hilbert 空間</strong>，希望在那裡線性可分，再套線性 SVM。關鍵是<strong>核技巧</strong>：你根本不用真的算出高維座標，只要用核函數算兩點在高維空間的內積。RKHS（再生核希爾伯特空間）就是「有這種再生性質的 Hilbert 空間」，是核方法從純數學（Hilbert 1904、Mercer 1909）被 Vapnik 1992 搬進機器學習的橋。</p> <h2>舉一反三</h2> <p>把果子換成垃圾郵件：先驗是「垃圾信比例」，likelihood 是「這封信出現這些詞的機率」，naive 假設各詞獨立。想想看，為什麼「詞獨立」明明常錯，垃圾郵件過濾還是能用？</p> <h2>大家最容易在這裡搞混</h2> <p>第一，<strong>「最優」不是「最好用」</strong>——Bayes 最優是理論上限，naive/LDA 是它的近似，別把天花板當成地板。第二，<strong>分母可以丟，但先驗不能丟</strong>——比較時 $\\mathbb{P}(X=x)$ 對所有類別相同可省略，先驗卻會真的改變答案。第三，<strong>SVM 稀疏不是「資料少」</strong>，是「只有支持向量有影響力」。</p> <h2>換句話重述</h2> <p>Bayes 分類器 = 先驗 × likelihood，取最大者；它最優但算不出，於是六個家族各用不同假設去近似它。</p> <h2>一句話收尾</h2> <p><strong>先驗乘證據、後驗定輸贏；最優算不出，六家來近似——LDA 直、QDA 彎、SVM 只靠支持向量撐。</strong></p>"}, "7": {"title": "教授祕笈：回歸家族與降維家族譜", "body": "<p>同學，今天我們把兩條家族譜一次看穿。主線比喻是<strong>「先瘦身，再預測」</strong>：資料太胖（維度太高）時，先想辦法把多餘的維度砍掉或壓縮（降維），再在瘦下來的空間裡做預測（回歸）。兩條譜線最後都指向同一個大脈絡：<strong>特徵選擇／降維 → 預測</strong>。</p> <h2>先把任務講成一句人話</h2> <p>回歸家族：<strong>用輸入特徵去預測一個連續數字</strong>，從最簡單的直線一路升級到能處理稀疏、非線性的版本。降維家族：<strong>把高維資料壓到低維，同時盡量保住重要的結構</strong>，讓後續預測或視覺化更省力。兩者合起來，就是「先整理資料，再下結論」。</p> <h2>回歸家族：每一步在解決什麼</h2> <ul> <li><strong>線性回歸</strong>：用最小平方誤差，把一條直線（超平面）貼到資料上。<strong>解決：最簡單的連續預測。</strong></li> <li><strong>Ridge（嶺）回歸</strong>：加 $\\ell_2$ 正則化，懲罰大係數。<strong>解決：係數太大、過度貼合。</strong></li> <li><strong>Lasso（套索）回歸</strong>：加 $\\ell_1$ 正則化。$\\ell_1$ 的單位球角上有大量零座標，所以解會<strong>稀疏</strong>——很多係數直接變零。<strong>解決：順手做特徵選擇。</strong></li> <li><strong>GLM（廣義線性模型）</strong>：透過 link function 把線性預測接到各種輸出（機率、計數）。<strong>解決：輸出不一定是連續實數。</strong></li> <li><strong>分位數回歸</strong>：不預測平均，改預測某個分位數（如中位數）。<strong>解決：平均被離群值帶偏時。</strong></li> <li><strong>非線性回歸（多項式等）</strong>：用多項式或神經網路捕捉彎曲關係。<strong>解決：資料根本不是直線。</strong></li> </ul> <p>串起來看：線性 → 怕過擬合就加正則化（Ridge/Lasso）→ 輸出種類多就上 GLM → 平均不可靠就換分位數 → 關係彎曲就上非線性。每一步都是「上一步不夠用」的補丁。</p> <h2>降維家族：譜系（spectral）路線</h2> <ul> <li><strong>PCA</strong>：找資料變異最大的方向，線性投影過去。<strong>解決：用最少的線性方向保住最大變異。</strong></li> <li><strong>核 PCA</strong>：把資料映射到高維再線性 PCA。<strong>解決：資料本身非線性時，線性 PCA 抓不住。</strong></li> <li><strong>Isomap</strong>：用測地距離（沿流形走）取代歐氏距離，並用<strong>分段歐氏</strong>近似。<strong>解決：歐氏直線距離在彎曲流形上會騙人。</strong></li> <li><strong>LLE</strong>：讓每個嵌入點能被它的鄰居重建，局部保真、全局跟著對。<strong>解決：只保局部鄰居，全局結構自然浮現。</strong></li> <li><strong>SDE（MVU）</strong>：用半正定規劃去「學最好的核」，把流形攤開。<strong>解決：不知道哪個核最好，就讓資料自己選。</strong></li> <li><strong>圖嵌入</strong>：把資料當圖，用 Laplacian 推廣降維。<strong>解決：把譜方法統一到圖的語言。</strong></li> <li><strong>HSIC</strong>：用核在 RKHS 裡量兩變數的相依性。<strong>解決：相關性（線性）量不出非線性相依，改用核。</strong> 由此還長出 supervised PCA。</li> </ul> <h2>降維家族：機率式（probabilistic）路線</h2> <ul> <li><strong>因子分析</strong>：假設資料由一個潛在因子線性投影加雜訊產生，用 EM 學投影矩陣。<strong>解決：給降維一個機率模型。</strong></li> <li><strong>pPCA</strong>：因子分析的特例，雜訊假設各向同性，解變成閉式。<strong>解決：把 EM 的迭代簡化成一步到位。</strong></li> <li><strong>隨機投影（Johnson-Lindenstrauss）</strong>：1984 年證明，連隨機投影都能大致保住距離。<strong>解決：不用最佳化，隨機亂投也夠用。</strong> 這也解釋了神經網路隨機初始化為何可行。</li> <li><strong>SDR / KDR</strong>：找一個子空間，投影後不改變「給定資料預測標籤」的條件分布。<strong>解決：降維後預測能力不變，才是「充分」降維。</strong></li> </ul> <h2>串成一個大脈絡</h2> <p>兩條譜線其實是同一件事的兩面：<strong>先降維（把資料瘦身、去雜訊、保結構），再回歸（在瘦下來的空間預測）。</strong> 譜系路線靠幾何與特徵值，機率式路線靠潛在變數與 EM；回歸家族則在「預測」這一端，從線性一路升級到稀疏與非線性。整章就是「特徵選擇／降維 → 預測」這條主線的各種實作。</p> <h2>舉一反三</h2> <p>給你一張 1000 維、其實只活在 3 維流形上的資料，你會先 PCA 還是直接上神經網路？想想「先瘦身再預測」為什麼通常比較省事。</p> <h2>大家最容易在這裡搞混</h2> <p>第一，<strong>Ridge 只縮小係數，Lasso 會把係數砍成零</strong>——差別就在 $\\ell_2$ 與 $\\ell_1$ 的幾何形狀。第二，<strong>PCA 是線性的，核 PCA 才是非線性</strong>，別把兩者混為一談。第三，<strong>Isomap 的「分段歐氏」不是偷懶</strong>，是拿來近似難算的測地距離。第四，<strong>SDR 的「充分」是預測不變</strong>，不是「維度最少」。</p> <h2>換句話重述</h2> <p>回歸家族：線性 → 正則化 → GLM → 分位數 → 非線性，一路補洞。降維家族：譜系靠幾何特徵值，機率式靠潛在變數，最後都服務「先瘦身、再預測」。</p> <h2>一句話收尾</h2> <p><strong>回歸一路補洞到非線性，降維兩條路都為預測；先瘦身再預測，特徵選擇是開路先鋒。</strong></p>"}};
+(function(){
+  window.openGuide=function(kp){
+    var t=window.__GUIDES__[kp]; if(!t) return;
+    document.getElementById('guide-title').textContent=t.title;
+    document.getElementById('guide-body').innerHTML=t.body;
+    document.getElementById('guide-modal').classList.add('open');
+    if(window.renderMath) setTimeout(window.renderMath,50);
+  };
+  window.closeGuide=function(){ document.getElementById('guide-modal').classList.remove('open'); };
+})();
+</script>
+</body>
+</html>
