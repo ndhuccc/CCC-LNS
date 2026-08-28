@@ -38,7 +38,27 @@ CCC-LNS/
 
 ## 3. 常見操作
 
-### 3.1 更新既有章節的內容
+`scripts/` 底下有幾支腳本把下面的手動步驟包成一個指令；沒有腳本可用時，才照手動步驟做。兩者做的事完全一樣，腳本只是省去手動編輯 `index.html` 的風險。
+
+| 腳本 | 用途 |
+|---|---|
+| `scripts/sync_chapter.sh <來源章節資料夾> <課程>/<章節>` | 只複製該章的 `index.html` + `assets/`，其餘生產檔案自動略過 |
+| `scripts/add_link.sh <課程> <章節> <badge> <標題>` | 在根目錄 `index.html` 對應課程區塊裡加入一張連結卡片 |
+| `scripts/new_course.sh <課程資料夾> "<課程顯示標題>"` | 建立新課程的資料夾與空的導覽區塊 |
+| `scripts/check_links.sh [課程資料夾]` | 檢查上線網站有沒有 404（頁面本身 + 頁內圖片），不給參數就全站檢查 |
+| `scripts/publish.sh "commit 訊息"` | commit + push + 等待 GitHub Pages 重新部署 + 自動跑 `check_links.sh` |
+
+新增一章的完整指令範例：
+
+```bash
+scripts/sync_chapter.sh ~/projects/LNS/PR_115/Ch17-xxx PR_115/Ch17-xxx
+scripts/add_link.sh PR_115 Ch17-xxx Ch17 "新章節標題"
+scripts/publish.sh "Add PR_115 Ch17"
+```
+
+`add_link.sh` 靠根目錄 `index.html` 裡每個課程區塊前面的 `<!-- COURSE:課程資料夾 -->` 標記與固定縮排的收尾格式（`    </div>` + `  </section>`）定位插入點——**手動編輯根目錄 `index.html` 時不要刪掉這些標記或改變這個縮排**，否則腳本會找不到插入點而報錯（腳本設計成寧可報錯也不亂改，不會靜默寫壞檔案）。
+
+### 3.1 更新既有章節的內容（手動做法）
 
 生產線那邊重新生成或修好某一章之後：
 
@@ -81,7 +101,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://ndhuccc.github.io/CCC-LNS/<課�
 grep -oE 'src="assets/[^"]+"' <章節資料夾>/index.html
 ```
 
-不要只信任「push 成功」就等於「網站正常」——曾經發生路徑大小寫或斜線打錯，push 沒報錯但學生點進去是 404。
+不要只信任「push 成功」就等於「網站正常」——曾經發生路徑大小寫或斜線打錯，push 沒報錯但學生點進去是 404。用腳本的話這兩件事 `scripts/publish.sh` 都會自動做。
 
 ## 4. 技術細節
 
