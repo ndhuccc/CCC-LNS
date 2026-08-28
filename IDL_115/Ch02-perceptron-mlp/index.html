@@ -456,16 +456,16 @@ STYLE: flat vector, scientific, hand-drawn-ish smooth curves, white background, 
 <h4>公式：加權和 + 激活</h4>
 <p>數學上，這個模型的輸出寫成（式 (1)）：</p>
 <p>$$
-o=f\\left(\\sum_{j=1}^{d} w_{j} x_{j}+w_{0}\\right)=f\\left(\\sum_{j=0}^{d} w_{j} x_{j}\\right), \\tag{1}
+o=f\left(\sum_{j=1}^{d} w_{j} x_{j}+w_{0}\right)=f\left(\sum_{j=0}^{d} w_{j} x_{j}\right), \tag{1}
 $$</p>
 <p>其中：</p>
 <ul>
-<li>輸入訊號 $\\left\\{x_{i} \\in \\mathbb{R}\\right\\}_{i=1}^{d}$；</li>
+<li>輸入訊號 $\left\{x_{i} \in \mathbb{R}\right\}_{i=1}^{d}$；</li>
 <li>偏置（截距）輸入 $x_{0}=1$；</li>
-<li>可學習的權重（參數）$\\left\\{w_{i} \\in \\mathbb{R}\\right\\}_{i=0}^{d}$；</li>
-<li>$f(\\cdot)$ 是激活函數。</li>
+<li>可學習的權重（參數）$\left\{w_{i} \in \mathbb{R}\right\}_{i=0}^{d}$；</li>
+<li>$f(\cdot)$ 是激活函數。</li>
 </ul>
-<p>神經元先算輸入的加權和，再套上激活函數 $f$，得到輸出 $o$。在 McCulloch-Pitts 模型中，激活函數是<strong>二元階梯函數（binary step）</strong>，所以輸出 $o$ 只取 $\\{0,1\\}$ 兩個值。</p>
+<p>神經元先算輸入的加權和，再套上激活函數 $f$，得到輸出 $o$。在 McCulloch-Pitts 模型中，激活函數是<strong>二元階梯函數（binary step）</strong>，所以輸出 $o$ 只取 $\{0,1\}$ 兩個值。</p>
 <h4>鷹架小結：它教會我們什麼</h4>
 <p>McCulloch-Pitts 把「累積訊號、超過門檻就開」的想法，正式翻譯成「<strong>加權和 → 閾值激活</strong>」的數學形式。但它有兩個先天限制——權重固定、不能學習。下一節的 Perceptron 正是為了解決「不能學習」這道題而誕生的。</p><figure class="orig-fig"><img src="assets/orig-kp3-fig2.jpg" alt="圖 2 McCulloch-Pitts 神經元模型"><figcaption>圖 2 McCulloch-Pitts 神經元模型</figcaption></figure>
 <div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, Helvetica, sans-serif">
@@ -577,28 +577,28 @@ STYLE: flat vector, scientific, white background, teal 主色系（#065f56 深�
 <h4>結構與資料表示</h4>
 <p>Perceptron 的結構如圖（Fig. 3）：把輸入做<strong>線性組合</strong>，再丟進激活函數 $f$。資料是這樣表示的——有 $n$ 筆輸入向量，第 $i$ 筆記作：</p>
 <p>$$
-\\boldsymbol{x}_{i}=\\left[x_{i 1}, \\ldots, x_{i d}\\right]^{\\top} \\in \\mathbb{R}^{d},
+\boldsymbol{x}_{i}=\left[x_{i 1}, \ldots, x_{i d}\right]^{\top} \in \mathbb{R}^{d},
 $$</p>
 <p>其中 $x_{i j}$ 是第 $i$ 筆資料的第 $j$ 個元素，每筆資料有對應的<strong>真實標籤</strong> $y_{i}$。</p>
 <h4>學習規則：錯了就改，對了就停</h4>
-<p>對每一筆資料 $\\boldsymbol{x}_{i}$，Perceptron 算出輸出 $o_{i}$，和真實標籤 $y_{i}$ 比較，再依兩者的差來更新權重。權重與偏置的更新規則（式 (2)）是：</p>
+<p>對每一筆資料 $\boldsymbol{x}_{i}$，Perceptron 算出輸出 $o_{i}$，和真實標籤 $y_{i}$ 比較，再依兩者的差來更新權重。權重與偏置的更新規則（式 (2)）是：</p>
 <p>$$
-\\boldsymbol{w}:=\\boldsymbol{w}+\\eta\\left(y_{i}-o_{i}\\right) \\boldsymbol{x}_{i}, \\quad w_{0}:=w_{0}+\\eta\\left(y_{i}-o_{i}\\right),
+\boldsymbol{w}:=\boldsymbol{w}+\eta\left(y_{i}-o_{i}\right) \boldsymbol{x}_{i}, \quad w_{0}:=w_{0}+\eta\left(y_{i}-o_{i}\right),
 $$</p>
 <p>用 $x_{i 0}:=1$ 把偏置併進去，就濃縮成式 (3)：</p>
 <p>$$
-\\boldsymbol{w}:=\\boldsymbol{w}+\\eta\\left(y_{i}-o_{i}\\right) \\boldsymbol{x}_{i}, \\tag{3}
+\boldsymbol{w}:=\boldsymbol{w}+\eta\left(y_{i}-o_{i}\right) \boldsymbol{x}_{i}, \tag{3}
 $$</p>
-<p>其中 $\\eta\gt 0$ 是<strong>學習率</strong>，$y_{i}\\in\\{0,1\\}$ 是真實標籤，$o_{i}$ 是預測輸出。</p>
+<p>其中 $\eta\gt 0$ 是<strong>學習率</strong>，$y_{i}\in\{0,1\}$ 是真實標籤，$o_{i}$ 是預測輸出。</p>
 <p><strong>batch 版與單樣本版的等價</strong>：也可以一次吃一整個 batch 再更新（式 (4)）：</p>
 <p>$$
-\\boldsymbol{w}:=\\boldsymbol{w}+\\eta \\sum_{i=1}^{b}\\left(y_{i}-o_{i}\\right) \\boldsymbol{x}_{i},
+\boldsymbol{w}:=\boldsymbol{w}+\eta \sum_{i=1}^{b}\left(y_{i}-o_{i}\right) \boldsymbol{x}_{i},
 $$</p>
 <p>其中 $b$ 是 batch size。去掉求和符號，就回到每次只處理單一樣本的式 (5)：</p>
 <p>$$
-\\boldsymbol{w}:=\\boldsymbol{w}+\\eta\\left(y_{i}-o_{i}\\right) \\boldsymbol{x}_{i}, \\quad \\forall i \\in\\{1, \\ldots, n\\} . \\tag{5}
+\boldsymbol{w}:=\boldsymbol{w}+\eta\left(y_{i}-o_{i}\right) \boldsymbol{x}_{i}, \quad \forall i \in\{1, \ldots, n\} . \tag{5}
 $$</p>
-<p><strong>直覺</strong>：如果預測對了，$o_{i}=y_{i}$，那麼 $y_{i}-o_{i}=0$，權重<strong>完全不用更新</strong>；只有預測錯（差 $\\neq 0$）時，權重才會按錯誤大小成比例地往正確方向調整。</p>
+<p><strong>直覺</strong>：如果預測對了，$o_{i}=y_{i}$，那麼 $y_{i}-o_{i}=0$，權重<strong>完全不用更新</strong>；只有預測錯（差 $\neq 0$）時，權重才會按錯誤大小成比例地往正確方向調整。</p>
 <h4>口語化復盤</h4>
 <p>一句話總結這顆神經元：<strong>它比 M-P 模型多了「會看錯誤、會改自己」的能力</strong>。把每個樣本送進去，比對「我猜的」和「正確的」，猜錯就照著誤差把權重推一把，猜對就原地不動——這就是監督學習最早的雛形。也正因為它會學習，才值得被稱為現代深度學習的真正起點。</p><figure class="orig-fig"><img src="assets/orig-kp4-fig3.jpg" alt="圖 3 二元激活的 Perceptron 結構"><figcaption>圖 3 二元激活的 Perceptron 結構</figcaption></figure>
 <div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, Helvetica, sans-serif">
