@@ -1,0 +1,3791 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ch08 循環神經網絡與長短期記憶網絡 (RNN & LSTM) — 互動式自學講義</title>
+  
+  <!-- KaTeX CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --secondary: #4f46e5;
+      --accent: #059669;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding-top: 70px;
+    }
+
+    /* Fixed Header & Progress Bar */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+    }
+    .header-title { font-weight: 700; font-size: 1.1rem; color: var(--text); }
+    .progress-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .progress-bar-wrap {
+      width: 140px;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--primary);
+      transition: width 0.3s ease;
+    }
+
+    /* Main Layout */
+    .container {
+      display: flex;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+      gap: 32px;
+    }
+
+    /* TOC Sidebar */
+    nav.toc {
+      width: 300px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 84px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .toc h3 {
+      font-size: 1rem;
+      margin-bottom: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .toc ul { list-style: none; }
+    .toc li { margin-bottom: 6px; }
+    .toc a {
+      display: block;
+      padding: 6px 10px;
+      font-size: 0.88rem;
+      color: var(--text);
+      text-decoration: none;
+      border-radius: 6px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .toc a:hover {
+      background: #eff6ff;
+      color: var(--primary);
+    }
+    .toc a.active {
+      background: var(--primary);
+      color: white;
+      font-weight: 600;
+    }
+    .toc .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 2px 6px;
+      background: #e0e7ff;
+      color: var(--secondary);
+      border-radius: 4px;
+      margin-right: 6px;
+      font-weight: 600;
+    }
+
+    /* Content Area */
+    main.content {
+      flex: 1;
+      min-width: 0;
+    }
+    .hero {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
+      padding: 40px;
+      border-radius: var(--radius);
+      margin-bottom: 32px;
+      box-shadow: var(--shadow);
+    }
+    .hero h1 { font-size: 2rem; margin-bottom: 12px; font-weight: 800; }
+    .hero p { font-size: 1.05rem; opacity: 0.9; max-width: 800px; }
+
+    /* Card Styling */
+    section.card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      margin-bottom: 32px;
+      overflow: hidden;
+      scroll-margin-top: 90px;
+    }
+    .card-header {
+      padding: 20px 24px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+    .card-header:hover { background: #f8fafc; }
+    .card-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .card-badge {
+      background: #dbeafe;
+      color: var(--primary-dark);
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+    .card-title { font-size: 1.25rem; font-weight: 700; color: var(--text); }
+    .card-toggle-icon {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      transition: transform 0.3s;
+    }
+    .card.collapsed .card-toggle-icon { transform: rotate(-90deg); }
+    .card.collapsed .card-body { display: none; }
+
+    .card-body { padding: 28px; }
+    .card-body h4 {
+      font-size: 1.1rem;
+      color: var(--secondary);
+      margin: 20px 0 10px 0;
+      padding-bottom: 4px;
+      border-bottom: 2px solid #e0e7ff;
+    }
+    .card-body p { margin-bottom: 14px; text-align: justify; }
+    .card-body ol, .card-body ul { margin: 12px 0 16px 24px; }
+    .card-body li { margin-bottom: 6px; }
+
+    /* Diagram Figures Constraint (CRITICAL) */
+    .diagram-figure {
+      margin: 24px 0;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #ffffff;
+      text-align: center;
+    }
+    .diagram-figure img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    .diagram-figure figcaption {
+      margin-top: 10px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+    .orig-fig {
+      margin: 24px 0;
+      padding: 16px;
+      background: #f1f5f9;
+      border-left: 4px solid var(--primary);
+      border-radius: 8px;
+      text-align: center;
+    }
+    .orig-fig img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 6px;
+    }
+    .orig-fig figcaption {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* AI Prompt Placeholder Styling */
+    .ai-illustration {
+      margin: 16px 0;
+      padding: 12px 16px;
+      background: #faf5ff;
+      border: 1px dashed #c084fc;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+    .ai-illustration summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: #7e22ce;
+    }
+    .ai-illustration-prompt {
+      margin-top: 10px;
+      background: #ffffff;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #e9d5ff;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #581c87;
+    }
+
+    /* Interactive Demo Container */
+    .demo {
+      margin: 28px 0;
+      padding: 20px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+    }
+    .demo-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .demo-instruction {
+      background: #ffffff;
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+    .demo-instruction h5 { font-size: 0.95rem; color: var(--text); margin-bottom: 6px; }
+    .demo-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 16px;
+      background: #ffffff;
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .demo-control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .demo-control-group input[type="range"] { width: 160px; }
+    .demo-canvas-wrap {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .demo-canvas-wrap canvas {
+      max-width: 100%;
+      height: auto;
+      background: #ffffff;
+    }
+    .demo-readout {
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 0.88rem;
+    }
+
+    /* Self Assessment Quiz Styling */
+    .quiz-container {
+      margin-top: 28px;
+      padding: 20px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 10px;
+    }
+    .quiz-title {
+      font-weight: 700;
+      color: #166534;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .quiz-question { margin-bottom: 12px; font-weight: 600; }
+    .quiz-options { display: flex; flex-direction: column; gap: 8px; }
+    .quiz-option-btn {
+      text-align: left;
+      padding: 10px 14px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .quiz-option-btn:hover { background: #e2e8f0; }
+    .quiz-option-btn.correct { background: #dcfce7; border-color: #22c55e; color: #15803d; font-weight: 700; }
+    .quiz-option-btn.wrong { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+    .quiz-feedback {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      display: none;
+    }
+    .quiz-feedback.visible { display: block; }
+    .quiz-feedback.correct { background: #dcfce7; color: #166534; }
+    .quiz-feedback.wrong { background: #fee2e2; color: #991b1b; }
+
+    /* Professor Secret Guide Button & Modal */
+    .guide-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(124, 58, 237, 0.3);
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-bottom: 16px;
+    }
+    .guide-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(124, 58, 237, 0.4);
+    }
+    .guide-flag {
+      background: #f59e0b;
+      color: #78350f;
+      font-size: 0.75rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    #guide-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #guide-modal.open { display: flex; }
+    .modal-box {
+      background: #ffffff;
+      width: 100%;
+      max-width: 850px;
+      max-height: 85vh;
+      border-radius: 16px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 16px 24px;
+      background: #4c1d95;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-header h3 { font-size: 1.15rem; font-weight: 700; }
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-body {
+      padding: 28px;
+      overflow-y: auto;
+      font-size: 0.95rem;
+      line-height: 1.8;
+    }
+    .modal-body h1, .modal-body h2, .modal-body h3 {
+      color: #4c1d95;
+      margin: 18px 0 10px 0;
+    }
+    .modal-body blockquote {
+      background: #f3e8ff;
+      border-left: 4px solid #7c3aed;
+      padding: 12px 16px;
+      margin: 14px 0;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 900px) {
+      .container { flex-direction: column; }
+      nav.toc { width: 100%; position: static; max-height: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-title">Elements of Deep Learning — Ch08 互動講義</div>
+    <div class="progress-container">
+      <span>閱讀進度</span>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <span id="progressText">0 / 16</span>
+    </div>
+  </header>
+
+  <!-- Container -->
+  <div class="container">
+    <!-- TOC Sidebar -->
+    <nav class="toc">
+      <h3>章節導覽 (TOC)</h3>
+      <ul>
+        <li><a href="#kp1"><span class="badge">1</span>序列建模與循環神經網絡導論</a></li>
+<li><a href="#kp2"><span class="badge">2.1–2.2</span>動態系統與參數共享機制</a></li>
+<li><a href="#kp3"><span class="badge">2.3</span>隨時間反向傳播演算法（BPTT）總覽與損失函數</a></li>
+<li><a href="#kp4"><span class="badge">2.3.1–2.3.2</span>BPTT 梯度推導：輸出層與隱藏狀態梯度</a></li>
+<li><a href="#kp5"><span class="badge">2.3.3–2.3.5</span>BPTT 權重矩陣梯度：V、W、U 的 Kronecker 積推導</a></li>
+<li><a href="#kp6"><span class="badge">2.3.6–2.3.8</span>BPTT 偏置梯度與梯度下降參數更新</a></li>
+<li><a href="#kp7"><span class="badge">3</span>長距離依賴中的梯度消失與爆炸問題</a></li>
+<li><a href="#kp8"><span class="badge">3.1–3.2</span>緩解梯度問題：特徵值分析、趨近單位矩陣與長延遲連線</a></li>
+<li><a href="#kp9"><span class="badge">3.3–3.5</span>滲漏單元（Leaky Units）與迴聲狀態網路（Echo State Networks）</a></li>
+<li><a href="#kp10"><span class="badge">4.1.1–4.1.3</span>長短期記憶網路（LSTM）門控機制：輸入門、遺忘門與輸出門</a></li>
+<li><a href="#kp11"><span class="badge">4.1.4–4.1.7</span>LSTM 細胞狀態更新、隱藏狀態與輸出計算</a></li>
+<li><a href="#kp12"><span class="badge">4.2</span>LSTM 的演進歷史與變體（Original, Vanilla, Peephole）</a></li>
+<li><a href="#kp13"><span class="badge">4.3.1</span>門控循環單元（GRU）：完全門控單元架構</a></li>
+<li><a href="#kp14"><span class="badge">4.3.2</span>極簡門控單元（Minimal Gated Unit, MGU）</a></li>
+<li><a href="#kp15"><span class="badge">5.1–5.2</span>雙向處理的合理性與雙向 RNN (Bidirectional RNN)</a></li>
+<li><a href="#kp16"><span class="badge">5.3–5.4</span>雙向 LSTM (BiLSTM) 與 ELMo 上下文詞嵌入</a></li>
+      </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content">
+      <div class="hero">
+        <h1>Chapter 08: 循環神經網絡與長短期記憶網絡</h1>
+        <p>Recurrent Neural Networks (RNNs) and Long Short-Term Memory Networks (LSTMs). 本講義深入拆解序列建模、隨時間反向傳播 (BPTT)、梯度消失與爆炸機制、LSTM 與 GRU 門控架構，以及雙向處理與 ELMo 上下文表徵。</p>
+      </div>
+
+      <!-- Knowledge Point Cards -->
+      
+        <section id="kp1" class="card" data-kp="1">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">1</span>
+              <div class="card-title">序列建模與循環神經網絡導論</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            <!-- == Phase D Guide Button kp-1 == -->
+<button class="guide-btn" data-guide="kp-1" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：序列建模與循環神經網絡導論</button>
+<!-- END Phase D Guide Button -->
+<!-- END Phase D Guide Button -->
+<!-- END Phase D Guide Button -->
+<!-- END Phase D Guide Button -->
+<!-- END Phase D Guide Button -->
+
+            
+<h4>什麼是序列數據與循環神經網絡？</h4>
+<p>在傳統的前饋神經網絡（Feedforward Neural Networks, FNN）中，輸入數據被假設為獨立同分布（i.i.d.）。然而，在真實世界的許多應用中，數據是以<b>時間序列</b>或<b>順序結構</b>的形式出現的，例如自然語言句子（單詞序列）、語音訊號（音素序列）或股票價格變化。</p>
+<p>前饋神經網絡無法有效處理變長序列，因為它們沒有「記憶」功能，無法將過去步驟的資訊傳遞到當前步驟。為了打破這個限制，<b>循環神經網絡（Recurrent Neural Network, RNN）</b>應運而生。</p>
+
+<h4>為什麼傳統神經網絡無法處理序列數據？</h4>
+<p>考慮以下兩個句子：</p>
+<ol>
+  <li>「警察正在追捕<b>小偷</b>。」（短距離依賴：警察與小偷在句子中位置相近）</li>
+  <li>「我出生在法國……經過許多年……所以我會說<b>法語</b>。」（長距離依賴：法國與法語隔了很長的距離）</li>
+</ol>
+<p>傳統神經網絡輸入維度固定，無法隨時間逐步累積上下文資訊。而 RNN 引入了<b>動態狀態（State）</b>與<b>循環回饋（Recurrence）</b>，讓網絡在 $t$ 時刻的輸出不僅取決於當前輸入 $x_t$，還受前一時刻狀態 $h_{t-1}$ 的影響。</p>
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「前饋無記憶，序列靠循環；歷史存隱藏，上下文相連。」</b></p>
+<p>雖然現代 Transformer 與狀態空間模型（SSM，如 Mamba）在長序列上表現優異，但 RNN 的循環原理依然是理解序列建模與流式數據處理（Streaming Data）的基石。</p>
+
+            <!-- == Phase B 圖解 kp-1 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp1.png" alt="序列建模與循環神經網絡導論 示意圖解">
+  <figcaption>圖 kp-1：序列建模與循環神經網絡導論 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-1" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: A side-by-side comparison diagram showing a Feedforward Neural Network (FNN) with independent single-step inputs vs a Recurrent Neural Network (RNN) with a recurrent state loop $h_t = \tanh(W h_{t-1} + U x_t)$.
+WHY: Highlight why traditional FNNs fail on sequence data due to lack of historical context memory, whereas RNN maintains temporal continuity.
+MUST show: (1) FNN processing isolated inputs without recurrence, (2) RNN state loop with weight matrix $W$ feeding back previous state $h_{t-1}$.
+AVOID: Abstract unlabelled boxes without mathematical symbols.
+STYLE: Clean scientific vector diagram, white background, distinct blue/yellow/green color scheme.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-1 == -->
+<!-- END Phase C Demo -->
+
+            
+            <div class="quiz-container" data-answer="1" data-explanation="傳統 FNN 假設數據點彼此獨立，且輸入層維度固定，無法將時間軸上過去的隱藏狀態傳遞給未來的計算。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">為什麼傳統前饋神經網絡（FNN）不適合直接處理變長文字序列？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">FNN 的權重無法更新</button><button class="quiz-option-btn" data-index="1">FNN 假設輸入獨立同分布，缺乏儲存歷史上下文的記憶機制與變長處理能力</button><button class="quiz-option-btn" data-index="2">FNN 無法使用反向傳播演算法</button><button class="quiz-option-btn" data-index="3">FNN 只支援複數運算</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp2" class="card" data-kp="2">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">2.1–2.2</span>
+              <div class="card-title">動態系統與參數共享機制</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>什麼是動態系統與參數共享？</h4>
+<p>經典動態系統（Dynamical System）是以遞迴關係定義的：</p>
+$$\boldsymbol{h}_{t} = f_{\theta}(\boldsymbol{h}_{t-1})$$
+<p>當系統包含外部輸入訊號 $\boldsymbol{x}_t$ 時，動態系統轉化為：</p>
+$$\boldsymbol{h}_{t} = f_{\theta}(\boldsymbol{h}_{t-1}, \boldsymbol{x}_{t})$$
+<p>隱藏狀態 $\boldsymbol{h}_t$ 充當了過去所有輸入與狀態序列的高維摘要（Summary）。</p>
+
+<h4>參數共享（Parameter Sharing）的核心意義</h4>
+<p>如果為序列中每個時間步 $t$ 都定義一套全新的函數 $f_{\theta_t}$，模型的參數量將隨序列長度暴增，且無法泛化到未見過的序列長度。RNN 的關鍵突破在於<b>跨時間步共享同一組權重矩陣</b>！</p>
+<p>標準 RNN 的前向傳播公式如下：</p>
+$$\begin{align*}
+\boldsymbol{i}_t &= \boldsymbol{W} \boldsymbol{h}_{t-1} + \boldsymbol{U} \boldsymbol{x}_t + \boldsymbol{b}_i \\
+\boldsymbol{h}_t &= \tanh(\boldsymbol{i}_t) = \tanh(\boldsymbol{W} \boldsymbol{h}_{t-1} + \boldsymbol{U} \boldsymbol{x}_t + \boldsymbol{b}_i) \\
+\boldsymbol{y}_t &= \boldsymbol{V} \boldsymbol{h}_t + \boldsymbol{b}_y
+\end{align*}$$
+<p>其中：</p>
+<ul>
+  <li>$\boldsymbol{U} \in \mathbb{R}^{p \times d}$：輸入到隱藏層的權重矩陣。</li>
+  <li>$\boldsymbol{W} \in \mathbb{R}^{p \times p}$：隱藏層到隱藏層（狀態轉移）的權重矩陣。</li>
+  <li>$\boldsymbol{V} \in \mathbb{R}^{q \times p}$：隱藏層到輸出層的權重矩陣。</li>
+  <li>$\boldsymbol{b}_i, \boldsymbol{b}_y$：對應的偏置向量。</li>
+</ul>
+<p>若輸出層需要機率分布（如分類任務），則使用 Softmax 函數：</p>
+$$\widehat{\boldsymbol{y}}_t = \operatorname{softmax}(\boldsymbol{y}_t) = \frac{\exp(y_{t,1})}{\sum_{j=1}^q \exp(y_{t,j})}$$
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「U 接輸入，W 傳狀態，V 算輸出；權重跨時共享，百步不變。」</b></p>
+
+            <!-- == Orig Fig kp-2 == -->
+<figure class="orig-fig">
+  <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-230_666_681_204_903.jpg" alt="Fig 1: The folded and unfolded structures of (a) dynamic system without input, (b) dynamical system with input, and (c) an RNN.">
+  <figcaption>【教材原圖】Fig 1: The folded and unfolded structures of (a) dynamic system without input, (b) dynamical system with input, and (c) an RNN.</figcaption>
+</figure>
+<!-- END Orig Fig -->
+<!-- == Phase B 圖解 kp-2 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp2.png" alt="動態系統與參數共享機制 示意圖解">
+  <figcaption>圖 kp-2：動態系統與參數共享機制 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-2" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: An unrolled computational graph of a Recurrent Neural Network over time steps $t=1..4$.
+WHY: Demonstrate the parameter sharing mechanism where identical weight matrices $(U, W, V)$ are reused across all time slots.
+MUST show: (1) Time sequence nodes $x_t \to h_t \to \hat{y}_t$, (2) Horizontal recurrent state arrows labelled with shared weight matrix $W$, (3) Explicit label "Shared Parameters across Time".
+AVOID: Different weight labels for different time steps.
+STYLE: Modern flat vector infographic, clear arrow connections, white background.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-2 == -->
+
+<div class="demo" data-demo-id="kp-2">
+  <div class="demo-title">🎮 互動展示 kp-2：RNN 前向傳播與狀態遞迴計算</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>展示標準 RNN 在時間步 $t=1..4$ 的前向傳播過程，說明隱藏狀態 $h_t = \tanh(W h_{t-1} + U x_t + b_i)$ 與輸出 $y_t = V h_t + b_y$ 的動態變化。</p>
+    <p><b>怎麼操作：</b>拖動下方滑桿調整狀態權重 $W$、輸入權重 $U$ 與當前輸入序列值 $x_t$。</p>
+    <p><b>觀察什麼：</b>隱藏狀態 $h_t$ 受到前一步狀態 $h_{t-1}$ 與當前輸入 $x_t$ 的共同作用，並被雙曲正切 $\tanh$ 壓縮在 $(-1, 1)$ 範圍內。</p>
+    <p><b>理論基準：</b>當 $h_{t-1}=0, x_t=1, U=1, b_i=0$ 時，前向輸入 $i_t=1.0$，狀態 $h_t = \tanh(1.0) \approx 0.7616$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>狀態權重 W (-2.0 ~ 2.0): <span id="kp2_w_val">0.8</span></label>
+      <input type="range" id="kp2_w" min="-2.0" max="2.0" step="0.1" value="0.8">
+    </div>
+    <div class="demo-control-group">
+      <label>輸入權重 U (-2.0 ~ 2.0): <span id="kp2_u_val">1.0</span></label>
+      <input type="range" id="kp2_u" min="-2.0" max="2.0" step="0.1" value="1.0">
+    </div>
+    <div class="demo-control-group">
+      <label>輸出權重 V (-2.0 ~ 2.0): <span id="kp2_v_val">1.2</span></label>
+      <input type="range" id="kp2_v" min="-2.0" max="2.0" step="0.1" value="1.2">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp2_canvas" width="600" height="220"></canvas>
+  </div>
+  <div class="demo-readout" id="kp2_readout">點擊或拉動滑桿計算數值...</div>
+</div>
+<script>
+(function(){
+  function updateKP2() {
+    var W = parseFloat(document.getElementById('kp2_w').value);
+    var U = parseFloat(document.getElementById('kp2_u').value);
+    var V = parseFloat(document.getElementById('kp2_v').value);
+    document.getElementById('kp2_w_val').textContent = W.toFixed(1);
+    document.getElementById('kp2_u_val').textContent = U.toFixed(1);
+    document.getElementById('kp2_v_val').textContent = V.toFixed(1);
+
+    var x_seq = [1.0, -0.5, 0.8, -1.0];
+    var h_seq = [0];
+    var y_seq = [];
+    var h_prev = 0;
+
+    for (var t = 0; t < x_seq.length; t++) {
+      var it = W * h_prev + U * x_seq[t];
+      var ht = Math.tanh(it);
+      var yt = V * ht;
+      h_seq.push(ht);
+      y_seq.push(yt);
+      h_prev = ht;
+    }
+
+    var cvs = document.getElementById('kp2_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    // Draw axes & bars for h_t
+    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(50, 110); ctx.lineTo(550, 110); ctx.stroke();
+
+    for (var i = 0; i < 4; i++) {
+      var cx = 100 + i * 120;
+      var hVal = h_seq[i+1];
+      var barH = hVal * 80;
+      ctx.fillStyle = hVal >= 0 ? '#3b82f6' : '#ef4444';
+      ctx.fillRect(cx - 20, 110 - barH, 40, barH);
+      ctx.fillStyle = '#1e293b'; ctx.font = '12px sans-serif';
+      ctx.fillText('t=' + (i+1) + ' (x=' + x_seq[i] + ')', cx - 30, 200);
+      ctx.fillText('h=' + hVal.toFixed(3), cx - 25, 110 - barH - 8);
+    }
+
+    var readout = '即時計算: ' +
+      't=1: h1=' + h_seq[1].toFixed(4) + ', y1=' + y_seq[0].toFixed(4) + ' | ' +
+      't=2: h2=' + h_seq[2].toFixed(4) + ', y2=' + y_seq[1].toFixed(4) + ' | ' +
+      't=4: h4=' + h_seq[4].toFixed(4) + ', y4=' + y_seq[3].toFixed(4);
+    document.getElementById('kp2_readout').textContent = readout;
+  }
+
+  var wEl = document.getElementById('kp2_w');
+  if (wEl) {
+    wEl.addEventListener('input', updateKP2);
+    document.getElementById('kp2_u').addEventListener('input', updateKP2);
+    document.getElementById('kp2_v').addEventListener('input', updateKP2);
+    setTimeout(updateKP2, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-2 == -->
+<button class="guide-btn" data-guide="kp-2" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：動態系統與參數共享機制</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="1" data-explanation="矩陣 W 負責連接上一時間步的隱藏狀態 h_{t-1} 與當前隱藏狀態 h_t，實現歷史資訊的遞迴傳遞。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">在標準 RNN 前向傳播公式中，權重矩陣 W 的主要作用是什麼？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">將輸入映射到輸出空間</button><button class="quiz-option-btn" data-index="1">在時間步之間傳遞並轉移隱藏狀態 h_{t-1} 到 h_t</button><button class="quiz-option-btn" data-index="2">對輸出向量進行 Softmax 歸一化</button><button class="quiz-option-btn" data-index="3">計算即時損失</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp3" class="card" data-kp="3">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">2.3</span>
+              <div class="card-title">隨時間反向傳播演算法（BPTT）總覽與損失函數</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>什麼是 BPTT 演算法與馬可夫假設？</h4>
+<p>訓練循環神經網絡的標準方法是<b>隨時間反向傳播（Backpropagation Through Time, BPTT）</b>。BPTT 本質上是將展開後的 RNN 視為一個極深的廣義前向網絡，運用鏈鎖律（Chain Rule）進行梯度計算。</p>
+
+<h4>損失函數的定義與 $T$ 階馬可夫性質</h4>
+<p>在實際訓練中，將訓練起點至今的所有歷史全部納入計算是不切實際的。因此我們假設網絡具有 $T$ 階<b>馬可夫性質（Markov Property）</b>，僅回溯過去的 $T$ 個時間步。總損失定義為各時間步損失的加總：</p>
+$$\mathcal{L} = \sum_{t=1}^{T} \mathcal{L}_t$$
+<p>其中 $\mathcal{L}_t$ 是第 $t$ 時間步的損失（例如交叉熵或均方誤差）。</p>
+
+<h4>需要優化的參數集合</h4>
+<p>BPTT 的目標是計算總損失 $\mathcal{L}$ 對模型所有可學習參數的偏微分（梯度）：</p>
+$$\left\{ \boldsymbol{V}, \boldsymbol{W}, \boldsymbol{U}, \boldsymbol{b}_i, \boldsymbol{b}_y \right\}$$
+<p>因為權重在所有時間步共享，梯度計算必須將每個時間步所產生的梯度貢獻累積相加！</p>
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「展開時間軸，總損等於各步和；梯度跨步傳，歷史參數一起算。」</b></p>
+
+            <!-- == Phase B 圖解 kp-3 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp3.png" alt="隨時間反向傳播演算法（BPTT）總覽與損失函數 示意圖解">
+  <figcaption>圖 kp-3：隨時間反向傳播演算法（BPTT）總覽與損失函數 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-3" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: A timeline bar chart illustrating BPTT total loss aggregation $\mathcal{L} = \sum_{t=1}^T \mathcal{L}_t$ and $T$-order Markov unrolling truncation window.
+WHY: Explain how losses at each time step sum together to form the global optimization objective under backpropagation through time.
+MUST show: (1) Stepwise loss bars $\mathcal{L}_1, \mathcal{L}_2, \dots, \mathcal{L}_T$, (2) Cumulative loss curve overlay, (3) Truncation window boundary $T$.
+AVOID: Unlabelled axes or missing summation formula.
+STYLE: Quantitative educational bar plot, crisp typography, clean background.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-3 == -->
+
+<div class="demo" data-demo-id="kp-3">
+  <div class="demo-title">🎮 互動展示 kp-3：BPTT 馬可夫窗口 T 與總損失累加</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>展示 BPTT 在截斷窗口 $T$ 內的單步損失累加 $\mathcal{L} = \sum_{t=1}^T \mathcal{L}_t$ 與計算複雜度。</p>
+    <p><b>怎麼操作：</b>調整馬可夫截斷窗口長度 $T$ (1 到 10)。</p>
+    <p><b>觀察什麼：</b>隨著時間步長 $T$ 增加，總損失 $\mathcal{L}$ 逐步累積，反向傳播的鏈鎖矩陣相乘次數呈線性增加。</p>
+    <p><b>理論基準：</b>假設單步平均損失 $\bar{\mathcal{L}} \approx 0.4$，若 $T=5$，總累積損失 $\mathcal{L} \approx 2.0$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>馬可夫截斷窗口 T (1 ~ 10): <span id="kp3_t_val">5</span></label>
+      <input type="range" id="kp3_t" min="1" max="10" step="1" value="5">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp3_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp3_readout">調整 T 值觀測計算...</div>
+</div>
+<script>
+(function(){
+  function updateKP3() {
+    var T = parseInt(document.getElementById('kp3_t').value);
+    document.getElementById('kp3_t_val').textContent = T;
+
+    var step_losses = [0.8, 0.65, 0.5, 0.42, 0.35, 0.3, 0.26, 0.22, 0.19, 0.16];
+    var total_loss = 0;
+    for (var i = 0; i < T; i++) total_loss += step_losses[i];
+
+    var cvs = document.getElementById('kp3_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(40, 160); ctx.lineTo(560, 160); ctx.stroke();
+
+    for (var i = 0; i < 10; i++) {
+      var cx = 60 + i * 50;
+      var h = step_losses[i] * 120;
+      if (i < T) {
+        ctx.fillStyle = '#3b82f6';
+      } else {
+        ctx.fillStyle = '#e2e8f0';
+      }
+      ctx.fillRect(cx - 15, 160 - h, 30, h);
+      ctx.fillStyle = i < T ? '#1e293b' : '#94a3b8';
+      ctx.font = '11px sans-serif';
+      ctx.fillText('t=' + (i+1), cx - 12, 178);
+    }
+
+    var readout = '截斷窗口 T = ' + T + ' 時: 總損失 L = ' + total_loss.toFixed(3) + ' | 梯度鏈相乘長度 = ' + T + ' 步';
+    document.getElementById('kp3_readout').textContent = readout;
+  }
+
+  var tEl = document.getElementById('kp3_t');
+  if (tEl) {
+    tEl.addEventListener('input', updateKP3);
+    setTimeout(updateKP3, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-3 == -->
+<button class="guide-btn" data-guide="kp-3" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：隨時間反向傳播演算法（BPTT）總覽與損失函數</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="0" data-explanation="因為參數共享機制使得 W 參與了每一個時間步的前向計算，因此總損失對 W 的全微分等於各時間步微分之和。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">在 BPTT 演算法中，為什麼總損失 L 對權重 W 的梯度需要對所有時間步 t 進行累加（summation）？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">因為 W 是在所有時間步共享的同一個參數矩陣，根據多元微積分鏈鎖律必須累加每個時間步的貢獻</button><button class="quiz-option-btn" data-index="1">因為每個時間步的 W 都不一樣</button><button class="quiz-option-btn" data-index="2">為了防止梯度爆炸</button><button class="quiz-option-btn" data-index="3">這是高斯分布的要求</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp4" class="card" data-kp="4">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">2.3.1–2.3.2</span>
+              <div class="card-title">BPTT 梯度推導：輸出層與隱藏狀態梯度</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>輸出層與隱藏狀態梯度的精密鏈鎖律推導</h4>
+<p>為了進行反向傳播，我們首先推導損失 $\mathcal{L}$ 對輸出 $\boldsymbol{y}_t$ 與隱藏狀態 $\boldsymbol{h}_t$ 的梯度。</p>
+
+<h4>1. 對輸出 $\boldsymbol{y}_t$ 的梯度</h4>
+<p>若無輸出激活函數，由鏈鎖律：</p>
+$$\frac{\partial \mathcal{L}}{\partial \boldsymbol{y}_t} = \frac{\partial \mathcal{L}_t}{\partial \boldsymbol{y}_t}$$
+<p>若有 Softmax 激活函數 $\widehat{\boldsymbol{y}}_t = \operatorname{softmax}(\boldsymbol{y}_t)$，則：</p>
+$$\frac{\partial \mathcal{L}}{\partial \boldsymbol{y}_t} = \frac{\partial \mathcal{L}_t}{\partial \widehat{\boldsymbol{y}}_t} \times \frac{\partial \widehat{\boldsymbol{y}}_t}{\partial \boldsymbol{y}_t}$$
+
+<h4>2. 對隱藏狀態 $\boldsymbol{h}_t$ 的反向遞迴梯度 $\boldsymbol{\delta}_t$</h4>
+<p>關鍵洞察：改變 $\boldsymbol{h}_t$ 會同時影響<b>當前輸出 $\boldsymbol{y}_t$</b> 與<b>下一時刻狀態 $\boldsymbol{h}_{t+1}$</b>！因此由多元鏈鎖律：</p>
+$$\boldsymbol{\delta}_t := \frac{\partial \mathcal{L}}{\partial \boldsymbol{h}_t} = \left( \frac{\partial \mathcal{L}}{\partial \boldsymbol{y}_t} \times \boldsymbol{V} \right) + \left( \boldsymbol{\delta}_{t+1} \times \frac{\partial \boldsymbol{h}_{t+1}}{\partial \boldsymbol{h}_t} \right)$$
+<p>其中狀態間轉移的雅可比矩陣為：</p>
+$$\frac{\partial \boldsymbol{h}_{t+1}}{\partial \boldsymbol{h}_t} = \boldsymbol{W} \operatorname{diag}\left( 1 - \boldsymbol{h}_{t+1}^2 \right)$$
+<p>對於最後一步 $t=T$，因為沒有未來的狀態，梯度簡化為：</p>
+$$\boldsymbol{\delta}_T = \frac{\partial \mathcal{L}_T}{\partial \boldsymbol{y}_T} \times \boldsymbol{V}$$
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「當前輸出加未來，兩路梯度匯狀態；最後一步無未來，直取輸出乘以 V。」</b></p>
+
+            <!-- == Phase B 圖解 kp-4 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp4.png" alt="BPTT 梯度推導：輸出層與隱藏狀態梯度 示意圖解">
+  <figcaption>圖 kp-4：BPTT 梯度推導：輸出層與隱藏狀態梯度 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-4" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: A reverse gradient flow diagram illustrating state error vector propagation $\boldsymbol{\delta}_t = \frac{\partial \mathcal{L}}{\partial \boldsymbol{y}_t} \boldsymbol{V} + \boldsymbol{\delta}_{t+1} \boldsymbol{W} (1 - \boldsymbol{h}_{t+1}^2)$.
+WHY: Show how gradient at step $t$ receives contributions from both current step output and future state backpropagation.
+MUST show: (1) Backward arrows $\boldsymbol{\delta}_{t+1} \to \boldsymbol{\delta}_t$, (2) Output error contribution $\frac{\partial \mathcal{L}_t}{\partial y_t} \boldsymbol{V}$, (3) Activation derivative multiplier $(1 - h_{t+1}^2)$.
+AVOID: Forward arrows instead of backward error propagation.
+STYLE: High-contrast technical diagram, color-coded gradient paths.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-4 == -->
+
+<div class="demo" data-demo-id="kp-4">
+  <div class="demo-title">🎮 互動展示 kp-4：BPTT 隱藏狀態梯度 $\delta_t$ 反向傳播計算</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>計算時間步 $t$ 的狀態梯度 $\boldsymbol{\delta}_t = \frac{\partial \mathcal{L}_t}{\partial \boldsymbol{y}_t} \boldsymbol{V} + \boldsymbol{\delta}_{t+1} \boldsymbol{W} (1 - \boldsymbol{h}_{t+1}^2)$ 的反向遞迴。</p>
+    <p><b>怎麼操作：</b>調整權重 $W$ 與末端輸出誤差 $\frac{\partial \mathcal{L}_T}{\partial y_T}$。</p>
+    <p><b>觀察什麼：</b>梯度從末端 $T$ 倒流至 $t=1$，每一步乘上雅可比矩陣項 $W(1-h^2)$。</p>
+    <p><b>理論基準：</b>當 $W=0.5, V=1, h=0$ 時，每向前一步梯度乘以 0.5。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>權重 W (0.1 ~ 1.5): <span id="kp4_w_val">0.7</span></label>
+      <input type="range" id="kp4_w" min="0.1" max="1.5" step="0.05" value="0.7">
+    </div>
+    <div class="demo-control-group">
+      <label>末端誤差dL/dy_T: <span id="kp4_err_val">1.0</span></label>
+      <input type="range" id="kp4_err" min="0.1" max="2.0" step="0.1" value="1.0">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp4_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp4_readout">計算反向梯度中...</div>
+</div>
+<script>
+(function(){
+  function updateKP4() {
+    var W = parseFloat(document.getElementById('kp4_w').value);
+    var err = parseFloat(document.getElementById('kp4_err').value);
+    document.getElementById('kp4_w_val').textContent = W.toFixed(2);
+    document.getElementById('kp4_err_val').textContent = err.toFixed(1);
+
+    var V = 1.0;
+    var deltas = new Array(4);
+    deltas[3] = err * V; // t=4
+    for (var t = 2; t >= 0; t--) {
+      // delta_t = err*V + delta_{t+1} * W * 0.8 (assuming 1-h^2 = 0.8)
+      deltas[t] = err * V + deltas[t+1] * W * 0.8;
+    }
+
+    var cvs = document.getElementById('kp4_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(40, 160); ctx.lineTo(560, 160); ctx.stroke();
+
+    for (var i = 0; i < 4; i++) {
+      var cx = 100 + i * 130;
+      var dVal = deltas[i];
+      var h = Math.min(dVal * 40, 130);
+      ctx.fillStyle = '#ca8a04';
+      ctx.fillRect(cx - 20, 160 - h, 40, h);
+      ctx.fillStyle = '#1e293b'; ctx.font = '11px sans-serif';
+      ctx.fillText('t=' + (i+1), cx - 12, 178);
+      ctx.fillText('delta=' + dVal.toFixed(3), cx - 28, 160 - h - 6);
+    }
+
+    var readout = '反向傳播結果: delta_4=' + deltas[3].toFixed(3) + ' | delta_3=' + deltas[2].toFixed(3) + ' | delta_2=' + deltas[1].toFixed(3) + ' | delta_1=' + deltas[0].toFixed(3);
+    document.getElementById('kp4_readout').textContent = readout;
+  }
+
+  var wEl = document.getElementById('kp4_w');
+  if (wEl) {
+    wEl.addEventListener('input', updateKP4);
+    document.getElementById('kp4_err').addEventListener('input', updateKP4);
+    setTimeout(updateKP4, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-4 == -->
+<button class="guide-btn" data-guide="kp-4" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：BPTT 梯度推導：輸出層與隱藏狀態梯度</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="1" data-explanation="因為 h_t 在前向傳播中既分支走向當前輸出 y_t，又分支走向下一個隱藏狀態 h_{t+1}，反向傳播時兩條路徑的梯度需相加。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">為什麼計算時間步 t 的隱藏狀態梯度 delta_t 時，公式包含兩項？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">一項來自輸入 x_t，一項來自輸出 y_t</button><button class="quiz-option-btn" data-index="1">一項來自當前輸出 y_t 的影響，另一項來自下一時間步隱藏狀態 h_{t+1} 的反向回傳影響</button><button class="quiz-option-btn" data-index="2">一項是偏置 b_i，一項是偏置 b_y</button><button class="quiz-option-btn" data-index="3">為了計算正則化項</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp5" class="card" data-kp="5">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">2.3.3–2.3.5</span>
+              <div class="card-title">BPTT 權重矩陣梯度：V、W、U 的 Kronecker 積推導</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>權重矩陣 V、W、U 的梯度推導與 Kronecker 積</h4>
+<p>得到了狀態梯度 $\boldsymbol{\delta}_t$ 後，我們進一步推導三大權重矩陣的總梯度。</p>
+
+<h4>1. 對隱藏至輸出矩陣 $\boldsymbol{V}$ 的梯度</h4>
+<p>矩陣 $\boldsymbol{V}$ 僅直接影響各步輸出 $\boldsymbol{y}_t = \boldsymbol{V} \boldsymbol{h}_t + \boldsymbol{b}_y$：</p>
+$$\frac{\partial \mathcal{L}}{\partial \boldsymbol{V}} = \sum_{t=1}^{T} \left( \frac{\partial \mathcal{L}_t}{\partial \boldsymbol{y}_t} \times \boldsymbol{h}_t^\top \right)$$
+
+<h4>2. 對狀態轉移矩陣 $\boldsymbol{W}$ 與輸入矩陣 $\boldsymbol{U}$ 的梯度</h4>
+<p>使用 Magnus-Neudecker 矩陣微分法與 Kronecker 積（$\otimes$）：</p>
+$$\frac{\partial \boldsymbol{i}_t}{\partial \boldsymbol{W}} = \boldsymbol{h}_{t-1}^\top \otimes \boldsymbol{I}_{p \times p}, \quad \frac{\partial \boldsymbol{i}_t}{\partial \boldsymbol{U}} = \boldsymbol{x}_t^\top \otimes \boldsymbol{I}_{p \times p}$$
+<p>經由反向量化（$\operatorname{vec}^{-1}$）整理後得到總梯度：</p>
+$$\frac{\partial \mathcal{L}}{\partial \boldsymbol{W}} = \sum_{t=1}^{T} \operatorname{vec}^{-1}_{p \times p} \left( \left(\frac{\partial \boldsymbol{h}_t}{\partial \boldsymbol{W}}\right)^\top \boldsymbol{\delta}_t \right)$$
+$$\frac{\partial \mathcal{L}}{\partial \boldsymbol{U}} = \sum_{t=1}^{T} \operatorname{vec}^{-1}_{p \times d} \left( \left(\frac{\partial \boldsymbol{h}_t}{\partial \boldsymbol{U}}\right)^\top \boldsymbol{\delta}_t \right)$$
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「V 拿輸出乘狀態，W 與 U 靠克氏積；張量展開降維度，各步梯度總相加。」</b></p>
+
+            <!-- == Phase B 圖解 kp-5 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp5.png" alt="BPTT 權重矩陣梯度：V、W、U 的 Kronecker 積推導 示意圖解">
+  <figcaption>圖 kp-5：BPTT 權重矩陣梯度：V、W、U 的 Kronecker 積推導 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-5" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: Matrix dimension and structure representation for weight matrix gradients $\frac{\partial \mathcal{L}}{\partial V}, \frac{\partial \mathcal{L}}{\partial W}, \frac{\partial \mathcal{L}}{\partial U}$ using Kronecker products $\otimes$.
+WHY: Clarify how vectorization and Kronecker product mathematics transform sequence gradients into weight update matrices.
+MUST show: (1) Dimension tags $q \times p$, $p \times p$, $p \times d$, (2) Vectorization operator $\operatorname{vec}^{-1}$, (3) Kronecker product symbol $\otimes$.
+AVOID: Confusing dot products with Kronecker products.
+STYLE: Mathematical vector schematic, structured box layout.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-5 == -->
+
+<div class="demo" data-demo-id="kp-5">
+  <div class="demo-title">🎮 互動展示 kp-5：權重矩陣 $(V, W, U)$ 梯度累加與矩陣維度</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>展示 $\frac{\partial \mathcal{L}}{\partial V} = \sum \frac{\partial \mathcal{L}_t}{\partial y_t} h_t^\top$ 與包含 Kronecker 積的反向向量化梯度計算。</p>
+    <p><b>怎麼操作：</b>設定隱藏層維度 $p$ (2 到 8) 與輸入維度 $d$ (2 到 8)。</p>
+    <p><b>觀察什麼：</b>張量積展型與對應權重矩陣的維度變化。</p>
+    <p><b>理論基準：</b>$\boldsymbol{V} \in \mathbb{R}^{q \times p}$、$\boldsymbol{W} \in \mathbb{R}^{p \times p}$、$\boldsymbol{U} \in \mathbb{R}^{p \times d}$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>隱藏維度 p: <span id="kp5_p_val">4</span></label>
+      <input type="range" id="kp5_p" min="2" max="8" step="1" value="4">
+    </div>
+    <div class="demo-control-group">
+      <label>輸入維度 d: <span id="kp5_d_val">3</span></label>
+      <input type="range" id="kp5_d" min="2" max="8" step="1" value="3">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp5_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp5_readout">維度計算中...</div>
+</div>
+<script>
+(function(){
+  function updateKP5() {
+    var p = parseInt(document.getElementById('kp5_p').value);
+    var d = parseInt(document.getElementById('kp5_d').value);
+    var q = 2; // output dim
+    document.getElementById('kp5_p_val').textContent = p;
+    document.getElementById('kp5_d_val').textContent = d;
+
+    var cvs = document.getElementById('kp5_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    // Draw 3 Matrix Grid Representers
+    // V matrix
+    ctx.fillStyle = '#dcfce7'; ctx.strokeStyle = '#166534';
+    ctx.fillRect(50, 40, p * 15, q * 25); ctx.strokeRect(50, 40, p * 15, q * 25);
+    ctx.fillStyle = '#166534'; ctx.font = '12px sans-serif';
+    ctx.fillText('dL/dV (' + q + 'x' + p + ')', 50, 30);
+
+    // W matrix
+    ctx.fillStyle = '#fef08a'; ctx.strokeStyle = '#ca8a04';
+    ctx.fillRect(230, 40, p * 15, p * 15); ctx.strokeRect(230, 40, p * 15, p * 15);
+    ctx.fillStyle = '#ca8a04';
+    ctx.fillText('dL/dW (' + p + 'x' + p + ')', 230, 30);
+
+    // U matrix
+    ctx.fillStyle = '#dbeafe'; ctx.strokeStyle = '#1d4ed8';
+    ctx.fillRect(430, 40, d * 15, p * 15); ctx.strokeRect(430, 40, d * 15, p * 15);
+    ctx.fillStyle = '#1d4ed8';
+    ctx.fillText('dL/dU (' + p + 'x' + d + ')', 430, 30);
+
+    var readout = '當前設定: V 維度 = (' + q + 'x' + p + '), W 維度 = (' + p + 'x' + p + '), U 維度 = (' + p + 'x' + d + ') | Kronecker 積二維展型向量長度 = ' + (p*p);
+    document.getElementById('kp5_readout').textContent = readout;
+  }
+
+  var pEl = document.getElementById('kp5_p');
+  if (pEl) {
+    pEl.addEventListener('input', updateKP5);
+    document.getElementById('kp5_d').addEventListener('input', updateKP5);
+    setTimeout(updateKP5, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-5 == -->
+<button class="guide-btn" data-guide="kp-5" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：BPTT 權重矩陣梯度：V、W、U 的 Kronecker 積推導</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="1" data-explanation="在矩陣微積分（Magnus-Neudecker 慣例）中，向量對矩陣求導的雅可比矩陣展型必然包含 Kronecker 積。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">在計算隱藏到隱藏權重 W 的梯度時，為什麼會用到 Kronecker 積 (⊗)？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">為了計算矩陣的逆矩陣</button><button class="quiz-option-btn" data-index="1">因為矩陣與向量求導時，將矩陣展開為向量處理（Vectorization），矩陣乘法求導自然產生 Kronecker 積結構</button><button class="quiz-option-btn" data-index="2">為了進行卷積運算</button><button class="quiz-option-btn" data-index="3">為了降低記憶體使用</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp6" class="card" data-kp="6">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">2.3.6–2.3.8</span>
+              <div class="card-title">BPTT 偏置梯度與梯度下降參數更新</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>偏置梯度與梯度下降參數更新法則</h4>
+<p>完成權重矩陣求導後，我們推導偏置項梯度並執行梯度下降更新。</p>
+
+<h4>1. 偏置向量 $\boldsymbol{b}_i$ 與 $\boldsymbol{b}_y$ 的梯度</h4>
+$$\frac{\partial \mathcal{L}}{\partial \boldsymbol{b}_i} = \sum_{t=1}^{T} \left( \left( \frac{\partial \boldsymbol{h}_t}{\partial \boldsymbol{i}_t} \right)^\top \boldsymbol{\delta}_t \right) = \sum_{t=1}^{T} \operatorname{diag}\left(1 - \boldsymbol{h}_t^2\right) \boldsymbol{\delta}_t$$
+$$\frac{\partial \mathcal{L}}{\partial \boldsymbol{b}_y} = \sum_{t=1}^{T} \frac{\partial \mathcal{L}_t}{\partial \boldsymbol{y}_t}$$
+
+<h4>2. 梯度下降更新公式（Learning Rate $\eta > 0$）</h4>
+$$\begin{align*}
+\boldsymbol{W} &:= \boldsymbol{W} - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{W}}, \quad \boldsymbol{U} := \boldsymbol{U} - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{U}}, \quad \boldsymbol{V} := \boldsymbol{V} - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{V}} \\
+\boldsymbol{b}_i &:= \boldsymbol{b}_i - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{b}_i}, \quad \boldsymbol{b}_y &:= \boldsymbol{b}_y - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{b}_y}
+\end{align*}$$
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「偏置累加簡潔明，學習率乘梯度減；反向傳播全走過，參數煥然一新變。」</b></p>
+
+            <!-- == Phase B 圖解 kp-6 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp6.png" alt="BPTT 偏置梯度與梯度下降參數更新 示意圖解">
+  <figcaption>圖 kp-6：BPTT 偏置梯度與梯度下降參數更新 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-6" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: A complete BPTT training epoch cycle diagram (Forward Pass $\to$ Total Loss Sum $\to$ BPTT Backpropagation $\to$ Gradient Descent Parameter Update).
+WHY: Visualise the full closed-loop learning process of an RNN in a single training iteration.
+MUST show: (1) Four sequential circular stages with arrows, (2) Gradient update rule $W := W - \eta \frac{\partial \mathcal{L}}{\partial W}$.
+AVOID: Broken loops or missing update formulas.
+STYLE: Sleek circular process flowchart, color-coded node stages.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-6 == -->
+
+<div class="demo" data-demo-id="kp-6">
+  <div class="demo-title">🎮 互動展示 kp-6：完整 BPTT 訓練循環與權重更新</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>模擬完整 1-Step BPTT 前向與反向傳播，並使用梯度下降 $W := W - \eta \frac{\partial \mathcal{L}}{\partial W}$ 更新權重，觀察 Loss 收斂。</p>
+    <p><b>怎麼操作：</b>設定學習率 $\eta$，點擊「執行 1 次訓練迭代」按鈕。</p>
+    <p><b>觀察什麼：</b>每次迭代後損失下降，權重 $W$ 向最優解靠攏。</p>
+    <p><b>理論基準：</b>梯度的反方向為函數下降最快方向，適當學習率可確保損失二次收斂。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>學習率 eta (0.01 ~ 0.5): <span id="kp6_eta_val">0.10</span></label>
+      <input type="range" id="kp6_eta" min="0.01" max="0.5" step="0.01" value="0.10">
+    </div>
+    <button class="quiz-option-btn" id="kp6_step_btn" style="background:#2563eb; color:white; font-weight:bold;">▶ 執行 1 次訓練迭代</button>
+    <button class="quiz-option-btn" id="kp6_reset_btn">↺ 重置訓練</button>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp6_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp6_readout">準備執行訓練...</div>
+</div>
+<script>
+(function(){
+  var currentW = 1.5;
+  var targetW = 0.6;
+  var historyLoss = [];
+  var stepCount = 0;
+
+  function runStep() {
+    var eta = parseFloat(document.getElementById('kp6_eta').value);
+    document.getElementById('kp6_eta_val').textContent = eta.toFixed(2);
+
+    // Simulated loss L = 0.5 * (currentW - targetW)^2
+    var loss = 0.5 * Math.pow(currentW - targetW, 2);
+    var grad = currentW - targetW;
+    
+    historyLoss.push(loss);
+    currentW = currentW - eta * grad;
+    stepCount++;
+
+    drawChart();
+  }
+
+  function resetTrain() {
+    currentW = 1.5;
+    historyLoss = [];
+    stepCount = 0;
+    drawChart();
+  }
+
+  function drawChart() {
+    var cvs = document.getElementById('kp6_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(40, 170); ctx.lineTo(560, 170); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(40, 20); ctx.lineTo(40, 170); ctx.stroke();
+
+    if (historyLoss.length > 0) {
+      ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 2; ctx.beginPath();
+      for (var i = 0; i < historyLoss.length; i++) {
+        var x = 40 + i * (500 / Math.max(10, historyLoss.length));
+        var y = 170 - historyLoss[i] * 300;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    var currLoss = historyLoss.length > 0 ? historyLoss[historyLoss.length - 1] : 0.5 * Math.pow(1.5 - 0.6, 2);
+    var readout = '迭代次數: ' + stepCount + ' | 當前 W = ' + currentW.toFixed(4) + ' | 當前 Loss = ' + currLoss.toFixed(4);
+    document.getElementById('kp6_readout').textContent = readout;
+  }
+
+  var btn = document.getElementById('kp6_step_btn');
+  if (btn) {
+    btn.addEventListener('click', runStep);
+    document.getElementById('kp6_reset_btn').addEventListener('click', resetTrain);
+    document.getElementById('kp6_eta').addEventListener('input', function(){
+      document.getElementById('kp6_eta_val').textContent = parseFloat(this.value).toFixed(2);
+    });
+    setTimeout(drawChart, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-6 == -->
+<button class="guide-btn" data-guide="kp-6" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：BPTT 偏置梯度與梯度下降參數更新</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="0" data-explanation="梯度指向函數增長最快的方向，因此最小化損失函數必須沿梯度的反方向（減號）進行更新。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">使用 BPTT 算完所有梯度後，梯度下降參數更新的符號方向為何是減號 (-)？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">為了沿著梯度的反方向移動以最小化損失函數（Gradient Descent）</button><button class="quiz-option-btn" data-index="1">為了最大化準確率</button><button class="quiz-option-btn" data-index="2">這只是習慣寫法</button><button class="quiz-option-btn" data-index="3">因為學習率 eta 是負數</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp7" class="card" data-kp="7">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">3</span>
+              <div class="card-title">長距離依賴中的梯度消失與爆炸問題</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>長距離依賴中的致命傷：梯度消失與爆炸</h4>
+<p>雖然 BPTT 理論完善，但在處理長序列時會面臨嚴重的數值不穩定性。考慮第 $T$ 步損失對早先第 $t$ 步狀態的梯度鏈：</p>
+$$\frac{\partial \boldsymbol{h}_T}{\partial \boldsymbol{h}_t} = \frac{\partial \boldsymbol{h}_T}{\partial \boldsymbol{h}_{T-1}} \times \frac{\partial \boldsymbol{h}_{T-1}}{\partial \boldsymbol{h}_{T-2}} \times \dots \times \frac{\partial \boldsymbol{h}_{t+1}}{\partial \boldsymbol{h}_t}$$
+
+<h4>數值行為分析：指數級放大或衰減</h4>
+<ul>
+  <li><b>梯度消失（Vanishing Gradient）</b>：若連乘項中的雅可比矩陣範數（Norm）小於 1，隨著時間跨度 $(T-t)$ 增大，梯度會呈<b>指數級衰減趨近於 0</b>。網絡無法學習遠古歷史與當前的關聯，失去長距離記憶能力。</li>
+  <li><b>梯度爆炸（Exploding Gradient）</b>：若雅可比矩陣範數大於 1，梯度會呈<b>指數級暴增趨近於無窮大（NaN/Inf）</b>，導致數值崩潰與模型訓練發散。</li>
+</ul>
+
+<h4>為什麼梯度消失比爆炸更常見？</h4>
+<p>因為激活函數 $\tanh$ 的導數範圍在 $(0, 1]$，加上權重初始化若偏小，連乘項極易小於 1。梯度爆炸可透過<b>梯度裁剪（Gradient Clipping）</b>輕易解決，但梯度消失則需要結構上的根本革新！</p>
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「連乘效應最驚人，小於一消失大於一爆；歷史太遠傳不到，傳統 RNN 難長記。」</b></p>
+
+            <!-- == Phase B 圖解 kp-7 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp7.png" alt="長距離依賴中的梯度消失與爆炸問題 示意圖解">
+  <figcaption>圖 kp-7：長距離依賴中的梯度消失與爆炸問題 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-7" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: A logarithmic plot comparing gradient norm decay vs explosion across time distance $k = (T - t)$ for eigenvalue magnitude $\gamma < 1$, $\gamma = 1$, $\gamma > 1$.
+WHY: Emphasise the catastrophic nature of vanishing gradients ($\gamma^k \to 0$) in capturing long-term dependencies compared to exploding gradients ($\gamma^k \to \infty$).
+MUST show: (1) Exponential decay curve plunging to zero, (2) Exponential explosion curve shooting up, (3) Stable line $\gamma = 1$.
+AVOID: Linear scale plots where exponential decay is hard to read.
+STYLE: Scientific line chart, semi-logarithmic scale, clear annotations.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-7 == -->
+
+<div class="demo" data-demo-id="kp-7">
+  <div class="demo-title">🎮 互動展示 kp-7：梯度消失與爆炸 $\gamma^k$ 數值變化模擬器</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>計算雅可比矩陣乘數 $\gamma$ 在時間跨度 $k=0..20$ 下的指數衰減與爆炸 $\gamma^k$。</p>
+    <p><b>怎麼操作：</b>調整乘數 $\gamma$ (0.5 到 1.4)。</p>
+    <p><b>觀察什麼：</b>$\gamma < 1$ 時梯度迅速歸零（消失），$\gamma > 1$ 時梯度呈指數爆炸。</p>
+    <p><b>理論基準：</b>當 $\gamma = 0.8, k=20$ 時，$\gamma^{20} \approx 0.0038$（信號消失）。當 $\gamma = 1.2, k=20$ 時，$\gamma^{20} \approx 38.33$（信號爆炸）。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>雅可比乘數 gamma (0.5 ~ 1.4): <span id="kp7_gamma_val">0.85</span></label>
+      <input type="range" id="kp7_gamma" min="0.5" max="1.4" step="0.05" value="0.85">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp7_canvas" width="600" height="220"></canvas>
+  </div>
+  <div class="demo-readout" id="kp7_readout">計算中...</div>
+</div>
+<script>
+(function(){
+  function updateKP7() {
+    var gamma = parseFloat(document.getElementById('kp7_gamma').value);
+    document.getElementById('kp7_gamma_val').textContent = gamma.toFixed(2);
+
+    var cvs = document.getElementById('kp7_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(50, 180); ctx.lineTo(550, 180); ctx.stroke();
+
+    ctx.strokeStyle = gamma > 1.0 ? '#d97706' : (gamma < 0.95 ? '#dc2626' : '#166534');
+    ctx.lineWidth = 2.5; ctx.beginPath();
+
+    var values = [];
+    for (var k = 0; k <= 20; k++) {
+      var val = Math.pow(gamma, k);
+      values.push(val);
+      var x = 50 + k * 25;
+      var y = 180 - Math.min(val * 40, 160);
+      if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    var statusText = gamma < 0.95 ? "⚠️ 梯度消失 (Vanishing Gradient)" : (gamma > 1.05 ? "💥 梯度爆炸 (Exploding Gradient)" : "✅ 數值穩定 (Stable)");
+    var readout = statusText + " | gamma^20 = " + values[20].toFixed(5);
+    document.getElementById('kp7_readout').textContent = readout;
+  }
+
+  var gEl = document.getElementById('kp7_gamma');
+  if (gEl) {
+    gEl.addEventListener('input', updateKP7);
+    setTimeout(updateKP7, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-7 == -->
+<button class="guide-btn" data-guide="kp-7" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：長距離依賴中的梯度消失與爆炸問題</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="0" data-explanation="梯度爆炸可透過限制最大梯度範數（Clipping）避免數值溢出；但梯度消失是信號衰減至零，無法從零中還原梯度，必須改變網路結構。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">在長序列訓練中，為什麼梯度消失（Vanishing Gradient）比梯度爆炸更難用簡單技巧解決？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">因為梯度爆炸可以用簡單的梯度裁剪（Clipping）截斷，但梯度消失意味著歷史訊息的梯度信號徹底歸零，無法重新補回</button><button class="quiz-option-btn" data-index="1">因為梯度消失會導致 CPU 燒毀</button><button class="quiz-option-btn" data-index="2">因為梯度消失無法用浮點數表示</button><button class="quiz-option-btn" data-index="3">因為梯度爆炸不會發生</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp8" class="card" data-kp="8">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">3.1–3.2</span>
+              <div class="card-title">緩解梯度問題：特徵值分析、趨近單位矩陣與長延遲連線</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>緩解梯度問題的早期結構創新：特徵值與長延遲</h4>
+<p>為了克服梯度消失/爆炸，研究人員提出了多種結構調節策略。</p>
+
+<h4>1. 趨近單位矩陣初始化（Close-to-Identity Weight Matrix）</h4>
+<p>對權重矩陣 $\boldsymbol{W}$ 進行特徵值分解 $\boldsymbol{W} = \boldsymbol{A} \boldsymbol{\Lambda} \boldsymbol{A}^\top$，特徵值 $\lambda$ 的大小決定了狀態變化的命運：</p>
+<ul>
+  <li>$\lambda < 1$：狀態變化按 $\lambda^t$ 呈收縮性（Contractive），遠古記憶被忘卻。建議選擇 $\lambda \lesssim 1$（略小於 1）的正交矩陣初始化。</li>
+  <li>結構修改：直接將前一狀態複製加入（Overcoming Vanishing Gradient）：
+$$\boldsymbol{h}_t = \tanh\left( (\boldsymbol{W} + \boldsymbol{I}) \boldsymbol{h}_{t-1} + \boldsymbol{U} \boldsymbol{x}_t + \boldsymbol{b}_i \right)$$
+強加單位矩陣 $\boldsymbol{I}$ 強化了對角線，使特徵值靠近 1，為梯度提供了直接穿透的恆等通道！</li>
+</ul>
+
+<h4>2. 長延遲連線（Long Delays / Skip Connections）</h4>
+<p>引入 $k$ 步延遲連線（如 1 步與 3 步延遲）：</p>
+$$\boldsymbol{h}_t = \tanh\left( \boldsymbol{W}_1 \boldsymbol{h}_{t-1} + \boldsymbol{W}_3 \boldsymbol{h}_{t-3} + \boldsymbol{U} \boldsymbol{x}_t + \boldsymbol{b}_i \right)$$
+<p>這允許梯度在反向傳播時跳過中間節點直接回傳，大幅縮短了連乘鏈長度。</p>
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「加 I 穿透恆等通道，長延遲開闢梯度捷徑；特徵值控制在波幅一，遠古資訊不流失。」</b></p>
+
+            <!-- == Orig Fig kp-8 == -->
+<figure class="orig-fig">
+  <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-236_377_994_209_580.jpg" alt="Fig 2: The (a) folded and (b) unfolded structures of an RNN with long delays.">
+  <figcaption>【教材原圖】Fig 2: The (a) folded and (b) unfolded structures of an RNN with long delays.</figcaption>
+</figure>
+<!-- END Orig Fig -->
+<!-- == Phase B 圖解 kp-8 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp8.png" alt="緩解梯度問題：特徵值分析、趨近單位矩陣與長延遲連線 示意圖解">
+  <figcaption>圖 kp-8：緩解梯度問題：特徵值分析、趨近單位矩陣與長延遲連線 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-8" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: Structural architectural comparison between standard 1-step RNN vs Identity-regularized $(W+I)$ RNN vs 3-step long delay skip connections $W_3$.
+WHY: Demonstrate how identity shortcut connections and skip delays open direct gradient highways that bypass intermediate multiplicative decay.
+MUST show: (1) Identity self-connection $(W+I)$, (2) Skip connection arrow spanning across 3 time steps, (3) Gradient flow bypass.
+AVOID: Cluttered unlabelled connections.
+STYLE: Minimalist network diagram, bright highlight arrows for skip paths.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-8 == -->
+
+<div class="demo" data-demo-id="kp-8">
+  <div class="demo-title">🎮 互動展示 kp-8：(W+I) 恆等通道與長延遲 Skip 梯度捷徑對比</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>對比標準 RNN ($W^T$)、強加單位矩陣 ($(W+I)^T$) 與 3-步長延遲 ($W_3$) 的梯度傳遞衰減率。</p>
+    <p><b>怎麼操作：</b>拖動時間步數 $T$ (1 到 25)。</p>
+    <p><b>觀察什麼：</b>加上單位矩陣 $I$ 後，對角線得到強化，特徵值接近 1，梯度保持平穩不衰減。</p>
+    <p><b>理論基準：</b>傳統 $0.8^{20} \approx 0.003$；恆等通道 $(0.8-0.9+1.0)^{20} \approx (0.9)^{20} \approx 0.121$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>時間跨度 T (1 ~ 25): <span id="kp8_t_val">15</span></label>
+      <input type="range" id="kp8_t" min="1" max="25" step="1" value="15">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp8_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp8_readout">比較中...</div>
+</div>
+<script>
+(function(){
+  function updateKP8() {
+    var T = parseInt(document.getElementById('kp8_t').value);
+    document.getElementById('kp8_t_val').textContent = T;
+
+    var stdGrad = Math.pow(0.75, T);
+    var idGrad = Math.pow(0.96, T);
+    var skipGrad = Math.pow(0.75, Math.floor(T / 3));
+
+    var cvs = document.getElementById('kp8_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    // Bar comparison
+    var bars = [
+      { name: "標準 RNN (W^T)", val: stdGrad, color: "#ef4444" },
+      { name: "恆等通道 ((W+I)^T)", val: idGrad, color: "#2563eb" },
+      { name: "3-步長延遲 (W_3)", val: skipGrad, color: "#d97706" }
+    ];
+
+    for (var i = 0; i < bars.length; i++) {
+      var b = bars[i];
+      var y = 30 + i * 50;
+      var w = Math.min(b.val * 450, 450);
+      ctx.fillStyle = b.color;
+      ctx.fillRect(160, y, w, 30);
+      ctx.fillStyle = '#1e293b'; ctx.font = '12px sans-serif';
+      ctx.fillText(b.name, 20, y + 20);
+      ctx.fillText(b.val.toFixed(4), 170 + w, y + 20);
+    }
+
+    var readout = 'T=' + T + ' 時: 標準衰減到 ' + stdGrad.toFixed(4) + ' | (W+I) 保持在 ' + idGrad.toFixed(4) + ' | 3-步延遲保持在 ' + skipGrad.toFixed(4);
+    document.getElementById('kp8_readout').textContent = readout;
+  }
+
+  var tEl = document.getElementById('kp8_t');
+  if (tEl) {
+    tEl.addEventListener('input', updateKP8);
+    setTimeout(updateKP8, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-8 == -->
+<button class="guide-btn" data-guide="kp-8" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：緩解梯度問題：特徵值分析、趨近單位矩陣與長延遲連線</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="1" data-explanation="加上單位矩陣 I 確保了狀態傳遞具備恆等映射成份，使特徵值接近 1，為梯度提供了捷徑。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">將 RNN 隱藏狀態更新修改為 h_t = tanh((W + I)h_{t-1} + Ux_t + b_i) 的主要目的是什麼？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">減少矩陣乘法運算量</button><button class="quiz-option-btn" data-index="1">引入單位矩陣 I 強化對角線，保持特徵值接近 1，防止梯度隨時間衰減歸零</button><button class="quiz-option-btn" data-index="2">將輸出限制在 0 與 1 之間</button><button class="quiz-option-btn" data-index="3">消除對輸入 x_t 的依賴</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp9" class="card" data-kp="9">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">3.3–3.5</span>
+              <div class="card-title">滲漏單元（Leaky Units）與迴聲狀態網路（Echo State Networks）</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>滲漏單元（Leaky Units）與迴聲狀態網絡（ESN）</h4>
+
+<h4>1. 滲漏單元（Leaky Units）</h4>
+<p>滲漏單元透過時間常數 $\tau_j \ge 1$ 來控制每個狀態維度的衰減率：</p>
+$$h_{t,j} = \left(1 - \frac{1}{\tau_j}\right) h_{t-1,j} + \frac{1}{\tau_j} \tanh\left( \boldsymbol{W}_{j:} \boldsymbol{h}_{t-1} + \boldsymbol{U}_{j:} \boldsymbol{x}_t + b_{i,j} \right)$$
+<ul>
+  <li>當 $\tau_j = 1$ 時，還原為標準 RNN。</li>
+  <li>當 $\tau_j \gg 1$ 時，$h_{t,j} \approx h_{t-1,j}$，歷史狀態被長久保存。</li>
+</ul>
+<p>網絡可針對不同維度獨立學習記憶保持率，是 LSTM 門控機制的直接前身！</p>
+
+<h4>2. 迴聲狀態網絡（Echo State Networks, ESN）</h4>
+<p>ESN 採用了極具創意的「儲水池計算（Reservoir Computing）」概念：</p>
+<ul>
+  <li>將循環隱藏層作為一個固定、隨機且稀疏連接的<b>儲水池（Reservoir）</b>。</li>
+  <li><b>儲水池內部的權重矩陣固定不訓練</b>，完全避免了 BPTT 的梯度消失問題！</li>
+  <li>僅訓練線性輸出層的權重 $\boldsymbol{V}$（只需解簡單的線性回歸求解）。</li>
+</ul>
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「滲漏單元平滑記，時間常數保長遠；迴聲網路儲水池，內部固定只練輸出。」</b></p>
+
+            <!-- == Orig Fig kp-9 == -->
+<figure class="orig-fig">
+  <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-237_381_847_1794_732.jpg" alt="Fig 3: The echo state network architecture.">
+  <figcaption>【教材原圖】Fig 3: The echo state network architecture.</figcaption>
+</figure>
+<!-- END Orig Fig -->
+<!-- == Phase B 圖解 kp-9 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp9.png" alt="滲漏單元（Leaky Units）與迴聲狀態網路（Echo State Networks） 示意圖解">
+  <figcaption>圖 kp-9：滲漏單元（Leaky Units）與迴聲狀態網路（Echo State Networks） 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-9" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: A two-panel diagram comparing Leaky Units state decay time constant $\tau$ curves vs Echo State Network (ESN) fixed reservoir architecture.
+WHY: Illustrate how Leaky Units dynamically control decay rates while ESN uses a fixed random reservoir to bypass BPTT.
+MUST show: (1) Exponential decay curves for $\tau=1, 3, 10$, (2) ESN fixed sparse reservoir graph with trainable linear output weights $V$.
+AVOID: Mixing up trainable weights with fixed reservoir weights.
+STYLE: Dual-panel educational graphic, clean scientific layout.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-9 == -->
+
+<div class="demo" data-demo-id="kp-9">
+  <div class="demo-title">🎮 互動展示 kp-9：滲漏單元 (Leaky Units) 時間常數 $\tau$ 動態模擬</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>展示 $h_{t,j} = (1 - \frac{1}{\tau_j}) h_{t-1,j} + \frac{1}{\tau_j} \tilde{h}_{t,j}$ 中時間常數 $\tau_j$ 對歷史記憶保留的影響。</p>
+    <p><b>怎麼操作：</b>調整時間常數 $\tau$ (1 到 20)。</p>
+    <p><b>觀察什麼：</b>$\tau=1$ 時為標準短記憶 RNN；$\tau$ 越大，狀態越傾向直接複製歷史 $h_{t-1}$。</p>
+    <p><b>理論基準：</b>脈衝訊號傳入後，$\tau=10$ 的狀態半衰期為 $\tau \ln(2) \approx 6.9$ 個時間步。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>時間常數 tau (1 ~ 20): <span id="kp9_tau_val">5</span></label>
+      <input type="range" id="kp9_tau" min="1" max="20" step="1" value="5">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp9_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp9_readout">計算滲漏反應中...</div>
+</div>
+<script>
+(function(){
+  function updateKP9() {
+    var tau = parseInt(document.getElementById('kp9_tau').value);
+    document.getElementById('kp9_tau_val').textContent = tau;
+
+    var h = 0;
+    var points = [];
+    for (var t = 0; t < 25; t++) {
+      var input_signal = (t === 2) ? 1.0 : 0.0;
+      h = (1.0 - 1.0/tau) * h + (1.0/tau) * Math.tanh(input_signal);
+      points.push(h);
+    }
+
+    var cvs = document.getElementById('kp9_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(40, 170); ctx.lineTo(560, 170); ctx.stroke();
+
+    ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 2.5; ctx.beginPath();
+    for (var t = 0; t < points.length; t++) {
+      var x = 40 + t * 20;
+      var y = 170 - points[t] * 120;
+      if (t === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    var readout = 'tau = ' + tau + ' 時: 脈衝輸入後第 10 步狀態殘留值 = ' + points[12].toFixed(4);
+    document.getElementById('kp9_readout').textContent = readout;
+  }
+
+  var tauEl = document.getElementById('kp9_tau');
+  if (tauEl) {
+    tauEl.addEventListener('input', updateKP9);
+    setTimeout(updateKP9, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-9 == -->
+<button class="guide-btn" data-guide="kp-9" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：滲漏單元（Leaky Units）與迴聲狀態網路（Echo State Networks）</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="1" data-explanation="ESN 的循環層權重是隨機初始化且固定的，訓練過程退化為對輸出層進行線性回歸，因此完全不需要通過時間反向傳播更新循環權重。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">迴聲狀態網絡（Echo State Network, ESN）如何徹底避免 BPTT 的梯度消失問題？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">使用非常大的學習率</button><button class="quiz-option-btn" data-index="1">將循環儲水池（Reservoir）內部的權重固定不訓練，僅訓練最後的線性輸出層</button><button class="quiz-option-btn" data-index="2">將所有激活函數換成 ReLU</button><button class="quiz-option-btn" data-index="3">完全不用矩陣運算</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp10" class="card" data-kp="10">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">4.1.1–4.1.3</span>
+              <div class="card-title">長短期記憶網路（LSTM）門控機制：輸入門、遺忘門與輸出門</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>長短期記憶網路（LSTM）門控機制：三大門的作用與算式</h4>
+<p>為了徹底解決梯度消失，Hochreiter 與 Schmidhuber 提出了 <b>LSTM（Long Short-Term Memory）</b>。LSTM 的核心創新是引入了三種控制資訊流動的<b>門控（Gates）</b>。</p>
+
+<h4>三大門的精確數學定義（含 Peephole 窺視孔連線）</h4>
+<ol>
+  <li><b>輸入門（Input Gate $\boldsymbol{i}_t$）</b>：決定多少新資訊可以寫入記憶：
+$$\boldsymbol{i}_t = \operatorname{sig}\left( \boldsymbol{W}_i \boldsymbol{h}_{t-1} + \boldsymbol{U}_i \boldsymbol{x}_t + (\boldsymbol{p}_i \odot \boldsymbol{c}_{t-1}) + \boldsymbol{b}_i \right)$$</li>
+  <li><b>遺忘門（Forget Gate $\boldsymbol{f}_t$）</b>：決定多少舊細胞記憶 $\boldsymbol{c}_{t-1}$ 需要保留：
+$$\boldsymbol{f}_t = \operatorname{sig}\left( \boldsymbol{W}_f \boldsymbol{h}_{t-1} + \boldsymbol{U}_f \boldsymbol{x}_t + (\boldsymbol{p}_f \odot \boldsymbol{c}_{t-1}) + \boldsymbol{b}_f \right)$$</li>
+  <li><b>輸出門（Output Gate $\boldsymbol{o}_t$）</b>：決定多少細胞記憶可以輸出到隱藏狀態 $\boldsymbol{h}_t$：
+$$\boldsymbol{o}_t = \operatorname{sig}\left( \boldsymbol{W}_o \boldsymbol{h}_{t-1} + \boldsymbol{U}_o \boldsymbol{x}_t + (\boldsymbol{p}_o \odot \boldsymbol{c}_t) + \boldsymbol{b}_o \right)$$</li>
+</ol>
+<p>其中 $\operatorname{sig}(x) = \frac{1}{1 + e^{-x}} \in (0, 1)$，$\boldsymbol{p}_i, \boldsymbol{p}_f, \boldsymbol{p}_o$ 為窺視孔權重（Peepholes）。</p>
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「Sigmoid 輸出零到一，控開控關最靈巧；遺忘選留舊記憶，輸入決定新資訊，輸出關照當前態。」</b></p>
+
+            <!-- == Orig Fig kp-10 == -->
+<figure class="orig-fig">
+  <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-238_284_849_701_450.jpg" alt="Fig 4: A sequence of LSTM cells processing the input sequence.">
+  <figcaption>【教材原圖】Fig 4: A sequence of LSTM cells processing the input sequence.</figcaption>
+</figure>
+<!-- END Orig Fig -->
+<!-- == Phase B 圖解 kp-10 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp10.png" alt="長短期記憶網路（LSTM）門控機制：輸入門、遺忘門與輸出門 示意圖解">
+  <figcaption>圖 kp-10：長短期記憶網路（LSTM）門控機制：輸入門、遺忘門與輸出門 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-10" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: A plot of the Sigmoid activation function $\operatorname{sig}(z) = \frac{1}{1 + e^{-z}}$ showing its 0 to 1 gating ratio behavior for Input ($i_t$), Forget ($f_t$), and Output ($o_t$) gates.
+WHY: Explain why Sigmoid is chosen for gate control (0 = fully closed, 1 = fully open).
+MUST show: (1) Sigmoid S-curve, (2) Highlighted 0-closed region and 1-open region, (3) Labels for input, forget, output gates.
+AVOID: Plotting Tanh instead of Sigmoid.
+STYLE: High-precision function curve, clear color-coded shading.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-10 == -->
+
+<div class="demo" data-demo-id="kp-10">
+  <div class="demo-title">🎮 互動展示 kp-10：LSTM 輸入門 $i_t$、遺忘門 $f_t$、輸出門 $o_t$ 計算器</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>輸入 $x_t$ 與前一狀態 $h_{t-1}$，即時計算三大 Sigmoid 門控開關比例。</p>
+    <p><b>怎麼操作：</b>調整當前輸入 $x_t$ 與前一隱藏狀態 $h_{t-1}$。</p>
+    <p><b>觀察什麼：</b>門控比例在 0 (完全關閉) 到 1 (完全開啟) 之間動態調節。</p>
+    <p><b>理論基準：</b>$\boldsymbol{f}_t = \operatorname{sig}(W_f h_{t-1} + U_f x_t + b_f)$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>輸入 x_t (-2.0 ~ 2.0): <span id="kp10_x_val">1.0</span></label>
+      <input type="range" id="kp10_x" min="-2.0" max="2.0" step="0.1" value="1.0">
+    </div>
+    <div class="demo-control-group">
+      <label>前一狀態 h_{t-1} (-1.0 ~ 1.0): <span id="kp10_h_val">0.5</span></label>
+      <input type="range" id="kp10_h" min="-1.0" max="1.0" step="0.1" value="0.5">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp10_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp10_readout">計算門控比例中...</div>
+</div>
+<script>
+(function(){
+  function sig(z) { return 1 / (1 + Math.exp(-z)); }
+
+  function updateKP10() {
+    var x = parseFloat(document.getElementById('kp10_x').value);
+    var h = parseFloat(document.getElementById('kp10_h').value);
+    document.getElementById('kp10_x_val').textContent = x.toFixed(1);
+    document.getElementById('kp10_h_val').textContent = h.toFixed(1);
+
+    var i_t = sig(0.8 * h + 1.2 * x + 0.1);
+    var f_t = sig(1.1 * h - 0.9 * x + 0.5);
+    var o_t = sig(0.5 * h + 0.7 * x - 0.2);
+
+    var cvs = document.getElementById('kp10_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    var gates = [
+      { name: "輸入門 i_t (寫入新資訊)", val: i_t, color: "#3b82f6" },
+      { name: "遺忘門 f_t (保留舊記憶)", val: f_t, color: "#ef4444" },
+      { name: "輸出門 o_t (當前輸出)", val: o_t, color: "#10b981" }
+    ];
+
+    for (var idx = 0; idx < gates.length; idx++) {
+      var g = gates[idx];
+      var y = 25 + idx * 50;
+      var w = g.val * 350;
+      ctx.fillStyle = g.color;
+      ctx.fillRect(200, y, w, 28);
+      ctx.fillStyle = '#1e293b'; ctx.font = '12px sans-serif';
+      ctx.fillText(g.name, 20, y + 18);
+      ctx.fillText((g.val * 100).toFixed(1) + '% (' + g.val.toFixed(3) + ')', 210 + w, y + 18);
+    }
+
+    var readout = '門控計算結果: 輸入門 i_t=' + i_t.toFixed(4) + ' | 遺忘門 f_t=' + f_t.toFixed(4) + ' | 輸出門 o_t=' + o_t.toFixed(4);
+    document.getElementById('kp10_readout').textContent = readout;
+  }
+
+  var xEl = document.getElementById('kp10_x');
+  if (xEl) {
+    xEl.addEventListener('input', updateKP10);
+    document.getElementById('kp10_h').addEventListener('input', updateKP10);
+    setTimeout(updateKP10, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-10 == -->
+<button class="guide-btn" data-guide="kp-10" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：長短期記憶網路（LSTM）門控機制：輸入門、遺忘門與輸出門</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="0" data-explanation="Sigmoid 值域在 (0,1)，乘以向量時能起到按比例「放行」或「遮蔽」資訊的作用，非常適合充當門控（Gate）。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">LSTM 中三大門（Input, Forget, Output Gates）使用 Sigmoid 激活函數的主要原因是什麼？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">Sigmoid 輸出在 0 到 1 之間，正好充當開關比例（0 代表完全關閉，1 代表完全開啟）</button><button class="quiz-option-btn" data-index="1">Sigmoid 計算速度比 tanh 快</button><button class="quiz-option-btn" data-index="2">Sigmoid 導數永遠大於 1</button><button class="quiz-option-btn" data-index="3">為了讓輸出變成負數</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp11" class="card" data-kp="11">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">4.1.4–4.1.7</span>
+              <div class="card-title">LSTM 細胞狀態更新、隱藏狀態與輸出計算</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>LSTM 細胞狀態傳送帶、隱藏狀態與最終輸出</h4>
+
+<h4>1. 新候選記憶（Block Input $\widetilde{\boldsymbol{c}}_t$）</h4>
+$$\widetilde{\boldsymbol{c}}_t = \tanh\left( \boldsymbol{W}_c \boldsymbol{h}_{t-1} + \boldsymbol{U}_c \boldsymbol{x}_t + \boldsymbol{b}_c \right)$$
+
+<h4>2. 最終細胞狀態更新（Conveyor Belt $\boldsymbol{c}_t$）——核心方程式</h4>
+$$\boldsymbol{c}_t = \left(\boldsymbol{f}_t \odot \boldsymbol{c}_{t-1}\right) + \left(\boldsymbol{i}_t \odot \widetilde{\boldsymbol{c}}_t\right)$$
+<p><b>為何這能解決梯度消失？</b><br>
+注意第一項 $\boldsymbol{f}_t \odot \boldsymbol{c}_{t-1}$！當遺忘門 $\boldsymbol{f}_t = 1$ 時，細胞狀態 $\boldsymbol{c}_t = \boldsymbol{c}_{t-1} + \dots$。在反向傳播時，梯度在 $\boldsymbol{c}$ 傳送帶上的傳播導數為 1（無衰減地加法傳遞），形成了<b>常數誤差流（Constant Error Carousel, CEC）</b>！</p>
+
+<h4>3. 隱藏狀態（Block Output $\boldsymbol{h}_t$）與輸出 $\boldsymbol{y}_t$</h4>
+$$\boldsymbol{h}_t = \boldsymbol{o}_t \odot \tanh(\boldsymbol{c}_t)$$
+$$\boldsymbol{y}_t = \boldsymbol{V} \boldsymbol{h}_t + \boldsymbol{b}_y$$
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「細胞狀態傳送帶，加法更新梯度暢；遺忘乘以舊記憶，輸入乘以新候選，輸出再由門控定。」</b></p>
+
+            <!-- == Orig Fig kp-11 == -->
+<figure class="orig-fig">
+  <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-238_961_1238_1084_255.jpg" alt="Fig 5: The conveyor belt in the LSTM cell.">
+  <figcaption>【教材原圖】Fig 5: The conveyor belt in the LSTM cell.</figcaption>
+</figure>
+<!-- END Orig Fig -->
+<!-- == Phase B 圖解 kp-11 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp11.png" alt="LSTM 細胞狀態更新、隱藏狀態與輸出計算 示意圖解">
+  <figcaption>圖 kp-11：LSTM 細胞狀態更新、隱藏狀態與輸出計算 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-11" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: The conveyor belt mechanism of an LSTM cell state $c_t = (f_t \odot c_{t-1}) + (i_t \odot \widetilde{c}_t)$ and output gate projection $h_t = o_t \odot \tanh(c_t)$.
+WHY: Reveal how Constant Error Carousel (CEC) allows linear additive cell state updates without multiplicative gradient decay.
+MUST show: (1) Main top conveyor belt line $c_{t-1} \to c_t$, (2) Multiplicative forget gate $\odot f_t$, (3) Additive input gate $+ (i_t \odot \widetilde{c}_t)$, (4) Output state branch $h_t$.
+AVOID: Confusing cell state $c_t$ with hidden state $h_t$.
+STYLE: Detailed architectural flow diagram, standard LSTM schematic coloring.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-11 == -->
+
+<div class="demo" data-demo-id="kp-11">
+  <div class="demo-title">🎮 互動展示 kp-11：LSTM 細胞狀態傳送帶 $c_t$ 與隱藏狀態 $h_t$ 演化</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>模擬 $c_t = f_t \odot c_{t-1} + i_t \odot \widetilde{c}_t$ 與 $h_t = o_t \odot \tanh(c_t)$ 在 5 個時間步內的演化。</p>
+    <p><b>怎麼操作：</b>調整遺忘門放行率 $f_t$ 與輸入門放行率 $i_t$。</p>
+    <p><b>觀察什麼：</b>高遺忘門 $f_t \approx 1$ 時細胞狀態 $c_t$ 能無衰減長久保持（CEC 常數誤差流）。</p>
+    <p><b>理論基準：</b>若 $f_t=1, i_t=0$，則 $c_t = c_{t-1}$（狀態絕對保留）。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>遺忘門 f_t (0.0 ~ 1.0): <span id="kp11_f_val">0.90</span></label>
+      <input type="range" id="kp11_f" min="0.0" max="1.0" step="0.05" value="0.90">
+    </div>
+    <div class="demo-control-group">
+      <label>輸入門 i_t (0.0 ~ 1.0): <span id="kp11_i_val">0.50</span></label>
+      <input type="range" id="kp11_i" min="0.0" max="1.0" step="0.05" value="0.50">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp11_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp11_readout">模擬細胞狀態中...</div>
+</div>
+<script>
+(function(){
+  function updateKP11() {
+    var f_t = parseFloat(document.getElementById('kp11_f').value);
+    var i_t = parseFloat(document.getElementById('kp11_i').value);
+    document.getElementById('kp11_f_val').textContent = f_t.toFixed(2);
+    document.getElementById('kp11_i_val').textContent = i_t.toFixed(2);
+
+    var c = 1.0; // initial cell state
+    var c_hist = [c];
+    var h_hist = [0.5 * Math.tanh(c)];
+
+    var inputs = [0.8, -0.6, 0.9, -0.4];
+    for (var t = 0; t < 4; t++) {
+      var c_tilde = Math.tanh(inputs[t]);
+      c = f_t * c + i_t * c_tilde;
+      var h = 0.8 * Math.tanh(c);
+      c_hist.push(c);
+      h_hist.push(h);
+    }
+
+    var cvs = document.getElementById('kp11_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(40, 100); ctx.lineTo(560, 100); ctx.stroke();
+
+    for (var t = 0; t < 5; t++) {
+      var cx = 60 + t * 110;
+      var cVal = c_hist[t];
+      var hVal = h_hist[t];
+
+      // Cell state c_t (blue)
+      ctx.fillStyle = '#3b82f6';
+      ctx.fillRect(cx - 20, 100 - cVal * 40, 18, cVal * 40);
+
+      // Hidden state h_t (green)
+      ctx.fillStyle = '#10b981';
+      ctx.fillRect(cx + 2, 100 - hVal * 40, 18, hVal * 40);
+
+      ctx.fillStyle = '#1e293b'; ctx.font = '11px sans-serif';
+      ctx.fillText('t=' + t, cx - 10, 120);
+    }
+
+    ctx.fillStyle = '#3b82f6'; ctx.fillRect(40, 150, 12, 12);
+    ctx.fillStyle = '#1e293b'; ctx.fillText('細胞狀態 c_t', 60, 161);
+    ctx.fillStyle = '#10b981'; ctx.fillRect(160, 150, 12, 12);
+    ctx.fillStyle = '#1e293b'; ctx.fillText('隱藏狀態 h_t', 180, 161);
+
+    var readout = '末端 t=4 狀態: 細胞狀態 c_4=' + c_hist[4].toFixed(4) + ' | 隱藏狀態 h_4=' + h_hist[4].toFixed(4);
+    document.getElementById('kp11_readout').textContent = readout;
+  }
+
+  var fEl = document.getElementById('kp11_f');
+  if (fEl) {
+    fEl.addEventListener('input', updateKP11);
+    document.getElementById('kp11_i').addEventListener('input', updateKP11);
+    setTimeout(updateKP11, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-11 == -->
+<button class="guide-btn" data-guide="kp-11" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：LSTM 細胞狀態更新、隱藏狀態與輸出計算</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="0" data-explanation="加法運算在求導時導數為 1，避免了傳統 RNN 矩陣連乘導致的指數級衰減，讓梯度能在細胞狀態傳送帶上長距離順暢傳播。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">LSTM 的細胞狀態更新公式 c_t = f_t ⊙ c_{t-1} + i_t ⊙ c~_t 為何能創造「常數誤差流（CEC）」？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">因為更新公式包含加法結構，當遺忘門 f_t 接近 1 時，反向傳播的梯度能無衰減地沿加法路徑跨越長時間步傳遞</button><button class="quiz-option-btn" data-index="1">因為它使用了矩陣求逆</button><button class="quiz-option-btn" data-index="2">因為它不需要反向傳播</button><button class="quiz-option-btn" data-index="3">因為它把所有權重設為 0</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp12" class="card" data-kp="12">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">4.2</span>
+              <div class="card-title">LSTM 的演進歷史與變體（Original, Vanilla, Peephole）</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>LSTM 的演進歷史與重要變體</h4>
+<p>LSTM 自 1997 年提出以來，經歷了數次重大演進：</p>
+
+<h4>1. 原始 LSTM（Original LSTM, Hochreiter & Schmidhuber 1997）</h4>
+<p>僅包含<b>輸入門</b>與<b>輸出門</b>，<b>沒有遺忘門</b>也沒有窺視孔（Peepholes）。由於缺乏遺忘門，細胞狀態會在長序列中無限累積，導致數值飽和。</p>
+
+<h4>2. Gers 遺忘門與窺視孔（Gers et al. 2000）</h4>
+<p>引入<b>遺忘門 $\boldsymbol{f}_t$</b>（允許主動清空舊狀態）與<b>窺視孔連線（Peepholes）</b>（讓門控能直接觀察細胞狀態 $\boldsymbol{c}_{t-1}$）。</p>
+
+<h4>3. 香草 LSTM（Vanilla LSTM, Graves & Schmidhuber 2005）</h4>
+<p>現代最常用的標準 LSTM 架構。結合了遺忘門、窺視孔與完整的 BPTT 訓練演算法。其門控公式（無窺視孔簡化版）為：</p>
+$$\begin{align*}
+\boldsymbol{i}_t &= \operatorname{sig}(\boldsymbol{W}_i \boldsymbol{h}_{t-1} + \boldsymbol{U}_i \boldsymbol{x}_t + \boldsymbol{b}_i) \\
+\boldsymbol{f}_t &= \operatorname{sig}(\boldsymbol{W}_f \boldsymbol{h}_{t-1} + \boldsymbol{U}_f \boldsymbol{x}_t + \boldsymbol{b}_f) \\
+\boldsymbol{o}_t &= \operatorname{sig}(\boldsymbol{W}_o \boldsymbol{h}_{t-1} + \boldsymbol{U}_o \boldsymbol{x}_t + \boldsymbol{b}_o)
+\end{align*}$$
+
+<h4>4. 全門控循環（Full Gate Recurrence）與投影 LSTM（LSTM with Projection）</h4>
+<p>讓門控之間互相連接，或在隱藏層輸出前加入線性投影層以降低參數量。</p>
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「原始無遺忘易飽和，Gers 加入遺忘門；香草標準最流行，窺視孔連細胞心。」</b></p>
+
+            <!-- == Phase B 圖解 kp-12 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp12.png" alt="LSTM 的演進歷史與變體（Original, Vanilla, Peephole） 示意圖解">
+  <figcaption>圖 kp-12：LSTM 的演進歷史與變體（Original, Vanilla, Peephole） 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-12" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: A chronological evolution timeline of LSTM architectures (Original 1997 $\to$ Gers Forget Gate 2000 $\to$ Vanilla 2005 $\to$ GRU/MGU 2014-2017).
+WHY: Trace the historical progression of recurrent gating mechanisms solving memory accumulation and complexity challenges.
+MUST show: (1) Four milestone blocks along a horizontal timeline, (2) Key architectural additions at each milestone (e.g. $+f_t$, $+$Peepholes, $+BPTT$).
+AVOID: Out of order historical dates.
+STYLE: Clean roadmap timeline, milestone card layout.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-12 == -->
+
+<div class="demo" data-demo-id="kp-12">
+  <div class="demo-title">🎮 互動展示 kp-12：Original vs Vanilla vs Peephole LSTM 變體對比</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>對比 1997 原始 LSTM（無遺忘門，狀態單調累積）、2005 香草 LSTM（含遺忘門）與窺視孔 LSTM 在長序列上的記憶動態。</p>
+    <p><b>怎麼操作：</b>選擇不同 LSTM 變體與序列長度 $N$。</p>
+    <p><b>觀察什麼：</b>原始 LSTM 因缺乏遺忘門 $f_t$，細胞狀態 $c_t$ 易飽和飆升；Vanilla LSTM 具備自我重置能力。</p>
+    <p><b>理論基準：</b>Original LSTM: $c_t = c_{t-1} + i_t 	ilde{c}_t$（單調無衰減累積）。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>選擇 LSTM 變體:</label>
+      <select id="kp12_variant" style="padding:6px; border-radius:6px;">
+        <option value="original">1997 原始 LSTM (無遺忘門)</option>
+        <option value="vanilla" selected>2005 香草 Vanilla LSTM (含遺忘門)</option>
+        <option value="peephole">窺視孔 Peephole LSTM</option>
+      </select>
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp12_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp12_readout">切換變體觀測...</div>
+</div>
+<script>
+(function(){
+  function updateKP12() {
+    var v = document.getElementById('kp12_variant').value;
+
+    var c = 0.5;
+    var c_curve = [c];
+    for (var t = 1; t <= 15; t++) {
+      if (v === 'original') {
+        c = c + 0.4; // monotonic saturation
+      } else if (v === 'vanilla') {
+        c = 0.7 * c + 0.4 * Math.sin(t);
+      } else {
+        c = 0.65 * c + 0.45 * Math.cos(t);
+      }
+      c_curve.push(c);
+    }
+
+    var cvs = document.getElementById('kp12_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(40, 160); ctx.lineTo(560, 160); ctx.stroke();
+
+    ctx.strokeStyle = v === 'original' ? '#ef4444' : '#10b981'; ctx.lineWidth = 2.5; ctx.beginPath();
+    for (var t = 0; t < c_curve.length; t++) {
+      var x = 40 + t * 34;
+      var y = 160 - Math.min(c_curve[t] * 20, 140);
+      if (t === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    var desc = v === 'original' ? '⚠️ 無遺忘門：細胞狀態單調暴增飽和！' : '✅ 具備遺忘門：狀態穩定動態平衡。';
+    document.getElementById('kp12_readout').textContent = desc + ' | 末端 c_15 = ' + c_curve[15].toFixed(3);
+  }
+
+  var vEl = document.getElementById('kp12_variant');
+  if (vEl) {
+    vEl.addEventListener('change', updateKP12);
+    setTimeout(updateKP12, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-12 == -->
+<button class="guide-btn" data-guide="kp-12" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：LSTM 的演進歷史與變體（Original, Vanilla, Peephole）</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="0" data-explanation="原始 LSTM 只有輸入與輸出門，細胞狀態只增不減，在處理連續流式序列時狀態會無限增大而飽和，遺忘門提供了主動重置狀態的能力。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">Gers 等人在 2000 年為原始 LSTM 引入「遺忘門（Forget Gate）」的主要歷史原因是什麼？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">原始 LSTM 缺乏清空記憶的機制，處理長序列時細胞狀態會無限制累積導致飽和與失真</button><button class="quiz-option-btn" data-index="1">為了減少計算量</button><button class="quiz-option-btn" data-index="2">因為原始 LSTM 無法處理圖像</button><button class="quiz-option-btn" data-index="3">為了替換 Softmax</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp13" class="card" data-kp="13">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">4.3.1</span>
+              <div class="card-title">門控循環單元（GRU）：完全門控單元架構</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>門控循環單元（GRU）：完全門控單元架構</h4>
+<p>2014 年 Cho 等人提出了 <b>Gated Recurrent Unit（GRU）</b>。GRU 的哲學是：<b>簡化 LSTM 複雜度，同時保持同等的序列建模能力</b>。</p>
+
+<h4>GRU 完全門控單元的四大算式</h4>
+<ol>
+  <li><b>重置門（Reset Gate $\boldsymbol{r}_t$）</b>：控制前一狀態 $\boldsymbol{h}_{t-1}$ 有多少被用於計算新候選：
+$$\boldsymbol{r}_t = \operatorname{sig}\left( \boldsymbol{W}_r \boldsymbol{h}_{t-1} + \boldsymbol{U}_r \boldsymbol{x}_t + \boldsymbol{b}_r \right)$$</li>
+  <li><b>更新門（Update Gate $\boldsymbol{z}_t$）</b>：同時兼具 LSTM 輸入門與遺忘門的功能：
+$$\boldsymbol{z}_t = \operatorname{sig}\left( \boldsymbol{W}_z \boldsymbol{h}_{t-1} + \boldsymbol{U}_z \boldsymbol{x}_t + \boldsymbol{b}_z \right)$$</li>
+  <li><b>新候選隱藏狀態（Candidate State $\widetilde{\boldsymbol{h}}_t$）</b>：
+$$\widetilde{\boldsymbol{h}}_t = \tanh\left( \boldsymbol{W}_c (\boldsymbol{r}_t \odot \boldsymbol{h}_{t-1}) + \boldsymbol{U}_c \boldsymbol{x}_t + \boldsymbol{b}_c \right)$$</li>
+  <li><b>最終隱藏狀態（Final State $\boldsymbol{h}_t$）</b>：舊狀態與新候選的凸組合（Convex Combination）：
+$$\boldsymbol{h}_t = \left( (\mathbf{1} - \boldsymbol{z}_t) \odot \boldsymbol{h}_{t-1} \right) + \left( \boldsymbol{z}_t \odot \widetilde{\boldsymbol{h}}_t \right)$$</li>
+</ol>
+
+<h4>GRU vs LSTM 關鍵對比</h4>
+<p>GRU 將 LSTM 的細胞狀態 $\boldsymbol{c}_t$ 與隱藏狀態 $\boldsymbol{h}_t$ 合二為一，門控數量從 3 個降為 2 個（矩陣參數減少 25%），計算更快且表現相當！</p>
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「GRU 精簡兩門控，更新重置好配合；無單獨細胞狀態，凸組合轉新舊態。」</b></p>
+
+            <!-- == Orig Fig kp-13 == -->
+<figure class="orig-fig">
+  <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-243_1135_1246_197_251.jpg" alt="Fig 6: The conveyor belt in the GRU cell (the fully gated unit).">
+  <figcaption>【教材原圖】Fig 6: The conveyor belt in the GRU cell (the fully gated unit).</figcaption>
+</figure>
+<!-- END Orig Fig -->
+<!-- == Phase B 圖解 kp-13 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp13.png" alt="門控循環單元（GRU）：完全門控單元架構 示意圖解">
+  <figcaption>圖 kp-13：門控循環單元（GRU）：完全門控單元架構 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-13" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: A structural block diagram of the GRU Fully Gated Unit featuring Reset Gate $r_t$, Update Gate $z_t$, Candidate State $\widetilde{h}_t$, and Final State $h_t = (1-z_t) \odot h_{t-1} + z_t \odot \widetilde{h}_t$.
+WHY: Explain how GRU simplifies LSTM by merging cell and hidden states into a single hidden state $h_t$ with 2 gates.
+MUST show: (1) Reset gate $r_t$ modulating $h_{t-1}$, (2) Update gate $z_t$ performing convex interpolation $(1-z_t) h_{t-1} + z_t \widetilde{h}_t$.
+AVOID: Showing 3 gates or separate cell state $c_t$.
+STYLE: Crisp block diagram, standardized GRU color scheme.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-13 == -->
+
+<div class="demo" data-demo-id="kp-13">
+  <div class="demo-title">🎮 互動展示 kp-13：GRU 重置門 $r_t$ 與更新門 $z_t$ 凸組合計算</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>即時計算 GRU 重置門 $r_t$、更新門 $z_t$ 與最終隱藏狀態 $h_t = (1-z_t) h_{t-1} + z_t \widetilde{h}_t$。</p>
+    <p><b>怎麼操作：</b>調整重置門 $r_t$ 與更新門 $z_t$ 的開關比例。</p>
+    <p><b>觀察什麼：</b>更新門 $z_t$ 在舊狀態 $h_{t-1}$ 與新候選 $\widetilde{h}_t$ 之間進行凸組合分配。</p>
+    <p><b>理論基準：</b>當 $z_t=1$ 時，$h_t = \widetilde{h}_t$（完全更新為新候選）。當 $z_t=0$ 時，$h_t = h_{t-1}$（完全保留舊狀態）。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>重置門 r_t (0.0 ~ 1.0): <span id="kp13_r_val">0.80</span></label>
+      <input type="range" id="kp13_r" min="0.0" max="1.0" step="0.05" value="0.80">
+    </div>
+    <div class="demo-control-group">
+      <label>更新門 z_t (0.0 ~ 1.0): <span id="kp13_z_val">0.60</span></label>
+      <input type="range" id="kp13_z" min="0.0" max="1.0" step="0.05" value="0.60">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp13_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp13_readout">計算中...</div>
+</div>
+<script>
+(function(){
+  function updateKP13() {
+    var r_t = parseFloat(document.getElementById('kp13_r').value);
+    var z_t = parseFloat(document.getElementById('kp13_z').value);
+    document.getElementById('kp13_r_val').textContent = r_t.toFixed(2);
+    document.getElementById('kp13_z_val').textContent = z_t.toFixed(2);
+
+    var h_prev = 0.8;
+    var x = 0.5;
+    var h_tilde = Math.tanh(0.9 * (r_t * h_prev) + 1.1 * x);
+    var h_t = (1.0 - z_t) * h_prev + z_t * h_tilde;
+
+    var cvs = document.getElementById('kp13_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    // Convex combination bar
+    var wOld = (1.0 - z_t) * 400;
+    var wNew = z_t * 400;
+
+    ctx.fillStyle = '#64748b'; ctx.fillRect(100, 60, wOld, 40);
+    ctx.fillStyle = '#10b981'; ctx.fillRect(100 + wOld, 60, wNew, 40);
+    ctx.strokeStyle = '#1e293b'; ctx.strokeRect(100, 60, 400, 40);
+
+    ctx.fillStyle = '#1e293b'; ctx.font = '12px sans-serif';
+    ctx.fillText('舊狀態保留 (1-z_t)=' + ((1-z_t)*100).toFixed(0) + '%', 100, 45);
+    ctx.fillText('新候選融合 z_t=' + (z_t*100).toFixed(0) + '%', 360, 45);
+
+    var readout = 'GRU 計算: 候選 h_tilde=' + h_tilde.toFixed(4) + ' | 最終狀態 h_t=' + h_t.toFixed(4);
+    document.getElementById('kp13_readout').textContent = readout;
+  }
+
+  var rEl = document.getElementById('kp13_r');
+  if (rEl) {
+    rEl.addEventListener('input', updateKP13);
+    document.getElementById('kp13_z').addEventListener('input', updateKP13);
+    setTimeout(updateKP13, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-13 == -->
+<button class="guide-btn" data-guide="kp-13" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：門控循環單元（GRU）：完全門控單元架構</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="1" data-explanation="GRU 移除了單獨的細胞狀態 c_t，僅維護 hidden state h_t，並用更新門 z_t 統一調控舊狀態保留與新狀態寫入的比例。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">相較於 LSTM，GRU 在結構上的主要精簡特徵是什麼？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">完全不需要激活函數</button><button class="quiz-option-btn" data-index="1">將細胞狀態 c_t 與隱藏狀態 h_t 合併，並將門控減少為重置門（r_t）與更新門（z_t）兩個</button><button class="quiz-option-btn" data-index="2">取消了所有偏置項</button><button class="quiz-option-btn" data-index="3">只能處理單步序列</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp14" class="card" data-kp="14">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">4.3.2</span>
+              <div class="card-title">極簡門控單元（Minimal Gated Unit, MGU）</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>極簡門控單元（Minimal Gated Unit, MGU）</h4>
+<p>2017 年 Heck & Salem 提出了進一步精簡的 <b>Minimal Gated Unit（MGU）</b>，探索門控機制的極限。</p>
+
+<h4>MGU 算式：將重置門與更新門合併為單一門</h4>
+<p>MGU 僅保留一個<b>遺忘門 $\boldsymbol{f}_t$</b>，同時控制舊狀態忘卻與新資訊融合：</p>
+$$\begin{align*}
+\boldsymbol{f}_t &= \operatorname{sig}\left( \boldsymbol{W}_f \boldsymbol{h}_{t-1} + \boldsymbol{U}_f \boldsymbol{x}_t + \boldsymbol{b}_f \right) \\
+\widetilde{\boldsymbol{h}}_t &= \tanh\left( \boldsymbol{W}_c (\boldsymbol{f}_t \odot \boldsymbol{h}_{t-1}) + \boldsymbol{U}_c \boldsymbol{x}_t + \boldsymbol{b}_c \right) \\
+\boldsymbol{h}_t &= \left( (\mathbf{1} - \boldsymbol{f}_t) \odot \boldsymbol{h}_{t-1} \right) + \left( \boldsymbol{f}_t \odot \widetilde{\boldsymbol{h}}_t \right)
+\end{align*}$$
+
+<h4>三種門控網絡的參數複雜度對比</h4>
+<table border="1" style="width:100%; text-align:center; border-collapse:collapse; margin:12px 0;">
+  <thead>
+    <tr style="background:#f3f4f6;">
+      <th>架構</th>
+      <th>門控數量</th>
+      <th>狀態表示</th>
+      <th>矩陣參數個數（隱藏維度 $p$, 輸入維度 $d$）</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>LSTM</b></td>
+      <td>3 個門 + 1 個候選</td>
+      <td>$c_t$ 與 $h_t$ 雙狀態</td>
+      <td>$4 \times (p^2 + pd + p)$</td>
+    </tr>
+    <tr>
+      <td><b>GRU</b></td>
+      <td>2 個門 + 1 個候選</td>
+      <td>僅 $h_t$ 單狀態</td>
+      <td>$3 \times (p^2 + pd + p)$</td>
+    </tr>
+    <tr>
+      <td><b>MGU</b></td>
+      <td>1 個門 + 1 個候選</td>
+      <td>僅 $h_t$ 單狀態</td>
+      <td>$2 \times (p^2 + pd + p)$</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「MGU 極簡極致，單一遺忘門控全；參數減半輕量化，邊緣計算好幫手。」</b></p>
+
+            <!-- == Phase B 圖解 kp-14 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp14.png" alt="極簡門控單元（Minimal Gated Unit, MGU） 示意圖解">
+  <figcaption>圖 kp-14：極簡門控單元（Minimal Gated Unit, MGU） 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-14" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: A horizontal bar chart comparing parameter counts and gate numbers between LSTM (3 gates, 2 states), GRU (2 gates, 1 state), and Minimal Gated Unit MGU (1 gate, 1 state).
+WHY: Highlight the progressive reduction in computational complexity and parameter overhead ($4 \times$ vs $3 \times$ vs $2 \times (p^2 + pd + p)$).
+MUST show: (1) Bar chart of parameter counts for $p=d=128$, (2) Exact parameter numbers, (3) Gate count labels.
+AVOID: Missing parameter formulas.
+STYLE: Modern horizontal bar chart, contrasting color palette.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-14 == -->
+
+<div class="demo" data-demo-id="kp-14">
+  <div class="demo-title">🎮 互動展示 kp-14：MGU vs GRU vs LSTM 參數量與記憶體計算器</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>計算給定隱藏層維度 $p$ 與輸入維度 $d$ 下，三種網路的精確參數量。</p>
+    <p><b>怎麼操作：</b>調整隱藏層維度 $p$ 與輸入維度 $d$。</p>
+    <p><b>觀察什麼：</b>MGU 只有 1 個門控，矩陣參數量比 GRU 減少 33%，比 LSTM 減少 50%！</p>
+    <p><b>理論基準：</b>LSTM: $4(p^2 + pd + p)$；GRU: $3(p^2 + pd + p)$；MGU: $2(p^2 + pd + p)$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>隱藏維度 p (16 ~ 512): <span id="kp14_p_val">128</span></label>
+      <input type="range" id="kp14_p" min="16" max="512" step="16" value="128">
+    </div>
+    <div class="demo-control-group">
+      <label>輸入維度 d (16 ~ 512): <span id="kp14_d_val">128</span></label>
+      <input type="range" id="kp14_d" min="16" max="512" step="16" value="128">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp14_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp14_readout">計算參數量中...</div>
+</div>
+<script>
+(function(){
+  function updateKP14() {
+    var p = parseInt(document.getElementById('kp14_p').value);
+    var d = parseInt(document.getElementById('kp14_d').value);
+    document.getElementById('kp14_p_val').textContent = p;
+    document.getElementById('kp14_d_val').textContent = d;
+
+    var unitParams = p*p + p*d + p;
+    var lstmP = 4 * unitParams;
+    var gruP = 3 * unitParams;
+    var mguP = 2 * unitParams;
+
+    var cvs = document.getElementById('kp14_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    var maxP = lstmP;
+    var items = [
+      { name: "LSTM (4組矩陣)", val: lstmP, color: "#3b82f6" },
+      { name: "GRU (3組矩陣)", val: gruP, color: "#10b981" },
+      { name: "MGU (2組矩陣)", val: mguP, color: "#8b5cf6" }
+    ];
+
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var y = 25 + i * 55;
+      var w = (item.val / maxP) * 360;
+      ctx.fillStyle = item.color;
+      ctx.fillRect(160, y, w, 32);
+      ctx.fillStyle = '#1e293b'; ctx.font = '12px sans-serif';
+      ctx.fillText(item.name, 20, y + 20);
+      ctx.fillText(item.val.toLocaleString() + ' 參數', 170 + w, y + 20);
+    }
+
+    var readout = '當前設定 (p=' + p + ', d=' + d + '): MGU 參數量相比 LSTM 省下 ' + (((lstmP - mguP)/lstmP)*100).toFixed(1) + '%';
+    document.getElementById('kp14_readout').textContent = readout;
+  }
+
+  var pEl = document.getElementById('kp14_p');
+  if (pEl) {
+    pEl.addEventListener('input', updateKP14);
+    document.getElementById('kp14_d').addEventListener('input', updateKP14);
+    setTimeout(updateKP14, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-14 == -->
+<button class="guide-btn" data-guide="kp-14" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：極簡門控單元（Minimal Gated Unit, MGU）</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="0" data-explanation="GRU 需要更新門、重置門與候選狀態共 3 組矩陣；MGU 將門控合併為 1 個遺忘門加上候選狀態共 2 組矩陣，參數比例減少 1/3。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">極簡門控單元（MGU）相比於 GRU，參數數量進一步減少了多少比例？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">矩陣參數從 3 組減少到 2 組（減少約 33% 的權重參數）</button><button class="quiz-option-btn" data-index="1">減少了 90%</button><button class="quiz-option-btn" data-index="2">沒有減少</button><button class="quiz-option-btn" data-index="3">增加了 50%</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp15" class="card" data-kp="15">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">5.1–5.2</span>
+              <div class="card-title">雙向處理的合理性與雙向 RNN (Bidirectional RNN)</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>雙向處理的合理性與雙向 RNN (Bidirectional RNN)</h4>
+
+<h4>1. 雙向處理（Bidirectional Processing）的合理性</h4>
+<p>在傳統因果（Causal）模型中，序列只能從左到右單向處理。然而，在許多非流式（Offline）任務中，例如文本語意分析、語音離線辨識或蛋白質結構預測，我們在做出決策前可以獲取整句或整段序列。</p>
+<p>例如句子：「警察正在追捕<b>小偷</b>。」若只看「警察正在追捕」，無法確定後面是「小偷」還是「犯人」；但若結合後文資訊，就能顯著提高雙向上下文表示能力！</p>
+
+<h4>2. 雙向 RNN（BiRNN, Schuster & Paliwal 1997）算式</h4>
+<p>BiRNN 維護兩組獨立的隱藏狀態：前向狀態 $\overrightarrow{\boldsymbol{h}}_t$ 與後向狀態 $\overleftarrow{\boldsymbol{h}}_t$：</p>
+$$\begin{align*}
+\overrightarrow{\boldsymbol{h}}_t &= \tanh\left( \overrightarrow{\boldsymbol{W}} \overrightarrow{\boldsymbol{h}}_{t-1} + \overrightarrow{\boldsymbol{U}} \boldsymbol{x}_t + \overrightarrow{\boldsymbol{b}}_i \right) \\
+\overleftarrow{\boldsymbol{h}}_t &= \tanh\left( \overleftarrow{\boldsymbol{W}} \overleftarrow{\boldsymbol{h}}_{t+1} + \overleftarrow{\boldsymbol{U}} \boldsymbol{x}_t + \overleftarrow{\boldsymbol{b}}_i \right)
+\end{align*}$$
+<p>最終輸出融合兩方向的資訊：</p>
+$$\boldsymbol{y}_t = \overrightarrow{\boldsymbol{V}} \overrightarrow{\boldsymbol{h}}_t + \overleftarrow{\boldsymbol{V}} \overleftarrow{\boldsymbol{h}}_t + \boldsymbol{b}_y$$
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「正向看得清過去，反向預知未來的；雙向結合上下文，離線處理全無敵。」</b></p>
+
+            <!-- == Orig Fig kp-15 == -->
+<figure class="orig-fig">
+  <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-246_586_671_206_909.jpg" alt="Fig 7: The bidirectional RNN.">
+  <figcaption>【教材原圖】Fig 7: The bidirectional RNN.</figcaption>
+</figure>
+<!-- END Orig Fig -->
+<!-- == Phase B 圖解 kp-15 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp15.png" alt="雙向處理的合理性與雙向 RNN (Bidirectional RNN) 示意圖解">
+  <figcaption>圖 kp-15：雙向處理的合理性與雙向 RNN (Bidirectional RNN) 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-15" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: Architecture schematic of a Bidirectional RNN (BiRNN) with forward states $\overrightarrow{h}_t$, backward states $\overleftarrow{h}_t$, and output concatenation $y_t$.
+WHY: Demonstrate how offline sequence processing leverages both past context ($t=1 \to T$) and future context ($t=T \to 1$).
+MUST show: (1) Forward state chain left-to-right, (2) Backward state chain right-to-left, (3) Combined output layer $y_t = \overrightarrow{V}\overrightarrow{h}_t + \overleftarrow{V}\overleftarrow{h}_t + b_y$.
+AVOID: Showing backward state arrows pointing left-to-right.
+STYLE: Dual-stream network schematic, distinct blue and orange directional paths.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-15 == -->
+
+<div class="demo" data-demo-id="kp-15">
+  <div class="demo-title">🎮 互動展示 kp-15：雙向 RNN (BiRNN) 前向與後向狀態雙流融合</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>展示雙向 RNN 同時進行前向傳播 $\overrightarrow{h}_t$ 與後向傳播 $\overleftarrow{h}_t$，並合成為最終輸出 $y_t$。</p>
+    <p><b>怎麼操作：</b>選擇欲檢視的時間位置 $t$ (1 到 4)。</p>
+    <p><b>觀察什麼：</b>$y_t$ 同時融合了來自左側的過去歷史資訊與來自右側的未來上下文資訊。</p>
+    <p><b>理論基準：</b>$y_t = \overrightarrow{V} \overrightarrow{h}_t + \overleftarrow{V} \overleftarrow{h}_t + b_y$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>檢視時間位置 t:</label>
+      <select id="kp15_t_sel" style="padding:6px; border-radius:6px;">
+        <option value="1">t = 1 (開頭: 包含全序列未來資訊)</option>
+        <option value="2" selected>t = 2 (前半部: 雙向融合)</option>
+        <option value="3">t = 3 (後半部: 雙向融合)</option>
+        <option value="4">t = 4 (結尾: 包含全序列過去資訊)</option>
+      </select>
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp15_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp15_readout">選擇位置檢視...</div>
+</div>
+<script>
+(function(){
+  function updateKP15() {
+    var t = parseInt(document.getElementById('kp15_t_sel').value);
+
+    // Forward states (accumulates from left)
+    var f_states = [0.25, 0.58, 0.79, 0.91];
+    // Backward states (accumulates from right)
+    var b_states = [0.88, 0.72, 0.49, 0.21];
+
+    var fVal = f_states[t - 1];
+    var bVal = b_states[t - 1];
+    var yVal = 1.0 * fVal + 1.0 * bVal;
+
+    var cvs = document.getElementById('kp15_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(40, 160); ctx.lineTo(560, 160); ctx.stroke();
+
+    for (var i = 1; i <= 4; i++) {
+      var cx = i * 130 - 30;
+      var isTarget = (i === t);
+
+      // Forward bar (blue)
+      ctx.fillStyle = isTarget ? '#2563eb' : '#93c5fd';
+      ctx.fillRect(cx - 20, 160 - f_states[i-1] * 70, 18, f_states[i-1] * 70);
+
+      // Backward bar (yellow)
+      ctx.fillStyle = isTarget ? '#d97706' : '#fde047';
+      ctx.fillRect(cx + 2, 160 - b_states[i-1] * 70, 18, b_states[i-1] * 70);
+
+      ctx.fillStyle = '#1e293b'; ctx.font = '11px sans-serif';
+      ctx.fillText('t=' + i, cx - 8, 178);
+    }
+
+    var readout = '位置 t=' + t + ' 時: 前向狀態 h_fw=' + fVal.toFixed(2) + ' | 後向狀態 h_bw=' + bVal.toFixed(2) + ' | 融合輸出 y_' + t + '=' + yVal.toFixed(3);
+    document.getElementById('kp15_readout').textContent = readout;
+  }
+
+  var sEl = document.getElementById('kp15_t_sel');
+  if (sEl) {
+    sEl.addEventListener('change', updateKP15);
+    setTimeout(updateKP15, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-15 == -->
+<button class="guide-btn" data-guide="kp-15" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：雙向處理的合理性與雙向 RNN (Bidirectional RNN)</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="0" data-explanation="BiRNN 分別由前向與後向兩個獨立 RNN 處理序列，當前位置 t 的輸出結合了從 t=1 傳來的過去資訊與從 t=T 傳來的未來資訊。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">雙向 RNN（BiRNN）之所以能在離線序列任務中表現優異，關鍵原因是什麼？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">它能同時利用當前時間步 t 之前（過去）與之後（未來）的雙向上下文資訊</button><button class="quiz-option-btn" data-index="1">它的訓練速度快 10 倍</button><button class="quiz-option-btn" data-index="2">它不需要使用激活函數</button><button class="quiz-option-btn" data-index="3">它消除了所有矩陣乘法</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+
+        <section id="kp16" class="card" data-kp="16">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-badge">5.3–5.4</span>
+              <div class="card-title">雙向 LSTM (BiLSTM) 與 ELMo 上下文詞嵌入</div>
+            </div>
+            <div class="card-toggle-icon">▼</div>
+          </div>
+          <div class="card-body">
+            
+            
+<h4>雙向 LSTM (BiLSTM) 與 ELMo 上下文詞嵌入</h4>
+
+<h4>1. 雙向 LSTM（BiLSTM, Graves & Schmidhuber 2005）</h4>
+<p>將 BiRNN 中的單純 RNN 單元升級為 LSTM 單元，既獲得了長距離記憶能力，又獲得了雙向上下文獲取能力。在 Transformer 出現之前，BiLSTM 是自然語言處理與語音辨識的 SOTA 架構。</p>
+
+<h4>2. ELMo（Embeddings from Language Models, Peters et al. 2018）</h4>
+<p>ELMo 是深層上下文詞嵌入的裡程碑工作，採用 $L$ 層深層堆疊的 BiLSTM。在時間步 $t$ 與第 $l$ 層，拼接前向與後向狀態：</p>
+$$\boldsymbol{h}_t^{(l)} = \left[ \overrightarrow{\boldsymbol{h}}_t^{(l)\top}, \overleftarrow{\boldsymbol{h}}_t^{(l)\top} \right]^\top$$
+<p>ELMo 詞嵌入向量是所有層隱藏狀態的下游任務加權線性組合：</p>
+$$\boldsymbol{y}_t^{\mathrm{ELMo}} = \gamma \sum_{l=1}^{L} s_l \boldsymbol{h}_t^{(l)}$$
+<p>其中 $\gamma$ 為全域縮放因子，$s_l$ 為第 $l$ 層的任務可學習權重。不同層 capture 不同層級的語言學特徵（低層語法、高層語意）！</p>
+
+<h4>怎麼記與怎麼用？</h4>
+<p>記憶口訣：<b>「BiLSTM 結合雙向與長記憶，ELMo 多層拼接疊上下文；任務加權求線性合，預訓練詞嵌入開新篇。」</b></p>
+
+            <!-- == Orig Fig kp-16 == -->
+<figure class="orig-fig">
+  <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-246_578_658_1516_917.jpg" alt="Fig 8: The bidirectional LSTM.">
+  <figcaption>【教材原圖】Fig 8: The bidirectional LSTM.</figcaption>
+</figure>
+<figure class="orig-fig">
+  <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-248_940_847_208_732.jpg" alt="Fig 9: The ELMo network.">
+  <figcaption>【教材原圖】Fig 9: The ELMo network.</figcaption>
+</figure>
+<!-- END Orig Fig -->
+<!-- == Phase B 圖解 kp-16 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp16.png" alt="雙向 LSTM (BiLSTM) 與 ELMo 上下文詞嵌入 示意圖解">
+  <figcaption>圖 kp-16：雙向 LSTM (BiLSTM) 與 ELMo 上下文詞嵌入 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-16" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: An architectural diagram of ELMo (Embeddings from Language Models) multi-layer stacked BiLSTM and task-specific scalar combination $y_t^{\mathrm{ELMo}} = \gamma \sum_{l=1}^L s_l h_t^{(l)}$.
+WHY: Show how deep contextual representations combine low-level syntax and high-level semantics from multiple BiLSTM layers.
+MUST show: (1) Layer 1 and Layer 2 BiLSTM blocks, (2) Concatenated forward and backward states $h_t^{(l)}$, (3) Weighted sum with task weights $s_l$ and scale $\gamma$.
+AVOID: Omitting the layer weighting equation.
+STYLE: Stacked neural network architecture diagram, clean layer representation.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+            <!-- == Phase C Demo kp-16 == -->
+
+<div class="demo" data-demo-id="kp-16">
+  <div class="demo-title">🎮 互動展示 kp-16：ELMo 多層 BiLSTM 任務自適應加權計算器</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>計算 ELMo 詞嵌入向量 $y_t^{\text{ELMo}} = \gamma (s_1 h_t^{(1)} + s_2 h_t^{(2)})$，展示不同層級表徵在特定任務中的加權融合。</p>
+    <p><b>怎麼操作：</b>調整第 1 層權重 $s_1$（語法特徵）與第 2 層權重 $s_2$（語意特徵）及全域縮放 $\gamma$。</p>
+    <p><b>觀察什麼：</b>下游任務（如詞性標註 vs 問答系統）透過學習不同的 $s_l$ 權重，靈活提取相應層級的語言學特徵。</p>
+    <p><b>理論基準：</b>$\boldsymbol{y}_t^{\mathrm{ELMo}} = \gamma \sum_{l=1}^L s_l \boldsymbol{h}_t^{(l)}$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>第 1 層權重 s1 (語法): <span id="kp16_s1_val">0.60</span></label>
+      <input type="range" id="kp16_s1" min="0.0" max="1.0" step="0.05" value="0.60">
+    </div>
+    <div class="demo-control-group">
+      <label>第 2 層權重 s2 (語意): <span id="kp16_s2_val">0.40</span></label>
+      <input type="range" id="kp16_s2" min="0.0" max="1.0" step="0.05" value="0.40">
+    </div>
+    <div class="demo-control-group">
+      <label>全域縮放 gamma: <span id="kp16_g_val">1.0</span></label>
+      <input type="range" id="kp16_g" min="0.5" max="2.0" step="0.1" value="1.0">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp16_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp16_readout">計算 ELMo 向量中...</div>
+</div>
+<script>
+(function(){
+  function updateKP16() {
+    var s1 = parseFloat(document.getElementById('kp16_s1').value);
+    var s2 = parseFloat(document.getElementById('kp16_s2').value);
+    var gamma = parseFloat(document.getElementById('kp16_g').value);
+    document.getElementById('kp16_s1_val').textContent = s1.toFixed(2);
+    document.getElementById('kp16_s2_val').textContent = s2.toFixed(2);
+    document.getElementById('kp16_g_val').textContent = gamma.toFixed(1);
+
+    var h1 = 0.8; // Layer 1 representation magnitude
+    var h2 = 1.2; // Layer 2 representation magnitude
+    var elmo_vec = gamma * (s1 * h1 + s2 * h2);
+
+    var cvs = document.getElementById('kp16_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    // Draw combined vector magnitude
+    ctx.fillStyle = '#e2e8f0'; ctx.fillRect(150, 60, 360, 35);
+    var w1 = (gamma * s1 * h1 / 3.0) * 360;
+    var w2 = (gamma * s2 * h2 / 3.0) * 360;
+
+    ctx.fillStyle = '#3b82f6'; ctx.fillRect(150, 60, w1, 35);
+    ctx.fillStyle = '#8b5cf6'; ctx.fillRect(150 + w1, 60, w2, 35);
+    ctx.strokeStyle = '#1e293b'; ctx.strokeRect(150, 60, 360, 35);
+
+    ctx.fillStyle = '#1e293b'; ctx.font = '12px sans-serif';
+    ctx.fillText('Layer 1 貢獻', 150, 45);
+    ctx.fillText('Layer 2 貢獻', 350, 45);
+
+    var readout = 'ELMo 嵌入向量長度 = ' + elmo_vec.toFixed(4) + ' | 語法層占比 = ' + ((s1*h1/(s1*h1+s2*h2))*100).toFixed(1) + '%';
+    document.getElementById('kp16_readout').textContent = readout;
+  }
+
+  var s1El = document.getElementById('kp16_s1');
+  if (s1El) {
+    s1El.addEventListener('input', updateKP16);
+    document.getElementById('kp16_s2').addEventListener('input', updateKP16);
+    document.getElementById('kp16_g').addEventListener('input', updateKP16);
+    setTimeout(updateKP16, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-16 == -->
+<button class="guide-btn" data-guide="kp-16" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：雙向 LSTM (BiLSTM) 與 ELMo 上下文詞嵌入</button>
+<!-- END Phase D Guide Button -->
+
+            
+            <div class="quiz-container" data-answer="1" data-explanation="ELMo 透過公式 y_t = gamma * sum(s_l * h_t^(l)) 將不同層級的 BiLSTM 表徵按任務自適應加權融合，創立了動態上下文嵌入的先河。">
+              <div class="quiz-title">💡 自我檢測</div>
+              <div class="quiz-question">ELMo 模型如何利用多層 BiLSTM 的隱藏狀態產生特定單詞的上下文詞嵌入向量？</div>
+              <div class="quiz-options">
+                <button class="quiz-option-btn" data-index="0">只取最頂層的隱藏狀態</button><button class="quiz-option-btn" data-index="1">將所有層前向與後向隱藏狀態拼接後，經由下游任務可學習的純量權重 s_l 進行線性組合與縮放 gamma</button><button class="quiz-option-btn" data-index="2">隨機選擇一層</button><button class="quiz-option-btn" data-index="3">對所有層取最大值 (Max pooling)</button>
+              </div>
+              <div class="quiz-feedback"></div>
+            </div>
+            
+          </div>
+        </section>
+        
+    </main>
+  </div>
+
+  <!-- Shared Guide Modal (Phase D) -->
+  <!-- == Phase D Guide Modal Placeholder == -->
+<!-- END Phase D Guide Modal Placeholder -->
+
+  <script>
+    // Progress & TOC Sync
+    document.addEventListener("DOMContentLoaded", function() {
+      const cards = document.querySelectorAll("section.card");
+      const totalCards = cards.length;
+      const progressBar = document.getElementById("progressBar");
+      const progressText = document.getElementById("progressText");
+
+      function updateProgress() {
+        let expanded = 0;
+        cards.forEach(card => {
+          if (!card.classList.contains("collapsed")) expanded++;
+        });
+        const pct = Math.round((expanded / totalCards) * 100);
+        if (progressBar) progressBar.style.width = pct + "%";
+        if (progressText) progressText.textContent = expanded + " / " + totalCards;
+      }
+
+      // Card Header Collapse Toggle
+      document.querySelectorAll(".card-header").forEach(header => {
+        header.addEventListener("click", function() {
+          const card = this.closest(".card");
+          card.classList.toggle("collapsed");
+          updateProgress();
+        });
+      });
+
+      // Quiz Action
+      document.querySelectorAll(".quiz-option-btn").forEach(btn => {
+        btn.addEventListener("click", function() {
+          const parent = this.closest(".quiz-container");
+          const targetIndex = parseInt(parent.getAttribute("data-answer"));
+          const selectedIndex = parseInt(this.getAttribute("data-index"));
+          const feedback = parent.querySelector(".quiz-feedback");
+
+          parent.querySelectorAll(".quiz-option-btn").forEach(b => {
+            b.classList.remove("correct", "wrong");
+          });
+
+          if (selectedIndex === targetIndex) {
+            this.classList.add("correct");
+            feedback.className = "quiz-feedback visible correct";
+            feedback.innerHTML = "<b>正確！</b> " + parent.getAttribute("data-explanation");
+          } else {
+            this.classList.add("wrong");
+            feedback.className = "quiz-feedback visible wrong";
+            feedback.innerHTML = "<b>答錯了。</b> 再思考看看！" + parent.getAttribute("data-explanation");
+          }
+        });
+      });
+
+      // Scroll Spy for TOC
+      window.addEventListener("scroll", function() {
+        let current = "";
+        cards.forEach(card => {
+          const top = card.offsetTop - 100;
+          if (window.scrollY >= top) {
+            current = card.getAttribute("id");
+          }
+        });
+        document.querySelectorAll(".toc a").forEach(a => {
+          a.classList.remove("active");
+          if (a.getAttribute("href") === "#" + current) {
+            a.classList.add("active");
+          }
+        });
+      });
+
+      // KaTeX Render
+      if (window.renderMathInElement) {
+        window.renderMathInElement(document.body, {
+          delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "$", right: "$", display: false}
+          ],
+          ignoredClasses: ["katex"]
+        });
+      }
+
+      updateProgress();
+    });
+  </script>
+<!-- == Phase D Guide Hidden Divs == -->
+<!-- END Phase D Guide Hidden Divs -->
+<!-- == Phase D Guide Modal Placeholder == -->
+<!-- END Phase D Guide Modal Placeholder -->
+<!-- == Phase D Guide Hidden Divs == -->
+<!-- END Phase D Guide Hidden Divs -->
+<!-- == Phase D Guide Modal Placeholder == -->
+<!-- END Phase D Guide Modal Placeholder -->
+<!-- == Phase D Guide Hidden Divs == -->
+<!-- END Phase D Guide Hidden Divs -->
+<!-- == Phase D Guide Modal Placeholder == -->
+<!-- END Phase D Guide Modal Placeholder -->
+<!-- == Phase D Guide Hidden Divs == -->
+<div id="guide-content-kp-1" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：序列建模與循環神經網絡導論</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「同學們好！歡迎來到序列建模的第一課。你是否想過，為什麼傳統神經網絡看圖很厲害，但讀一篇文章或聽一句話就『失憶』了？今天我們就用最接地氣的語言，把這個動態記憶的秘密講透！」</p>
+</blockquote>
+<h3>1. 單一主線類比：錄音帶 vs 單張相片</h3>
+<p>傳統前饋神經網絡（FNN）就像「單張相片」，看完這張照片，下一張照片跟上一張完全沒有關係；但語言與音樂是「錄音帶」，當前發出的音節必須緊扣著上一秒的聲音！RNN 就是為神經網絡裝上了「磁帶錄音頭」，讓網絡在處理當前單詞時，能隨時回放過去的上下文記憶。</p>
+<h3>2. 鷹架式拆解：為何 FNN 處理序列會卡關？</h3>
+<p>傳統 FNN 假設輸入數據彼此獨立（i.i.d.），且輸入層維度固定：</p>
+<ol>
+<li><strong>維度僵局</strong>：文字句子有長有短（有的 5 個字，有的 500 個字），FNN 無法伸縮輸入層。</li>
+<li><strong>上下文斷裂</strong>：「警察正在追捕小偷」與「小偷正在追捕警察」，單詞完全相同但順序相反、語意天差地遠！FNN 丟失了時間順序。</li>
+</ol>
+<p>RNN 的解決方案：引入<b>隱藏狀態（Hidden State $h_t$）</b>，將歷史訊息壓縮打包，傳給下一時間步。</p>
+<h3>3. 數值演算示範：時間軸上的記憶傳遞</h3>
+<p>假設我們輸入一個 3 個單詞的序列 $[x_1, x_2, x_3]$：</p>
+<ol>
+<li><strong>Step 1 ($t=1$)</strong>：輸入 $x_1$，結合初始記憶 $h_0=0$，算出新記憶 $h_1$ 與輸出 $y_1$。</li>
+<li><strong>Step 2 ($t=2$)</strong>：輸入 $x_2$，結合剛剛留下的記憶 $h_1$，算出新記憶 $h_2$。</li>
+<li><strong>Step 3 ($t=3$)</strong>：輸入 $x_3$，結合含有了 $x_1$ 與 $x_2$ 資訊的 $h_2$，得出最終上下文理解 $y_3$。</li>
+</ol>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：如果我們把序列長度拉長到 1000 個字，RNN 還能完美記得第一個字嗎？
+<strong>答</strong>：先別急著下結論！傳統 RNN 其實是個「短跑選手」，後面我們會看到它在長距離傳送時面臨的「致命失憶症」（梯度消失）。</p>
+<h3>5. 舉一反三出口</h3>
+<p>請思考：在自動駕駛中，連續的影像畫面（Video Frames）屬於序列數據嗎？RNN 適合處理嗎？</p>
+<ol>
+<li>是的！影像序列具備時間連續性（前後影格連貫）。</li>
+<li>結合 CNN 提取單幀特徵，再用 RNN 傳遞時間動態，就是早期影片理解的經典架構。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 RNN 在不同時間步使用不同的神經網絡。</li>
+<li>✅ <strong>正解</strong>：RNN 全程只有一個網絡！只是像小丑甩拋接球一樣，把同一套權重在時間軸上反覆套用（參數共享）。</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>了解了序列建模的需求後，下一步 KP-2 將精確拆解 RNN 內部如何透過權重矩陣 $U, W, V$ 實現參數共享。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「前饋獨立無歷史，序列循環串時間；隱藏狀態存上下文，千字萬語一線牽。」</strong></p>
+</div>
+<div id="guide-content-kp-2" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：動態系統與參數共享機制</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「上一節我們知道了 RNN 有記憶，今天我們就打開它的引擎蓋，看看運算核心裡的動態方程式與那三把關鍵鑰匙 $U, W, V$！」</p>
+</blockquote>
+<h3>1. 單一主線類比：熬煮老高湯</h3>
+<p>把 RNN 的隱藏狀態 $h_t$ 想像成一鍋「老高湯」：</p>
+<ol>
+<li>當前輸入 $x_t$ 是今天加入的新食材。</li>
+<li>隱藏狀態 $h_{t-1}$ 是昨天熬好的高湯底。</li>
+<li>矩陣 $W$ 是熬湯的獨門配方，將昨天的湯底 $h_{t-1}$ 與今天的新食材 $x_t$ 均勻融合，提煉出今天濃郁的新高湯 $h_t$！</li>
+</ol>
+<h3>2. 鷹架式拆解：RNN 三大核心算式</h3>
+<p>我們一步步拆解標準 RNN 前向傳播公式：</p>
+<ol>
+<li><strong>淨輸入組合</strong>：
+$$\boldsymbol{i}_t = \boldsymbol{W} \boldsymbol{h}_{t-1} + \boldsymbol{U} \boldsymbol{x}_t + \boldsymbol{b}_i$$</li>
+<li>$\boldsymbol{U}$：輸入權重（把新食材 $x_t$ 轉化為隱藏空間維度）。</li>
+<li>$\boldsymbol{W}$：狀態轉移權重（把舊記憶 $h_{t-1}$ 混合進來）。</li>
+<li><strong>非線性激活</strong>：
+$$\boldsymbol{h}_t = \tanh(\boldsymbol{i}_t)$$</li>
+<li>將數值壓縮在 $(-1, 1)$ 之間，防止高湯數值無限暴漲。</li>
+<li><strong>輸出映射</strong>：
+$$\boldsymbol{y}_t = \boldsymbol{V} \boldsymbol{h}_t + \boldsymbol{b}_y$$</li>
+<li>$\boldsymbol{V}$：從當前高湯 $h_t$ 中舀出一碗呈現給顧客的成品 $y_t$。</li>
+</ol>
+<h3>3. 數值演算示範：手算單步狀態</h3>
+<p>假設維度 $p=1, d=1$（純量範例）：
+設 $W=0.8, U=1.0, b_i=0.0$。初始狀態 $h_0 = 0$。</p>
+<ol>
+<li><strong>Step 1 ($t=1, x_1=1.0$)</strong>：</li>
+<li>$i_1 = 0.8 \times 0 + 1.0 \times 1.0 = 1.0$</li>
+<li>$h_1 = \tanh(1.0) \approx 0.7616$</li>
+<li><strong>Step 2 ($t=2, x_2=-0.5$)</strong>：</li>
+<li>$i_2 = 0.8 \times 0.7616 + 1.0 \times (-0.5) = 0.6093 - 0.5 = 0.1093$</li>
+<li>$h_2 = \tanh(0.1093) \approx 0.1089$</li>
+</ol>
+<p>可以看到，$x_1=1.0$ 的殘餘記憶透過 $0.8 \times 0.7616$ 成功保留到了第二步！</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：如果在第 100 步時，我們還想要矩陣 $W$ 的數值不變嗎？
+<strong>答</strong>：必須不變！這就是「參數共享（Parameter Sharing）」。否則如果每個時間步都換一套 $W_t$，處理長度為 1000 的文章就需要 1000 組矩陣，模型直接爆炸！</p>
+<h3>5. 舉一反三出口</h3>
+<p>試算：若 $W=0$, $U=1$, $h_0=0$，當前的 $h_t$ 會發生什麼事？</p>
+<ol>
+<li>$h_t = \tanh(x_t)$，狀態完全失去了歷史記憶 $h_{t-1}$！</li>
+<li>這說明 $W=0$ 時，RNN 退化為無記憶的傳統網絡。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為矩陣 $U, W, V$ 的維度必須全部相同。</li>
+<li>✅ <strong>正解</strong>：輸入維度 $d$、隱藏維度 $p$、輸出維度 $q$ 可以完全不同！$U$ 是 $(p \times d)$，$W$ 是 $(p \times p)$，$V$ 是 $(q \times p)$。</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>有了前向傳播公式後，下一節 KP-3 將探討如何透過隨時間反向傳播（BPTT）來訓練這三組權重矩陣。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「U 轉輸入 W 轉態，V 拿隱藏變輸出；參數共享跨百步，遞迴高湯代代傳。」</strong></p>
+</div>
+<div id="guide-content-kp-3" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：隨時間反向傳播演算法（BPTT）總覽與損失函數</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「歡迎來到 BPTT 的世界！如果前向傳播是把電影從第 1 秒放映到第 T 秒，那 BPTT 就是倒帶回放、找尋哪一格畫面演錯了並修正演員（權重）的過程。」</p>
+</blockquote>
+<h3>1. 單一主線類比：多關卡遊戲的總分結算</h3>
+<p>把 RNN 處理 $T$ 個時間步想像成玩一場包含 $T$ 個關卡的神作遊戲：</p>
+<ol>
+<li>每過一個關卡 $t$，都會結算一個單關扣分 $\mathcal{L}_t$。</li>
+<li>整場遊戲的總扣分就是所有關卡扣分的總和：
+$$\mathcal{L} = \sum_{t=1}^T \mathcal{L}_t$$</li>
+<li>為了讓總扣分最少，我們必須從最後一關倒回去檢查每一關的動作，並調整玩家操控指南（權重 $W, U, V$）。</li>
+</ol>
+<h3>2. 鷹架式拆解：馬可夫假設與時間軸展開</h3>
+<p>為了讓計算可行，我們引入 $T$-階馬可夫假設：</p>
+<ol>
+<li><strong>展開（Unrolling）</strong>：將時間軸拉平，把原本帶有循環線路的 RNN 展開成一個深度為 $T$ 的前向網絡。</li>
+<li><strong>總損失求和</strong>：
+$$\mathcal{L} = \mathcal{L}_1 + \mathcal{L}_2 + \dots + \mathcal{L}_T$$</li>
+<li><strong>權重共享的梯度累加</strong>：由於同一組權重 $W$ 在 $t=1, 2, \dots, T$ 都參與了運算，根據多元微積分全微分公式，總梯度等於各時間步梯度的加總：
+$$\frac{\partial \mathcal{L}}{\partial \boldsymbol{W}} = \sum_{t=1}^T \frac{\partial \mathcal{L}_t}{\partial \boldsymbol{W}}$$</li>
+</ol>
+<h3>3. 數值演算示範：3 時間步的損失加總</h3>
+<p>假設各步均方誤差（MSE）損失分別為：</p>
+<ul>
+<li>$\mathcal{L}_1 = 0.50$</li>
+<li>$\mathcal{L}_2 = 0.30$</li>
+<li>$\mathcal{L}_3 = 0.10$</li>
+</ul>
+<p>總損失即為：
+$$\mathcal{L} = 0.50 + 0.30 + 0.10 = 0.90$$</p>
+<p>若第 3 步的偏微分 $\frac{\partial \mathcal{L}_3}{\partial W} = 0.2$，第 2 步為 $0.15$，第 1 步為 $0.05$，則：
+$$\frac{\partial \mathcal{L}}{\partial W} = 0.2 + 0.15 + 0.05 = 0.40$$</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：如果一個句子長達 10,000 個字，我們可以直接設定 $T=10000$ 跑一次 BPTT 嗎？
+<strong>答</strong>：理論上可以，但實務上記億體會直接 OOM（Out of Memory），且梯度會傳到歸零！實務上會使用截斷 BPTT（Truncated BPTT），例如設定 $T=35$。</p>
+<h3>5. 舉一反三出口</h3>
+<p>若某些時間步不需要輸出（例如句子分類任務，只在最後一步 $t=T$ 輸出分類結果），損失函數會變成怎樣？</p>
+<ol>
+<li>前面時間步的 $\mathcal{L}_t = 0$ ($t < T$)。</li>
+<li>總損失簡化為 $\mathcal{L} = \mathcal{L}_T$，梯度完全從最後一步 $T$ 開始倒傳播。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 BPTT 是一種全新的微分演算法。</li>
+<li>✅ <strong>正解</strong>：BPTT 就是標準的反向傳播（BP），只是求導對象是在時間軸上展開後的網絡！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>知道了總損失與累加原理後，下一節 KP-4 將精確推導梯度如何沿著狀態 $\boldsymbol{h}_t$ 一步步倒回傳遞。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「時間展開成深度，單步損失湊成總；鏈鎖倒帶求偏導，跨時梯度總相加。」</strong></p>
+</div>
+<div id="guide-content-kp-4" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：BPTT 梯度推導：輸出層與隱藏狀態梯度</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「這是整個 RNN 微積分推導中最精彩的一步！請跟緊教授的思維，看看梯度信號是如何像河流一樣，在每個時間節點匯流與分流的。」</p>
+</blockquote>
+<h3>1. 單一主線類比：訊息倒流的分叉河流</h3>
+<p>把隱藏狀態 $h_t$ 想像成一個水庫：</p>
+<ol>
+<li>在前向傳播時，水庫 $h_t$ 同時開了兩條渠：一條供水給當前輸出 $y_t$，另一條流入下一個水庫 $h_{t+1}$。</li>
+<li>在反向傳播時（水倒流），水庫 $h_t$ 接收到的總水量（梯度 $\delta_t$），必然是來自當前輸出渠 $\frac{\partial \mathcal{L}_t}{\partial y_t} V$ 與未來水庫渠 $\delta_{t+1} \frac{\partial h_{t+1}}{\partial h_t}$ 的<b>兩路匯流總和</b>！</li>
+</ol>
+<h3>2. 鷹架式拆解：鏈鎖律雙路匯流推導</h3>
+<p>定義狀態梯度 $\boldsymbol{\delta}_t := \frac{\partial \mathcal{L}}{\partial \boldsymbol{h}_t}$。</p>
+<ol>
+<li><strong>第一路（當前輸出影響）</strong>：</li>
+<li>改變 $\boldsymbol{h}_t$ 會改變 $\boldsymbol{y}_t = \boldsymbol{V} \boldsymbol{h}_t + \boldsymbol{b}_y$。</li>
+<li>貢獻項 $= \frac{\partial \mathcal{L}}{\partial \boldsymbol{y}_t} \times \boldsymbol{V}$</li>
+<li><strong>第二路（未來的歷史傳承）</strong>：</li>
+<li>改變 $\boldsymbol{h}_t$ 會改變 $\boldsymbol{h}_{t+1} = \tanh(\boldsymbol{W} \boldsymbol{h}_t + \boldsymbol{U} \boldsymbol{x}_{t+1} + \boldsymbol{b}_i)$。</li>
+<li>貢獻項 $= \boldsymbol{\delta}_{t+1} \times \frac{\partial \boldsymbol{h}_{t+1}}{\partial \boldsymbol{h}_t} = \boldsymbol{\delta}_{t+1} \boldsymbol{W} \operatorname{diag}(1 - \boldsymbol{h}_{t+1}^2)$</li>
+<li><strong>兩路相加（核心反向遞迴式）</strong>：
+$$\boldsymbol{\delta}_t = \left( \frac{\partial \mathcal{L}}{\partial \boldsymbol{y}_t} \boldsymbol{V} \right) + \left( \boldsymbol{\delta}_{t+1} \boldsymbol{W} \operatorname{diag}(1 - \boldsymbol{h}_{t+1}^2) \right)$$</li>
+<li><strong>邊界條件 ($t=T$)</strong>：</li>
+<li>最後一步沒有未來！因此 $\boldsymbol{\delta}_T = \frac{\partial \mathcal{L}_T}{\partial \boldsymbol{y}_T} \boldsymbol{V}$。</li>
+</ol>
+<h3>3. 數值演算示範：手算倒傳播梯度</h3>
+<p>設純量參數 $V=1.0, W=0.5$。假設某步驟 $\tanh$ 導數 $(1-h^2) = 0.8$。
+假設輸出梯度 $\frac{\partial \mathcal{L}_t}{\partial y_t} = 1.0$ 對所有 $t$ 成立。</p>
+<ol>
+<li><strong>$t=3$（末端）</strong>：</li>
+<li>$\delta_3 = 1.0 \times 1.0 = 1.0$</li>
+<li><strong>$t=2$</strong>：</li>
+<li>$\delta_2 = 1.0 \times 1.0 + \delta_3 \times (W \times 0.8) = 1.0 + 1.0 \times (0.5 \times 0.8) = 1.0 + 0.4 = 1.4$</li>
+<li><strong>$t=1$</strong>：</li>
+<li>$\delta_1 = 1.0 \times 1.0 + \delta_2 \times (0.4) = 1.0 + 1.4 \times 0.4 = 1.0 + 0.56 = 1.56$</li>
+</ol>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：為什麼 $\tanh$ 的導數 $(1-h^2)$ 會出現在遞迴項裡？
+<strong>答</strong>：因為前向時 $h_{t+1} = \tanh(i_{t+1})$，求導時必須經過 $\tanh$ 的門檻！而 $|1-h^2| \le 1$，這就是造成梯度消失的元凶之一！</p>
+<h3>5. 舉一反三出口</h3>
+<p>如果某時間步 $t$ 沒有輸出（例如中間過程不計算損失 $\mathcal{L}_t$），$\delta_t$ 公式會怎麼簡化？</p>
+<ol>
+<li>第一項 $\frac{\partial \mathcal{L}_t}{\partial y_t} V = 0$。</li>
+<li>$\delta_t$ 完全簡化為純粹由未來傳回的梯度：$\delta_t = \delta_{t+1} W \operatorname{diag}(1-h_{t+1}^2)$。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 $\delta_t$ 是從 $t=1$ 向後計算到 $t=T$。</li>
+<li>✅ <strong>正解</strong>：前向傳播從 $1 \to T$，反向傳播 $\delta_t$ <strong>必須從 $T \to 1$ 倒著算</strong>！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>擁有了各步狀態梯度 $\delta_t$ 後，下一節 KP-5 將利用 $\delta_t$ 來計算權重矩陣 $V, W, U$ 的最終梯度。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「狀態梯度兩路匯，當前輸出加未來；末端無未直接算，反向倒流鏈鎖流。」</strong></p>
+</div>
+<div id="guide-content-kp-5" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：BPTT 權重矩陣梯度：V、W、U 的 Kronecker 積推導</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「當我們拿到每個時間步的狀態梯度 $\delta_t$ 後，如何算出矩陣 $V, W, U$ 的總調整量？這裡會用到高階矩陣微積分的祕密武器——Kronecker 積！」</p>
+</blockquote>
+<h3>1. 單一主線類比：多間分店的年度總帳</h3>
+<p>把矩陣 $W$ 想像成連鎖企業的「統一管理規範」：</p>
+<ol>
+<li>規範 $W$ 在 $t=1$ 分店、$t=2$ 分店……$t=T$ 分店都在執行。</li>
+<li>每間分店營運後，都會產生一份改進建議（單步梯度 $\delta_t \times h_{t-1}^\top$）。</li>
+<li>總公司的最終修改決策，就是把所有分店的建議通通加起來（$\sum_{t=1}^T$）！</li>
+</ol>
+<h3>2. 鷹架式拆解：三大權重矩陣梯度公式</h3>
+<ol>
+<li><strong>隱藏至輸出矩陣 $\boldsymbol{V}$ 的梯度</strong>：
+$$\frac{\partial \mathcal{L}}{\partial \boldsymbol{V}} = \sum_{t=1}^T \left( \frac{\partial \mathcal{L}_t}{\partial \boldsymbol{y}_t} \boldsymbol{h}_t^\top \right)$$</li>
+<li>維度：$(q \times p) = (q \times 1) \times (1 \times p)$。</li>
+<li><strong>狀態轉移矩陣 $\boldsymbol{W}$ 的梯度（含 Kronecker 積 $\otimes$）</strong>：</li>
+<li>根據 Magnus-Neudecker 慣例，向量對矩陣求導時，展開為 $\frac{\partial \boldsymbol{i}_t}{\partial \boldsymbol{W}} = \boldsymbol{h}_{t-1}^\top \otimes \boldsymbol{I}_{p \times p}$。</li>
+<li>反向量化整理後：
+$$\frac{\partial \mathcal{L}}{\partial \boldsymbol{W}} = \sum_{t=1}^T \operatorname{vec}^{-1}_{p \times p} \left( \left(\frac{\partial \boldsymbol{h}_t}{\partial \boldsymbol{W}}\right)^\top \boldsymbol{\delta}_t \right)$$</li>
+<li><strong>輸入矩陣 $\boldsymbol{U}$ 的梯度</strong>：
+$$\frac{\partial \mathcal{L}}{\partial \boldsymbol{U}} = \sum_{t=1}^T \operatorname{vec}^{-1}_{p \times d} \left( \left(\frac{\partial \boldsymbol{h}_t}{\partial \boldsymbol{U}}\right)^\top \boldsymbol{\delta}_t \right)$$</li>
+</ol>
+<h3>3. 數值演算示範：外積累加手算</h3>
+<p>假設隱藏維度 $p=2$，某時間步 $t$ 的狀態梯度 $\boldsymbol{\delta}_t = [0.5, 0.2]^\top$，前一步狀態 $\boldsymbol{h}_{t-1} = [1.0, 0.0]^\top$。
+此時間步對 $W$ 的梯度貢獻為外積（Outer Product）：
+$$\Delta \boldsymbol{W}_t = \boldsymbol{\delta}_t \boldsymbol{h}_{t-1}^\top = \begin{bmatrix} 0.5 \\ 0.2 \end{bmatrix} \begin{bmatrix} 1.0 & 0.0 \end{bmatrix} = \begin{bmatrix} 0.5 & 0.0 \\ 0.2 & 0.0 \end{bmatrix}$$
+將所有時間步的 $\Delta \boldsymbol{W}_t$ 相加，即得 $\frac{\partial \mathcal{L}}{\partial \boldsymbol{W}}$！</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：為什麼不能只拿最後一步 $t=T$ 的梯度來更新 $W$？
+<strong>答</strong>：因為 $W$ 在 $t=1, 2, \dots, T-1$ 都發揮了作用！如果只拿最後一步，模型會「忘記」前面的時間步對 $W$ 的修正需求。</p>
+<h3>5. 舉一反三出口</h3>
+<p>若輸入 $x_t$ 在某時間步 $t$ 全為 0，該步對 $\boldsymbol{U}$ 的梯度貢獻是多少？</p>
+<ol>
+<li>貢獻為 0！因為 $\Delta \boldsymbol{U}_t = \boldsymbol{\delta}_t \boldsymbol{x}_t^\top = 0$。</li>
+<li>這說明只有有輸入訊號的時間步，才會推動輸入權重 $U$ 的更新。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 Kronecker 積會讓梯度矩陣的維度變成 $p^2 \times p^2$。</li>
+<li>✅ <strong>正解</strong>：Kronecker 積是中間向量化過程，最後經過 $\operatorname{vec}^{-1}$ 反向量化，維度嚴格還原為 $W$ 的原始尺寸 $(p \times p)$！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>完成了 $V, W, U$ 矩陣梯度求導後，下一節 KP-6 將完成偏置項求導並執行最終的梯度下降參數更新。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「外積累加成梯度，克氏積展開護維度；各步貢獻總相加，矩陣更新方向明。」</strong></p>
+</div>
+<div id="guide-content-kp-6" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：BPTT 偏置梯度與梯度下降參數更新法則</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「恭喜大家！我們已經完成了前向傳播、損失計算與矩陣梯度推導。現在只差最後一步——偏置項求導與梯度下降實質更新！」</p>
+</blockquote>
+<h3>1. 單一主線類比：微調音響等化器</h3>
+<p>參數更新就像微調高級音響的等化器旋鈕：</p>
+<ol>
+<li>偏置項 $b_i, b_y$ 是基準底噪的偏移量。</li>
+<li>學習率 $\eta$ 是你手指轉動旋鈕的幅度（太大幅度會暴音，太小幅度轉半天沒聲音）。</li>
+<li>減號 $-$ 代表向著消除雜音（最小化 Loss）的方向轉動！</li>
+</ol>
+<h3>2. 鷹架式拆解：偏置梯度與更新算式</h3>
+<ol>
+<li><strong>隱藏層偏置 $\boldsymbol{b}_i$ 梯度</strong>：
+$$\frac{\partial \mathcal{L}}{\partial \boldsymbol{b}_i} = \sum_{t=1}^T \operatorname{diag}(1 - \boldsymbol{h}_t^2) \boldsymbol{\delta}_t$$</li>
+<li><strong>輸出層偏置 $\boldsymbol{b}_y$ 梯度</strong>：
+$$\frac{\partial \mathcal{L}}{\partial \boldsymbol{b}_y} = \sum_{t=1}^T \frac{\partial \mathcal{L}_t}{\partial \boldsymbol{y}_t}$$</li>
+<li><strong>梯度下降（Gradient Descent）全套更新公式</strong>（學習率 $\eta > 0$）：
+$$\begin{align*}
+\boldsymbol{W} &:= \boldsymbol{W} - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{W}} \\
+\boldsymbol{U} &:= \boldsymbol{U} - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{U}} \\
+\boldsymbol{V} &:= \boldsymbol{V} - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{V}} \\
+\boldsymbol{b}_i &:= \boldsymbol{b}_i - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{b}_i} \\
+\boldsymbol{b}_y &:= \boldsymbol{b}_y - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{b}_y}
+\end{align*}$$</li>
+</ol>
+<h3>3. 數值演算示範：單步權重更新手算</h3>
+<p>假設當前權重 $W = 0.80$，計算出的總梯度 $\frac{\partial \mathcal{L}}{\partial W} = 0.50$，設定學習率 $\eta = 0.1$。</p>
+<p>更新過程：
+$$\Delta W = -\eta \times \frac{\partial \mathcal{L}}{\partial W} = -0.1 \times 0.50 = -0.05$$
+$$W_{\text{new}} = 0.80 - 0.05 = 0.75$$</p>
+<p>權重從 $0.80$ 調降為 $0.75$，損失成功下降！</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：如果學習率 $\eta$ 設定得太大（例如 $\eta = 10.0$）會發生什麼？
+<strong>答</strong>：權重會直接飛出去（發散），損失值暴增到 <code>NaN</code> 或 <code>Inf</code>！</p>
+<h3>5. 舉一反三出口</h3>
+<p>在 Adam 或 Momentum 優化器中，更新公式有何不同？</p>
+<ol>
+<li>不再直接用 $\eta \nabla$，而是引入梯度的動量（一階矩）與方差（二階矩）自適應調整步長。</li>
+<li>這能有效防止在陡峭山谷中震盪。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為偏置項 $b_i, b_y$ 在每個時間步都不一樣。</li>
+<li>✅ <strong>正解</strong>：偏置項與權重矩陣一樣，在所有時間步共享同一組向量！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>到此為止，傳統 RNN 的 BPTT 完整閉環已講述完畢。然而在實際應用中，這種傳統結構會面臨致命的「梯度消失與爆炸」，這正是 KP-7 要深入探討的核心病症。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「偏置求導累加和，學習率乘梯度減；BPTT 全閉環，參數煥然一新變。」</strong></p>
+</div>
+<div id="guide-content-kp-7" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：長距離依賴中的梯度消失與爆炸問題</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「歡迎來到 RNN 發展史上最著名的『百米障礙賽』！為什麼傳統 RNN 傳到第 50 個字就開始胡言亂語？今天我們就用數學切片，診斷這個致命病症。」</p>
+</blockquote>
+<h3>1. 單一主線類比：傳話遊戲與影印機效應</h3>
+<p>想像 100 個人排成一排傳話：</p>
+<ol>
+<li><strong>梯度消失</strong>：如果每個人傳話時都把音量降低 20%（乘以 0.8），傳到第 20 個人時，聲音已經小到聽不見了（$0.8^{20} \approx 0.0038$）。第一個人的話徹底失傳！</li>
+<li><strong>梯度爆炸</strong>：如果每個人傳話時都把音量放大 20%（乘以 1.2），傳到第 20 個人時，喇叭直接震爆（$1.2^{20} \approx 38.33$）！</li>
+</ol>
+<h3>2. 鷹架式拆解：連乘鏈與雅可比矩陣</h3>
+<p>考慮第 $T$ 步損失對第 $t$ 步狀態的梯度的連乘鏈：
+$$\frac{\partial \boldsymbol{h}_T}{\partial \boldsymbol{h}_t} = \prod_{k=t+1}^T \frac{\partial \boldsymbol{h}_k}{\partial \boldsymbol{h}_{k-1}} = \prod_{k=t+1}^T \boldsymbol{W}^\top \operatorname{diag}\left(1 - \boldsymbol{h}_k^2\right)$$</p>
+<ol>
+<li><strong>連乘項數</strong>：時間跨度 $(T-t)$ 越大，連乘的矩陣個數越多。</li>
+<li><strong>範數約束</strong>：</li>
+<li>活性函數 $\tanh$ 的導數 $1-h^2 \le 1$。</li>
+<li>若 $\boldsymbol{W}$ 的最大特徵值 $\lambda < 1$，連乘結果呈<b>指數級衰減趨近於 0（梯度消失）</b>。</li>
+<li>若 $\boldsymbol{W}$ 的最大特徵值 $\lambda > 1$，連乘結果呈<b>指數級暴增趨近於無窮大（梯度爆炸）</b>。</li>
+</ol>
+<h3>3. 數值演算示範：20 步連乘對比</h3>
+<p>設連乘項平均純量值為 $\gamma$：</p>
+<ul>
+<li><strong>$\gamma = 0.85$（梯度消失）</strong>：
+  $$\gamma^{20} = 0.85^{20} \approx 0.0388 \quad (\text{信號衰減 96\% 以上})$$
+  $$\gamma^{50} = 0.85^{50} \approx 0.000295 \quad (\text{幾乎歸零})$$</li>
+<li><strong>$\gamma = 1.15$（梯度爆炸）</strong>：
+  $$\gamma^{20} = 1.15^{20} \approx 16.36 \quad (\text{放大 16 倍})$$
+  $$\gamma^{50} = 1.15^{50} \approx 1083.65 \quad (\text{數值溢出})$$</li>
+</ul>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：梯度消失和梯度爆炸，哪一個更容易修復？
+<strong>答</strong>：<strong>梯度爆炸更容易修復</strong>！只需加一行代碼「梯度裁剪（Gradient Clipping）」，若範數超過門檻就等比例截斷；但梯度消失是信號徹底歸零，無法從 0 中還原資訊，必須改動網路結構！</p>
+<h3>5. 舉一反三出口</h3>
+<p>在深層前向神經網絡（Feedforward NN）中也會發生梯度消失嗎？</p>
+<ol>
+<li>會的！層數太深時（如 100 層 ResNet 出現前），連乘效應同樣會讓淺層權重得不到梯度。</li>
+<li>ResNet 的殘差跳躍連接（Skip Connection）與 RNN 的 LSTM/ResNet 哲學完全一致！</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為梯度消失是因為計算機浮點數精度不夠。</li>
+<li>✅ <strong>正解</strong>：這是連乘數學性質決定的必然結果，即使用無限精度計算機，$0.8^{1000}$ 依然無限趨近於 0。</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>知道了病因後，下一節 KP-8 將介紹早期研究者如何透過特徵值初始化與長延遲 Skip 連線來緩解此問題。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「連乘效應最驚人，小於一消失大於一爆；遠古歷史傳不到，結構革新勢在行。」</strong></p>
+</div>
+<div id="guide-content-kp-8" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：緩解梯度問題：特徵值分析、趨近單位矩陣與長延遲連線</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「既然知道了連乘是梯度消失的元凶，聰明的科學家們想出了什麼絕招？今天我們就來看早期兩大經典解藥：特徵值單位化與長延遲捷徑！」</p>
+</blockquote>
+<h3>1. 單一主線類比：高鐵直達車與保護色</h3>
+<ol>
+<li><strong>趨近單位矩陣 $(W+I)$</strong>：就像給梯度信號穿上了「防腐保鮮膜」，強行注入單位矩陣 $I$，讓信號傳遞時保持 100% 原汁原味。</li>
+<li><strong>長延遲連線（Long Delays）</strong>：就像開通了「高鐵直達站」，原本要站站停（$t \to t+1 \to t+2 \to t+3$），現在直接從 $t$ 一站直達 $t+3$，一下子少了 2 次衰減！</li>
+</ol>
+<h3>2. 鷹架式拆解：兩大改進算式</h3>
+<ol>
+<li><strong>趨近單位矩陣 (Close-to-Identity Weight Matrix)</strong>：</li>
+<li>特徵值分解 $\boldsymbol{W} = \boldsymbol{A} \boldsymbol{\Lambda} \boldsymbol{A}^\top$。若 $\lambda \lesssim 1$，狀態變換平穩。</li>
+<li>結構修改（Overcoming Vanishing Gradient）：
+$$\boldsymbol{h}_t = \tanh\left( (\boldsymbol{W} + \boldsymbol{I}) \boldsymbol{h}_{t-1} + \boldsymbol{U} \boldsymbol{x}_t + \boldsymbol{b}_i \right)$$</li>
+<li>強加單位矩陣 $\boldsymbol{I}$ 確保對角線特徵值靠近 1，為反向梯度提供了恆等穿透通道。</li>
+<li><strong>長延遲連線 (Long Delays / Skip Connections)</strong>：
+$$\boldsymbol{h}_t = \tanh\left( \boldsymbol{W}_1 \boldsymbol{h}_{t-1} + \boldsymbol{W}_3 \boldsymbol{h}_{t-3} + \boldsymbol{U} \boldsymbol{x}_t + \boldsymbol{b}_i \right)$$</li>
+<li>引入 3 步延遲連線 $\boldsymbol{W}_3$，使梯度在反向傳播時可直接跳躍跨過 3 個時間步！</li>
+</ol>
+<h3>3. 數值演算示範：跨越 15 步的梯度殘留對比</h3>
+<p>假設時間跨度 $T=15$：</p>
+<ul>
+<li><strong>標準 RNN ($W^T$, $\lambda=0.75$)</strong>：
+  $$\text{梯度殘留} = 0.75^{15} \approx 0.0134$$</li>
+<li><strong>3-步長延遲 ($W_3$, 只需要 5 次跳躍)</strong>：
+  $$\text{梯度殘留} = 0.75^5 \approx 0.2373 \quad (\text{提升了 17 倍！})$$</li>
+<li><strong>單位矩陣 $(W+I, \lambda \approx 0.98)$</strong>：
+  $$\text{梯度殘留} = 0.98^{15} \approx 0.7385 \quad (\text{保持 73\% 以上！})$$</li>
+</ul>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：既然長延遲這麼好，我們可以直接加一個 100 步延遲的連線嗎？
+<strong>答</strong>：可以，但這會讓網絡結構變得極為複雜，且無法自適應決定何時該延遲、何時該清除。這促使了自適應門控（LSTM）的誕生。</p>
+<h3>5. 舉一反三出口</h3>
+<p>思考：正交矩陣初始化（Orthogonal Initialization）為何能緩解梯度問題？</p>
+<ol>
+<li>正交矩陣的特徵值模長嚴格等於 1（$\Vert \boldsymbol{W} v \Vert = \Vert v \Vert$）。</li>
+<li>在矩陣連乘時既不放大也不縮小範數，完美維持梯度範數穩定！</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 $(W+I)$ 會增加模型的參數量。</li>
+<li>✅ <strong>正解</strong>：單位矩陣 $I$ 是常數矩陣（對角線全為 1），完全不增加任何額外可學習參數！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>除了單位矩陣與長延遲外，下一節 KP-9 將介紹透過時間常數進行平滑記憶的滲漏單元（Leaky Units）與迴聲狀態網絡（ESN）。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「加 I 穿透恆等通道，長延遲開闢梯度捷徑；特徵值控制在波幅一，遠古資訊不流失。」</strong></p>
+</div>
+<div id="guide-content-kp-9" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：滲漏單元（Leaky Units）與迴聲狀態網路（Echo State Networks）</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「今天我們來看兩位不按牌理出牌的『怪傑』：一位是用時間常數慢慢滲漏記憶的 Leaky Units，另一位則是乾脆不訓練內部權重的 ESN 儲水池！」</p>
+</blockquote>
+<h3>1. 單一主線類比：水庫滲漏與固定隨機迷宮</h3>
+<ol>
+<li><strong>滲漏單元 (Leaky Units)</strong>：就像一個帶有調節閥的蓄水池，$\tau_j$ 是閥門的大小。閥門開得越小（$\tau_j$ 越大），昨天的水（舊記憶 $h_{t-1}$）流失得越慢。</li>
+<li><strong>迴聲狀態網路 (ESN)</strong>：就像一個「固定結構的鋼珠遊戲盤（儲水池）」，內部的鋼珠碰撞路線（權重）全部固定死不改，我們只在出口處裝幾個可調節的接球網（訓練輸出層 $V$）！</li>
+</ol>
+<h3>2. 鷹架式拆解：算式與機制</h3>
+<ol>
+<li><strong>滲漏單元 (Leaky Units)</strong>：
+$$h_{t,j} = \left(1 - \frac{1}{\tau_j}\right) h_{t-1,j} + \frac{1}{\tau_j} \tanh\left( \boldsymbol{W}_{j:} \boldsymbol{h}_{t-1} + \boldsymbol{U}_{j:} \boldsymbol{x}_t + b_{i,j} \right)$$</li>
+<li>$\tau_j = 1$：回歸傳統 RNN。</li>
+<li>$\tau_j \gg 1$：$h_{t,j} \approx h_{t-1,j}$，歷史狀態長久複製保存。</li>
+<li><strong>迴聲狀態網路 (Echo State Networks, ESN)</strong>：</li>
+<li>內部儲水池 $W_{res}$：稀疏、固定、不訓練。</li>
+<li>僅訓練線性輸出層 $\boldsymbol{y}_t = \boldsymbol{V} \boldsymbol{h}_t + \boldsymbol{b}_y$（使用最小二乘法 / 線性回歸求解）。</li>
+<li><strong>完全避開 BPTT</strong>，因此徹底免除了梯度消失問題！</li>
+</ol>
+<h3>3. 數值演算示範：滲漏單元記憶衰減</h3>
+<p>設當前輸入 $\tanh(\dots) = 0.0$，初始 $h_{0} = 1.0$：</p>
+<ul>
+<li><strong>$\tau = 2$</strong>：</li>
+<li>$h_1 = (1 - 0.5) \times 1.0 + 0 = 0.5$</li>
+<li>$h_2 = 0.5 \times 0.5 = 0.25$</li>
+<li><strong>$\tau = 10$</strong>：</li>
+<li>$h_1 = (1 - 0.1) \times 1.0 + 0 = 0.9$</li>
+<li>$h_2 = 0.9 \times 0.9 = 0.81$</li>
+<li>$h_{10} = 0.9^{10} \approx 0.3487$</li>
+</ul>
+<p>高 $\tau$ 值讓記憶衰減速度大幅放緩！</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：ESN 既然完全不用跑 BPTT，為什麼沒有全面取代 RNN？
+<strong>答</strong>：因為 ESN 的儲水池容量有限，對於極度複雜的語言或語意任務，固定不訓練的隨機權重無法學習到最佳的特徵抽取能力。</p>
+<h3>5. 舉一反三出口</h3>
+<p>Leaky Units 的 $\left(1 - \frac{1}{\tau_j}\right)$ 權重如果變成動態學習的，會變成什麼？</p>
+<ol>
+<li>就會演變成 GRU 的更新門 $z_t$！</li>
+<li>GRU 的 $h_t = (1-z_t) h_{t-1} + z_t \tilde{h}_t$ 正是 Leaky Units 的動態參數化升級版。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 ESN 裡面沒有循環連線。</li>
+<li>✅ <strong>正解</strong>：ESN 裡面有大量複雜的循環連線，只是這些權重在初始化後被鎖定（Freeze）不再更新！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>完成了早期改進方案的學習後，下一節 KP-10 將正式進入深度學習歷史上的巨星——長短期記憶網絡（LSTM）的門控機制！</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「滲漏單元平滑記，時間常數保長遠；迴聲網路儲水池，內部固定只練輸出。」</strong></p>
+</div>
+<div id="guide-content-kp-10" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：長短期記憶網路（LSTM）門控機制：輸入門、遺忘門與輸出門</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「歡迎來到深度學習地標——LSTM！如果把傳統 RNN 比喻成一個容易忘事的記性差學生，LSTM 就是給他配了三個精密的『智慧門控』。今天我們就來拆解這三大神仙門控！」</p>
+</blockquote>
+<h3>1. 單一主線類比：城堡的三道門衛</h3>
+<p>把 LSTM 細胞想像成一座儲存知識的城堡：</p>
+<ol>
+<li><strong>遺忘門（Forget Gate $f_t$）</strong>：城堡後門的清潔隊，決定清理掉多少過時的舊垃圾記憶（$0=$ 完全扔掉，$1=$ 完全保留）。</li>
+<li><strong>輸入門（Input Gate $i_t$）</strong>：城堡前門的檢驗員，決定允許多少今天傳入的新資訊寫入城堡（$0=$ 不准進，$1=$ 全放行）。</li>
+<li><strong>輸出門（Output Gate $o_t$）</strong>：城堡頂樓的發報員，決定將城堡內儲存的哪些記憶對外發布成當前狀態（$0=$ 隱蔽，$1=$ 公開）。</li>
+</ol>
+<h3>2. 鷹架式拆解：三大門控算式</h3>
+<p>所有門控均採用 <strong>Sigmoid 激活函數</strong> $\operatorname{sig}(z) = \frac{1}{1 + e^{-z}} \in (0, 1)$：</p>
+<ol>
+<li><strong>輸入門 $\boldsymbol{i}_t$</strong>：
+$$\boldsymbol{i}_t = \operatorname{sig}\left( \boldsymbol{W}_i \boldsymbol{h}_{t-1} + \boldsymbol{U}_i \boldsymbol{x}_t + (\boldsymbol{p}_i \odot \boldsymbol{c}_{t-1}) + \boldsymbol{b}_i \right)$$</li>
+<li><strong>遺忘門 $\boldsymbol{f}_t$</strong>：
+$$\boldsymbol{f}_t = \operatorname{sig}\left( \boldsymbol{W}_f \boldsymbol{h}_{t-1} + \boldsymbol{U}_f \boldsymbol{x}_t + (\boldsymbol{p}_f \odot \boldsymbol{c}_{t-1}) + \boldsymbol{b}_f \right)$$</li>
+<li><strong>輸出門 $\boldsymbol{o}_t$</strong>：
+$$\boldsymbol{o}_t = \operatorname{sig}\left( \boldsymbol{W}_o \boldsymbol{h}_{t-1} + \boldsymbol{U}_o \boldsymbol{x}_t + (\boldsymbol{p}_o \odot \boldsymbol{c}_t) + \boldsymbol{b}_o \right)$$</li>
+</ol>
+<p>註：$\boldsymbol{p}_i, \boldsymbol{p}_f, \boldsymbol{p}_o$ 為窺視孔權重（Peepholes），允許門控觀察之前的細胞記憶 $\boldsymbol{c}_{t-1}$。</p>
+<h3>3. 數值演算示範：手算 Sigmoid 門控開啟度</h3>
+<p>假設某門控線性和為 $z = 2.197$：
+$$\text{Gate Value} = \operatorname{sig}(2.197) = \frac{1}{1 + e^{-2.197}} = \frac{1}{1 + 0.111} \approx 0.90 \quad (90\% \text{開啟})$$</p>
+<p>若線性和為 $z = -2.197$：
+$$\text{Gate Value} = \operatorname{sig}(-2.197) = \frac{1}{1 + e^{2.197}} = \frac{1}{1 + 9.0} \approx 0.10 \quad (10\% \text{開啟})$$</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：為什麼三大門控一定要用 Sigmoid 函數，而不能用 Tanh 或 ReLU？
+<strong>答</strong>：因為 Sigmoid 的輸出範圍嚴格在 $(0, 1)$，這個數值乘以任何向量正好充當「閥門開關比例」！ReLU 無上限，Tanh 有負數，都不適合當開關。</p>
+<h3>5. 舉一反三出口</h3>
+<p>當讀到一個新章節開頭時（例如文章出現「新話題：」），遺忘門與輸入門會如何配合？</p>
+<ol>
+<li>遺忘門 $f_t \to 0$（清空上一章節的舊背景）。</li>
+<li>輸入門 $i_t \to 1$（全力寫入新話題資訊）。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為門控輸出是 0 或 1 的硬性離散值。</li>
+<li>✅ <strong>正解</strong>：門控是連續可微的軟性開關（如 $0.85$），這才使得梯度能順暢反向傳播！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>擁有了三大門控的開關數值後，下一節 KP-11 將展示這些門控如何精確控制細胞狀態傳送帶 $\boldsymbol{c}_t$ 的更新。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「Sigmoid 輸出零到一，控開控關最靈巧；遺忘選留舊記憶，輸入決定新資訊，輸出關照當前態。」</strong></p>
+</div>
+<div id="guide-content-kp-11" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：LSTM 細胞狀態更新、隱藏狀態與輸出計算</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「今天我們來看 LSTM 的核心心臟——細胞狀態傳送帶（Conveyor Belt）！正是這條神奇的傳送帶，創造了常數誤差流（CEC），讓梯度傳播幾百步都不衰減！」</p>
+</blockquote>
+<h3>1. 單一主線類比：工廠傳送帶與加法融合</h3>
+<p>把細胞狀態 $c_t$ 想像成一條貫穿工廠的「輸送帶」：</p>
+<ol>
+<li>舊記憶 $c_{t-1}$ 在輸送帶上往前走。</li>
+<li>經過<b>遺忘門 $f_t$ 刮刀</b>：把過時的舊零件刮掉（$f_t \odot c_{t-1}$）。</li>
+<li>經過<b>輸入門 $i_t$ 安裝手臂</b>：把剛製造好的新組件 $\tilde{c}_t$ 焊接到傳送帶上（$+ i_t \odot \tilde{c}_t$）。</li>
+<li>由於更新過程是<b>純加法連結</b>，反向傳播時求導結果為 1，梯度在傳送帶上無阻礙奔跑！</li>
+</ol>
+<h3>2. 鷹架式拆解：四大核心方程式</h3>
+<ol>
+<li><strong>新候選記憶（Block Input $\widetilde{\boldsymbol{c}}_t$）</strong>：
+$$\widetilde{\boldsymbol{c}}_t = \tanh\left( \boldsymbol{W}_c \boldsymbol{h}_{t-1} + \boldsymbol{U}_c \boldsymbol{x}_t + \boldsymbol{b}_c \right)$$</li>
+<li><strong>細胞狀態更新（Conveyor Belt $\boldsymbol{c}_t$）</strong>：
+$$\boldsymbol{c}_t = \left( \boldsymbol{f}_t \odot \boldsymbol{c}_{t-1} \right) + \left( \boldsymbol{i}_t \odot \widetilde{\boldsymbol{c}}_t \right)$$</li>
+<li><strong>隱藏狀態（Block Output $\boldsymbol{h}_t$）</strong>：
+$$\boldsymbol{h}_t = \boldsymbol{o}_t \odot \tanh(\boldsymbol{c}_t)$$</li>
+<li><strong>最終輸出 $\boldsymbol{y}_t$</strong>：
+$$\boldsymbol{y}_t = \boldsymbol{V} \boldsymbol{h}_t + \boldsymbol{b}_y$$</li>
+</ol>
+<h3>3. 數值演算示範：細胞狀態更新手算</h3>
+<p>假設純量狀態：</p>
+<ul>
+<li>上一時刻細胞狀態 $c_{t-1} = 2.0$</li>
+<li>遺忘門 $f_t = 0.8$</li>
+<li>輸入門 $i_t = 0.5$</li>
+<li>新候選記憶 $\tilde{c}_t = 0.6$</li>
+</ul>
+<p>計算：</p>
+<ol>
+<li>舊記憶保留項 $= f_t \times c_{t-1} = 0.8 \times 2.0 = 1.60$</li>
+<li>新資訊寫入項 $= i_t \times \tilde{c}_t = 0.5 \times 0.6 = 0.30$</li>
+<li>新細胞狀態 $c_t = 1.60 + 0.30 = 1.90$</li>
+</ol>
+<p>若輸出門 $o_t = 0.9$，則隱藏狀態：
+$$h_t = 0.9 \times \tanh(1.90) = 0.9 \times 0.956 = 0.860$$</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：當遺忘門 $f_t = 1.0$ 且輸入門 $i_t = 0.0$ 時，細胞狀態會怎樣？
+<strong>答</strong>：$c_t = 1.0 \times c_{t-1} + 0 = c_{t-1}$！狀態將被<strong>完美無損保存</strong>，梯度反向傳播時導數嚴格等於 1.0（常數誤差流 CEC）！</p>
+<h3>5. 舉一反三出口</h3>
+<p>為什麼 $h_t$ 需要經過 $\tanh(c_t)$ 壓縮後才乘以輸出門 $o_t$？</p>
+<ol>
+<li>因為細胞狀態 $c_t$ 長期加法累積可能數值較大（如 $c_t = 15.0$）。</li>
+<li>用 $\tanh$ 把它重新壓縮回 $(-1, 1)$，能防止輸出 $y_t$ 數值過大。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 $c_t$ 與 $h_t$ 是同一個東西。</li>
+<li>✅ <strong>正解</strong>：$c_t$ 是內部長期細胞記憶（不受 $\tanh$ 限制），$h_t$ 是對外曝露的短期隱藏狀態！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>掌握了完整 LSTM 計算機制後，下一節 KP-12 將帶大家回顧 LSTM 從 1997 到 2005 年的演進歷史與變體。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「細胞狀態傳送帶，加法更新梯度暢；遺忘乘以舊記憶，輸入乘以新候選，輸出再由門控定。」</strong></p>
+</div>
+<div id="guide-content-kp-12" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：LSTM 的演進歷史與變體（Original, Vanilla, Peephole）</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「Rome was not built in a day！今天的標準 LSTM 不是一蹴而就的，它經歷了多次歷史性的升級。今天我們就來一次 LSTM 家族編年史巡禮！」</p>
+</blockquote>
+<h3>1. 單一主線類比：汽車空調的升級史</h3>
+<ol>
+<li><strong>Original LSTM (1997)</strong>：第一代汽車，只有冷氣（輸入門）和送風（輸出門），<strong>沒有關關按鈕（遺忘門）</strong>。開久了車內越來越冷（記憶無限累積飽和）！</li>
+<li><strong>Gers LSTM (2000)</strong>：第二代汽車，加裝了關關按鈕（遺忘門 $f_t$）與儀表板反饋（Peepholes），隨時清空廢氣。</li>
+<li><strong>Vanilla LSTM (2005)</strong>：現代標準汽車，全套極速 BPTT + 雙向適應，成為領域標準！</li>
+</ol>
+<h3>2. 鷹架式拆解：四大歷史階段</h3>
+<ol>
+<li><strong>1997 原始 LSTM (Hochreiter &amp; Schmidhuber)</strong>：</li>
+<li>僅包含輸入門 $i_t$ 與輸出門 $o_t$。</li>
+<li>缺陷：缺少遺忘門，處理連續流式序列時 $c_t$ 無限增大導致飽和。</li>
+<li><strong>2000 Gers 遺忘門與窺視孔 (Gers et al.)</strong>：</li>
+<li>引入遺忘門 $\boldsymbol{f}_t$，允許主動清空狀態。</li>
+<li>引入窺視孔（Peepholes）：讓門控直接讀取 $c_{t-1}$。</li>
+<li><strong>2005 香草 LSTM (Vanilla LSTM, Graves &amp; Schmidhuber)</strong>：</li>
+<li>現代最通用的標準 LSTM 架構：
+$$\begin{align*}
+\boldsymbol{i}_t &= \operatorname{sig}(\boldsymbol{W}_i \boldsymbol{h}_{t-1} + \boldsymbol{U}_i \boldsymbol{x}_t + \boldsymbol{b}_i) \\
+\boldsymbol{f}_t &= \operatorname{sig}(\boldsymbol{W}_f \boldsymbol{h}_{t-1} + \boldsymbol{U}_f \boldsymbol{x}_t + \boldsymbol{b}_f) \\
+\boldsymbol{o}_t &= \operatorname{sig}(\boldsymbol{W}_o \boldsymbol{h}_{t-1} + \boldsymbol{U}_o \boldsymbol{x}_t + \boldsymbol{b}_o)
+\end{align*}$$</li>
+<li><strong>2014-2017 精簡與變體 (GRU / MGU)</strong>：</li>
+<li>簡化門控結構以提升計算效率。</li>
+</ol>
+<h3>3. 數值演算示範：有無遺忘門的狀態對比</h3>
+<p>處理長度為 50 的全 1 序列：</p>
+<ul>
+<li><strong>原始 LSTM（無遺忘門，$c_t = c_{t-1} + 0.5$）</strong>：
+  $$c_{50} = 0.5 \times 50 = 25.0 \quad (\text{數值飽和，}\tanh(25) = 1.0\text{ 失去梯度})$$</li>
+<li><strong>香草 LSTM（含遺忘門，$f_t = 0.7$）</strong>：
+  $$c_t = 0.7 c_{t-1} + 0.5 \Rightarrow c_{\infty} = \frac{0.5}{1 - 0.7} \approx 1.67 \quad (\text{數值收斂穩定！})$$</li>
+</ul>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：窺視孔（Peepholes）連線在 PyTorch 或 TensorFlow 預設 LSTM 中有啟用嗎？
+<strong>答</strong>：預設通常<strong>沒有啟用</strong>！因為經驗實驗（Greff et al. 2016 Odyssey）發現窺視孔對多數任務提升微乎其微，但會增加計算量。</p>
+<h3>5. 舉一反三出口</h3>
+<p>為什麼 Full Gate Recurrence（門控互相連接）後來消失了？</p>
+<ol>
+<li>因為增加了過多的權重矩陣（$R_{ii}, R_{if}, \dots$），導致過擬合且計算變慢。</li>
+<li>模型設計符合「奧卡姆剃刀原理」：如無必要，勿增實體。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 Original LSTM 就已經包含了遺忘門。</li>
+<li>✅ <strong>正解</strong>：遺忘門是 2000 年 Gers 的論文才補上的重大發明！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>知道了 LSTM 繁複演進後，下一節 KP-13 將介紹極簡主義的代表作——門控循環單元（GRU）。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「原始無遺忘易飽和，Gers 加入遺忘門；香草標準最流行，窺視孔連細胞心。」</strong></p>
+</div>
+<div id="guide-content-kp-13" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：門控循環單元（GRU）：完全門控單元架構</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「LSTM 雖好，但 4 組矩陣是不是太沉重了？2014 年 Cho 等人提出了 GRU，用極簡主義告訴大家：兩門控也能打天下！」</p>
+</blockquote>
+<h3>1. 單一主線類比：精簡版控制面板</h3>
+<p>把 LSTM 與 GRU 的控制器做個比喻：</p>
+<ol>
+<li><strong>LSTM</strong>：3 個開關（輸入、遺忘、輸出）+ 2 個儲存槽（$c_t, h_t$）。</li>
+<li><strong>GRU</strong>：2 個開關（重置門 $r_t$、更新門 $z_t$）+ 1 個儲存槽（$h_t$）。</li>
+<li><strong>更新門 $z_t$</strong> 充當「新舊比例調配器」：如果 $z_t = 0.6$，代表 60% 用新資訊，40% 用舊記憶！</li>
+</ol>
+<h3>2. 鷹架式拆解：GRU 完全門控單元四大算式</h3>
+<ol>
+<li><strong>重置門（Reset Gate $\boldsymbol{r}_t$）</strong>：
+$$\boldsymbol{r}_t = \operatorname{sig}\left( \boldsymbol{W}_r \boldsymbol{h}_{t-1} + \boldsymbol{U}_r \boldsymbol{x}_t + \boldsymbol{b}_r \right)$$</li>
+<li><strong>更新門（Update Gate $\boldsymbol{z}_t$）</strong>：
+$$\boldsymbol{z}_t = \operatorname{sig}\left( \boldsymbol{W}_z \boldsymbol{h}_{t-1} + \boldsymbol{U}_z \boldsymbol{x}_t + \boldsymbol{b}_z \right)$$</li>
+<li><strong>新候選狀態（Candidate State $\widetilde{\boldsymbol{h}}_t$）</strong>：
+$$\widetilde{\boldsymbol{h}}_t = \tanh\left( \boldsymbol{W}_c (\boldsymbol{r}_t \odot \boldsymbol{h}_{t-1}) + \boldsymbol{U}_c \boldsymbol{x}_t + \boldsymbol{b}_c \right)$$</li>
+<li><strong>最終狀態（Final State $\boldsymbol{h}_t$）——凸組合（Convex Combination）</strong>：
+$$\boldsymbol{h}_t = \left( (\mathbf{1} - \boldsymbol{z}_t) \odot \boldsymbol{h}_{t-1} \right) + \left( \boldsymbol{z}_t \odot \widetilde{\boldsymbol{h}}_t \right)$$</li>
+</ol>
+<h3>3. 數值演算示範：手算 GRU 凸組合更新</h3>
+<p>假設純量狀態 $h_{t-1} = 0.8$：</p>
+<ul>
+<li>重置門算得 $r_t = 1.0$（完全保留舊記憶來算新候選）。</li>
+<li>新候選算得 $\tilde{h}_t = -0.4$。</li>
+<li>更新門算得 $z_t = 0.7$（70% 偏向新候選）。</li>
+</ul>
+<p>計算最終狀態：
+$$\boldsymbol{h}_t = (1 - 0.7) \times 0.8 + 0.7 \times (-0.4) = 0.3 \times 0.8 - 0.28 = 0.24 - 0.28 = -0.04$$</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：GRU 和 LSTM 相比，誰的參數量更少？少多少？
+<strong>答</strong>：GRU 參數量比 LSTM <strong>減少了 25%</strong>（矩陣從 4 組降為 3 組）！訓練速度明顯加快。</p>
+<h3>5. 舉一反三出口</h3>
+<p>當更新門 $z_t = 0$ 時，GRU 的狀態會怎樣？</p>
+<ol>
+<li>$h_t = (1 - 0) h_{t-1} + 0 = h_{t-1}$。</li>
+<li>狀態完全複製歷史，相當於 LSTM 的遺忘門 $f_t = 1$。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 GRU 性能一定比 LSTM 差。</li>
+<li>✅ <strong>正解</strong>：大量實證研究（Chung et al. 2014）表明，在多數語音與 NLP 任務上，GRU 與 LSTM 性能不分軒輊！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>知道了 GRU 的兩門控架構後，下一節 KP-14 將介紹門控簡化的極致——極簡門控單元（MGU）。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「GRU 精簡兩門控，更新重置好配合；無單獨細胞狀態，凸組合轉新舊態。」</strong></p>
+</div>
+<div id="guide-content-kp-14" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：極簡門控單元（Minimal Gated Unit, MGU）</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「如果說 GRU 是精簡版，那 MGU 就是『極簡主義狂魔』！只留一個門控，到底能不能玩轉序列建模？今天我們就來看看它的參數量大對決！」</p>
+</blockquote>
+<h3>1. 單一主線類比：單鈕調節冷熱水龍頭</h3>
+<ol>
+<li><strong>LSTM (4 矩陣)</strong>：獨立的冷氣開關、熱水開關、風量開關與溫度設定。</li>
+<li><strong>GRU (3 矩陣)</strong>：一個冷水開關，一個熱水開關。</li>
+<li><strong>MGU (2 矩陣)</strong>：只有<b>一個單鈕混水龍頭 $f_t$</b>！往左轉（$f_t \to 1$）全是新水（新資訊 $\tilde{h}_t$），往右轉（$f_t \to 0$）全是舊水（舊記憶 $h_{t-1}$）。</li>
+</ol>
+<h3>2. 鷹架式拆解：MGU 算式與三大架構參數量對比</h3>
+<ol>
+<li><strong>MGU 算式（單一遺忘門 $\boldsymbol{f}_t$）</strong>：
+$$\begin{align*}
+\boldsymbol{f}_t &= \operatorname{sig}\left( \boldsymbol{W}_f \boldsymbol{h}_{t-1} + \boldsymbol{U}_f \boldsymbol{x}_t + \boldsymbol{b}_f \right) \\
+\widetilde{\boldsymbol{h}}_t &= \tanh\left( \boldsymbol{W}_c (\boldsymbol{f}_t \odot \boldsymbol{h}_{t-1}) + \boldsymbol{U}_c \boldsymbol{x}_t + \boldsymbol{b}_c \right) \\
+\boldsymbol{h}_t &= \left( (\mathbf{1} - \boldsymbol{f}_t) \odot \boldsymbol{h}_{t-1} \right) + \left( \boldsymbol{f}_t \odot \widetilde{\boldsymbol{h}}_t \right)
+\end{align*}$$</li>
+<li><strong>參數量大對決（設隱藏維度 $p$, 輸入維度 $d$）</strong>：</li>
+<li><strong>LSTM</strong>：$4 \times (p^2 + pd + p)$</li>
+<li><strong>GRU</strong>：$3 \times (p^2 + pd + p)$ (省 25%)</li>
+<li><strong>MGU</strong>：$2 \times (p^2 + pd + p)$ (省 50% vs LSTM, 省 33% vs GRU)</li>
+</ol>
+<h3>3. 數值演算示範：手算參數量案例</h3>
+<p>假設嵌入維度 $p = 256$, $d = 256$：</p>
+<ol>
+<li><strong>單組矩陣單元</strong> $= 256 \times 256 + 256 \times 256 + 256 = 131,328$ 參數。</li>
+<li><strong>LSTM</strong> $= 4 \times 131,328 = 525,312$ 參數。</li>
+<li><strong>GRU</strong> $= 3 \times 131,328 = 393,984$ 參數。</li>
+<li><strong>MGU</strong> $= 2 \times 131,328 = 262,656$ 參數。</li>
+</ol>
+<p>MGU 省下了整整 26 萬個參數！極適合微型邊界設備（Edge AI）。</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：MGU 參數減半，性能會暴跌嗎？
+<strong>答</strong>：在許多中小型數據集上，MGU 的表現與 GRU 驚人地接近！但在極度複雜的大型語言任務上，容量限制才會顯現。</p>
+<h3>5. 舉一反三出口</h3>
+<p>如果連最後這 1 個門控也省掉（$f_t$ 變成常數 0.5），會怎樣？</p>
+<ol>
+<li>退化為無門控的平滑線性混合。</li>
+<li>失去了自適應選擇性寫入與記憶清空能力。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 MGU 是 Hochreiter 或 Cho 提出的。</li>
+<li>✅ <strong>正解</strong>：MGU 是 Heck &amp; Salem 於 2017 年提出的極簡變體。</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>了解了單向門控網絡的演進極限後，下一節 KP-15 將打破「單向因果限制」，介紹雙向處理（Bidirectional processing）。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「MGU 極簡極致，單一遺忘門控全；參數減半輕量化，邊緣計算好幫手。」</strong></p>
+</div>
+<div id="guide-content-kp-15" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：雙向處理的合理性與雙向 RNN (Bidirectional RNN)</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「前面的網絡都是『單向向前看』的。但在看書或聽音樂時，後面的單詞往往能決定前面單詞的意思！今天我們就解鎖『雙向後視鏡』——BiRNN！」</p>
+</blockquote>
+<h3>1. 單一主線類比：偵案小說與雙向倒查</h3>
+<p>閱讀偵探小說時：</p>
+<ol>
+<li>單向閱讀（只看前文）：第 5 頁出現「張三把鑰匙丟進了水池」，你不知道張三是好人還是壞人。</li>
+<li>雙向閱讀（結合後文）：第 100 頁揭曉張三是臥底！此時回看第 5 頁，才恍然大悟張三是在毀滅證據。</li>
+<li><strong>BiRNN 就是同時派兩個偵探</strong>：一個從第 1 頁往後讀，另一個從第 100 頁往前讀！</li>
+</ol>
+<h3>2. 鷹架式拆解：BiRNN 計算算式</h3>
+<p>BiRNN 維護兩組完全獨立的狀態鏈：</p>
+<ol>
+<li><strong>前向狀態 $\overrightarrow{\boldsymbol{h}}_t$（從左到右 $t=1 \to T$）</strong>：
+$$\overrightarrow{\boldsymbol{h}}_t = \tanh\left( \overrightarrow{\boldsymbol{W}} \overrightarrow{\boldsymbol{h}}_{t-1} + \overrightarrow{\boldsymbol{U}} \boldsymbol{x}_t + \overrightarrow{\boldsymbol{b}}_i \right)$$</li>
+<li><strong>後向狀態 $\overleftarrow{\boldsymbol{h}}_t$（從右到左 $t=T \to 1$）</strong>：
+$$\overleftarrow{\boldsymbol{h}}_t = \tanh\left( \overleftarrow{\boldsymbol{W}} \overleftarrow{\boldsymbol{h}}_{t+1} + \overleftarrow{\boldsymbol{U}} \boldsymbol{x}_t + \overleftarrow{\boldsymbol{b}}_i \right)$$</li>
+<li><strong>雙向融合輸出 $\boldsymbol{y}_t$</strong>：
+$$\boldsymbol{y}_t = \overrightarrow{\boldsymbol{V}} \overrightarrow{\boldsymbol{h}}_t + \overleftarrow{\boldsymbol{V}} \overleftarrow{\boldsymbol{h}}_t + \boldsymbol{b}_y$$</li>
+</ol>
+<h3>3. 數值演算示範：手算雙向狀態融合</h3>
+<p>假設某時間步 $t=2$：</p>
+<ul>
+<li>前向狀態算得 $\overrightarrow{\boldsymbol{h}}_2 = 0.60$</li>
+<li>後向狀態算得 $\overleftarrow{\boldsymbol{h}}_2 = -0.40$</li>
+<li>前向權重 $\overrightarrow{V} = 1.0$，後向權重 $\overleftarrow{V} = 1.0$，偏置 $b_y = 0.1$</li>
+</ul>
+<p>輸出計算：
+$$y_2 = (1.0 \times 0.60) + (1.0 \times -0.40) + 0.1 = 0.60 - 0.40 + 0.1 = 0.30$$</p>
+<p>$y_2$ 完美融合了過去（0.60）與未來（-0.40）的雙向資訊！</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：雙向 RNN 能用於即時語音打字（Streaming Speech Recognition）嗎？
+<strong>答</strong>：<strong>不能直接使用</strong>！因為即時流式打字時，說話者還沒說出的「未來語音」尚未發生，模型無法倒著讀未來！雙向處理只適用於非流式（Offline）任務。</p>
+<h3>5. 舉一反三出口</h3>
+<p>如果在雙向 RNN 基礎上，把 RNN 單元換成 LSTM 會變成什麼？</p>
+<ol>
+<li>就變成了著名的 BiLSTM（Bidirectional LSTM）！</li>
+<li>兼具長距離記憶能力與雙向上下文能力。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為後向 RNN 是前向 RNN 跑完後，把輸入反過來再跑一次前向。</li>
+<li>✅ <strong>正解</strong>：前向與後向是兩套完全獨立的神經網絡（權重 $\overrightarrow{W} \neq \overleftarrow{W}$），各自獨立計算狀態。</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>擁有了雙向處理原理後，最後一節 KP-16 將介紹 BiLSTM 的終極應用——ELMo 上下文詞嵌入。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「正向看得清過去，反向預知未來的；雙向結合上下文，離線處理全無敵。」</strong></p>
+</div>
+<div id="guide-content-kp-16" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：雙向 LSTM (BiLSTM) 與 ELMo 上下文詞嵌入</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「歡迎來到本章的終曲！在 Transformer 席卷全球之前，BiLSTM + ELMo 是 NLP 領域的絕對霸主。今天我們就來拆解這個預訓練上下文詞嵌入的開山鼻祖！」</p>
+</blockquote>
+<h3>1. 單一主線類比：多角度複合顯微鏡</h3>
+<p>文字中的單詞多義性（例如「蘋果」是指水果還是手機公司？）：</p>
+<ol>
+<li>靜態詞向量（Word2Vec）：就像用「普通放大鏡」，無論「蘋果」出現在哪裡，向量永遠固定不變。</li>
+<li><strong>ELMo 多層 BiLSTM</strong>：就像「複合顯微鏡」！</li>
+<li>第一層 BiLSTM：觀察單詞的語法結構（詞性、單複數）。</li>
+<li>第二層 BiLSTM：觀察單詞的高層語意（上下文主題）。</li>
+<li>最後透過任務加權 $\gamma \sum s_l h_t^{(l)}$ 調整焦距，調配出最適當的上下文詞向量！</li>
+</ol>
+<h3>2. 鷹架式拆解：ELMo 算式與架構</h3>
+<ol>
+<li><strong>多層 BiLSTM 狀態拼接</strong>：
+   在第 $l$ 層與時間步 $t$，拼接前向與後向狀態：
+$$\boldsymbol{h}_t^{(l)} = \left[ \overrightarrow{\boldsymbol{h}}_t^{(l)\top}, \overleftarrow{\boldsymbol{h}}_t^{(l)\top} \right]^\top$$</li>
+<li><strong>下游任務自適應加權融合（ELMo 核心公式）</strong>：
+$$\boldsymbol{y}_t^{\mathrm{ELMo}} = \gamma \sum_{l=1}^{L} s_l \boldsymbol{h}_t^{(l)}$$</li>
+<li>$L$：BiLSTM 的總層數（ELMo 通常採 2 層）。</li>
+<li>$s_l$：第 $l$ 層的任務可學習權重（滿足 $\sum s_l = 1$）。</li>
+<li>$\gamma$：全域縮放因子。</li>
+</ol>
+<h3>3. 數值演算示範：手算 ELMo 詞向量融合</h3>
+<p>假設 2 層 BiLSTM，特定單詞在 $t$ 位置的狀態向量為：</p>
+<ul>
+<li>第 1 層表徵 $\boldsymbol{h}_t^{(1)} = [1.0, 2.0]^\top$</li>
+<li>第 2 層表徵 $\boldsymbol{h}_t^{(2)} = [3.0, 0.0]^\top$</li>
+</ul>
+<p>若下游任務（如問答系統）學習到的權重為 $s_1 = 0.3, s_2 = 0.7$，縮放因子 $\gamma = 1.0$：
+$$\boldsymbol{y}_t^{\mathrm{ELMo}} = 1.0 \times \left( 0.3 \begin{bmatrix} 1.0 \\ 2.0 \end{bmatrix} + 0.7 \begin{bmatrix} 3.0 \\ 0.0 \end{bmatrix} \right) = \begin{bmatrix} 0.3 \\ 0.6 \end{bmatrix} + \begin{bmatrix} 2.1 \\ 0.0 \end{bmatrix} = \begin{bmatrix} 2.4 \\ 0.6 \end{bmatrix}$$</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：為什麼 ELMo 在 2018 年推出後震撼了整個 NLP 界？
+<strong>答</strong>：因為它徹底解決了「一詞多義」！「Apple 股票上漲」與「吃一顆 Apple」，ELMo 產出的 Apple 向量完全不同！</p>
+<h3>5. 舉一反三出口</h3>
+<p>ELMo 雖然強大，但後來為什麼被 BERT 超越了？</p>
+<ol>
+<li>ELMo 是把前向 LSTM 和後向 LSTM 獨立訓練後拼接（淺層雙向）。</li>
+<li>BERT 採用 Transformer 自注意力機制（Self-Attention），實現了真·全向深度上下文注意力。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 ELMo 的層權重 $s_l$ 是預先固定死不變的。</li>
+<li>✅ <strong>正解</strong>：$s_l$ 是在微調下游任務時，由下游任務梯度自動學習出來的！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>至此，Chapter 08 全章 16 個知識點從基礎 RNN、BPTT 推導、梯度問題、LSTM/GRU 門控到 BiLSTM/ELMo 已全部精準解構完畢！</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「BiLSTM 結合雙向與長記憶，ELMo 多層拼接疊上下文；任務加權求線性合，預訓練詞嵌入開新篇。」</strong></p>
+</div>
+<!-- END Phase D Guide Hidden Divs -->
+<!-- == Phase D Guide Modal Placeholder == -->
+<div id="guide-modal" aria-hidden="true" role="dialog">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-guide-title">教授祕笈</h3>
+      <button class="modal-close-btn" id="modal-close-x" aria-label="關閉">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-guide-body">
+      <!-- Dynamic Guide Content Injected Here -->
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  document.addEventListener("DOMContentLoaded", function() {
+    var modal = document.getElementById("guide-modal");
+    var modalTitle = document.getElementById("modal-guide-title");
+    var modalBody = document.getElementById("modal-guide-body");
+    var closeBtn = document.getElementById("modal-close-x");
+
+    function openModal(kpId, btnTitle) {
+      var srcDiv = document.getElementById("guide-content-kp-" + kpId);
+      if (!srcDiv) return;
+
+      modalTitle.textContent = "教授祕笈：" + btnTitle;
+      modalBody.innerHTML = srcDiv.innerHTML;
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+
+      // Re-render KaTeX inside modal safely
+      if (window.renderMathInElement) {
+        window.renderMathInElement(modalBody, {
+          delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "$", right: "$", display: false}
+          ],
+          ignoredClasses: ["katex"]
+        });
+      }
+    }
+
+    function closeModal() {
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+
+    // Event Delegation for Guide Buttons
+    document.addEventListener("click", function(e) {
+      var btn = e.target.closest(".guide-btn");
+      if (btn) {
+        var guideId = btn.getAttribute("data-guide").replace("kp-", "");
+        var titleText = btn.textContent.replace("祕笈教授祕笈：", "").replace("教授祕笈：", "").trim();
+        openModal(guideId, titleText);
+      }
+    });
+
+    if (closeBtn) {
+      closeBtn.addEventListener("click", closeModal);
+    }
+
+    if (modal) {
+      modal.addEventListener("click", function(e) {
+        if (e.target === modal) closeModal();
+      });
+    }
+
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape" && modal.classList.contains("open")) {
+        closeModal();
+      }
+    });
+  });
+})();
+</script>
+<!-- END Phase D Guide Modal Placeholder -->
+</body>
+</html>

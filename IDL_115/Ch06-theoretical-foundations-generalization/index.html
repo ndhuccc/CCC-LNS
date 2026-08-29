@@ -1,0 +1,3319 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch06 深度學習泛化的理論基礎 — 互動自學講義</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<style>
+:root {
+  --bg: #f8fafc;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --accent: #7c3aed;          /* 紫，主題色 */
+  --accent-2: #5b21b6;
+  --accent-bg: #f5f3ff;
+  --ok: #16a34a;
+  --err: #dc2626;
+  --code-bg: #f1f5f9;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.6 "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+header.page-head {
+  padding: 28px 24px 16px;
+  background: linear-gradient(135deg, #7c3aed22 0%, #db277722 100%);
+  border-bottom: 1px solid var(--card-border);
+}
+header.page-head h1 { margin: 0 0 6px; font-size: 1.6rem; line-height: 1.3; }
+header.page-head .sub { color: var(--muted); font-size: .98rem; }
+.layout { display: flex; gap: 24px; align-items: flex-start; padding: 24px; max-width: 1200px; margin: 0 auto; }
+nav.toc {
+  position: sticky; top: 90px;
+  flex: 0 0 260px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 12px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  font-size: .9rem;
+}
+nav.toc h3 { margin: 0 0 8px; font-size: .9rem; color: var(--muted); }
+nav.toc ol { list-style: none; padding: 0; margin: 0; }
+nav.toc li { margin: 2px 0; }
+nav.toc a {
+  display: flex; gap: 6px; align-items: baseline;
+  color: var(--fg); text-decoration: none;
+  padding: 4px 6px; border-radius: 6px;
+}
+nav.toc a:hover { background: var(--accent-bg); }
+nav.toc .toc-badge { color: var(--accent); font-variant-numeric: tabular-nums; min-width: 36px; }
+main.cards { flex: 1; min-width: 0; }
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  margin-bottom: 18px;
+  scroll-margin-top: 90px;
+  overflow: hidden;
+}
+.card-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, var(--accent-bg) 0%, transparent 100%);
+  border-bottom: 1px solid var(--card-border);
+}
+.card-head .badge {
+  background: var(--accent); color: #fff;
+  padding: 2px 8px; border-radius: 6px;
+  font-size: .82rem; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.card-head .card-title { margin: 0; font-size: 1.08rem; flex: 1; }
+.card-head .toggle {
+  background: transparent; border: 1px solid var(--card-border);
+  width: 28px; height: 28px; border-radius: 6px;
+  font-size: 1.2rem; cursor: pointer; line-height: 1;
+}
+.card-body { padding: 14px 18px; }
+.card.collapsed .card-body { display: none; }
+.kp-content p { margin: .6em 0; }
+.kp-content ol, .kp-content ul { margin: .5em 0; padding-left: 1.6em; }
+.kp-content li { margin: .2em 0; }
+.kp-content strong { color: var(--accent-2); }
+.kp-content em { color: var(--accent-2); font-style: normal; font-weight: 600; }
+figure.orig-fig {
+  margin: 14px 0; padding: 8px;
+  border: 1px solid var(--card-border); border-radius: 8px; background: #fff;
+  text-align: center;
+}
+figure.orig-fig img { max-width: 100%; height: auto; border-radius: 4px; }
+.diag-figure, .diagram-figure {
+  margin: 14px 0; padding: 12px;
+  border: 1px solid var(--card-border); border-radius: 12px; background: #fff;
+  text-align: center;
+}
+.diag-figure img, .diagram-figure img { max-width: 100%; height: auto; border-radius: 8px; }
+.diag-figure figcaption, .diagram-figure figcaption { margin-top: 8px; font-size: .85rem; color: var(--muted); }
+.diag-figure svg { max-width: 100%; height: auto; }
+svg.inline-svg { max-width: 100%; height: auto; display: block; margin: 12px auto; }
+.quiz {
+  margin: 14px 0; padding: 10px 12px;
+  background: var(--accent-bg); border-radius: 8px;
+  border-left: 4px solid var(--accent);
+}
+.quiz-q { margin: 0 0 6px; font-size: .95rem; }
+.quiz-opts { list-style: none; padding: 0; margin: 4px 0; }
+.quiz-opts li { margin: 3px 0; }
+.quiz-opts label { display: flex; gap: 6px; align-items: flex-start; cursor: pointer; font-size: .9rem; }
+.quiz-check {
+  margin-top: 6px;
+  background: var(--accent); color: #fff;
+  border: none; padding: 4px 12px; border-radius: 6px;
+  cursor: pointer; font-size: .85rem;
+}
+.quiz-check:hover { background: var(--accent-2); }
+.quiz-feedback { margin-top: 6px; font-size: .88rem; min-height: 1.2em; }
+.quiz-feedback.ok { color: var(--ok); font-weight: 600; }
+.quiz-feedback.err { color: var(--err); font-weight: 600; }
+.guide-btn {
+  display: inline-block;
+  margin: 10px 0 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  color: #fff; border: none; border-radius: 8px;
+  font-size: .92rem; font-weight: 600; cursor: pointer;
+  box-shadow: 0 2px 6px rgba(124,58,237,.3);
+  transition: transform .15s;
+}
+.guide-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(124,58,237,.4); }
+.guide-btn .guide-flag {
+  display: inline-block; margin-right: 6px; padding: 1px 6px;
+  background: #fbbf24; color: #78350f; border-radius: 4px;
+  font-size: .72rem; font-weight: 700;
+}
+.demo {
+  margin: 16px 0; padding: 12px;
+  border: 1px solid #ddd6fe; border-radius: 12px;
+  background: #faf5ff;
+}
+.demo h4 { margin: 0 0 6px; color: var(--accent-2); font-size: 1rem; }
+.demo .demo-theory { background: #fff; padding: 8px 10px; border-radius: 6px; margin: 6px 0; }
+.demo .demo-controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0; align-items: center; }
+.demo .demo-controls label { display: flex; align-items: center; gap: 4px; font-size: .88rem; }
+.demo canvas { display: block; max-width: 100%; background: #fff; border: 1px solid var(--card-border); border-radius: 4px; margin: 6px auto; }
+.demo .demo-readout { font-family: monospace; font-size: .85rem; background: #fff; padding: 6px 8px; border-radius: 4px; margin-top: 4px; min-height: 1.4em; }
+.ai-illustration {
+  margin: 10px 0; padding: 6px 8px;
+  border: 1px dashed #cbd5e1; border-radius: 6px;
+  background: #f8fafc; font-size: .82rem; color: var(--muted);
+}
+.ai-illustration summary { cursor: pointer; }
+.ai-illustration-prompt {
+  white-space: pre-wrap; font-family: monospace; font-size: .78rem;
+  background: #fff; padding: 6px; border-radius: 4px; margin: 6px 0 0;
+}
+#guide-modal { display: none; }
+#guide-modal.open { display: flex; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+#guide-modal .modal-box { background: #fff; border-radius: 12px; max-width: 800px; width: 100%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+#guide-modal .modal-head { padding: 12px 16px; background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); color: #fff; display: flex; justify-content: space-between; align-items: center; }
+#guide-modal .modal-head h3 { margin: 0; font-size: 1.1rem; }
+#guide-modal .modal-close { background: transparent; border: 1px solid #fff; color: #fff; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; }
+#guide-modal .modal-body { padding: 16px 20px; overflow-y: auto; line-height: 1.7; }
+#guide-modal .modal-body p { margin: .5em 0; }
+#guide-modal .modal-body h4 { margin: 1em 0 .4em; color: var(--accent-2); }
+#progress-bar {
+  position: fixed; top: 0; left: 0; right: 0; height: 4px;
+  background: #e2e8f0; z-index: 999;
+}
+#progress-bar .bar { height: 100%; background: var(--accent); width: 0%; transition: width .25s; }
+#progress-text {
+  position: fixed; top: 8px; right: 16px;
+  background: var(--accent); color: #fff;
+  padding: 2px 10px; border-radius: 10px;
+  font-size: .8rem; z-index: 999;
+}
+code { background: var(--code-bg); padding: 1px 4px; border-radius: 3px; font-family: "JetBrains Mono", "Consolas", monospace; font-size: .9em; }
+@media (max-width: 800px) {
+  .layout { flex-direction: column; }
+  nav.toc { position: static; max-height: none; }
+}
+</style>
+</head>
+<body>
+<div id="progress-bar"><div class="bar"></div></div>
+<div id="progress-text">進度 0%</div>
+<header class="page-head">
+  <h1>Ch06 — 深度學習泛化的理論基礎（Theoretical Foundations of Generalization in Deep Learning）</h1>
+  <div class="sub">從 PAC、VC、資訊瓶頸到 double descent / grokking / NTK / scaling laws</div>
+</header>
+<div class="layout">
+<nav class="toc" id="toc"><h3>章節導覽</h3><ol>
+  <li><a href="#kp1"><span class="toc-badge">1</span><span>全章地圖：為何要懂泛化理論？</span></a></li>
+  <li><a href="#kp2"><span class="toc-badge">2</span><span>PAC 學習：把「學得起來」變成可量化保證</span></a></li>
+  <li><a href="#kp3"><span class="toc-badge">2.1</span><span>Realizable PAC：真函數在 $\mathcal{H}$ 內</span></a></li>
+  <li><a href="#kp4"><span class="toc-badge">2.2</span><span>Agnostic PAC：放棄「完美函數存在」</span></a></li>
+  <li><a href="#kp5"><span class="toc-badge">2.3</span><span>VC 維度：模型的「打散能力」</span></a></li>
+  <li><a href="#kp6"><span class="toc-badge">2.4</span><span>樣本複雜度：多少資料才夠？</span></a></li>
+  <li><a href="#kp7"><span class="toc-badge">2.5</span><span>複雜度依賴誤差上界</span></a></li>
+  <li><a href="#kp8"><span class="toc-badge">3.1</span><span>神經網路的表達力</span></a></li>
+  <li><a href="#kp9"><span class="toc-badge">3.2</span><span>神經網路的複雜度誤差上界</span></a></li>
+  <li><a href="#kp10"><span class="toc-badge">3.3</span><span>理論上界在 NN 為何失效？</span></a></li>
+  <li><a href="#kp11"><span class="toc-badge">3.3.1</span><span>隨機標籤實驗：NN 為何能記住一切？</span></a></li>
+  <li><a href="#kp12"><span class="toc-badge">3.3.2</span><span>Uniform convergence 的不足</span></a></li>
+  <li><a href="#kp13"><span class="toc-badge">4.1</span><span>深度學習 = 資訊瓶頸</span></a></li>
+  <li><a href="#kp14"><span class="toc-badge">4.1.1</span><span>Rate-distortion 最佳化</span></a></li>
+  <li><a href="#kp15"><span class="toc-badge">4.1.2</span><span>各層的互資訊與資料處理不等式</span></a></li>
+  <li><a href="#kp16"><span class="toc-badge">4.1.3</span><span>IB 最佳化解的閉式表達</span></a></li>
+  <li><a href="#kp17"><span class="toc-badge">4.2</span><span>泛化差距的 IB 上界</span></a></li>
+  <li><a href="#kp18"><span class="toc-badge">4.3</span><span>IB 理論的批評</span></a></li>
+  <li><a href="#kp19"><span class="toc-badge">5.1</span><span>Double descent：U 形曲線再下降</span></a></li>
+  <li><a href="#kp20"><span class="toc-badge">5.2</span><span>Grokking：過擬合後突然頓悟</span></a></li>
+  <li><a href="#kp21"><span class="toc-badge">5.3</span><span>Benign overfitting</span></a></li>
+  <li><a href="#kp22"><span class="toc-badge">5.4</span><span>SGD 的隱式偏置</span></a></li>
+  <li><a href="#kp23"><span class="toc-badge">5.5</span><span>Neural Tangent Kernel</span></a></li>
+  <li><a href="#kp24"><span class="toc-badge">5.6</span><span>彩票假說與 Scaling laws</span></a></li>
+  <li><a href="#kp25"><span class="toc-badge">6</span><span>結論：對實作者的啟示</span></a></li>
+</ol></nav>
+<main class="cards">
+<section class="card" id="kp1" data-kp="1">
+  <header class="card-head">
+    <span class="badge">1</span>
+    <h2 class="card-title">全章地圖：為何要懂泛化理論？</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-1 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-1-svg">
+  <svg class="inline-svg" viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5b21b6"/>
+    </marker>
+  </defs>
+  <!-- central node -->
+  <ellipse cx="300" cy="140" rx="90" ry="40" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="300" y="135" text-anchor="middle" font-size="14" font-weight="600" fill="#5b21b6">為何大模型</text>
+  <text x="300" y="155" text-anchor="middle" font-size="14" font-weight="600" fill="#5b21b6">能泛化？</text>
+  <!-- 5 branches -->
+  <line x1="390" y1="120" x2="490" y2="50" stroke="#5b21b6" stroke-width="1.5" marker-end="url(#arr1)"/>
+  <line x1="390" y1="130" x2="500" y2="100" stroke="#5b21b6" stroke-width="1.5" marker-end="url(#arr1)"/>
+  <line x1="390" y1="140" x2="510" y2="160" stroke="#5b21b6" stroke-width="1.5" marker-end="url(#arr1)"/>
+  <line x1="390" y1="155" x2="500" y2="215" stroke="#5b21b6" stroke-width="1.5" marker-end="url(#arr1)"/>
+  <line x1="390" y1="165" x2="480" y2="255" stroke="#5b21b6" stroke-width="1.5" marker-end="url(#arr1)"/>
+  <text x="495" y="48" text-anchor="end" font-size="11" fill="#0f172a">§2 PAC / VC</text>
+  <text x="510" y="100" text-anchor="end" font-size="11" fill="#0f172a">§3 NN 誤差上界</text>
+  <text x="515" y="163" text-anchor="end" font-size="11" fill="#0f172a">§4 資訊瓶頸</text>
+  <text x="510" y="218" text-anchor="end" font-size="11" fill="#0f172a">§5a Double descent / Grokking</text>
+  <text x="490" y="258" text-anchor="end" font-size="11" fill="#0f172a">§5b Benign overfit / NTK / Scaling</text>
+  <text x="300" y="30" text-anchor="middle" font-size="12" font-style="italic" fill="#64748b">5 條主軸，本章按此順序展開</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-1 diagram END == -->
+
+      <p>深度學習的「奇蹟」是<strong>明明參數量遠大於訓練樣本數</strong>，模型卻仍能對沒看過的資料預測得很準。這個現象違背了 1980–2000 年代由 Vapnik、Valiant 等人建立的<strong>統計學習理論</strong>給出的悲觀上界。本章就是要把這個落差攤開來檢查。</p>
+<p>全章五大主軸：</p>
+<ol>
+<li><strong>PAC 與 VC 維度（§2）</strong>：給「學得起來」一個可量化的保證，附帶一個代價——為了保證成立你需要多少樣本？</li>
+<li><strong>神經網路複雜度上界（§3）</strong>：把 VC 維度套到神經網路上，得到的結論是「現代神經網路的 VC 維度遠大於樣本數，理論上界是空的（vacuous）」。</li>
+<li><strong>資訊瓶頸（§4）</strong>：換一個鏡頭看泛化——認為「好的表示 = 對輸入做最大壓縮、同時保留對標籤的資訊」。</li>
+<li><strong>現代泛化現象（§5）</strong>：double descent、grokking、benign overfitting、implicit bias、NTK、lottery ticket、scaling laws——這些是 2017 年以後從實驗與理論兩端冒出來的新理解。</li>
+</ol>
+<p>讀完本章，你應該能回答：「為什麼我的模型在 train acc 99%、test acc 95% 的時候，我<em>不應該</em>驚訝、也<em>不應該</em>把它當成『理論解釋完了』。」</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-1" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：全章地圖與三大張力</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 本章主要想回答的核心問題是什麼？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">如何用更深的網路提升訓練準確度</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">為什麼大模型在資料量小於參數量時仍能泛化</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">如何設計更好的優化器</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">如何避免過擬合的唯一方法</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp2" data-kp="2">
+  <header class="card-head">
+    <span class="badge">2</span>
+    <h2 class="card-title">PAC 學習：把「學得起來」變成可量化保證</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-2 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-2-svg">
+  <svg class="inline-svg" viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5b21b6"/>
+    </marker>
+  </defs>
+  <!-- left: 模型輸出 h -->
+  <rect x="40" y="100" width="100" height="60" rx="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="90" y="125" text-anchor="middle" font-size="13" font-weight="600" fill="#5b21b6">模型 h</text>
+  <text x="90" y="145" text-anchor="middle" font-size="10" fill="#64748b">(來自 H)</text>
+  <!-- middle: 兩個旋鈕 -->
+  <circle cx="240" cy="80" r="35" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="240" y="85" text-anchor="middle" font-size="20" font-weight="700" fill="#92400e">ε</text>
+  <text x="240" y="135" text-anchor="middle" font-size="11" fill="#0f172a">容忍錯誤率</text>
+  <circle cx="240" cy="180" r="35" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="240" y="185" text-anchor="middle" font-size="20" font-weight="700" fill="#1e40af">δ</text>
+  <text x="240" y="225" text-anchor="middle" font-size="11" fill="#0f172a">容忍失敗機率</text>
+  <line x1="140" y1="130" x2="200" y2="100" stroke="#5b21b6" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <line x1="140" y1="130" x2="200" y2="190" stroke="#5b21b6" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <!-- right: 結論 -->
+  <rect x="350" y="90" width="210" height="90" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="455" y="115" text-anchor="middle" font-size="12" font-weight="600" fill="#166534">PAC 保證</text>
+  <text x="455" y="138" text-anchor="middle" font-size="11" fill="#0f172a">P(err ≤ ε) ≥ 1-δ</text>
+  <text x="455" y="158" text-anchor="middle" font-size="10" fill="#64748b">用足夠樣本即可達成</text>
+  <line x1="280" y1="80" x2="350" y2="120" stroke="#5b21b6" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <line x1="280" y1="180" x2="350" y2="140" stroke="#5b21b6" stroke-width="1.5" marker-end="url(#arr2)"/>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-2 diagram END == -->
+
+      <p>1984 年 Valiant 提出 <strong>PAC（Probably Approximately Correct）學習</strong>：把「學得起來」這件含糊的事，拆成兩個可調整的旋鈕——<strong>$\epsilon$（容忍多大錯誤）</strong> 與 <strong>$\delta$（容忍多大概率失敗）</strong>。</p>
+<p>給定一個假設類 $\mathcal{H}$（所有候選模型的集合），演算法 $\mathcal{A}$ 拿到 $n$ 筆訓練樣本後輸出 $\hat h$。PAC 框架要求：</p>
+<ol>
+<li>$\hat h$ 在真實分佈 $\mathcal{D}$ 上的錯誤率 $\mathrm{err}_{\mathcal{D}}(\hat h)$ <strong>以至少 $1-\delta$ 的機率</strong> 不超過 $\epsilon$；</li>
+<li>而且這件事要能用<strong>多項式時間</strong>、<strong>多項式樣本數</strong> 達成。</li>
+</ol>
+<p>這個框架的威力在於：它把「我想訓練一個好模型」變成「我能不能給出一個在 $(\epsilon,\delta)$ 下成立的<strong>樣本複雜度公式</strong> $n_{\mathcal{H}}(\epsilon,\delta)$」。<strong>本章後面三節就是圍繞這個 $n_{\mathcal{H}}$ 打轉</strong>。</p>
+<p>重要提醒：PAC 給的是<strong>最壞情況</strong>保證——對「任何」分佈 $\mathcal{D}$、「任何」目標函數 $f\in\mathcal{H}$ 都要成立。實務上我們通常只關心「這份特定資料」，但理論給的界會比實際鬆很多，這正是 §3.3 要談的落差。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-2" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：PAC 框架的兩顆旋鈕</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> PAC 框架中 $\epsilon$ 與 $\delta$ 各代表什麼？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$\epsilon$= 訓練誤差，$\delta$= 學習率</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">$\epsilon$= 容忍的最大真實錯誤率，$\delta$= 容忍的失敗機率</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$\epsilon$= 模型參數量，$\delta$= 資料量</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">兩者都是模型複雜度衡量</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp3" data-kp="3">
+  <header class="card-head">
+    <span class="badge">2.1</span>
+    <h2 class="card-title">Realizable PAC：真函數在 $\mathcal{H}$ 內</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-3 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-3">
+  <img src="assets/diagram-kp3-pac-realizable.png" alt="kp-3 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-3" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 兩條曲線在同一張 log-log 座標上，藍色 realizable (∝1/n) 與紅色 agnostic (∝1/√n) 從左上往右下；水平虛線是 ε=0.05 容忍線；兩條曲線各自有一個圓點標示抵達容忍線的 n 值，並有箭頭與標籤寫 n≈40 與 n≈10000（讓讀者一眼看出 250 倍差距）。
+WHY: 必須讓讀者瞬間看懂「agnostic 比 realizable 多吃 1/ε 倍樣本」這個差距。
+MUST show: (1) 兩條對比曲線，顏色區分；(2) 同一條 ε 容忍線；(3) 兩個交叉點與對應 n 標籤；(4) log-log 軸。
+AVOID: 條形圖、隨機散點、沒有標註的純曲線。
+STYLE: clean scientific plot, white background, 標題「PAC 樣本複雜度：Realizable vs Agnostic」。</pre>
+  </details>
+<!-- == Phase C kp-3 demo == -->
+<div class="demo" id="demo-kp3" data-demo-id="kp-3">
+  <h4>互動 demo：Realizable vs Agnostic：兩條 ε 曲線</h4>
+  <div class="demo-theory"><p>Realizable: $\varepsilon \le 2/n$（假設 $\mathcal{H}$ 內有真函數）。Agnostic: $\varepsilon \le C/\sqrt{n}$（沒有 realizable 假設）。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拉動樣本數 $n$ 滑桿，觀察兩條曲線抵達 $\varepsilon=0.05$ 所需的差距。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>差距隨 $n$ 增大而拉大——agnostic 比 realizable 多吃 $\sim\sqrt{n}$ 倍樣本。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>在 $n=40$ 附近 realizable 抵達 $\varepsilon\approx0.05$，agnostic 還在 0.79；拉到 $n=10000$ 時 realizable 0.0002、agnostic 0.05。</div>
+  <div class="demo-controls"><label>樣本數 $n$：<input type="range" id="d3-n" min="10" max="8000" value="500"></label><span class="demo-val" id="d3-n-val">500</span><span style="margin-left:20px"><span class="demo-readout-inline" id="d3-ep"></span> <span class="demo-readout-inline" id="d3-compare"></span></span></div>
+  <canvas id="d3-canvas" width="500" height="200" aria-label="Realizable vs Agnostic：兩條 ε 曲線 互動圖"></canvas>
+  <div class="demo-readout" id="d3-out"></div>
+</div>
+<!-- == Phase C kp-3 demo END == -->
+</div>
+<!-- == Phase B kp-3 diagram END == -->
+
+      <p><strong>Realizable 假設</strong>：存在某個目標函數 $f\in\mathcal{H}$，使得資料標籤就是 $y=f(x)$（沒有雜訊）。這是 PAC 框架最乾淨的設定。</p>
+<p>在此設定下，定義假設 $h$ 在分佈 $\mathcal{D}$ 上的真實錯誤率：</p>
+<p>$$\mathrm{err}_{\mathcal{D}}(h) := \mathbb{P}_{x\sim\mathcal{D}}[h(x) \neq f(x)]$$</p>
+<p><strong>定義 1（Realizable PAC）</strong>：若存在演算法 $\mathcal{A}$，對任意 $\epsilon,\delta\in(0,1)$、任意分佈 $\mathcal{D}$，當樣本數 $n\ge n_{\mathcal{H}}(\epsilon,\delta)$ 時，$\mathcal{A}$ 以至少 $1-\delta$ 機率輸出 $h\in\mathcal{H}$ 使 $\mathrm{err}_{\mathcal{D}}(h)\le\epsilon$，則 $\mathcal{H}$ 是 <strong>PAC-learnable</strong>。</p>
+<p>直覺：因為資料「可被某個 $\mathcal{H}$ 內的函數完美解釋」，只要樣本夠多，<strong>經驗風險最小化（ERM）</strong> 自然能挑到一個錯誤率小於 $\epsilon$ 的假設。</p>
+<p><strong>Realizable 的限制</strong>：現實資料幾乎一定有雜訊——同一張 $x$ 可能對應不同 $y$（標註者主觀、感測器誤差、隱藏變數）。這時 realizable 假設不成立，要用下節的 agnostic 設定。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-3" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Realizable PAC — 假設類裡有真神</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Realizable PAC 設定的核心假設是什麼？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">資料沒有標籤</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">存在某個 $f\in\mathcal{H}$ 能解釋所有標籤</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$\mathcal{H}$ 有限</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">訓練資料服從高斯分佈</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp4" data-kp="4">
+  <header class="card-head">
+    <span class="badge">2.2</span>
+    <h2 class="card-title">Agnostic PAC：放棄「完美函數存在」</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+      <p>放棄 realizable 假設——也就是承認「$\mathcal{H}$ 裡可能根本沒有能完美解釋資料的函數」。這時學習的目標變成：找到 $\mathcal{H}$ 內<strong>最好</strong>的那個假設，至多好 $\epsilon$。</p>
+<p><strong>定義 2（Agnostic PAC）</strong>：若 $\mathcal{A}$ 以至少 $1-\delta$ 機率輸出 $h\in\mathcal{H}$ 使</p>
+<p>$$\mathrm{err}_{\mathcal{D}}(h) \le \inf_{h'\in\mathcal{H}}\mathrm{err}_{\mathcal{D}}(h') + \epsilon,$$</p>
+<p>則 $\mathcal{H}$ 是 <strong>agnostic PAC-learnable</strong>。</p>
+<p>注意右側多出的 $\inf_{h'\in\mathcal{H}}\mathrm{err}_{\mathcal{D}}(h')$：這是 $\mathcal{H}$ 內<strong>最好假設的錯誤率</strong>（bayes risk 的 $\mathcal{H}$ 內版本）。agnostic 給的保證是「我學到的跟 $\mathcal{H}$ 內最好的差不多」，而不是「我學到一個好模型」——這個差別在深度學習裡至關重要，因為 $\mathcal{H}$ 通常<strong>根本沒有</strong>能完美解釋資料的函數。</p>
+<p>原文用股票做類比：realizable 像「保證一年後報酬最高」（假設資訊完美）；agnostic 像「保證跟市場上最好的投資人不會差太多」（現實有戰爭、災變等不可控因素）。</p>
+<!-- == Phase C kp-4 demo == -->
+<div class="demo" id="demo-kp4" data-demo-id="kp-4">
+  <h4>互動 demo：Agnostic bound = infimum + 修正項</h4>
+  <div class="demo-theory"><p>$\mathrm{err}(h) \le \inf_{h'\in\mathcal{H}}\mathrm{err}(h') + \sqrt{(d + \log(1/\delta))/n}$</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拉動三個旋鈕：$\inf\mathrm{err}$（$\mathcal{H}$ 內最佳者）、$d$（VC 維度）、$n$（樣本數）。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>當 $d$ 大或 $n$ 小時，修正項膨脹，整個 bound 失效。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$n=10000, d=10$ 時修正項 $\approx 0.05$；$n=100, d=10^6$ 時修正項 $\approx 100$（淪為廢話）。</div>
+  <div class="demo-controls"><label>$\inf\mathrm{err}$：<input type="range" id="d4-inf" min="0" max="0.3" step="0.01" value="0.05"></label><span class="demo-val" id="d4-inf-val"></span><label style="margin-left:12px">$d$：<input type="range" id="d4-d" min="1" max="1000000" value="1000"></label><span class="demo-val" id="d4-d-val"></span><label style="margin-left:12px">$n$：<input type="range" id="d4-n" min="100" max="100000" value="10000"></label><span class="demo-val" id="d4-n-val"></span><span class="demo-readout-inline" id="d4-out-inline"></span></div>
+  <canvas id="d4-canvas" width="500" height="200" aria-label="Agnostic bound = infimum + 修正項 互動圖"></canvas>
+  <div class="demo-readout" id="d4-out"></div>
+</div>
+<!-- == Phase C kp-4 demo END == -->
+</div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-4" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Agnostic PAC — 放棄「真神存在」</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Agnostic PAC 與 Realizable PAC 的關鍵差別是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">Agnostic 不需要資料</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">Agnostic 放棄「$\mathcal{H}$ 內存在完美函數」的假設，改與 $\mathcal{H}$ 內最佳者比</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">Agnostic 只適用於回歸</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">Agnostic 的樣本數與 $\delta$ 無關</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp5" data-kp="5">
+  <header class="card-head">
+    <span class="badge">2.3</span>
+    <h2 class="card-title">VC 維度：模型的「打散能力」</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-5 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-5">
+  <img src="assets/diagram-kp5-vc-shatter.png" alt="kp-5 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-5" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 左右兩子圖。左圖：3 個點（一紅二藍）排成不等距三角形，畫一條水平黑線完美分開紅藍；右圖：4 個點排成 2×2 對角同色（XOR 配置），多條灰色虛線（X 形 + 兩條斜線）嘗試但顯然都無法分開。
+WHY: 凸顯「2D 直線只能 shatter 3 點不能 shatter 4 點」這個 VC 維度核心定義。
+MUST show: (1) 左 3 點 1 條線 OK；(2) 右 4 點 XOR 形狀；(3) 右圖至少 3 條嘗試的線都失敗。
+AVOID: 數學公式、表格；用 3D 圖；只畫一張圖。
+STYLE: clean educational diagram, 黑白 + 紅藍標記，標題「VC 維度：2D 直線 VCdim=3」。</pre>
+  </details>
+<!-- == Phase C kp-5 demo == -->
+<div class="demo" id="demo-kp5" data-demo-id="kp-5">
+  <h4>互動 demo：2D 線打散 3 / 打不散 4（VC = 3）</h4>
+  <div class="demo-theory"><p>2D 平面上，直線假設類 $\mathcal{H}=\{$所有直線$\}$ 的 $\mathrm{VCdim}(\mathcal{H})=3$。任何 3 點都可被某直線完美打散；存在 4 點（如 XOR 配置）打不散。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>切換 3 點 / 4 點模式觀察。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>3 點：總能找到一條線分開紅藍（shatter 成功）。4 點 XOR 配色：任何一條線都會至少錯一個（shatter 失敗）。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>左圖 3 點 1 條綠線 = shatter ✓；右圖 4 點 XOR，灰色虛線嘗試都失敗 = ✗。</div>
+  <div class="demo-controls"><label>模式：<select id="d5-mode"><option value="3">3 點（可打散）</option><option value="4">4 點（打不散）</option></select></label><span class="demo-readout-inline" id="d5-label"></span></div>
+  <canvas id="d5-canvas" width="500" height="200" aria-label="2D 線打散 3 / 打不散 4（VC = 3） 互動圖"></canvas>
+  <div class="demo-readout" id="d5-out"></div>
+</div>
+<!-- == Phase C kp-5 demo END == -->
+</div>
+<!-- == Phase B kp-5 diagram END == -->
+
+      <p><strong>打散（shattering）</strong>：給定一個假設類 $\mathcal{H}$ 與一組 $n$ 個資料點，$\mathcal{H}$ <strong>能打散</strong>這組點若且唯若<strong>所有 $2^n$ 種標籤組合都存在某個 $h\in\mathcal{H}$ 能正確分類</strong>。</p>
+<p><strong>VC 維度</strong> = $\mathcal{H}$ 能打散的最大點數，記為 $\mathrm{VCdim}(\mathcal{H})$。</p>
+<p>經典例子：2D 平面上的直線 $\mathrm{VCdim}=3$——任何 3 點都可被某直線打散（如原文 Fig.1a/b/c），但 4 點不行（如 Fig.1d 的對角配置）。</p>
+<p><strong>定理 1（統計學習基本定理）</strong>：$\mathcal{H}$ 是 PAC-learnable <strong>若且唯若</strong> $\mathrm{VCdim}(\mathcal{H})$ 有限。</p>
+<p>為什麼？因為有限 VC 維度才能保證「假設類不會太強到記住任何雜訊」。深度學習的 $\mathrm{VCdim}$ 是多少？依 Harvey-Liaw-Mehrabian (2017) 與 Bartlett 等人 (2019) 的近緊界：對 $w$ 個參數、$l$ 層的 ReLU 網路，</p>
+<p>$$\Omega(wl\log(w/l)) \le \mathrm{VCdim} \le \mathcal{O}(wl\log w).$$</p>
+<p>實務上若深度 $l\ll w$，可簡化為 $\mathrm{VCdim}=\Theta(w\log w)$——<strong>VC 維度隨參數量近似線性增長</strong>。GPT-3 級模型有 1750 億參數，VC 維度約 $\sim 10^{11}$，比整個訓練集都還大——這就是 §3.3 要面對的問題。</p>
+<figure class="orig-fig"><img src="assets/orig-fig1-vc-dimension-2d.jpg" alt="2D 線打散 3 點 / 打不散 4 點" loading="lazy"></figure>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-5" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：VC 維度 — 假設類的「打散能力」</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 2D 直線的 VC 維度是多少？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">2</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">3</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">4</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">無限</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp6" data-kp="6">
+  <header class="card-head">
+    <span class="badge">2.4</span>
+    <h2 class="card-title">樣本複雜度：多少資料才夠？</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-6 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-6">
+  <img src="assets/diagram-kp6-sample-complexity.png" alt="kp-6 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-6" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸是 ε（0.01–0.3），y 軸是 n（log scale），兩條曲線 realizable 藍色（淺）與 agnostic 紅色（陡），中間填半透明橘色標「差距區」。
+WHY: 凸顯「容忍錯誤率要求越嚴，所需樣本指數爆炸」。
+MUST show: (1) 兩條曲線，agnostic 比 realizable 陡得多；(2) 中間差距區；(3) 標註 d=10, δ=0.05 的條件。
+AVOID: 對數軸改用線性；單一條曲線；沒有差距區填色。
+STYLE: clean scientific plot, 標題「樣本複雜度 vs ε」。</pre>
+  </details>
+<!-- == Phase C kp-6 demo == -->
+<div class="demo" id="demo-kp6" data-demo-id="kp-6">
+  <h4>互動 demo：樣本複雜度 $n(\epsilon)$ 曲線</h4>
+  <div class="demo-theory"><p>$n_{\mathrm{realizable}}(\epsilon) = O((d\log(1/\epsilon)+\log(1/\delta))/\epsilon)$；$n_{\mathrm{agnostic}} = O((d+\log(1/\delta))/\epsilon^2)$</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $\epsilon$ 與 $d$ 觀察兩條曲線。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>Agnostic 曲線在 $\epsilon$ 變小時急劇上升——這是「錯誤率要求越嚴，所需樣本指數爆炸」的視覺。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>預設 $d=10, \delta=0.05$：$\epsilon=0.05$ 時 realizable $n\approx300$，agnostic $n\approx4300$（約 14× 差距）。</div>
+  <div class="demo-controls"><label>$\epsilon$：<input type="range" id="d6-eps" min="0.02" max="0.3" step="0.005" value="0.05"></label><span class="demo-val" id="d6-eps-val"></span><label style="margin-left:12px">$d$：<input type="range" id="d6-d" min="1" max="100" value="10"></label><span class="demo-val" id="d6-d-val"></span><div class="demo-readout-inline" id="d6-out-inline"></div></div>
+  <canvas id="d6-canvas" width="500" height="200" aria-label="樣本複雜度 $n(\epsilon)$ 曲線 互動圖"></canvas>
+  <div class="demo-readout" id="d6-out"></div>
+</div>
+<!-- == Phase C kp-6 demo END == -->
+</div>
+<!-- == Phase B kp-6 diagram END == -->
+
+      <p>定義 <strong>樣本複雜度函數</strong> $n_{\mathcal{H}}(\epsilon,\delta)$：滿足 PAC 條件所需的最小樣本數。定理 2 給了兩個最重要的具體公式：</p>
+<p><strong>Realizable 情形</strong>：</p>
+<p>$$n_{\mathcal{H}} = \mathcal{O}\!\left(\frac{1}{\epsilon}\left(d\log\frac{1}{\epsilon}+\log\frac{1}{\delta}\right)\right).$$</p>
+<p><strong>Agnostic 情形</strong>：</p>
+<p>$$n_{\mathcal{H}} = \mathcal{O}\!\left(\frac{1}{\epsilon^{2}}\left(d+\log\frac{1}{\delta}\right)\right).$$</p>
+<p>其中 $d=\mathrm{VCdim}(\mathcal{H})$。幾個值得記住的指數關係：</p>
+<ol>
+<li><strong>對 $\epsilon$ 的依賴</strong>：realizable 是 $1/\epsilon$，agnostic 是 $1/\epsilon^2$——agnostic 對「想要更小的錯誤率」反應更敏感，因為容忍了更多不確定性。</li>
+<li><strong>對 $d$ 的依賴</strong>：兩者都是 $d$ 線性——VC 維度是「學習難度」的代理變數。</li>
+<li><strong>對 $\delta$ 的依賴</strong>：都只有 $\log(1/\delta)$——把信心從 95% 提到 99% 只需多一點點樣本。</li>
+</ol>
+<p>把數字塞進去：$d=10^6$（百萬參數）、$\epsilon=0.01$、$\delta=0.05$，agnostic 給的 $n\sim 10^6\times 10^4 + 3 = 10^{10}$——比現實常見資料集大好幾個量級。這就是所謂「<strong>上界是空的（vacuous）</strong>」。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-6" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：樣本複雜度 — 多少資料才夠？</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Agnostic 樣本複雜度 $n_{\mathcal{H}}$ 對 $\epsilon$ 的依賴是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$1/\epsilon$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">$1/\epsilon^2$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$\log(1/\epsilon)$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">與 $\epsilon$ 無關</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp7" data-kp="7">
+  <header class="card-head">
+    <span class="badge">2.5</span>
+    <h2 class="card-title">複雜度依賴誤差上界</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-7 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-7">
+  <img src="assets/diagram-kp7-complexity-bound.png" alt="kp-7 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-7" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸是 n（log 100–10000），y 軸是上界（log scale），4 條不同顏色的曲線對應 |𝓔|=10³, 10⁵, 10⁷, 10⁹；水平虛線在 y=1 處標「淪為廢話」；右側圖例。
+WHY: 凸顯「參數量遠大於資料時上界退化為 1」這個定理 3 的關鍵推論。
+MUST show: (1) 4 條曲線隨 |𝓔| 變大而整體上移；(2) 水平虛線 y=1；(3) log-log 軸；(4) 圖例清楚標示每條線的 |𝓔|。
+AVOID: 沒有 log 軸、沒有 1 基準線、單一條曲線。
+STYLE: clean scientific plot, 標題「複雜度依賴誤差上界」。</pre>
+  </details>
+<!-- == Phase C kp-7 demo == -->
+<div class="demo" id="demo-kp7" data-demo-id="kp-7">
+  <h4>互動 demo：複雜度上界：參數量與資料量的拔河</h4>
+  <div class="demo-theory"><p>$\mathrm{err}_{\mathcal{D}}(h) \le \inf\mathrm{err} + \sqrt{(|\mathcal{E}|+\log(1/\delta))/n}$</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $|\mathcal{E}|$（log scale）與 $n$ 觀察上界變化。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>當 $|\mathcal{E}|$ 遠大於 $n$ 時上界膨脹甚至 $\ge 1$——理論失效。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$|\mathcal{E}|=10^6, n=10^3$ 時上界 $\approx 31.6$；$|\mathcal{E}|=10^3, n=10^6$ 時 $\approx 0.002$。</div>
+  <div class="demo-controls"><label>$|\mathcal{E}|$：<input type="range" id="d7-E" min="3" max="9" step="0.1" value="6"></label><span class="demo-val" id="d7-E-val"></span><label style="margin-left:12px">$n$：<input type="range" id="d7-n" min="100" max="1000000" value="10000"></label><span class="demo-val" id="d7-n-val"></span><div class="demo-readout-inline" id="d7-out-inline"></div></div>
+  <canvas id="d7-canvas" width="500" height="200" aria-label="複雜度上界：參數量與資料量的拔河 互動圖"></canvas>
+  <div class="demo-readout" id="d7-out"></div>
+</div>
+<!-- == Phase C kp-7 demo END == -->
+</div>
+<!-- == Phase B kp-7 diagram END == -->
+
+      <p>把 §2.4 的樣本複雜度結論改寫成「已知訓練資料 $n$ 時，測試誤差被什麼限制」——這是更常用的形式。定理 3 給出：</p>
+<p>$$\mathrm{err}_{\mathcal{D}}(h) \le \inf_{h'\in\mathcal{H}}\mathrm{err}_{\mathcal{D}}(h') + f(c(h), n),$$</p>
+<p>其中 $c(h)$ 是某個<strong>複雜度度量</strong>（VC 維度就是一種），$f$ 是隨 $c$ 遞增、隨 $n$ 遞減的函數。具體到神經網路（定理 5 在 §3.2），$f$ 就是 $\sqrt{(|\mathcal{E}|+\log(1/\delta))/n}$，其中 $|\mathcal{E}|$ 是權重總數。</p>
+<p><strong>這個上界告訴你什麼？</strong></p>
+<ol>
+<li>模型越複雜（$c$ 大），上界越鬆——經典的「bias-variance 取捨」。</li>
+<li>資料越多（$n$ 大），上界越緊——「多看資料永遠有用」。</li>
+<li>若 $|\mathcal{E}| \gg n$，$f$ 接近 1，上界淪為「$\mathrm{err}_{\mathcal{D}}(h) \le 1$」這種廢話。</li>
+</ol>
+<p>這也是後面 §3.3「為什麼上界在神經網路不 work」的鋪墊：實務上 $|\mathcal{E}|\gg n$ 的神經網路比比皆是（GPT-3 級模型參數量遠超訓練 token 數），但它們泛化得<strong>莫名其妙地好</strong>——這違反了上界的字面意義。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-7" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：複雜度依賴誤差上界 — 測試誤差被什麼卡住</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 若 $|\mathcal{E}| \gg n$（參數遠多於資料），定理 3 的上界會怎樣？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">變緊</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">變鬆，甚至淪為 $\mathrm{err}\le 1$ 的廢話</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">與 $\delta$ 無關</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">自動收斂到 0</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp8" data-kp="8">
+  <header class="card-head">
+    <span class="badge">3.1</span>
+    <h2 class="card-title">神經網路的表達力</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-8 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-8-svg">
+  <svg class="inline-svg" viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="25" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">通用逼近定理：s(d) 神經元可逼近任意 f:[0,1]^d → [0,1]</text>
+  <!-- input -->
+  <circle cx="80" cy="130" r="30" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="80" y="125" text-anchor="middle" font-size="11" fill="#1e40af">x₁</text>
+  <text x="80" y="142" text-anchor="middle" font-size="11" fill="#1e40af">...</text>
+  <text x="80" y="159" text-anchor="middle" font-size="11" fill="#1e40af">x_d</text>
+  <text x="80" y="195" text-anchor="middle" font-size="10" fill="#64748b">輸入 (d 維)</text>
+  <!-- hidden layer (many neurons) -->
+  <line x1="110" y1="120" x2="240" y2="40" stroke="#5b21b6" stroke-width=".8"/>
+  <line x1="110" y1="120" x2="240" y2="80" stroke="#5b21b6" stroke-width=".8"/>
+  <line x1="110" y1="120" x2="240" y2="120" stroke="#5b21b6" stroke-width=".8"/>
+  <line x1="110" y1="120" x2="240" y2="160" stroke="#5b21b6" stroke-width=".8"/>
+  <line x1="110" y1="120" x2="240" y2="200" stroke="#5b21b6" stroke-width=".8"/>
+  <line x1="110" y1="140" x2="240" y2="40" stroke="#5b21b6" stroke-width=".8"/>
+  <line x1="110" y1="140" x2="240" y2="80" stroke="#5b21b6" stroke-width=".8"/>
+  <line x1="110" y1="140" x2="240" y2="120" stroke="#5b21b6" stroke-width=".8"/>
+  <line x1="110" y1="140" x2="240" y2="160" stroke="#5b21b6" stroke-width=".8"/>
+  <line x1="110" y1="140" x2="240" y2="200" stroke="#5b21b6" stroke-width=".8"/>
+  <circle cx="260" cy="40" r="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+  <circle cx="260" cy="80" r="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+  <circle cx="260" cy="120" r="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+  <circle cx="260" cy="160" r="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+  <circle cx="260" cy="200" r="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="280" y="125" font-size="10" fill="#64748b">...</text>
+  <circle cx="310" cy="100" r="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+  <circle cx="310" cy="140" r="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="285" y="225" text-anchor="middle" font-size="10" fill="#64748b">s(d) 個神經元</text>
+  <text x="285" y="240" text-anchor="middle" font-size="9" font-style="italic" fill="#64748b">（s(d) 是 d 的指數函數）</text>
+  <!-- output -->
+  <line x1="320" y1="120" x2="450" y2="130" stroke="#5b21b6" stroke-width="1"/>
+  <line x1="320" y1="100" x2="450" y2="130" stroke="#5b21b6" stroke-width="1"/>
+  <line x1="320" y1="140" x2="450" y2="130" stroke="#5b21b6" stroke-width="1"/>
+  <line x1="320" y1="160" x2="450" y2="130" stroke="#5b21b6" stroke-width="1"/>
+  <circle cx="480" cy="130" r="35" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="480" y="125" text-anchor="middle" font-size="11" font-weight="600" fill="#166534">f̂</text>
+  <text x="480" y="142" text-anchor="middle" font-size="9" fill="#166534">≈ f</text>
+  <text x="480" y="195" text-anchor="middle" font-size="10" fill="#64748b">逼近輸出</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-8 diagram END == -->
+
+      <p><strong>定理 4（神經網路表達力）</strong>：設 $d$ 為資料維度，$s(d)$ 為 $d$ 的指數函數。則<strong>存在</strong>一個有 $s(d)$ 個神經元的前饋網路，可逼近任意函數</p>
+<p>$$f:[0,1]^d \to [0,1],$$</p>
+<p>誤差至多 $\epsilon\gtrsim 0$。</p>
+<p>這就是有名的<strong>通用逼近定理（Universal Approximation Theorem）</strong>。它只保證「<strong>存在</strong>夠大的網路能逼近」，但沒說：</p>
+<ol>
+<li>這個網路要多大？實務上指數級 $s(d)$ 對 $d$ 大的問題是天文數字。</li>
+<li>訓練演算法找不找得到？這是優化問題，不是表達力問題。</li>
+<li>找到的網路泛化嗎？這是 §3.2–§3.3 的主題。</li>
+</ol>
+<p><strong>深度帶來的好處</strong>：定理 4 還有個常被忽略的版本——對於某些函數族，<strong>深度網路</strong>所需的參數量是<strong>淺層網路</strong>的指數分之一。例如 parity 函數、層疊的 XOR-like 結構。<strong>深度</strong>不只是「多幾層的非線性疊加」，而是用指數效率表達某些函數族。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-8" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：神經網路的表達力 — 通用逼近定理</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 通用逼近定理告訴我們什麼？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">任何有限網路都能逼近任意函數</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">存在夠大的網路能逼近任意函數，但沒說多大、找不找得到、泛不泛化</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">神經網路不需要訓練</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">深度不重要</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp9" data-kp="9">
+  <header class="card-head">
+    <span class="badge">3.2</span>
+    <h2 class="card-title">神經網路的複雜度誤差上界</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+      <p>把定理 3 套到神經網路——用「權重數 $|\mathcal{E}|$」當複雜度度量 $c(h)$：</p>
+<p>$$\mathrm{err}_{\mathcal{D}}(h) \le \inf_{h'\in\mathcal{H}}\mathrm{err}_{\mathcal{D}}(h') + \sqrt{\frac{|\mathcal{E}|+\log(1/\delta)}{n}}.$$</p>
+<p>這個上界的三個直接推論：</p>
+<ol>
+<li><strong>網路越大、泛化越差？</strong> 表面上看是的——$|\mathcal{E}|$ 變大會讓根號項變大、上界變鬆。</li>
+<li><strong>資料越多、泛化越好</strong>——$n$ 變大會讓根號項變小、上界變緊。</li>
+<li><strong>「$n\gg|\mathcal{E}|$」是必要條件</strong>：若 $n\approx|\mathcal{E}|$，根號項 $\approx 1$，上界等於「$\mathrm{err}\le 1$」這種空話。</li>
+</ol>
+<p>「直覺」告訴你：模型參數量 $\gg$ 訓練樣本數時一定會過擬合。但 §3.3 馬上會打臉：實務上 $|\mathcal{E}|\gg n$ 的神經網路<strong>泛化得很好</strong>。這個矛盾就是現代深度學習理論的核心謎題。</p>
+<p>直觀解釋（先劇透）：$|\mathcal{E}|$ 是「<strong>最壞情況</strong>的容量」，但 SGD 找到的解其實落在參數空間的某個小子集合，這個子集的「有效容量」可能遠小於 $|\mathcal{E}|$（見 §5.4 implicit bias）。</p>
+<!-- == Phase C kp-9 demo == -->
+<div class="demo" id="demo-kp9" data-demo-id="kp-9">
+  <h4>互動 demo：NN 複雜度上界：$|\mathcal{E}|$ 與 $n$ 拉鋸</h4>
+  <div class="demo-theory"><p>神經網路的定理 3：$\mathrm{err} \le \inf\mathrm{err} + \sqrt{(|\mathcal{E}|+\log(1/\delta))/n}$</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $|\mathcal{E}|$ 與 $n$ 觀察上界水平線（紫）vs 廢話線（紅 $y=1$）的相對位置。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>$|\mathcal{E}| \gg n$ 時紫線撞上紅線，上界失效。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$|\mathcal{E}|=10^6, n=10^3$ 時紫線遠在紅線上方（$1.0$ 上界）。$|\mathcal{E}|=10^3, n=10^6$ 時紫線在底部。</div>
+  <div class="demo-controls"><label>$|\mathcal{E}|$：<input type="range" id="d9-E" min="3" max="9" step="0.1" value="6"></label><span class="demo-val" id="d9-E-val"></span><label style="margin-left:12px">$n$：<input type="range" id="d9-n" min="100" max="10000000" value="10000"></label><span class="demo-val" id="d9-n-val"></span><div class="demo-readout-inline" id="d9-out-inline"></div></div>
+  <canvas id="d9-canvas" width="500" height="200" aria-label="NN 複雜度上界：$|\mathcal{E}|$ 與 $n$ 拉鋸 互動圖"></canvas>
+  <div class="demo-readout" id="d9-out"></div>
+</div>
+<!-- == Phase C kp-9 demo END == -->
+</div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-9" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：神經網路的複雜度誤差上界 — 為何理論給的界是空的</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 若 $|\mathcal{E}|\approx n$，上界中的根號項接近多少？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">0</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">1（讓上界淪為 $\mathrm{err}\le 1$）</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$n$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$\delta$</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp10" data-kp="10">
+  <header class="card-head">
+    <span class="badge">3.3</span>
+    <h2 class="card-title">理論上界在 NN 為何失效？</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-10 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-10-svg">
+  <svg class="inline-svg" viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5b21b6"/>
+    </marker>
+  </defs>
+  <!-- left: theory -->
+  <rect x="40" y="40" width="220" height="170" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+  <text x="150" y="65" text-anchor="middle" font-size="13" font-weight="700" fill="#991b1b">古典理論</text>
+  <text x="150" y="90" text-anchor="middle" font-size="11" fill="#0f172a">|E| ≫ n</text>
+  <text x="150" y="110" text-anchor="middle" font-size="11" fill="#0f172a">⇒ 上界 = 1</text>
+  <text x="150" y="135" text-anchor="middle" font-size="11" font-weight="600" fill="#dc2626">預測：</text>
+  <text x="150" y="155" text-anchor="middle" font-size="11" fill="#0f172a">「一定會過擬合」</text>
+  <text x="150" y="175" text-anchor="middle" font-size="11" fill="#0f172a">「無法泛化」</text>
+  <text x="150" y="200" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">（§3.2 bound）</text>
+  <!-- right: practice -->
+  <rect x="340" y="40" width="220" height="170" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="450" y="65" text-anchor="middle" font-size="13" font-weight="700" fill="#166534">實際觀察</text>
+  <text x="450" y="90" text-anchor="middle" font-size="11" fill="#0f172a">GPT-3, ResNet...</text>
+  <text x="450" y="110" text-anchor="middle" font-size="11" fill="#0f172a">|E| ≫ n 仍泛化</text>
+  <text x="450" y="135" text-anchor="middle" font-size="11" font-weight="600" fill="#16a34a">事實：</text>
+  <text x="450" y="155" text-anchor="middle" font-size="11" fill="#0f172a">「泛化良好」</text>
+  <text x="450" y="175" text-anchor="middle" font-size="11" fill="#0f172a">「scaling 還能提升」</text>
+  <text x="450" y="200" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">（§3.3 兩個實驗）</text>
+  <!-- middle: gap -->
+  <text x="300" y="120" text-anchor="middle" font-size="22" font-weight="700" fill="#5b21b6">≠</text>
+  <text x="300" y="140" text-anchor="middle" font-size="11" fill="#5b21b6">理論 ↔ 實務</text>
+  <text x="300" y="160" text-anchor="middle" font-size="11" fill="#5b21b6">嚴重脫節</text>
+  <line x1="260" y1="125" x2="280" y2="125" stroke="#5b21b6" stroke-width="1.5" marker-end="url(#arr3)"/>
+  <line x1="340" y1="125" x2="320" y2="125" stroke="#5b21b6" stroke-width="1.5" marker-end="url(#arr3)"/>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-10 diagram END == -->
+
+      <p>一句話：<strong>理論上界給的是「對所有可學習的假設都成立」的最壞情況保證，但神經網路實際上依賴某些結構假設</strong>（如資料的低維流形、標籤的某些可學規律），這些假設讓最壞情況不會發生。</p>
+<p>本章用三個方向的證據展示這個落差：</p>
+<ol>
+<li><strong>§3.3.1 隨機標籤實驗</strong>（Zhang et al., 2017）：把 CIFAR-10 的標籤完全隨機打散，神經網路<strong>仍然能完美擬合訓練資料</strong>。也就是說，<strong>網路容量足夠記住任何函數</strong>。如果只考慮 VC 維度，這種網路早該爆掉，但它對「真實」測試資料仍表現正常——<strong>「能記住」不等於「會記住」</strong>，關鍵在於訓練演算法（SGD）有偏置。</li>
+<li><strong>§3.3.2 Uniform convergence 的不足</strong>（Nagarajan & Kolter, 2019）：uniform convergence 框架要求「訓練誤差收斂到測試誤差」，但實驗顯示 <strong>uniform convergence bound 可能隨 $n$ 增加而變鬆</strong>（即使測試誤差下降）——bound 與真實泛化根本脫鉤。</li>
+</ol>
+<p>這兩個方向都指出：<strong>要解釋深度學習的泛化，必須引入超出「模型容量」的東西</strong>——資料結構、SGD 動力學、模型架構的歸納偏置……後面 §4（資訊瓶頸）與 §5（六大新現象）就是這些嘗試。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-10" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：古典 PAC 與 NN 實務為何脫節</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> §3.3.1 隨機標籤實驗說明了什麼？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">神經網路會被雜訊干擾</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">神經網路有足夠容量記住任何函數，「能記住」不等於「會記住」</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">SGD 一定會找到最簡模型</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">VC 維度對 CNN 適用</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp11" data-kp="11">
+  <header class="card-head">
+    <span class="badge">3.3.1</span>
+    <h2 class="card-title">隨機標籤實驗：NN 為何能記住一切？</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-11 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-11">
+  <img src="assets/diagram-kp11-random-labels.png" alt="kp-11 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-11" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸是 epoch（0–200），4 條線：藍實線 真實標籤 train、藍虛線 真實標籤 test、紅實線 隨機標籤 train、紅虛線 隨機標籤 test；水平灰虛線在 0.5 標「隨機猜測」。
+WHY: 凸顯「隨機標籤時訓練誤差仍能 0，但測試掉到 50%」——NN 有容量記住一切，但泛化靠結構。
+MUST show: (1) 紅實線也能降到 0；(2) 紅虛線停在 0.5 附近；(3) 0.5 水平線。
+AVOID: 線性軸（用線性就好）、雙 y 軸、3D。
+STYLE: clean scientific plot, 標題「隨機標籤實驗 (Zhang et al. 2017)」。</pre>
+  </details>
+<!-- == Phase C kp-11 demo == -->
+<div class="demo" id="demo-kp11" data-demo-id="kp-11">
+  <h4>互動 demo：隨機標籤實驗：能記住 ≠ 會記住</h4>
+  <div class="demo-theory"><p>Zhang et al. (2017)：訓練資料標籤完全隨機化，CNN 仍能將訓練誤差降到 0，但測試誤差停在隨機水準。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>切換 真實 / 隨機 標籤模式觀察曲線差異。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>真實標籤：兩條曲線都下降（泛化）。隨機標籤：訓練誤差降到 0 但測試卡在 0.5（沒泛化）。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>預設顯示：真實模式 test $\approx 0.08$；隨機模式 test 卡在 0.5。</div>
+  <div class="demo-controls"><label>模式：<select id="d11-mode"><option value="real">真實標籤</option><option value="random">隨機標籤</option></select></label><div class="demo-readout-inline" id="d11-out-inline"></div></div>
+  <canvas id="d11-canvas" width="500" height="200" aria-label="隨機標籤實驗：能記住 ≠ 會記住 互動圖"></canvas>
+  <div class="demo-readout" id="d11-out"></div>
+</div>
+<!-- == Phase C kp-11 demo END == -->
+</div>
+<!-- == Phase B kp-11 diagram END == -->
+
+      <p>Zhang et al. (2017) 做了兩個乾淨的實驗：</p>
+<ol>
+<li><strong>隨機標籤實驗</strong>：把 ImageNet/CIFAR 的標籤完全打亂（圖還是原圖，標籤是均勻隨機），用標準 CNN 訓練。訓練誤差能降到 0——網路<strong>有足夠容量把隨機標籤也記下來</strong>。測試誤差當然接近亂猜（因為測試標籤也是隨機的）。</li>
+<li><strong>隨機像素實驗</strong>：標籤用真實的，但把輸入像素完全打亂成高斯雜訊。同樣能訓練誤差 0、測試誤差近亂猜。</li>
+</ol>
+<p>這兩個實驗的意義：</p>
+<ol>
+<li><strong>「能記住」≠「會記住」</strong>。同樣的網路結構，在<strong>真實資料</strong>上會學到可泛化解，在<strong>隨機資料</strong>上只能死記。可見泛化不是「模型容量不夠」造成的——而是訓練演算法（SGD）配合資料結構的結果。</li>
+<li><strong>正則化不是答案</strong>。即使加 weight decay、dropout 等顯式正則化，隨機標籤實驗的訓練誤差仍能降到 0。換言之，<strong>正則化無法完全解釋泛化</strong>——還有別的機制在運作。</li>
+</ol>
+<p>後續工作（如 [Poggio et al., 2018]）把這種「額外的泛化來源」歸因於<strong>loss landscape 的幾何</strong> 與<strong>優化過程的隱式正則化</strong>——也就是 §5.4 implicit bias。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-11" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：隨機標籤實驗 — 容量不是泛化的瓶頸</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 在 Zhang et al. (2017) 的隨機標籤實驗中，神經網路能否把訓練誤差降到 0？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">不能</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">能</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">只有 CNN 能，MLP 不能</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">加了正則化就不能</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp12" data-kp="12">
+  <header class="card-head">
+    <span class="badge">3.3.2</span>
+    <h2 class="card-title">Uniform convergence 的不足</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-12 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-12">
+  <img src="assets/diagram-kp12-uniform-convergence.png" alt="kp-12 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-12" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸是 n（log 100–5000），藍實線 真實測試誤差持續下降、紅虛線 uniform convergence bound 隨 n 變鬆（從低升到高）；中間紅色半透明填色「Bound 與實際脫鉤區」。
+WHY: 凸顯 Nagarajan & Kolter (2019) 的反直覺：bound 與真實泛化可以完全脫鉤。
+MUST show: (1) 兩條方向相反的曲線；(2) 紅色填色區；(3) 圖例。
+AVOID: 兩條曲線方向相同、沒有填色區。
+STYLE: clean scientific plot, 標題「Uniform convergence 的不足」。</pre>
+  </details>
+<!-- == Phase C kp-12 demo == -->
+<div class="demo" id="demo-kp12" data-demo-id="kp-12">
+  <h4>互動 demo：Uniform convergence bound 隨 $n$ 變鬆</h4>
+  <div class="demo-theory"><p>Nagarajan & Kolter (2019)：在線性 NN 上，uniform convergence bound 可能隨 $n$ 增加而變鬆，與真實測試誤差方向相反。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $n$ 觀察兩個圓點位置。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>藍點（真實測試誤差）隨 $n$ 下降；紅點（bound）隨 $n$ 上升——bound 與真實泛化脫鉤。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$n=5000$ 時 test $\approx 0.16$，bound $\approx 0.66$，差距 0.5。</div>
+  <div class="demo-controls"><label>$n$：<input type="range" id="d12-n" min="100" max="5000" value="1500"></label><span class="demo-val" id="d12-n-val"></span><div class="demo-readout-inline" id="d12-out-inline"></div></div>
+  <canvas id="d12-canvas" width="500" height="200" aria-label="Uniform convergence bound 隨 $n$ 變鬆 互動圖"></canvas>
+  <div class="demo-readout" id="d12-out"></div>
+</div>
+<!-- == Phase C kp-12 demo END == -->
+</div>
+<!-- == Phase B kp-12 diagram END == -->
+
+      <p><strong>Uniform convergence（均勻收斂）</strong>框架：要求「<strong>所有</strong>假設的訓練誤差都收斂到測試誤差」。如果成立，那 ERM 挑出的最佳假設自然也泛化。</p>
+<p>Nagarajan & Kolter (2019) 用實驗展示這個框架在神經網路上的失敗：</p>
+<ol>
+<li>他們建構了一個單層線性網路，模型很小、很穩定。</li>
+<li>訓練過程中，<strong>測試誤差持續下降</strong>（模型確實在學）。</li>
+<li>但 <strong>uniform convergence bound 卻隨 $n$ 增加而變鬆</strong>——bound 與真實泛化脫鉤。</li>
+</ol>
+<p>換言之，「訓練誤差能收斂到測試誤差」這件事在神經網路上<strong>未必成立</strong>。即使它成立，bound 也可能鬆到沒用。</p>
+<p><strong>這告訴我們什麼？</strong></p>
+<ol>
+<li>Uniform convergence 是泛化的<strong>充分條件</strong>，但不是<strong>必要條件</strong>。神經網路可能有泛化但沒有 uniform convergence。</li>
+<li>要解釋深度學習泛化，需要<strong>超出 uniform convergence 的新框架</strong>。資訊瓶頸（§4）就是一種嘗試，§5 介紹的六大現象是另一種「現象學」視角。</li>
+</ol>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-12" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Uniform Convergence 為什麼解釋不了現代 NN</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Uniform convergence 框架的局限是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">計算成本太高</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">bound 可能隨 $n$ 增加而變鬆，與真實泛化脫鉤</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">只能用於線性模型</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">只適用於分類</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp13" data-kp="13">
+  <header class="card-head">
+    <span class="badge">4.1</span>
+    <h2 class="card-title">深度學習 = 資訊瓶頸</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-13 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-13-svg">
+  <svg class="inline-svg" viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5b21b6"/>
+    </marker>
+  </defs>
+  <text x="300" y="25" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">資訊瓶頸：保留與 Y 相關，壓縮其他</text>
+  <circle cx="80" cy="100" r="38" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/>
+  <text x="80" y="95" text-anchor="middle" font-size="14" font-weight="700" fill="#1e40af">X</text>
+  <text x="80" y="115" text-anchor="middle" font-size="10" fill="#1e40af">輸入</text>
+  <text x="80" y="155" text-anchor="middle" font-size="9" fill="#64748b">高維</text>
+  <!-- bottleneck -->
+  <polygon points="220,60 380,60 340,100 340,100 380,140 220,140 260,100" fill="#fef3c7" stroke="#d97706" stroke-width="2.5"/>
+  <text x="300" y="95" text-anchor="middle" font-size="14" font-weight="700" fill="#92400e">X̃</text>
+  <text x="300" y="115" text-anchor="middle" font-size="10" fill="#92400e">瓶頸 / 隱藏層</text>
+  <text x="300" y="155" text-anchor="middle" font-size="9" fill="#64748b">緊緻表示</text>
+  <circle cx="520" cy="100" r="38" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5"/>
+  <text x="520" y="95" text-anchor="middle" font-size="14" font-weight="700" fill="#166534">Ŷ</text>
+  <text x="520" y="115" text-anchor="middle" font-size="10" fill="#166534">預測</text>
+  <line x1="120" y1="100" x2="218" y2="100" stroke="#5b21b6" stroke-width="2" marker-end="url(#arr4)"/>
+  <line x1="382" y1="100" x2="480" y2="100" stroke="#5b21b6" stroke-width="2" marker-end="url(#arr4)"/>
+  <!-- Y in background -->
+  <text x="520" y="180" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">（最大化 I(X̃;Y)）</text>
+  <text x="80" y="180" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">（最小化 I(X;X̃)）</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-13 diagram END == -->
+
+      <p><strong>資訊瓶頸（Information Bottleneck, IB）</strong>：Tishby 等人 (2000) 提出的資訊論框架。核心想法：</p>
+<ul>
+<li>給定輸入 $X$ 與標籤 $Y$。</li>
+<li>學習一個<strong>壓縮表示</strong> $\tilde X$，使得 $\tilde X$ 對 $X$ 的資訊<strong>盡可能少</strong>（壓縮），但對 $Y$ 的資訊<strong>盡可能多</strong>（預測有用）。</li>
+</ul>
+<p>形式化為優化問題：</p>
+<p>$$\min_{P(\tilde x|x)} I(X;\tilde X) - \beta I(\tilde X;Y),$$</p>
+<p>其中 $I(\cdot;\cdot)$ 是互資訊，$\beta>0$ 控制「壓縮」與「任務相關」的取捨。</p>
+<p><strong>把神經網路當 IB：</strong> Tishby & Zaslavsky (2015) 提出，把<strong>隱藏層的輸出</strong>視為 $\tilde X$——隱藏層就是「資訊瓶頸」，資料通過隱藏層被壓縮、但保留對預測有用的部分。Fig.2a/b/c 展示了三個版本：抽象的瓶頸、autoencoder 的 code 層、一般多層網路。</p>
+<figure class="orig-fig"><img src="assets/orig-fig2-information-bottleneck.jpg" alt="資訊瓶頸：抽象 / autoencoder / 多層網路" loading="lazy"></figure>
+<p><strong>優化極限</strong>：$\beta=0$ 時完全忽略 $Y$、把 $X$ 壓到最小（可能只剩一個神經元）；$\beta\to\infty$ 時忽略壓縮、保留所有 $Y$ 相關資訊（接近 hard clustering）。</p>
+<p><strong>與 PAC 的差別</strong>：PAC 用樣本數量界；IB 用<strong>資訊量</strong>界。直覺上，若表示 $\tilde X$ 與 $Y$ 的互資訊越大、與 $X$ 的互資訊越小，泛化應越好——這是 §4.2 要形式化的命題。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-13" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：資訊瓶頸 — 換個鏡頭看泛化</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 資訊瓶頸的目標是哪兩個互資訊之間的取捨？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">$I(X;\tilde X)$ 與 $I(\tilde X;Y)$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$\mathbb{E}[Y]$ 與 $\mathrm{Var}(Y)$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$\mathrm{KL}$ 與 $\ell_2$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">訓練誤差與測試誤差</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp14" data-kp="14">
+  <header class="card-head">
+    <span class="badge">4.1.1</span>
+    <h2 class="card-title">Rate-distortion 最佳化</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-14 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-14">
+  <img src="assets/diagram-kp14-rate-distortion.png" alt="kp-14 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-14" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 標準 rate-distortion 曲線：x 軸 rate R（0–5），y 軸 distortion D（從 2 衰減到 0.05）；3 個彩色圓點標示 β=0.1, 1.0, 5.0 的操作點（β 越大操作點越偏右下方）。
+WHY: 凸顯「β 是壓縮率 vs 預測力的旋鈕」。
+MUST show: (1) 單調遞減曲線；(2) 3 個不同 β 的操作點；(3) 圖例標 β 值。
+AVOID: 多條曲線、3D 圖、對數軸。
+STYLE: clean scientific plot, 標題「Rate-Distortion 取捨曲線」。</pre>
+  </details>
+<!-- == Phase C kp-14 demo == -->
+<div class="demo" id="demo-kp14" data-demo-id="kp-14">
+  <h4>互動 demo：Rate-Distortion：$\beta$ 控制平衡</h4>
+  <div class="demo-theory"><p>$\min I(X;\tilde X) - \beta I(\tilde X;Y)$：$\beta$ 大 → 重預測；$\beta$ 小 → 重壓縮。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $\beta$ 觀察操作點（橘點）位置。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>$\beta$ 變大時操作點往右下移——容忍更多 rate 換更小 distortion。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$\beta=0.1$ 操作點在左上（高 distortion、低 rate）；$\beta=5.0$ 操作點在右下（低 distortion、高 rate）。</div>
+  <div class="demo-controls"><label>$\beta$：<input type="range" id="d14-beta" min="0.1" max="5" step="0.1" value="1.0"></label><span class="demo-val" id="d14-beta-val"></span><div class="demo-readout-inline" id="d14-out-inline"></div></div>
+  <canvas id="d14-canvas" width="500" height="200" aria-label="Rate-Distortion：$\beta$ 控制平衡 互動圖"></canvas>
+  <div class="demo-readout" id="d14-out"></div>
+</div>
+<!-- == Phase C kp-14 demo END == -->
+</div>
+<!-- == Phase B kp-14 diagram END == -->
+
+      <p>IB 不是憑空冒出來的，它本質上是經典的 <strong>rate-distortion（速率-失真）</strong>最佳化在「保留 $Y$ 相關資訊」這個特殊失真度量下的特例。</p>
+<p>Rate-distortion 的兩個旋鈕：</p>
+<ul>
+<li><strong>Rate（速率）</strong> $I(X;\tilde X)$：表示 $\tilde X$ 還保留多少 $X$ 的資訊。Rate 越小 = 壓縮越狠。</li>
+<li><strong>Distortion（失真）</strong> $I(\tilde X;Y)$：表示 $\tilde X$ 對預測 $Y$ 有多有用。失真越小（$I(\tilde X;Y)$ 越大）= 預測越準。</li>
+</ul>
+<p>IB 的目標函數（重述）：</p>
+<p>$$\min I(X;\tilde X) - \beta I(\tilde X;Y).$$</p>
+<p>$\beta$ 越大，越重視預測準確度（容忍更多 rate）；$\beta$ 越小，越重視壓縮（容忍更多 distortion）。這是經典的「壓縮率 vs 預測力」取捨曲線。</p>
+<p><strong>為什麼這對神經網路重要？</strong> Kawaguchi 等人 (2023) 沿這條思路證明：泛化差距可用「$X$ 與隱藏層的條件互資訊」來上界（見 §4.2 定理 6）。換言之，<strong>若隱藏層有效壓縮與 $Y$ 無關的資訊，泛化差距會小</strong>。這給了 IB 在深度學習中重新被關注的理論理由。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-14" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Rate-Distortion — 壓縮率與預測力的拔河</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Rate-distortion 中 rate 對應哪個量？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$I(\tilde X;Y)$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">$I(X;\tilde X)$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$\mathrm{KL}$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$\ell_2$</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp15" data-kp="15">
+  <header class="card-head">
+    <span class="badge">4.1.2</span>
+    <h2 class="card-title">各層的互資訊與資料處理不等式</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-15 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-15">
+  <img src="assets/diagram-kp15-layer-mutual-info.png" alt="kp-15 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-15" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸 5 個類別（X, H₁, H₂, H₃, Ŷ），雙組長條圖：紫 = I(·;Y) 從 1.0 單調遞減到 0.42，綠 = I(·;X) 從 1.0 單調遞減到 0.20；紅色斜箭頭 + 文字「DPI: 越深 → 越小」。
+WHY: 凸顯資料處理不等式「越深的隱藏層保留的標籤資訊越少」。
+MUST show: (1) 5 個類別；(2) 兩組單調遞減的長條；(3) 數值標註；(4) 紅色箭頭與 DPI 標註。
+AVOID: 折線圖、3D、沒有數值標註。
+STYLE: clean scientific plot, 標題「各隱藏層的互資訊」。</pre>
+  </details>
+<!-- == Phase C kp-15 demo == -->
+<div class="demo" id="demo-kp15" data-demo-id="kp-15">
+  <h4>互動 demo：各隱藏層的互資訊單調遞減（DPI）</h4>
+  <div class="demo-theory"><p>資料處理不等式：$I(\hat Y;Y) \le I(H_i;Y) \le I(H_j;Y) \le I(X;Y)$，$i \ge j$</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動隱藏層數觀察曲線形狀。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>無論幾層，紫線（與 $Y$）與綠線（與 $X$）都從左到右單調遞減——DPI 的視覺證據。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>預設 3 隱藏層：$I(X;Y)=1.0$，$I(H_1;Y)\approx 0.85$，$I(H_3;Y)\approx 0.55$，$I(\hat Y;Y)=0.4$。</div>
+  <div class="demo-controls"><label>隱藏層數：<input type="range" id="d15-n" min="1" max="6" value="3"></label><span class="demo-val" id="d15-n-val"></span><div class="demo-readout-inline" id="d15-out-inline"></div></div>
+  <canvas id="d15-canvas" width="500" height="200" aria-label="各隱藏層的互資訊單調遞減（DPI） 互動圖"></canvas>
+  <div class="demo-readout" id="d15-out"></div>
+</div>
+<!-- == Phase C kp-15 demo END == -->
+</div>
+<!-- == Phase B kp-15 diagram END == -->
+
+      <p>這節給出三組關鍵不等式，把「資訊如何在神經網路中流動」形式化。</p>
+<p><strong>不等式 1：壓縮必失資訊</strong></p>
+<p>$$I(\tilde X;Y) \le I(X;Y).$$</p>
+<p>壓縮後的表示最多保留與原資料一樣多的標籤資訊——顯而易見。</p>
+<p><strong>不等式 2：各層資訊單調遞減</strong>（這是經典 <strong>資料處理不等式 DPI</strong> 的應用）</p>
+<p>$$I(\hat Y;Y) \le I(H_i;Y) \le I(H_j;Y) \le I(X;Y), \quad i\ge j.$$</p>
+<p>更深的隱藏層保留的標籤資訊<strong>不會比淺層多</strong>。這也是 Tishby 等人主張「訓練過程中深層的 $I(H_i;Y)$ 應先升後降（fitting phase → compression phase）」的依據。</p>
+<p><strong>不等式 3：有限樣本估計的有限樣本修正</strong>（Shamir-Sabato-Tishby 2010）</p>
+<p>$$I(\tilde X;Y) \le \hat I(\tilde X;Y) + \mathcal{O}\!\left(\frac{|\tilde{\mathcal{X}}||\mathcal{Y}|}{\sqrt{n}}\right),$$</p>
+<p>$$I(X;\tilde X) \le \hat I(X;\tilde X) + \mathcal{O}\!\left(\frac{|\tilde{\mathcal{X}}|}{\sqrt{n}}\right),$$</p>
+<p>其中 $\hat I$ 是從 $n$ 筆樣本估出的實證互資訊。這告訴我們：<strong>壓縮越狠（$|\tilde{\mathcal{X}}|$ 越小），有限樣本估計越準</strong>。這是為什麼「模型自動學到緊緻表示」對泛化有益的一個量化理由。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-15" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：各隱藏層的互資訊單調遞減</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 依資料處理不等式，更深的隱藏層對標籤的互資訊會？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">一定變大</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">不會比淺層多</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">與層數無關</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">先升後降</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp16" data-kp="16">
+  <header class="card-head">
+    <span class="badge">4.1.3</span>
+    <h2 class="card-title">IB 最佳化解的閉式表達</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-16 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-16">
+  <img src="assets/diagram-kp16-ib-closedform.png" alt="kp-16 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-16" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸 KL 散度（0–3），3 條曲線 β=0.5 綠、1.0 橘、3.0 紅 全部是 exp(-β·KL)；垂直灰虛線在 KL=0.5 標「小 KL = 好表示」。
+WHY: 凸顯「IB 最佳化解把高 KL 的 x̃ 排除，β 越大排除越狠」。
+MUST show: (1) 3 條 exp 衰減曲線；(2) β 越大越陡；(3) KL=0.5 標註線。
+AVOID: 對數軸、3D、只有 1 條曲線。
+STYLE: clean scientific plot, 標題「IB 閉式解」。</pre>
+  </details>
+<!-- == Phase C kp-16 demo == -->
+<div class="demo" id="demo-kp16" data-demo-id="kp-16">
+  <h4>互動 demo：IB 閉式解：$\exp(-\beta\cdot\mathrm{KL})/Z$</h4>
+  <div class="demo-theory"><p>$\mathbb{P}(\tilde x|x) \propto \exp(-\beta\cdot\mathrm{KL}(\mathbb{P}(y|x) \| \mathbb{P}(y|\tilde x)))$</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $\beta$ 觀察權重曲線形狀與配分函數 $Z$ 數值。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>$\beta$ 變大時曲線越尖，$Z$ 越小——表示越只挑 KL 小的 $\tilde x$。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$\beta=0.5$ 時 $Z\approx 13$；$\beta=3.0$ 時 $Z\approx 0.06$。</div>
+  <div class="demo-controls"><label>$\beta$：<input type="range" id="d16-beta" min="0.1" max="5" step="0.1" value="1.0"></label><span class="demo-val" id="d16-beta-val"></span><div class="demo-readout-inline" id="d16-out-inline"></div></div>
+  <canvas id="d16-canvas" width="500" height="200" aria-label="IB 閉式解：$\exp(-\beta\cdot\mathrm{KL})/Z$ 互動圖"></canvas>
+  <div class="demo-readout" id="d16-out"></div>
+</div>
+<!-- == Phase C kp-16 demo END == -->
+</div>
+<!-- == Phase B kp-16 diagram END == -->
+
+      <p>把 IB 最佳化問題（式 12/13）對 $P(\tilde x|x)$ 做變分，可得一個非常乾淨的閉式解（Tishby et al., 2000 定理 5）：</p>
+<p>$$\mathbb{P}(\tilde x|x) = \frac{\mathbb{P}(\tilde x)}{Z(x,\beta)} \exp\!\left(-\beta\,\mathrm{KL}\!\left(\mathbb{P}(y|x) \| \mathbb{P}(y|\tilde x)\right)\right),$$</p>
+<p>其中 $Z(x,\beta)=\sum_{\tilde x}\mathbb{P}(\tilde x)\exp(-\beta\,\mathrm{KL}(\mathbb{P}(y|x) \| \mathbb{P}(y|\tilde x)))$ 是配分函數。</p>
+<p><strong>如何理解這個解？</strong></p>
+<ol>
+<li>「$x$ 編碼到 $\tilde x$ 的機率」正比於 $\exp(-\beta\,\mathrm{KL}(\mathbb{P}(y|x) \| \mathbb{P}(y|\tilde x)))$。$\mathrm{KL}$ 越小 = 知道 $\tilde x$ 後對 $y$ 的預測越接近知道 $x$ = 這個 $\tilde x$ 越能代表 $x$ 的標籤資訊。</li>
+<li>$\beta$ 控制「容忍度」：$\beta$ 大 → 只選 $\mathrm{KL}$ 極小的 $\tilde x$（強壓縮、保留資訊）；$\beta$ 小 → 容許較大的 $\mathrm{KL}$（弱壓縮）。</li>
+<li>這是 soft clustering 版的 IB：每個 $x$ 依 KL 大小「軟式」分配到各 $\tilde x$，而非 hard cluster。</li>
+</ol>
+<p>實務上直接算這個解需要知道 $\mathbb{P}(x,y)$ 與所有候選 $\tilde x$ 的聯合分佈，<strong>高維時不可行</strong>——這是 §4.3 要討論的 IB 批評之一。但作為「理想解」，它清楚展示了<strong>好的表示應如何平衡壓縮與預測</strong>。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-16" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：IB 最佳化解的閉式表達</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> IB 最佳化閉式解中，$x$ 編碼到 $\tilde x$ 的機率正比於？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$\mathbb{P}(x|\tilde x)$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">$\exp(-\beta\,\mathrm{KL}(\mathbb{P}(y|x) \| \mathbb{P}(y|\tilde x)))$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$\beta I(X;\tilde X)$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$\sqrt{n}$</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp17" data-kp="17">
+  <header class="card-head">
+    <span class="badge">4.2</span>
+    <h2 class="card-title">泛化差距的 IB 上界</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-17 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-17">
+  <img src="assets/diagram-kp17-ib-gen-bound.png" alt="kp-17 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-17" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸 n（log 100–50000），y 軸 bound（log scale），3 條曲線 I(X;H_l|Y)=0.1 綠、1.0 橘、10 紅；圖例寫明每條對應的殘餘互資訊。
+WHY: 凸顯「殘餘互資訊越小、泛化差距上界越緊」（Kawaguchi 2023 定理 6）。
+MUST show: (1) 3 條 log-log 衰減曲線；(2) I 越小曲線越低；(3) 圖例清楚。
+AVOID: 線性軸、單一條曲線、沒有圖例。
+STYLE: clean scientific plot, 標題「IB 泛化上界」。</pre>
+  </details>
+<!-- == Phase C kp-17 demo == -->
+<div class="demo" id="demo-kp17" data-demo-id="kp-17">
+  <h4>互動 demo：IB 泛化上界：殘餘互資訊越小越好</h4>
+  <div class="demo-theory"><p>$\Delta \le \min_l \sqrt{(I(X;H_l|Y)+1)/n}$</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $I(X;H_l|Y)$ 與 $n$ 觀察上界。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>$I$ 越小上界越緊，$n$ 越大上界越緊。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$I=0.1, n=10000$：bound $\approx 0.010$；$I=10, n=1000$：bound $\approx 0.105$。</div>
+  <div class="demo-controls"><label>$I(X;H_l|Y)$：<input type="range" id="d17-I" min="0.1" max="20" step="0.1" value="1.0"></label><span class="demo-val" id="d17-I-val"></span><label style="margin-left:12px">$n$：<input type="range" id="d17-n" min="100" max="100000" value="10000"></label><span class="demo-val" id="d17-n-val"></span><div class="demo-readout-inline" id="d17-out-inline"></div></div>
+  <canvas id="d17-canvas" width="500" height="200" aria-label="IB 泛化上界：殘餘互資訊越小越好 互動圖"></canvas>
+  <div class="demo-readout" id="d17-out"></div>
+</div>
+<!-- == Phase C kp-17 demo END == -->
+</div>
+<!-- == Phase B kp-17 diagram END == -->
+
+      <p>承 §4.1.1 與 §4.1.2 的鋪墊，Kawaguchi 等人 (2023) 證明了把 IB 連到泛化的核心定理（定理 6）：</p>
+<p>對於任何 $\delta>0$，以至少 $1-\delta$ 機率，</p>
+<p>$$\lim_{n\to\infty} \mathcal{O}(\Delta(\mathcal{D})) \le \min_{l\in\{1,\ldots,L\}} \sqrt{\frac{I(X;H_l|Y)+1}{n}},$$</p>
+<p>其中：</p>
+<ul>
+<li>$\Delta(\mathcal{D}) = \mathbb{E}[\ell(f(X),Y)] - \frac{1}{n}\sum_{i=1}^n \ell(f(x_i),y_i)$ 是泛化差距；</li>
+<li>$H_l$ 是第 $l$ 個隱藏層的輸出；</li>
+<li>$I(X;H_l|Y)$ 是 $X$ 與 $H_l$ 在給定 $Y$ 下<strong>殘餘的</strong>互資訊（$X$ 還保留多少 $Y$ 無關的資訊）。</li>
+</ul>
+<p><strong>這個上界的關鍵意涵：</strong></p>
+<ol>
+<li>若某個隱藏層 $H_l$ 對 $X$ 的條件互資訊（扣除 $Y$ 已知部分後）很小，泛化差距就小。</li>
+<li>這給了「有效的表示 = 壓縮掉所有 $Y$ 無關資訊」一個嚴格的量化意義。</li>
+<li>但這也帶來限制：$I(X;H_l|Y)$ 在高維下<strong>難以估計</strong>，這個 bound 在實務中同樣可能是 vacuous 的。</li>
+</ol>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-17" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：泛化差距的 IB 上界 — 壓縮越狠泛化越好</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 定理 6 中，泛化差距上界主要依賴哪個量？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$I(X;Y)$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">$\min_l \sqrt{(I(X;H_l|Y)+1)/n}$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$n$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">$\beta$</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp18" data-kp="18">
+  <header class="card-head">
+    <span class="badge">4.3</span>
+    <h2 class="card-title">IB 理論的批評</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-18 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-18-svg">
+  <svg class="inline-svg" viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">對 IB 理論的三大批評</text>
+  <rect x="40" y="50" width="160" height="160" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+  <text x="120" y="75" text-anchor="middle" font-size="12" font-weight="700" fill="#991b1b">1. 互資訊難估</text>
+  <text x="120" y="105" text-anchor="middle" font-size="10" fill="#0f172a">高維連續</text>
+  <text x="120" y="125" text-anchor="middle" font-size="10" fill="#0f172a">需要 P(x, x̃)</text>
+  <text x="120" y="145" text-anchor="middle" font-size="10" fill="#0f172a">→ MINE/InfoNCE</text>
+  <text x="120" y="165" text-anchor="middle" font-size="10" fill="#0f172a">  各有偏差</text>
+  <text x="120" y="195" text-anchor="middle" font-size="9" font-style="italic" fill="#64748b">[4, 29]</text>
+  <rect x="220" y="50" width="160" height="160" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="300" y="75" text-anchor="middle" font-size="12" font-weight="700" fill="#92400e">2. 不一定壓縮</text>
+  <text x="300" y="105" text-anchor="middle" font-size="10" fill="#0f172a">許多實驗顯示</text>
+  <text x="300" y="125" text-anchor="middle" font-size="10" fill="#0f172a">I(X; H_l) 不降</text>
+  <text x="300" y="145" text-anchor="middle" font-size="10" fill="#0f172a">無 compression</text>
+  <text x="300" y="165" text-anchor="middle" font-size="10" fill="#0f172a">phase</text>
+  <text x="300" y="195" text-anchor="middle" font-size="9" font-style="italic" fill="#64748b">[11, 32, 33]</text>
+  <rect x="400" y="50" width="160" height="160" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="480" y="75" text-anchor="middle" font-size="12" font-weight="700" fill="#5b21b6">3. 非唯一解釋</text>
+  <text x="480" y="105" text-anchor="middle" font-size="10" fill="#0f172a">loss landscape</text>
+  <text x="480" y="125" text-anchor="middle" font-size="10" fill="#0f172a">SGD 隨機性</text>
+  <text x="480" y="145" text-anchor="middle" font-size="10" fill="#0f172a">架構歸納偏置</text>
+  <text x="480" y="165" text-anchor="middle" font-size="10" fill="#0f172a">→ 都貢獻泛化</text>
+  <text x="480" y="195" text-anchor="middle" font-size="9" font-style="italic" fill="#64748b">[28, 46]</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-18 diagram END == -->
+
+      <p>IB 是個漂亮的理論框架，但對它在深度學習的適用性有三個主要批評：</p>
+<ol>
+<li><strong>互資訊難以估計</strong>。$I(X;\tilde X)$ 在高維、連續空間下需要 $\mathbb{P}(x,\tilde x)$，這通常不可得。變分下界如 MINE、InfoNCE 可以逼近，但都有自己的假設與限制。換言之，IB 的「實驗可驗證性」受限。</li>
+<li><strong>深網未必進入壓縮階段</strong>。Tishby 等人主張訓練會經歷 fitting phase（$I(H_i;Y)$ 上升）→ compression phase（$I(X;H_i)$ 下降）。但 Saxe 等人 (2018) 與 Geiger (2020) 實驗顯示，許多網路<strong>沒有明顯的壓縮階段</strong>，$I(X;H_i)$ 在整個訓練過程中都不下降。</li>
+<li><strong>壓縮不是泛化的唯一來源</strong>。loss landscape 的幾何（平坦最小值）、SGD 的隨機性、模型架構的歸納偏置（CNN 的平移不變、RNN 的時序歸納）——這些都可能獨立地貢獻泛化，不一定要靠 IB 解釋。</li>
+</ol>
+<p>結論：<strong>IB 是個有用的視角，但不是泛化的「完整解釋」</strong>。它應被視為「可能的（但非唯一的）」框架——這也是為什麼 §5 要介紹六個其他視角的原因。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-18" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：IB 理論的三大批評</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 對 IB 的主要批評之一是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">只能用在監督學習</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">互資訊難以估計、許多實驗顯示深網沒有壓縮階段</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">不適用於分類</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">只能用於回歸</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp19" data-kp="19">
+  <header class="card-head">
+    <span class="badge">5.1</span>
+    <h2 class="card-title">Double descent：U 形曲線再下降</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-19 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-19">
+  <img src="assets/diagram-kp19-double-descent.png" alt="kp-19 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-19" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸模型大小 N（10–1000），藍實線 訓練誤差、紅實線 測試誤差；測試誤差先 U 形下降、中間插值點（綠虛線）附近凸起、後段再下降（double descent）；兩個標註箭頭「U 形」「再下降」。
+WHY: 凸顯「過插值點後測試誤差再次下降」這個反直覺現象。
+MUST show: (1) U 形 + 凸起 + 再下降的完整曲線；(2) 訓練誤差（單調下降）；(3) 插值點垂直線；(4) 兩個標註。
+AVOID: 沒有插值點垂直線、沒有標註、U 形不完整。
+STYLE: clean scientific plot, 標題「Double Descent」。</pre>
+  </details>
+<!-- == Phase C kp-19 demo == -->
+<div class="demo" id="demo-kp19" data-demo-id="kp-19">
+  <h4>互動 demo：Double descent 曲線</h4>
+  <div class="demo-theory"><p>模型大小 $N$ 從小到大時，測試誤差先 U 形下降、中間插值點凸起、再下降。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $N$ 觀察當前點位置。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>$N$ 過插值點（綠虛線 $\approx 260$）後測試誤差再次下降——double descent 區。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$N=500$：test $\approx 0.32$（U 形右側）；$N=800$：test $\approx 0.18$（再下降）。</div>
+  <div class="demo-controls"><label>模型大小 $N$：<input type="range" id="d19-size" min="10" max="1000" value="500"></label><span class="demo-val" id="d19-size-val"></span><div class="demo-readout-inline" id="d19-out-inline"></div></div>
+  <canvas id="d19-canvas" width="500" height="200" aria-label="Double descent 曲線 互動圖"></canvas>
+  <div class="demo-readout" id="d19-out"></div>
+</div>
+<!-- == Phase C kp-19 demo END == -->
+</div>
+<!-- == Phase B kp-19 diagram END == -->
+
+      <p>經典 bias-variance tradeoff：模型太小 → underfit（測試誤差高），模型中等 → sweet spot（測試誤差低），模型太大 → overfit（測試誤差又升高）。畫出來是 U 形。</p>
+<p>但 Belkin 等人 (2019) 與 Nakkiran 等人 (2021) 觀察到：若把模型大小繼續往上推、<strong>超過 interpolation threshold</strong>（模型能完美擬合訓練資料的最小大小）時，<strong>測試誤差再次下降</strong>。整條曲線不是 U 形，而是 <strong>U + 再下降</strong>——所以叫 <strong>double descent</strong>。</p>
+<figure class="orig-fig"><img src="assets/orig-fig3-double-descent.jpg" alt="double descent 示意圖" loading="lazy"></figure>
+<p><strong>為什麼會這樣？</strong> 直覺：在 interpolation threshold 附近，模型必須精細擬合每個訓練點（包括雜訊），沒有餘裕學規律；過了這個門檻，模型雖然大到能擬合任何東西，但梯度下降會找到更平滑、泛化更好的解（<strong>隱式正則化</strong>，見 §5.4）。</p>
+<p><strong>對實作者的啟示</strong>：不要因為「模型太大會過擬合」就在 sweet spot 之前停下來。在有充足資料/合適歸納偏置時，<strong>更大的模型可能反而泛化更好</strong>。這也是現代 LLM 一路把參數量推上去的核心動機之一。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-19" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Double Descent — U 形曲線再下降</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Double descent 描述的是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">訓練誤差隨 epoch 變化</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">測試誤差隨模型大小先降（U 形）再升、過 interpolation threshold 後又下降</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">學習率調整</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">批次大小選擇</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp20" data-kp="20">
+  <header class="card-head">
+    <span class="badge">5.2</span>
+    <h2 class="card-title">Grokking：過擬合後突然頓悟</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-20 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-20">
+  <img src="assets/diagram-kp20-grokking.png" alt="kp-20 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-20" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸優化步數（0–10000），藍實線 訓練誤差快速降、紅實線 測試誤差在 5000 步前卡在 0.92、5000 步後突然降到 0.05；綠色虛線在 5000 標「頓悟開始」；兩個標註箭頭「overfit 但未泛化」「突然泛化」。
+WHY: 凸顯 Power et al. (2022) 的 grokking——過擬合後突然泛化的戲劇化轉折。
+MUST show: (1) 訓練誤差快降；(2) 測試誤差長時間高、然後陡降；(3) 5000 步垂直線；(4) 兩個對比標註。
+AVOID: 兩條曲線同方向、沒有「卡住再下降」階段。
+STYLE: clean scientific plot, 標題「Grokking」。</pre>
+  </details>
+<!-- == Phase C kp-20 demo == -->
+<div class="demo" id="demo-kp20" data-demo-id="kp-20">
+  <h4>互動 demo：Grokking：過擬合後突然泛化</h4>
+  <div class="demo-theory"><p>Power et al. (2022)：訓練誤差快速 0、測試誤差長期卡住、繼續訓練後突然泛化。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動優化步數觀察曲線。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>步數 < 5000：測試卡在 0.92（overfit）。步數 > 5000：測試突然下降（grok）。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>step=1000：test $\approx 0.92$；step=10000：test $\approx 0.13$。</div>
+  <div class="demo-controls"><label>優化步數：<input type="range" id="d20-step" min="0" max="12000" value="3000"></label><span class="demo-val" id="d20-step-val"></span><div class="demo-readout-inline" id="d20-out-inline"></div></div>
+  <canvas id="d20-canvas" width="500" height="200" aria-label="Grokking：過擬合後突然泛化 互動圖"></canvas>
+  <div class="demo-readout" id="d20-out"></div>
+</div>
+<!-- == Phase C kp-20 demo END == -->
+</div>
+<!-- == Phase B kp-20 diagram END == -->
+
+      <p>Power et al. (2022) 發現一個戲劇化現象：在小型演算法資料集（如模算術）上，模型可能：</p>
+<ol>
+<li>快速達到訓練誤差 0（過擬合、記住所有訓練樣本）。</li>
+<li>測試誤差初期高（沒泛化）。</li>
+<li>若繼續訓練很久很久，<strong>測試誤差突然從隨機水準掉到接近完美</strong>。</li>
+</ol>
+<p>這個「過擬合後突然泛化」叫 <strong>grokking</strong>。它和 double descent 不同：double descent 是模型<strong>大小</strong>掃出來的曲線；grokking 是同一個模型在<strong>訓練時間</strong>上演的曲線。</p>
+<figure class="orig-fig"><img src="assets/orig-fig4-grokking.jpg" alt="grokking 示意圖" loading="lazy"></figure>
+
+<p><strong>為什麼會 grok？</strong> 主流假設是 SGD 的隱式正則化：剛開始 SGD 快速擬合資料（記住），但因為它偏好平坦最小值，長時間訓練後模型會慢慢「漂」到一個更結構化、更泛化解的區域。換言之，<strong>泛化不是訓練初期就到位，而是 SGD 慢慢逼出來的</strong>。</p>
+<p><strong>對實作者的啟示</strong>：在小型資料集上，若模型早期過擬合但測試仍有機會上來，可以考慮<strong>給它時間</strong>——learning rate 衰減策略、訓練長度可能比架構調整更關鍵。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-20" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Grokking — 過擬合後突然頓悟</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Grokking 是什麼現象？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">模型過擬合後突然泛化</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">模型欠擬合</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">測試誤差隨 epoch 持續上升</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">模型崩潰</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp21" data-kp="21">
+  <header class="card-head">
+    <span class="badge">5.3</span>
+    <h2 class="card-title">Benign overfitting</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-21 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-21-svg">
+  <svg class="inline-svg" viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Benign overfitting：雜訊方向多 → 互相抵消，訊號方向少 → 主導</text>
+  <!-- high-dim axes -->
+  <g stroke="#cbd5e1" stroke-width=".8">
+    <line x1="50" y1="200" x2="100" y2="200"/>
+    <line x1="50" y1="200" x2="50" y2="100"/>
+    <line x1="50" y1="200" x2="80" y2="160"/>
+    <line x1="50" y1="200" x2="50" y2="160"/>
+  </g>
+  <text x="100" y="215" font-size="9" fill="#64748b">x₁</text>
+  <text x="48" y="98" text-anchor="end" font-size="9" fill="#64748b">x₂</text>
+  <!-- signal direction (red, big arrow) -->
+  <line x1="80" y1="180" x2="220" y2="100" stroke="#dc2626" stroke-width="3"/>
+  <polygon points="220,100 212,98 215,106" fill="#dc2626"/>
+  <text x="225" y="100" font-size="11" font-weight="700" fill="#dc2626">訊號方向（少）</text>
+  <!-- many noise directions (gray) -->
+  <g stroke="#94a3b8" stroke-width="1.2">
+    <line x1="80" y1="180" x2="180" y2="140"/>
+    <line x1="80" y1="180" x2="170" y2="160"/>
+    <line x1="80" y1="180" x2="200" y2="130"/>
+    <line x1="80" y1="180" x2="150" y2="120"/>
+    <line x1="80" y1="180" x2="190" y2="100"/>
+    <line x1="80" y1="180" x2="160" y2="170"/>
+    <line x1="80" y1="180" x2="200" y2="170"/>
+  </g>
+  <text x="160" y="195" font-size="11" font-style="italic" fill="#64748b">雜訊方向（多）</text>
+  <text x="300" y="160" text-anchor="middle" font-size="11" fill="#0f172a">→ 測試時，訊號權重主導</text>
+  <text x="300" y="180" text-anchor="middle" font-size="11" fill="#0f172a">→ 雜訊權重互相抵消</text>
+  <text x="300" y="220" text-anchor="middle" font-size="12" font-weight="600" fill="#16a34a">過擬合但泛化 ✓</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-21 diagram END == -->
+
+      <p>Bartlett 等人 (2020, 2021) 提出並形式化一個反直覺現象：<strong>當資料有底層訊號 + 一些雜訊、且資料分佈有特定幾何結構（如高維下的特徵協方差結構）時，過參數化的模型可以同時</strong>：</p>
+<ol>
+<li>完美擬合訓練資料（包括雜訊）；</li>
+<li>在測試資料上仍表現良好。</li>
+</ol>
+<p>這種「過擬合但無害」叫 <strong>benign overfitting</strong>。</p>
+<p><strong>為什麼「記住雜訊」不等於「測試會爆」？</strong> 直覺：在高維空間，<strong>雜訊的方向有很多很多</strong>，模型把它們分散到很多參數去擬合；訊號的方向只有少數幾個，模型把大部分容量集中在訊號方向上。測試時，<strong>訊號方向上的權重主導預測，雜訊方向的權重互相抵消</strong>，所以泛化不受影響。</p>
+<p>這個現象在線性回歸裡已經有嚴格證明（Bartlett-Long-Lugosi-Tsigler 2020 證明了在某些協方差結構下，<strong>插值（interpolating）解</strong>可以達到 bayes-optimal 風險的常數倍）。對神經網路也有部分理論結果（線性化分析等），但完整非線性版本仍是開放問題。</p>
+<p><strong>對實作者的啟示</strong>：在資料「訊號強於雜訊」、特徵有結構的情況下，<strong>不必為了避免過擬合而刻意縮小模型</strong>。讓它過擬合，測試也不一定崩。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-21" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Benign Overfitting — 過擬合但無害</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Benign overfitting 描述的是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">任何過擬合都會破壞泛化</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">在有利的高維幾何下，模型可同時完美擬合訓練（含雜訊）並泛化良好</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">只適用於線性模型</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">訓練誤差與測試誤差總是同步</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp22" data-kp="22">
+  <header class="card-head">
+    <span class="badge">5.4</span>
+    <h2 class="card-title">SGD 的隱式偏置</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-22 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-22">
+  <img src="assets/diagram-kp22-sgd-bias.png" alt="kp-22 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-22" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 左右兩子圖。左圖：x 是參數方向，藍色 loss curve 有一個深而窄的谷（sharp minimum），紅點標示最低點；右圖：綠色 loss curve 有一個寬而淺的谷（flat minimum），紫點標示最低點。
+WHY: 凸顯 SGD 偏好平坦最小值這件事的視覺差異。
+MUST show: (1) 左右對比，一個 sharp 一個 flat；(2) 兩個最低點用不同顏色標；(3) 標題「Sharp」與「Flat」；(4) 整體標題「SGD 隱式偏置」。
+AVOID: 兩個子圖長一樣、沒有谷、3D。
+STYLE: clean scientific plot, 標題「SGD 隱式偏置：sharp vs flat minimum」。</pre>
+  </details>
+</div>
+<!-- == Phase B kp-22 diagram END == -->
+
+      <p>很多深度學習的 loss 函數是<strong>欠定的</strong>——同一個訓練資料可能對應無限多組零訓練誤差的參數（特別是過參數化模型）。SGD 不會隨便挑一組；它有自己的<strong>隱式偏置</strong>（implicit bias），偏好某些解。</p>
+<p>這個偏置從哪來？三個來源：</p>
+<ol>
+<li><strong>Step size / 學習率</strong>：較大的學習率讓 SGD 難以收斂到狹窄的最小值（會被「彈出來」），所以偏好較寬的最小值。</li>
+<li><strong>Mini-batch 雜訊</strong>：每次更新只用一小批樣本，引入隨機性；這個隨機性等同於對參數做某種隨機微分方程的「擴散」效應，也傾向平坦解。</li>
+<li><strong>初始化</strong>：不同的初始化讓 SGD 走向不同解，特別在小初始化時偏好「低秩/簡單」解。</li>
+</ol>
+<p>為什麼「平坦最小值」與泛化有關？<strong>經驗上</strong>，平坦最小值（hessian 特徵值小）對應的測試誤差較低，狹窄最小值（hessian 特徵值大）對應的測試誤差較高。一個直觀解釋：平坦最小值附近的 loss landscape 較平緩，<strong>對訓練/測試資料的小擾動更不敏感</strong>。</p>
+<p>SAM (Sharpness-Aware Minimization, Foret et al. 2021) 是把這個觀察做成演算法——它顯式尋找「附近所有點都 loss 低的參數」，等同於尋找平坦最小值，實驗上能提升泛化。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-22" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：SGD 的隱式偏置 — 偏好平坦最小值</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> SGD 的隱式偏置主要讓它偏好？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">狹窄最小值</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">平坦最小值</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">完全隨機的解</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">訓練誤差最大的解</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp23" data-kp="23">
+  <header class="card-head">
+    <span class="badge">5.5</span>
+    <h2 class="card-title">Neural Tangent Kernel</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-23 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-23">
+  <img src="assets/diagram-kp23-ntk.png" alt="kp-23 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-23" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 左右兩子圖，散點圖兩類 A 藍 B 紅各 20 點；左圖：初始決策線（黑色虛線）與訓練後決策線（紫色實線）幾乎重合仍是直線，標題「無限寬（NTK 極限）— 特徵凍結」；右圖：訓練後決策線變成曲線（紫色實線 y=0.3sin(2x)+0.2x²），標題「有限寬 — 特徵被學到」。
+WHY: 凸顯 NTK 的核心區別：無限寬 → 線性行為（kernel method），有限寬 → 學到非線性特徵。
+MUST show: (1) 兩類散點；(2) 左圖兩條線幾乎重合；(3) 右圖訓練後明顯變曲線；(4) 對比標題。
+AVOID: 兩子圖相同、沒有訓練後曲線對比。
+STYLE: clean scientific plot, 標題「NTK：無限寬 vs 有限寬」。</pre>
+  </details>
+<!-- == Phase C kp-23 demo == -->
+<div class="demo" id="demo-kp23" data-demo-id="kp-23">
+  <h4>互動 demo：NTK：寬度小 → 學到曲線；寬度大 → 直線</h4>
+  <div class="demo-theory"><p>無限寬 NTK 極限下，特徵凍結，決策曲線退化成直線（kernel-like）。有限寬能學到曲線特徵。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動「寬度」滑桿觀察決策曲線形狀。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>寬度小 → 曲率大（學到非線性特徵）；寬度大 → 接近直線（NTK 凍結）。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>寬度=200 → 曲率 ≈ 0.9（明顯彎曲）；寬度=2000 → 曲率 ≈ 0（直線）。</div>
+  <div class="demo-controls"><label>網路寬度：<input type="range" id="d23-w" min="100" max="2000" value="500"></label><span class="demo-val" id="d23-w-val"></span><div class="demo-readout-inline" id="d23-out-inline"></div></div>
+  <canvas id="d23-canvas" width="500" height="200" aria-label="NTK：寬度小 → 學到曲線；寬度大 → 直線 互動圖"></canvas>
+  <div class="demo-readout" id="d23-out"></div>
+</div>
+<!-- == Phase C kp-23 demo END == -->
+</div>
+<!-- == Phase B kp-23 diagram END == -->
+
+      <p>Jacot et al. (2018) 與 Lee et al. (2019) 發現：在<strong>無限寬度</strong>極限下（即每層神經元數 $\to\infty$），用 gradient descent 訓練神經網路<strong>等價於</strong>用某個固定的 kernel 做<strong>kernel regression</strong>。這個 kernel 就是 <strong>Neural Tangent Kernel (NTK)</strong>，由網路架構與初始化決定、訓練過程中不變。</p>
+<p><strong>NTK 的兩個關鍵含義：</strong></p>
+<ol>
+<li><strong>無限寬度 → 線性模型行為</strong>。雖然神經網路高度非線性，但在無限寬度下，訓練過程可以用 NTK 線性化——效果等同於在 NTK 定義的高維特徵空間做線性回歸。預測函式的訓練動態是閉式的、可分析的。</li>
+<li><strong>無限寬度 → 凍結特徵</strong>。在這個極限下，<strong>有效特徵在整個訓練過程中保持不變</strong>（凍結在初始化），只更新線性係數。這解釋了為什麼無限寬網路泛化行為像 kernel method、而有限寬網路能學到新特徵。</li>
+</ol>
+<p><strong>與通用逼近定理的互補</strong>：通用逼近說「夠寬的網路可表達任意函數」（<strong>表達力</strong>）；NTK 說「夠寬的網路訓練起來像 kernel method」（<strong>訓練動力學</strong>）。兩者一起給出無限寬極限的完整圖像。</p>
+<p><strong>對實作者的限制</strong>：實際模型不是無限寬。NTK 對有限寬仍提供<strong>近似</strong>，但「特徵學得到」這件事在有限寬才明顯。所以 NTK 更像「理解極限的解析工具」，而非「實務設計指南」。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-23" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Neural Tangent Kernel — 無限寬凍結、有限寬學到</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> NTK 框架說明瞭什麼？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">訓練等價於 kernel regression，有效特徵在訓練中不變</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">深度不重要</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">只能用在 CNN</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">等價於 SGD 隨機性</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp24" data-kp="24">
+  <header class="card-head">
+    <span class="badge">5.6</span>
+    <h2 class="card-title">彩票假說與 Scaling laws</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-24 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-24">
+  <img src="assets/diagram-kp24-scaling.png" alt="kp-24 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-24" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸模型參數量 N（log 10⁵–10¹⁰），y 軸測試 loss（log scale），兩條冪律直線：藍實線 L∝N^-0.076（Kaplan 2020 較陡）、紅虛線 L∝N^-0.05（Chinchilla 較平緩）；左側標註「冪律區（可預測）」。
+WHY: 凸顯「模型越大 loss 越低、且遵循冪律」——這是 LLM 時代最重要的實務經驗法則。
+MUST show: (1) 兩條 log-log 直線（冪律 → 直線）；(2) 兩種不同指數對比；(3) 冪律區標註。
+AVOID: 對數軸改用線性、單一條曲線、3D。
+STYLE: clean scientific plot, 標題「Scaling Law」。</pre>
+  </details>
+</div>
+<!-- == Phase B kp-24 diagram END == -->
+
+      <p>這節合併兩個獨立的理論視角。</p>
+<p><strong>彩票假說（Lottery Ticket Hypothesis, Frankle & Carlin 2019）</strong>：大型過參數化網路通常包含<strong>較小的子網路</strong>（「中獎彩券」），若僅訓練這個子網路（用合適的初始化），可以達到與完整網路相當的效能。換言之，<strong>大網路之所以有效，是因為裡面藏了可以獨立成功的小網路</strong>。這給了 network pruning 的理論基礎，也暗示大網路的容量有大量「冗餘」——但冗餘不是壞事，因為它給了「找中獎彩券」的搜尋空間。</p>
+<p><strong>Scaling laws（Kaplan et al. 2020；Hoffmann et al. 2022）</strong>：模型效能（loss）隨模型大小、資料量、計算量呈<strong>冪律（power law）關係</strong>。例如，$L(N)\sim N^{-\alpha_N}$，其中 $N$ 是參數量，$\alpha_N$ 是某個固定指數。實務含義：</p>
+<ol>
+<li>給定足夠資源，<strong>沿三個軸（N、資料、計算）放大</strong> 就能穩定提升效能。</li>
+<li><strong>偏離冪律</strong> 通常預示資料品質或架構問題。</li>
+<li>可用於<strong>預測最佳資源分配</strong>（如 Chinchilla 論文發現：在固定計算下，模型大小與資料量應等比放大）。</li>
+</ol>
+<p><strong>兩者結合的觀點</strong>：彩票假說解釋了「為什麼大網路內能找到好子網路」；scaling laws 給了「要把資源放在哪」的量化指引。兩者都強調：<strong>現代深度學習的進展，很大程度來自「放大」與「剪枝」這一對張力</strong>。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-24" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：彩票假說與 Scaling Laws — 大網路藏寶、放大有規律</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Scaling laws 描述的是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">學習率與 loss 的關係</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">模型效能隨模型/資料/計算量呈冪律關係</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">訓練時間與記憶體的關係</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">epoch 與 batch size</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp25" data-kp="25">
+  <header class="card-head">
+    <span class="badge">6</span>
+    <h2 class="card-title">結論：對實作者的啟示</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-25 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-25-svg">
+  <svg class="inline-svg" viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="25" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">對實作者的三個啟示</text>
+  <rect x="40" y="55" width="170" height="200" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+  <text x="125" y="80" text-anchor="middle" font-size="12" font-weight="700" fill="#991b1b">1. PAC/VC 上界</text>
+  <text x="125" y="95" text-anchor="middle" font-size="12" font-weight="700" fill="#991b1b">是 vacuous</text>
+  <text x="125" y="125" text-anchor="middle" font-size="10" fill="#0f172a">現代 NN 必中招</text>
+  <text x="125" y="150" text-anchor="middle" font-size="10" fill="#0f172a">把 bound 當</text>
+  <text x="125" y="170" text-anchor="middle" font-size="10" fill="#0f172a">「必出錯清單」</text>
+  <text x="125" y="190" text-anchor="middle" font-size="10" fill="#0f172a">用，而不是</text>
+  <text x="125" y="210" text-anchor="middle" font-size="10" fill="#0f172a">「絕對預測」</text>
+  <text x="125" y="240" text-anchor="middle" font-size="9" font-style="italic" fill="#64748b">需要新框架</text>
+  <rect x="215" y="55" width="170" height="200" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="300" y="80" text-anchor="middle" font-size="12" font-weight="700" fill="#92400e">2. 用現象學</text>
+  <text x="300" y="95" text-anchor="middle" font-size="12" font-weight="700" fill="#92400e">指導實務</text>
+  <text x="300" y="125" text-anchor="middle" font-size="10" fill="#0f172a">double descent</text>
+  <text x="300" y="145" text-anchor="middle" font-size="10" fill="#0f172a">grokking</text>
+  <text x="300" y="165" text-anchor="middle" font-size="10" fill="#0f172a">benign overfit</text>
+  <text x="300" y="185" text-anchor="middle" font-size="10" fill="#0f172a">implicit bias</text>
+  <text x="300" y="205" text-anchor="middle" font-size="10" fill="#0f172a">→ 直覺優先</text>
+  <text x="300" y="240" text-anchor="middle" font-size="9" font-style="italic" fill="#64748b">比死記 bound 有用</text>
+  <rect x="390" y="55" width="170" height="200" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="475" y="80" text-anchor="middle" font-size="12" font-weight="700" fill="#166534">3. 歸納偏置</text>
+  <text x="475" y="95" text-anchor="middle" font-size="12" font-weight="700" fill="#166534">比大小關鍵</text>
+  <text x="475" y="125" text-anchor="middle" font-size="10" fill="#0f172a">CNN 平移不變</text>
+  <text x="475" y="145" text-anchor="middle" font-size="10" fill="#0f172a">Transformer attn</text>
+  <text x="475" y="165" text-anchor="middle" font-size="10" fill="#0f172a">預訓練 + 微調</text>
+  <text x="475" y="185" text-anchor="middle" font-size="10" fill="#0f172a">→ 跳出冪律</text>
+  <text x="475" y="205" text-anchor="middle" font-size="10" fill="#0f172a">  拿到紅利</text>
+  <text x="475" y="240" text-anchor="middle" font-size="9" font-style="italic" fill="#64748b">scaling 不變時</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-25 diagram END == -->
+
+      <p>本章把「為什麼神經網路能泛化」這個問題繞了一大圈。可以濃縮成三個對實作者有意義的結論：</p>
+<ol>
+<li><strong>古典 PAC/VC 給的上界是 vacuous 的</strong>。現代神經網路 $|\mathcal{E}|\gg n$ 是常態，§3.2 的上界因此是廢話。把它當真理是錯的，把它當完全無用也是錯的——它告訴你「需要新框架」這件事本身是對的。</li>
+<li><strong>用現象學而非單一理論指導實務</strong>。double descent、grokking、benign overfitting、implicit bias、NTK、lottery、scaling laws——這些不是一個統一理論的不同面相，而是<strong>各自解釋不同切片</strong>的「現象指南」。實作者用它們形成直覺（如「在訊號強於雜訊時放大模型」、「SGD 偏平坦最小值」），比死記某個 bound 更有用。</li>
+<li><strong>架構、資料、優化的歸納偏置比模型大小更關鍵</strong>。CNN 的平移不變、Transformer 的 attention、預訓練 + fine-tune 的遷移能力——這些結構性偏置往往比「再多 10 億參數」更能決定泛化。Scaling laws 的冪律只在「其他條件不變」時成立——改架構或資料 pipeline，常能跳出冪律獲得額外紅利。</li>
+</ol>
+<p>用一句話總結：<em>泛化不是靠「理論上界小」保證的，而是靠「資料結構 + 歸納偏置 + 優化動力學」共同決定的。</em></p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-25" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：結論 — 對實作者的三個啟示</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 本章對實作者最關鍵的結論是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">永遠用最小模型</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">古典上界是 vacuous，應用現象學（double descent 等）與歸納偏置指導實務</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">只相信 PAC 理論</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">永遠用最大學習率</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+</main>
+</div>
+<div id="guide-modal" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="guide-title">教授祕笈</h3>
+      <button class="modal-close" type="button" aria-label="關閉">×</button>
+    </div>
+    <div class="modal-body"></div>
+  </div>
+</div>
+<!-- __GUIDES__ -->
+<script>
+
+(function(){
+  // Render math (idempotent thanks to ignoredClasses)
+  window.renderMath = function(){
+    if (window.renderMathInElement) {
+      try { renderMathInElement(document.body, {ignoredClasses:['katex'], delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]}); } catch(e){ console.error('renderMath err', e); }
+    }
+  };
+
+  // Card collapse toggle
+  document.querySelectorAll('.card-head .toggle').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const card = e.target.closest('.card');
+      card.classList.toggle('collapsed');
+      btn.textContent = card.classList.contains('collapsed') ? '+' : '−';
+      btn.setAttribute('aria-expanded', String(!card.classList.contains('collapsed')));
+      // Re-render math in case newly visible
+      if (!card.classList.contains('collapsed')) window.renderMath();
+    });
+  });
+
+  // Quiz check
+  document.querySelectorAll('.quiz').forEach(quiz=>{
+    const btn = quiz.querySelector('.quiz-check');
+    const fb = quiz.querySelector('.quiz-feedback');
+    btn.addEventListener('click', ()=>{
+      const checked = quiz.querySelector('input[type=radio]:checked');
+      if (!checked) { fb.textContent = '請先選一個選項。'; fb.className='quiz-feedback err'; return; }
+      const correct = checked.dataset.correct === '1';
+      fb.textContent = correct ? '✅ 答對了！' : '❌ 再想想，繼續看下一個知識點。';
+      fb.className = 'quiz-feedback ' + (correct ? 'ok' : 'err');
+      if (correct) updateProgress();
+    });
+  });
+
+  // Progress (any quiz answered = "completed")
+  function updateProgress(){
+    const total = document.querySelectorAll('.quiz').length;
+    const done = Array.from(document.querySelectorAll('.quiz-feedback.ok')).length;
+    const pct = total ? Math.round(done*100/total) : 0;
+    const bar = document.querySelector('#progress-bar .bar');
+    const txt = document.querySelector('#progress-text');
+    if (bar) bar.style.width = pct+'%';
+    if (txt) txt.textContent = '進度 '+pct+'%';
+  }
+  // expose for demo/guide integration
+  window.updateProgress = updateProgress;
+  updateProgress();
+
+  // Guide modal open/close (Phase D will populate content)
+  document.addEventListener('click', e=>{
+    const btn = e.target.closest('.guide-btn');
+    if (btn) { openGuide(btn.dataset.guide); return; }
+    if (e.target.id === 'guide-modal' || e.target.classList.contains('modal-close')) {
+      closeGuide();
+    }
+  });
+  document.addEventListener('keydown', e=>{ if (e.key === 'Escape') closeGuide(); });
+
+  function openGuide(kpId){
+    const modal = document.getElementById('guide-modal');
+    const body = modal.querySelector('.modal-body');
+    const head = modal.querySelector('.modal-head h3');
+    const src = document.getElementById('guide-content-'+kpId);
+    if (!src) { console.warn('No guide for', kpId); return; }
+    head.textContent = src.dataset.title || ('教授祕笈：kp-'+kpId);
+    body.innerHTML = src.innerHTML;
+    modal.classList.add('open');
+    if (window.renderMathInElement) {
+      try { renderMathInElement(body, {ignoredClasses:['katex'], delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]}); } catch(e){}
+    }
+  }
+  function closeGuide(){
+    const modal = document.getElementById('guide-modal');
+    if (modal) modal.classList.remove('open');
+  }
+  window.openGuide = openGuide;
+  window.closeGuide = closeGuide;
+
+  // Initial render
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.renderMath);
+  } else {
+    window.renderMath();
+  }
+})();
+
+</script>
+<!-- __DEMOS_JS__ -->
+<script>
+/*
+IDL_115 Ch06 — Phase C 互動 demo 集合。
+每個 demo 為一個 initXxx() IIFE 風格函式，掛在 initDemos() 下。
+所有 demo 用 vanilla JS + canvas/SVG，零外部依賴。公式採閉式（含 KaTeX 渲染於靜態面板）。
+Canvas 文字用 Unicode（μ, σ, ², ₁, β …）。
+JS 字串中的 LaTeX 反斜線一律雙寫（\\）。
+*/
+
+(function(){
+  function $(s, root=document){ return root.querySelector(s); }
+  function $$(s, root=document){ return Array.from(root.querySelectorAll(s)); }
+  function txt(el, s){ if (el) el.textContent = s; }
+  function clearCanvas(c){ if (!c) return; const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); }
+
+  // ============================================================
+  // kp3 — Realizable PAC: true error decays as 2/n
+  // 公式：ε_realizable(n) ≈ 2/n；ε_agnostic(n) ≈ 5/√n
+  // ============================================================
+  window.initDemoKp3 = function(){
+    const root = $('#demo-kp3'); if (!root) return;
+    const nSlider = $('#d3-n', root);
+    const nVal = $('#d3-n-val', root);
+    const out = $('#d3-out', root);
+    const epOut = $('#d3-ep', root);
+    const compare = $('#d3-compare', root);
+    const canvas = $('#d3-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    let curN = parseInt(nSlider.value, 10);
+    function draw(){
+      clearCanvas(canvas);
+      ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      // 兩條曲線
+      const ns = [];
+      for (let i=0;i<200;i++) ns.push(10 + i*40);
+      ctx.lineWidth = 2;
+      // realizable 2/n
+      ctx.strokeStyle = '#3b82f6'; ctx.beginPath();
+      ns.forEach((n,i)=>{ const y = H - Math.min(H-20, 2/n*200 + 20); i?ctx.lineTo(i*W/200+10, y):ctx.moveTo(i*W/200+10, y); });
+      ctx.stroke();
+      // agnostic 5/√n
+      ctx.strokeStyle = '#ef4444'; ctx.beginPath();
+      ns.forEach((n,i)=>{ const y = H - Math.min(H-20, 5/Math.sqrt(n)*60 + 20); i?ctx.lineTo(i*W/200+10, y):ctx.moveTo(i*W/200+10, y); });
+      ctx.stroke();
+      // 當前 n 垂直線
+      const xCur = (curN-10)/(200*40-10) * (W-20) + 10;
+      ctx.strokeStyle = '#16a34a'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(xCur, 0); ctx.lineTo(xCur, H); ctx.stroke(); ctx.setLineDash([]);
+      // 圖例
+      ctx.fillStyle = '#1e40af'; ctx.fillRect(10, 10, 14, 6); ctx.fillStyle = '#000'; ctx.font = '11px monospace'; ctx.fillText('Realizable: 2/n', 28, 17);
+      ctx.fillStyle = '#991b1b'; ctx.fillRect(10, 24, 14, 6); ctx.fillStyle = '#000'; ctx.fillText('Agnostic: 5/√n', 28, 31);
+      ctx.fillStyle = '#166534'; ctx.fillText(`n = ${curN}`, Math.min(xCur+4, W-50), 50);
+      // readout
+      const epRe = (2/curN).toFixed(4);
+      const epAg = (5/Math.sqrt(curN)).toFixed(4);
+      txt(out, `Realizable ε ≈ ${epRe}　|　Agnostic ε ≈ ${epAg}　|　差距 ${(epAg/epRe).toFixed(1)}×`);
+      txt(epOut, `Realizable ε ≈ ${epRe}　|　Agnostic ε ≈ ${epAg}`);
+      txt(compare, `差距 ${(epAg/epRe).toFixed(1)}×`);
+    }
+    nSlider.addEventListener('input', e=>{ curN=parseInt(e.target.value,10); txt(nVal,curN); draw(); });
+    txt(nVal, curN); draw();
+  };
+
+  // ============================================================
+  // kp4 — Agnostic PAC: bound = infimum + f(d, n)
+  // ============================================================
+  window.initDemoKp4 = function(){
+    const root = $('#demo-kp4'); if (!root) return;
+    const infSlider = $('#d4-inf', root);
+    const dSlider = $('#d4-d', root);
+    const nSlider = $('#d4-n', root);
+    const infVal=$('#d4-inf-val',root), dVal=$('#d4-d-val',root), nVal=$('#d4-n-val',root);
+    const out = $('#d4-out', root);
+    function draw(){
+      const infimum = parseFloat(infSlider.value);
+      const d = parseInt(dSlider.value,10);
+      const n = parseInt(nSlider.value,10);
+      const f = Math.sqrt((d + Math.log(20))/n);
+      const bound = infimum + f;
+      txt(infVal, infimum.toFixed(2)); txt(dVal, d); txt(nVal, n);
+      txt(out, `err(h) ≤ ${infimum.toFixed(2)} + √((${d} + log(1/0.05))/${n}) ≈ ${bound.toFixed(3)}`);
+    }
+    [infSlider,dSlider,nSlider].forEach(s=>s.addEventListener('input', draw));
+    draw();
+  };
+
+  // ============================================================
+  // kp5 — VC 維度：2D 線 shatter 3 / 打不散 4 (XOR)
+  // ============================================================
+  window.initDemoKp5 = function(){
+    const root = $('#demo-kp5'); if (!root) return;
+    const canvas = $('#d5-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const mode = $('#d5-mode', root); // 3 or 4
+    const out = $('#d5-out', root);
+    const label = $('#d5-label', root);
+    function draw(){
+      clearCanvas(canvas);
+      ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      // 邊框
+      ctx.strokeStyle='#cbd5e1'; ctx.strokeRect(20,20,W-40,H-40);
+      const nPts = parseInt(mode.value,10);
+      let pts, colors;
+      if (nPts===3){
+        pts=[[80,100],[230,140],[160,260]]; colors=['#dc2626','#dc2626','#3b82f6'];
+        ctx.fillStyle='#000'; ctx.font='bold 12px sans-serif';
+        ctx.fillText('3 點：線可打散 ✓', 30, 50);
+      } else {
+        pts=[[80,80],[80,260],[260,80],[260,260]]; colors=['#dc2626','#3b82f6','#3b82f6','#dc2626'];
+        ctx.fillStyle='#000'; ctx.font='bold 12px sans-serif';
+        ctx.fillText('4 點 XOR：線打不散 ✗', 30, 50);
+      }
+      pts.forEach(([x,y],i)=>{ ctx.fillStyle=colors[i]; ctx.beginPath(); ctx.arc(x,y,12,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#000'; ctx.lineWidth=1.5; ctx.stroke(); });
+      if (nPts===3){
+        // 嘗試一條水平線
+        ctx.strokeStyle='#16a34a'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(20,180); ctx.lineTo(W-20,180); ctx.stroke();
+        ctx.fillStyle='#166534'; ctx.fillText('→ 紅紅 | 藍 完全分開', 30, 70);
+        txt(out, '3 點：存在一條線分開紅藍（shatter ✓）');
+        txt(label, '線存在 ✓，shatter 3 點成功');
+      } else {
+        // 嘗試多條線，全部失敗
+        const lines = [[80,80,260,260],[80,260,260,80],[40,170,W-40,170],[170,40,170,H-40]];
+        ctx.lineWidth=1.5;
+        lines.forEach(([x1,y1,x2,y2])=>{
+          ctx.strokeStyle='#94a3b8'; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+        });
+        ctx.setLineDash([]);
+        txt(out, '4 點 XOR：任何直線都無法分開（shatter ✗）');
+        txt(label, '任何一條線都無法分開 XOR 配色 ✗');
+      }
+    }
+    mode.addEventListener('change', draw);
+    draw();
+  };
+
+  // ============================================================
+  // kp6 — Sample complexity: n vs ε curve
+  // ============================================================
+  window.initDemoKp6 = function(){
+    const root = $('#demo-kp6'); if (!root) return;
+    const epsSlider = $('#d6-eps', root);
+    const dSlider = $('#d6-d', root);
+    const epsVal=$('#d6-eps-val',root), dVal=$('#d6-d-val',root);
+    const canvas = $('#d6-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d6-out', root);
+    function draw(){
+      clearCanvas(canvas); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      const eps = parseFloat(epsSlider.value);
+      const d = parseInt(dSlider.value,10);
+      txt(epsVal, eps.toFixed(2)); txt(dVal, d);
+      const ns = [];
+      for (let i=0;i<200;i++) ns.push(0.01 + i*0.005);
+      ctx.lineWidth=2;
+      // realizable
+      ctx.strokeStyle='#3b82f6'; ctx.beginPath();
+      ns.forEach((e,i)=>{ const n = (1/e)*(d*Math.log(1/e)+Math.log(20)); const y = H - Math.min(H-20, Math.log10(n)*30 + 20); i?ctx.lineTo(i*W/200+10,y):ctx.moveTo(i*W/200+10,y); });
+      ctx.stroke();
+      // agnostic
+      ctx.strokeStyle='#ef4444'; ctx.beginPath();
+      ns.forEach((e,i)=>{ const n = (1/e**2)*(d+Math.log(20)); const y = H - Math.min(H-20, Math.log10(n)*30 + 20); i?ctx.lineTo(i*W/200+10,y):ctx.moveTo(i*W/200+10,y); });
+      ctx.stroke();
+      // 當前 eps 垂直線
+      const xCur = (eps-0.01)/(200*0.005) * (W-20) + 10;
+      ctx.strokeStyle='#16a34a'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(xCur,0); ctx.lineTo(xCur,H); ctx.stroke(); ctx.setLineDash([]);
+      // 圖例
+      ctx.fillStyle='#000'; ctx.font='10px monospace';
+      ctx.fillStyle='#1e40af'; ctx.fillRect(10,8,12,5); ctx.fillStyle='#000'; ctx.fillText('Realizable', 26, 14);
+      ctx.fillStyle='#991b1b'; ctx.fillRect(10,22,12,5); ctx.fillStyle='#000'; ctx.fillText('Agnostic', 26, 28);
+      // readout
+      const nRe = (1/eps)*(d*Math.log(1/eps)+Math.log(20));
+      const nAg = (1/eps**2)*(d+Math.log(20));
+      txt(out, `Realizable: n ≈ ${Math.round(nRe)}  |  Agnostic: n ≈ ${Math.round(nAg)}  |  差距 ${(nAg/nRe).toFixed(0)}×`);
+    }
+    [epsSlider,dSlider].forEach(s=>s.addEventListener('input', draw));
+    draw();
+  };
+
+  // ============================================================
+  // kp7 — Complexity error bound sqrt(|E|/n)
+  // ============================================================
+  window.initDemoKp7 = function(){
+    const root = $('#demo-kp7'); if (!root) return;
+    const ESlider = $('#d7-E', root);
+    const nSlider = $('#d7-n', root);
+    const EVal=$('#d7-E-val',root), nVal=$('#d7-n-val',root);
+    const out = $('#d7-out', root);
+    function draw(){
+      const E = parseFloat(ESlider.value);
+      const n = parseInt(nSlider.value,10);
+      txt(EVal, '10^'+Math.round(Math.log10(E)));
+      txt(nVal, n);
+      const bound = Math.sqrt((E + Math.log(20))/n);
+      txt(out, `上界 = √((${E.toExponential(1)} + log(1/0.05))/${n}) ≈ ${bound.toFixed(3)}${bound>=1?'  ⚠ 已淪為廢話':''}`);
+    }
+    [ESlider,nSlider].forEach(s=>s.addEventListener('input', draw));
+    draw();
+  };
+
+  // ============================================================
+  // kp9 — NN 複雜度上界
+  // ============================================================
+  window.initDemoKp9 = function(){
+    const root = $('#demo-kp9'); if (!root) return;
+    const ESlider = $('#d9-E', root);
+    const nSlider = $('#d9-n', root);
+    const EVal=$('#d9-E-val',root), nVal=$('#d9-n-val',root);
+    const canvas = $('#d9-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d9-out', root);
+    function draw(){
+      const E = parseFloat(ESlider.value);
+      const n = parseInt(nSlider.value,10);
+      txt(EVal, '10^'+Math.round(Math.log10(E)));
+      txt(nVal, n);
+      const bound = Math.sqrt((E + Math.log(20))/n);
+      clearCanvas(canvas); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      // 畫水平虛線 y=1 與當前 bound 的水平線
+      const y1 = H-30;
+      ctx.strokeStyle='#dc2626'; ctx.setLineDash([4,3]); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(20,y1); ctx.lineTo(W-20,y1); ctx.stroke();
+      ctx.fillStyle='#991b1b'; ctx.font='11px monospace'; ctx.fillText('上界 = 1（廢話線）', W-140, y1-4);
+      const yB = H-30 - Math.min(bound,1.5)*120;
+      ctx.strokeStyle='#16a34a'; ctx.lineWidth=3; ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(20,yB); ctx.lineTo(W-20,yB); ctx.stroke();
+      ctx.fillStyle='#000'; ctx.font='11px monospace';
+      txt(out, `√(E/n) ≈ ${bound.toFixed(3)}　|　n ≫ E 條件：${n > E*10 ? '✓ 滿足' : '✗ 不滿足（|𝓔| ≫ n）'}`);
+    }
+    [ESlider,nSlider].forEach(s=>s.addEventListener('input', draw));
+    draw();
+  };
+
+  // ============================================================
+  // kp11 — Random labels: train acc → 0, test acc → 隨機
+  // ============================================================
+  window.initDemoKp11 = function(){
+    const root = $('#demo-kp11'); if (!root) return;
+    const mode = $('#d11-mode', root); // 'real' or 'random'
+    const canvas = $('#d11-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d11-out', root);
+    function draw(){
+      clearCanvas(canvas); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      const epochs = 200;
+      const isRand = mode.value === 'random';
+      // 訓練誤差
+      const trainR = 1 - 0.95*(1 - Math.exp(-50/30));
+      const trainCurve = [];
+      for (let e=0;e<epochs;e++) trainCurve.push(1 - 0.95*(1 - Math.exp(-e/30)));
+      // 測試誤差
+      const testCurve = [];
+      for (let e=0;e<epochs;e++) {
+        if (isRand) {
+          testCurve.push(0.48 + 0.04*Math.sin(e/8));
+        } else {
+          testCurve.push(0.5 - 0.42*(1 - Math.exp(-e/40)));
+        }
+      }
+      // 繪製
+      ctx.lineWidth=2.5;
+      ctx.strokeStyle='#3b82f6'; ctx.beginPath();
+      trainCurve.forEach((v,i)=>{ const x=20+i*(W-40)/epochs; const y=H-30-v*180; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      ctx.stroke();
+      ctx.strokeStyle='#ef4444'; ctx.beginPath();
+      testCurve.forEach((v,i)=>{ const x=20+i*(W-40)/epochs; const y=H-30-v*180; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      ctx.stroke();
+      // 圖例
+      ctx.fillStyle='#000'; ctx.font='11px monospace';
+      ctx.fillStyle='#1e40af'; ctx.fillRect(20,12,12,5); ctx.fillStyle='#000'; ctx.fillText('訓練誤差', 36, 18);
+      ctx.fillStyle='#991b1b'; ctx.fillRect(20,28,12,5); ctx.fillStyle='#000'; ctx.fillText('測試誤差', 36, 34);
+      txt(out, isRand ? '隨機標籤：train→0 但 test 卡在 0.5（隨機猜測）' : '真實標籤：train→0 且 test 收斂到 ≈0.05');
+    }
+    mode.addEventListener('change', draw);
+    draw();
+  };
+
+  // ============================================================
+  // kp12 — Uniform convergence bound
+  // ============================================================
+  window.initDemoKp12 = function(){
+    const root = $('#demo-kp12'); if (!root) return;
+    const nSlider = $('#d12-n', root);
+    const nVal = $('#d12-n-val', root);
+    const canvas = $('#d12-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d12-out', root);
+    function draw(){
+      const n = parseInt(nSlider.value,10);
+      txt(nVal, n);
+      // 真實測試誤差隨 n 下降
+      const testErr = 0.5 - 0.35*(1 - Math.exp(-n/1500));
+      // bound 隨 n 變鬆
+      const bound = 0.18 + 0.07 * (n/5000)**1.5;
+      clearCanvas(canvas); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      // 水平線
+      ctx.strokeStyle='#cbd5e1'; ctx.setLineDash([3,3]);
+      [0.1,0.2,0.3,0.4,0.5].forEach(v=>{ const y=H-30-v*300; ctx.beginPath(); ctx.moveTo(20,y); ctx.lineTo(W-20,y); ctx.stroke(); });
+      ctx.setLineDash([]);
+      // 畫當前點
+      const x = 20 + (n-100)/(5000-100) * (W-40);
+      const yTest = H-30 - testErr*300;
+      const yBound = H-30 - bound*300;
+      ctx.fillStyle='#3b82f6'; ctx.beginPath(); ctx.arc(x,yTest,8,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#ef4444'; ctx.beginPath(); ctx.arc(x,yBound,8,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#000'; ctx.font='11px monospace';
+      ctx.fillText('● 真實測試誤差（持續下降）', 20, 18);
+      ctx.fillText('● Bound（隨 n 變鬆）', 20, 34);
+      txt(out, `n=${n}：真實測試誤差 ${testErr.toFixed(3)}，bound ${bound.toFixed(3)} → 差距 ${(bound-testErr).toFixed(3)}`);
+    }
+    nSlider.addEventListener('input', draw); draw();
+  };
+
+  // ============================================================
+  // kp14 — Rate-distortion 取捨曲線
+  // ============================================================
+  window.initDemoKp14 = function(){
+    const root = $('#demo-kp14'); if (!root) return;
+    const betaSlider = $('#d14-beta', root);
+    const betaVal = $('#d14-beta-val', root);
+    const canvas = $('#d14-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d14-out', root);
+    function draw(){
+      const beta = parseFloat(betaSlider.value);
+      txt(betaVal, beta);
+      // 標準 R-D 曲線
+      clearCanvas(canvas); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      const rates=[];
+      for (let i=0;i<200;i++) rates.push(0.01+i*0.04);
+      const D = rates.map(r => 2.0*Math.exp(-r*0.7) + 0.05);
+      ctx.strokeStyle='#3b82f6'; ctx.lineWidth=2.5; ctx.beginPath();
+      D.forEach((d,i)=>{ const x=20+i*(W-40)/200; const y=H-30-d*80; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      ctx.stroke();
+      // 操作點（由 β 決定）
+      const targetD = 0.3/beta;
+      let bestI=0, bestDiff=1e9;
+      D.forEach((d,i)=>{ const diff=Math.abs(d-targetD); if (diff<bestDiff){bestDiff=diff;bestI=i;} });
+      const xOp = 20+bestI*(W-40)/200;
+      const yOp = H-30 - D[bestI]*80;
+      ctx.fillStyle='#f59e0b'; ctx.beginPath(); ctx.arc(xOp,yOp,9,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#000'; ctx.font='11px monospace';
+      ctx.fillText('D(R) 曲線', 20, 18);
+      ctx.fillText(`β=${beta} 操作點：R≈${rates[bestI].toFixed(2)}`, 20, 36);
+      txt(out, `β=${beta} 平衡：R ≈ ${rates[bestI].toFixed(2)}，D ≈ ${D[bestI].toFixed(3)}（β 越大越容忍高 rate 換低 distortion）`);
+    }
+    betaSlider.addEventListener('input', draw); draw();
+  };
+
+  // ============================================================
+  // kp15 — 各層互資訊單調遞減 (DPI)
+  // ============================================================
+  window.initDemoKp15 = function(){
+    const root = $('#demo-kp15'); if (!root) return;
+    const nSlider = $('#d15-n', root);
+    const nVal = $('#d15-n-val', root);
+    const canvas = $('#d15-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d15-out', root);
+    function draw(){
+      const nLayers = parseInt(nSlider.value,10);
+      txt(nVal, nLayers);
+      // 生成 DPI 序列：I(·;Y) 與 I(·;X) 都單調遞減
+      const layers = ['X', ...Array.from({length:nLayers},(_,i)=>'H'+(i+1)), 'Ŷ'];
+      const IY = [1.0];
+      const IX = [1.0];
+      for (let i=1;i<=nLayers;i++) {
+        IY.push(Math.max(0.1, IY[i-1] - 0.12 - Math.random()*0.03));
+        IX.push(Math.max(0.05, IX[i-1] - 0.15 - Math.random()*0.03));
+      }
+      IY.push(0.4); IX.push(0.15);
+      // 繪製
+      clearCanvas(canvas); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      const xs = layers.map((_,i)=>30 + i*(W-60)/(layers.length-1));
+      ctx.lineWidth=2.5;
+      ctx.strokeStyle='#7c3aed'; ctx.beginPath();
+      IY.forEach((v,i)=>{ const y=H-30-v*150; i?ctx.lineTo(xs[i],y):ctx.moveTo(xs[i],y); });
+      ctx.stroke();
+      ctx.strokeStyle='#10b981'; ctx.beginPath();
+      IX.forEach((v,i)=>{ const y=H-30-v*150; i?ctx.lineTo(xs[i],y):ctx.moveTo(xs[i],y); });
+      ctx.stroke();
+      // 標籤
+      ctx.fillStyle='#000'; ctx.font='9px monospace';
+      layers.forEach((l,i)=>ctx.fillText(l, xs[i]-8, H-12));
+      ctx.fillStyle='#5b21b6'; ctx.fillText('● I(·;Y)', 20, 18);
+      ctx.fillStyle='#059669'; ctx.fillText('● I(·;X)', 20, 34);
+      txt(out, `${nLayers} 個隱藏層：最淺層 H₁ 的 I(H;Y)=${IY[1].toFixed(2)} 最高，最深層 H${nLayers} 的 I(H;Y)=${IY[nLayers].toFixed(2)} 最低（DPI 成立）`);
+    }
+    nSlider.addEventListener('input', draw); draw();
+  };
+
+  // ============================================================
+  // kp16 — IB 閉式解 exp(-β·KL)/Z
+  // ============================================================
+  window.initDemoKp16 = function(){
+    const root = $('#demo-kp16'); if (!root) return;
+    const betaSlider = $('#d16-beta', root);
+    const betaVal = $('#d16-beta-val', root);
+    const canvas = $('#d16-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d16-out', root);
+    function draw(){
+      const beta = parseFloat(betaSlider.value);
+      txt(betaVal, beta);
+      const kls = [];
+      for (let i=0;i<200;i++) kls.push(i*0.02);
+      const weights = kls.map(kl => Math.exp(-beta*kl));
+      clearCanvas(canvas); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      ctx.lineWidth=2.5; ctx.strokeStyle='#7c3aed'; ctx.beginPath();
+      weights.forEach((w,i)=>{ const x=20+i*(W-40)/200; const y=H-30-w*180; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      ctx.stroke();
+      // 標 Z（配分函數）：beta 越大曲線越尖，Z 越小
+      const Z = kls.reduce((s,kl)=>s+Math.exp(-beta*kl), 0) * 0.02;
+      ctx.fillStyle='#000'; ctx.font='11px monospace';
+      ctx.fillText('● P(x̃|x) ∝ e^{-β·KL}', 20, 18);
+      ctx.fillText(`Z ≈ ${Z.toFixed(2)}`, 20, 34);
+      txt(out, `β=${beta}：配分函數 Z ≈ ${Z.toFixed(2)}（β 越大，Z 越小，曲線越尖 = 越只挑 KL 小的 x̃）`);
+    }
+    betaSlider.addEventListener('input', draw); draw();
+  };
+
+  // ============================================================
+  // kp17 — IB 泛化上界
+  // ============================================================
+  window.initDemoKp17 = function(){
+    const root = $('#demo-kp17'); if (!root) return;
+    const Islider = $('#d17-I', root);
+    const nSlider = $('#d17-n', root);
+    const IVal = $('#d17-I-val', root), nVal = $('#d17-n-val', root);
+    const out = $('#d17-out', root);
+    function draw(){
+      const I = parseFloat(Islider.value);
+      const n = parseInt(nSlider.value,10);
+      txt(IVal, I); txt(nVal, n);
+      const bound = Math.sqrt((I+1)/n);
+      txt(out, `Δ ≤ √((${I} + 1)/${n}) ≈ ${bound.toFixed(4)}　|　${I<1?'✓ 強壓縮，bound 緊':(I<5?'中等':'弱壓縮，bound 鬆')}`);
+    }
+    [Islider,nSlider].forEach(s=>s.addEventListener('input', draw)); draw();
+  };
+
+  // ============================================================
+  // kp19 — Double descent
+  // ============================================================
+  window.initDemoKp19 = function(){
+    const root = $('#demo-kp19'); if (!root) return;
+    const sizeSlider = $('#d19-size', root);
+    const sizeVal = $('#d19-size-val', root);
+    const canvas = $('#d19-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d19-out', root);
+    function draw(){
+      const N = parseInt(sizeSlider.value,10);
+      txt(sizeVal, N);
+      clearCanvas(canvas); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      const sizes = [];
+      for (let i=0;i<200;i++) sizes.push(10+i*5);
+      const train = sizes.map(s=> s>250?0: 0.5-0.5*(1-Math.exp(-s/200)));
+      const test = sizes.map(s=>{
+        const bump = 0.35*Math.exp(-1*((s-260)**2)/(2*40**2));
+        return Math.min(0.95, 0.3+0.4*Math.exp(-1*((s-150)**2)/(2*80**2)) + 0.05*s/1000 + bump - 0.05);
+      });
+      ctx.lineWidth=2.5; ctx.strokeStyle='#3b82f6'; ctx.beginPath();
+      train.forEach((v,i)=>{ const x=20+i*(W-40)/200; const y=H-30-v*220; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      ctx.stroke();
+      ctx.strokeStyle='#ef4444'; ctx.beginPath();
+      test.forEach((v,i)=>{ const x=20+i*(W-40)/200; const y=H-30-v*220; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      ctx.stroke();
+      // 插值點垂直線
+      const xInter = 20 + (260-10)/(200*5-10)*(W-40);
+      ctx.strokeStyle='#16a34a'; ctx.setLineDash([4,3]); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(xInter,0); ctx.lineTo(xInter,H); ctx.stroke(); ctx.setLineDash([]);
+      // 當前 size 點
+      const xCur = 20 + (N-10)/(200*5-10)*(W-40);
+      const trainAt = N>250?0:0.5-0.5*(1-Math.exp(-N/200));
+      const bumpAt = 0.35*Math.exp(-1*((N-260)**2)/(2*40**2));
+      const testAt = Math.min(0.95, 0.3+0.4*Math.exp(-1*((N-150)**2)/(2*80**2)) + 0.05*N/1000 + bumpAt - 0.05);
+      const yT = H-30-trainAt*220;
+      const yTe = H-30-testAt*220;
+      ctx.fillStyle='#3b82f6'; ctx.beginPath(); ctx.arc(xCur,yT,5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#ef4444'; ctx.beginPath(); ctx.arc(xCur,yTe,5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#000'; ctx.font='10px monospace';
+      ctx.fillText('train', 20, 18); ctx.fillStyle='#1e40af'; ctx.fillRect(20,8,12,5);
+      ctx.fillStyle='#991b1b'; ctx.fillRect(20,30,12,5); ctx.fillStyle='#000'; ctx.fillText('test', 36, 36);
+      txt(out, `N=${N}：train ${trainAt.toFixed(3)}，test ${testAt.toFixed(3)}${N>260?'（過插值點，double descent 區）':''}`);
+    }
+    sizeSlider.addEventListener('input', draw); draw();
+  };
+
+  // ============================================================
+  // kp20 — Grokking
+  // ============================================================
+  window.initDemoKp20 = function(){
+    const root = $('#demo-kp20'); if (!root) return;
+    const stepSlider = $('#d20-step', root);
+    const stepVal = $('#d20-step-val', root);
+    const canvas = $('#d20-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d20-out', root);
+    function draw(){
+      const step = parseInt(stepSlider.value,10);
+      txt(stepVal, step);
+      clearCanvas(canvas); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      const steps = [];
+      for (let i=0;i<300;i++) steps.push(i*40);
+      const train = steps.map(s => 1-0.98*(1-Math.exp(-s/200)));
+      const test = steps.map(s => s<5000? 0.92 : 0.92-0.85*(1-Math.exp(-1*((s-5000)**2)/(1500**2))));
+      ctx.lineWidth=2.5; ctx.strokeStyle='#3b82f6'; ctx.beginPath();
+      train.forEach((v,i)=>{ const x=20+i*(W-40)/300; const y=H-30-v*220; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      ctx.stroke();
+      ctx.strokeStyle='#ef4444'; ctx.beginPath();
+      test.forEach((v,i)=>{ const x=20+i*(W-40)/300; const y=H-30-v*220; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      ctx.stroke();
+      // grok 垂直線
+      const xGrok = 20 + (5000-0)/(12000-0)*(W-40);
+      ctx.strokeStyle='#16a34a'; ctx.setLineDash([4,3]); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(xGrok,0); ctx.lineTo(xGrok,H); ctx.stroke(); ctx.setLineDash([]);
+      // 當前 step 點
+      const xCur = 20 + (step-0)/(12000-0)*(W-40);
+      const trainAt = 1-0.98*(1-Math.exp(-step/200));
+      const testAt = step<5000? 0.92 : 0.92-0.85*(1-Math.exp(-1*((step-5000)**2)/(1500**2)));
+      const yT = H-30-trainAt*220, yTe = H-30-testAt*220;
+      ctx.fillStyle='#3b82f6'; ctx.beginPath(); ctx.arc(xCur,yT,5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#ef4444'; ctx.beginPath(); ctx.arc(xCur,yTe,5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#000'; ctx.font='10px monospace';
+      ctx.fillStyle='#1e40af'; ctx.fillRect(20,8,12,5); ctx.fillStyle='#000'; ctx.fillText('train', 36, 14);
+      ctx.fillStyle='#991b1b'; ctx.fillRect(20,26,12,5); ctx.fillStyle='#000'; ctx.fillText('test', 36, 32);
+      txt(out, `step=${step}：train ${trainAt.toFixed(3)}，test ${testAt.toFixed(3)}${step>=5000?'（已過頓悟點，grok 開始）':''}`);
+    }
+    stepSlider.addEventListener('input', draw); draw();
+  };
+
+  // ============================================================
+  // kp23 — NTK: frozen vs learned
+  // ============================================================
+  window.initDemoKp23 = function(){
+    const root = $('#demo-kp23'); if (!root) return;
+    const widthSlider = $('#d23-w', root);
+    const widthVal = $('#d23-w-val', root);
+    const canvas = $('#d23-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d23-out', root);
+    let rng = mulberry32(7);
+    function mulberry32(a) { return function() { a |= 0; a = a + 0x6D2B79F5 | 0; var t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; } }
+    // 兩類散點
+    const X0 = Array.from({length:20}, ()=>[rng()*1.4-2.0, rng()*1.4-2.0]);
+    const X1 = Array.from({length:20}, ()=>[rng()*1.4+0.6, rng()*1.4+0.6]);
+    function draw(){
+      const width = parseInt(widthSlider.value,10);
+      txt(widthVal, width);
+      clearCanvas(canvas); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      // 軸
+      ctx.strokeStyle='#cbd5e1'; ctx.strokeRect(W/2-90,30,180,H-60);
+      // 散點
+      X0.forEach(([x,y])=>{ ctx.fillStyle='#3b82f6'; ctx.fillRect(W/2-90+x*40+90, 30+y*40+90, 6, 6); });
+      X1.forEach(([x,y])=>{ ctx.fillStyle='#ef4444'; ctx.fillRect(W/2-90+x*40+90, 30+y*40+90, 6, 6); });
+      // 決策線：寬度越大越接近直線
+      const slope = 1 - (width-50)/5000; // 寬度影響曲率
+      const curveAmount = Math.max(0, 1 - width/2000); // 寬度小 → 大曲率
+      const xs = [];
+      for (let i=0;i<100;i++) xs.push(-1.8 + i*3.6/100);
+      ctx.lineWidth=2.5; ctx.strokeStyle='#7c3aed'; ctx.beginPath();
+      xs.forEach((x,i)=>{
+        const y = slope * x + 0.3 * curveAmount * Math.sin(x*2.5);
+        const px = W/2-90+x*40+90, py = 30+y*40+90;
+        i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+      });
+      ctx.stroke();
+      ctx.fillStyle='#000'; ctx.font='11px monospace';
+      ctx.fillText('● A', 10, 18); ctx.fillText('● B', 10, 34);
+      txt(out, `寬度=${width}：決策曲線曲率 ${curveAmount.toFixed(2)}（寬度小 → 大曲率 = 學到特徵；寬度大 → 接近直線 = NTK 凍結）`);
+    }
+    widthSlider.addEventListener('input', draw); draw();
+  };
+
+  // ============================================================
+  // 啟動所有 demo
+  // ============================================================
+  window.initDemos = function(){
+    [3,4,5,6,7,9,11,12,14,15,16,17,19,20,23].forEach(kp=>{
+      const fn = window['initDemoKp'+kp];
+      if (fn) try { fn(); } catch(e){ console.error('demo kp'+kp+' err', e); }
+    });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.initDemos);
+  else window.initDemos();
+})();
+
+</script>
+<!-- == Phase D guides block == -->
+<!-- == Phase D kp-1 guide == -->
+<div id="guide-content-kp-1" data-title="教授祕笈：全章地圖與三大張力" style="display:none">
+<h1>教授祕笈：全章地圖與三大張力</h1>
+<p>同學，我們打開整章前，先想一個場景：你在 2024 年用 GPT-4 寫論文，它對你問的問題答得很好。但你翻開 1990 年 Vapnik 的書，他會跟你說：「依 VC 維度，GPT 應該過擬合得亂七八糟才對。」為什麼書上說不可能，但實務上很行？</p>
+<p>這是整章要回答的核心問題。今天的比喻我選「<strong>保齡球計分</strong>」。</p>
+<p>保齡球有 10 格，每格 1 次機會丟兩球。理論（PAC/VC 維度）就像「完美球員」——他每球都精準丟中，10 格全倒。但你我都沒那麼準。我們是「普通球員」，可能第 1 格丟 7 支、第 2 格丟 4 支。我們能不能贏完美球員？通常不行，但奇蹟是：如果你能依分數調整策略（例如「哪一格丟什麼角度」），<strong>你的平均分會逼完美球員</strong>。這就是泛化。</p>
+<p>整章的 5 條主軸就像 5 種「調整策略」：</p>
+<ol>
+<li><strong>§2 PAC 與 VC</strong>：給你「完美球員打幾格才夠」的數學界。壞消息：界鬆到沒用。</li>
+<li><strong>§3 神經網路</strong>：把上面的界套到 NN，壞消息更明顯：$|\mathcal{E}|\gg n$，上界 = 1（廢話）。</li>
+<li><strong>§4 資訊瓶頸</strong>：換鏡頭——「好的表示 = 對輸入做最大壓縮、保留對標籤的資訊」。</li>
+<li><strong>§5a Double descent / Grokking</strong>：實務上的兩個反直覺——「模型越大可能越好」「過擬合後突然頓悟」。</li>
+<li><strong>§5b Benign overfit / NTK / Scaling</strong>：補完的「現象學指南」。</li>
+</ol>
+<p>請你動筆算算看：</p>
+<ol>
+<li>一個 $d=100$ 的假設類，$\delta=0.05$，目標 $\epsilon=0.05$，用 realizable 公式要多少樣本？</li>
+<li>改成 agnostic 公式又要多少？</li>
+</ol>
+<p>（提示：$n_{\text{real}} = O(\frac{1}{\epsilon}(d\log\frac{1}{\epsilon}+\log\frac{1}{\delta}))$，代入 $d=100, \epsilon=0.05, \delta=0.05$ 約 $4400$；agnostic 是 $O(\frac{1}{\epsilon^2}(d+\log\frac{1}{\delta}))$，約 $42000$。<strong>差距約 10 倍</strong>——這就是為什麼我們要關心「realizable vs agnostic」。）</p>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「VC 維度等於模型參數量」——錯，VC 維度是「能打散的最大點數」，是模型表達力的度量，但跟參數量不是簡單線性關係（其實是 $\Theta(w\log w)$）。</li>
+<li>誤解 2：「現代 NN 泛化好，所以 PAC 理論錯了」——半對半錯。PAC 給的是「最壞情況保證」，對 NN 失效是因為「最壞情況不會發生」（資料有結構），不是理論錯。</li>
+<li>誤解 3：「理解泛化只能選一個框架」——其實是 5 個框架各看一片光，沒有單一理論解釋一切。</li>
+</ul>
+<p><strong>口訣</strong>：<em>PAC 給界、VC 量難、NN 失靈、IB 換鏡、現象補完。</em></p>
+</div>
+<!-- == Phase D kp-1 guide END == -->
+<!-- == Phase D kp-2 guide == -->
+<div id="guide-content-kp-2" data-title="教授祕笈：PAC 框架的兩顆旋鈕" style="display:none">
+<h1>教授祕笈：PAC 框架的兩顆旋鈕</h1>
+<p>同學，今天我們談 PAC。1984 年 Valiant 提出一個天才點子：<strong>把「學得起來」這件含糊事，拆成兩個可調整的旋鈕</strong>——$\epsilon$ 與 $\delta$。</p>
+<p>我想用「<strong>面試三關</strong>」做比喻。你去面試一份工作，面試官有三關：</p>
+<ul>
+<li>第一關（精度關）：你做的工作<strong>錯誤率</strong>要小於 $\epsilon$。$\epsilon$ 越小 = 老闆越挑剔。</li>
+<li>第二關（信心關）：你<strong>至少有 $1-\delta$ 的機率</strong>通過第一關。$\delta$ 越小 = 老闆越沒耐心。</li>
+<li>第三關（時間關）：你要在<strong>多項式時間</strong>內完成所有關。</li>
+</ul>
+<p>PAC 框架說：給我足夠的訓練資料（$n\ge n_{\mathcal{H}}(\epsilon,\delta)$），前三關可同時通過。</p>
+<p>兩個關鍵詞要分清：</p>
+<ul>
+<li><strong>真實錯誤率</strong>（true / generalization error）：在新資料上答錯的機率。我們想讓它小。</li>
+<li><strong>訓練錯誤率</strong>（empirical / training error）：在訓練資料上答錯的機率。我們直接量得到。</li>
+</ul>
+<p>PAC 給的是「<strong>訓練錯誤率小，能保證真實錯誤率也小</strong>」這件事的樣本數公式。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>假設 $\mathcal{H}$ 是 2D 線，VC 維度 = 3，$\delta=0.05$，目標 $\epsilon=0.1$。Realizable 公式給的 $n_{\mathcal{H}}$ 是多少？
+   （公式 $n = O(\frac{1}{\epsilon}(d\log\frac{1}{\epsilon}+\log\frac{1}{\delta}))$，代入 $d=3, \epsilon=0.1, \delta=0.05$ 約 $310$。）</p>
+</li>
+<li>
+<p>為什麼是 $d\log(1/\epsilon)$ 而不只是 $d$？因為 $1/\epsilon$ 是「容忍精度的倒數」，越精的目標需要越多樣本；但 $\log$ 把指數爆炸壓回多項式。</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「PAC 是訓練演算法」——錯。PAC 是<strong>框架</strong>（family of statements），不是演算法。任何 ERM、SGD 都可以拿來用。</li>
+<li>誤解 2：「$\delta=0$ 才算學會」——錯。$\delta=0.05$ = 接受 5% 失敗機率，這在實務上完全夠用。</li>
+<li>誤解 3：「PAC 一定能學到完美模型」——錯。Realizable 是 $\text{err}\le\epsilon$，Agnostic 是 $\text{err}\le\inf+\epsilon$，兩者都不是「零錯誤」。</li>
+</ul>
+<p><strong>口訣</strong>：<em>兩顆旋鈕 $\epsilon\delta$，多項式時間內可達；最壞情況保證，現代 NN 不夠用。</em></p>
+</div>
+<!-- == Phase D kp-2 guide END == -->
+<!-- == Phase D kp-3 guide == -->
+<div id="guide-content-kp-3" data-title="教授祕笈：Realizable PAC — 假設類裡有真神" style="display:none">
+<h1>教授祕笈：Realizable PAC — 假設類裡有真神</h1>
+<p>Realizable PAC 是最乾淨的設定：<strong>存在某個 $f\in\mathcal{H}$，資料標籤剛好是 $y=f(x)$，沒有雜訊</strong>。這時學習變得「理論上簡單」：只要找到訓練誤差為 0 的假設，<strong>就幾乎一定</strong>泛化。</p>
+<p>我用「<strong>找失物</strong>」做比喻。你把鑰匙掉在家裡某個房間。房間集合 = $\mathcal{H}$。每個房間你都找一次（= 評估每個 $h$）。如果有「真的房間」是鑰匙所在（= $f\in\mathcal{H}$），那只要你認真找完，<strong>保證能找到</strong>。</p>
+<p>Realizable 的關鍵不等式（這個是整章的核心，記下來）：</p>
+<p>$$\text{err}_\mathcal{D}(h) \le \epsilon \quad\text{機率}\ge 1-\delta \quad\Leftrightarrow\quad n \ge n_\mathcal{H}(\epsilon,\delta)$$</p>
+<p>其中 $n_\mathcal{H}(\epsilon,\delta) = O\left(\frac{1}{\epsilon}\left(d\log\frac{1}{\epsilon}+\log\frac{1}{\delta}\right)\right)$，$d = \text{VCdim}(\mathcal{H})$。</p>
+<p><strong>為什麼是 $1/\epsilon$ 而不是 $1/\epsilon^2$？</strong> 因為 realizable 沒有「資料雜訊」這條項——你只要找到訓練誤差 0 的假設，理論上就保證它泛化，<strong>不需要處理「可能找錯」的雜訊</strong>。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>假設 $\mathcal{H}$ 是 $d$ 維線性分類器（VC 維度 = $d+1$），$\epsilon=0.05$, $\delta=0.05$。要多少樣本？
+   （代入公式約 $n\approx 60\cdot(d+1)$，$d=10$ 時約 660。）</p>
+</li>
+<li>
+<p>為什麼「找到 $h$ 使 $\text{err}_S(h)=0$」在 realizable 設定下是 ERM 的目標？
+   （因為 realizable 假設下 $f\in\mathcal{H}$，存在 $h$（即 $f$）使 $S$ 上誤差 0；ERM 就會找到它或同類的。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「Realizable 假設等於 $\mathcal{H}$ 內有零訓練誤差的 $h$」——這是<strong>結果</strong>不是<strong>假設</strong>。假設是「資料真的由 $\mathcal{H}$ 內某個函數產生」，這才能推出存在零訓練誤差的 $h$。</li>
+<li>誤解 2：「真實資料符合 realizable」——現實資料幾乎一定有標註雜訊，所以 realizable 主要是<strong>理論基準</strong>，不是實務設定。</li>
+</ul>
+<p><strong>口訣</strong>：<em>真神在屋內，找完就找到；$1/\epsilon$ 樣本夠，雜訊不擾。</em></p>
+</div>
+<!-- == Phase D kp-3 guide END == -->
+<!-- == Phase D kp-4 guide == -->
+<div id="guide-content-kp-4" data-title="教授祕笈：Agnostic PAC — 放棄「真神存在」" style="display:none">
+<h1>教授祕笈：Agnostic PAC — 放棄「真神存在」</h1>
+<p>Realizable 假設很乾淨但現實幾乎不成立——同樣的圖片，不同醫師可能給不同標籤；同樣的句子，不同人評分不同。所以我們要 <strong>agnostic</strong> PAC：放棄「真神在 $\mathcal{H}$ 內」的假設，<strong>改與 $\mathcal{H}$ 內最佳者比</strong>。</p>
+<p>我用「<strong>高爾夫球敘獎</strong>」做比喻。比賽有兩種：</p>
+<ul>
+<li><strong>A 賽（realizable）</strong>：保證第一名正確，目標是「答對所有題」（沒雜訊）。</li>
+<li><strong>B 賽（agnostic）</strong>：你跟一群人打，大家實力有差、有時運氣差，目標是「不比最厲害的那位差太多」。</li>
+</ul>
+<p>Agnostic PAC 的關鍵不等式：</p>
+<p>$$\text{err}_\mathcal{D}(h) \le \inf_{h'\in\mathcal{H}}\text{err}_\mathcal{D}(h') + \epsilon \quad\text{機率}\ge 1-\delta$$</p>
+<p>注意右側多了一個 $\inf_{h'\in\mathcal{H}}\text{err}_\mathcal{D}(h')$：這是 $\mathcal{H}$ 內<strong>最好</strong>的假設的錯誤率。我們不保證學到「零錯誤」，只保證「跟 $\mathcal{H}$ 內最好的差不多」。</p>
+<p>樣本複雜度公式：</p>
+<p>$$n_\mathcal{H}(\epsilon,\delta) = O\left(\frac{1}{\epsilon^2}\left(d+\log\frac{1}{\delta}\right)\right)$$</p>
+<p>跟 realizable 比，$1/\epsilon^2$ vs $1/\epsilon$——對 $\epsilon$ 的依賴變成平方級。<strong>直覺</strong>：當「真神」可能不在 $\mathcal{H}$ 內時，$h$ 跟最優者的差距也帶有雜訊，要 $n$ <strong>指數地多</strong>才能把這層差距壓下來。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>比較 realizable 與 agnostic 在 $d=10, \epsilon=0.1, \delta=0.05$ 的 $n_\mathcal{H}$。
+   （realizable: $n \approx 230$；agnostic: $n \approx 1100$——差距約 5 倍。）</p>
+</li>
+<li>
+<p>$\mathcal{H}$ 內最優者的 $\text{err}$ 怎麼影響 agnostic 的界？
+   （如果 $\inf_{h'\in\mathcal{H}}\text{err} = 0.3$（即 $\mathcal{H}$ 內沒人能學到完美），那我們學到的 $h$ 錯誤率約 0.3 + $\epsilon$。整個 $\mathcal{H}$ 太弱，<strong>不是資料不夠</strong>。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「agnostic 比 realizable 差」——agnostic 只是更寬鬆（不假設 $\mathcal{H}$ 內有真神），並非比較差。Realizable 是 agnostic 的特例。</li>
+<li>誤解 2：「$\inf\text{err}$ 是 0」——幾乎從來不是。實務上 $\mathcal{H}$ 從不包含真實函數，這個下限通常 &gt; 0。</li>
+</ul>
+<p><strong>口訣</strong>：<em>放棄真神、不比完美、跟最好者差不多；$1/\epsilon^2$ 倍代價。</em></p>
+</div>
+<!-- == Phase D kp-4 guide END == -->
+<!-- == Phase D kp-5 guide == -->
+<div id="guide-content-kp-5" data-title="教授祕笈：VC 維度 — 假設類的「打散能力」" style="display:none">
+<h1>教授祕笈：VC 維度 — 假設類的「打散能力」</h1>
+<p>VC 維度（Vapnik-Chervonenkis dimension）是 PAC 框架的「<strong>容量</strong>」度量。我用「<strong>撲克牌花式</strong>」做比喻。</p>
+<p>一副撲克牌有 4 種花（黑桃、紅心、方塊、梅花）。給你 $n$ 張牌，你可以用<strong>某種規則</strong>（假設 $h$）把它分成兩堆。如果<strong>任何分法</strong>都做得到，規則就「<strong>打散</strong>」了 $n$ 個點。<strong>最多能打散幾個點</strong>？就是 VC 維度。</p>
+<p>關鍵例子：2D 平面上的直線，$\mathrm{VCdim}=3$。任何 3 點（不管怎麼擺），都能找到一條直線完美分類；但 4 點（特別是對角的 XOR 配置）不行。</p>
+<p><strong>統計學習基本定理</strong>：$\mathcal{H}$ 是 PAC-learnable $\Leftrightarrow$ $\mathrm{VCdim}(\mathcal{H})$ 有限。</p>
+<p><strong>為什麼這個定理重要</strong>：它把「能不能學起來」這個<strong>演算法</strong>問題，變成「假設類容量是否有限」這個<strong>結構</strong>問題。</p>
+<p>深度學習的 $\mathrm{VCdim}$ 是多少？依 Harvey-Liaw-Mehrabian (2017)：</p>
+<p>$$\Omega\left(wl\log\frac{w}{l}\right) \le \mathrm{VCdim}(\mathcal{H}) \le \mathcal{O}(wl\log w)$$</p>
+<p>其中 $w$ 是參數量、$l$ 是層數。實務上若 $l\ll w$，可簡化為 $\mathrm{VCdim}=\Theta(w\log w)$。</p>
+<p>GPT-3 有 1750 億參數，$\mathrm{VCdim}\sim 10^{11}$，比整個訓練集（幾千億 token 的「樣本概念」對應）還大。<strong>這就是後面 §3.3「為什麼理論失效」的根源</strong>。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>一個簡單的二元分類器：$h(x)=\mathbb{1}[x>a]$（$x$ 實數、$a$ 門檻）。$\mathrm{VCdim}$ 是多少？
+   （$a$ 切一個實數，最多打散 1 個點但打不散 2 個（1 個在 $a$ 左、1 個在 $a$ 右就分不開）。所以 $\mathrm{VCdim}=1$。）</p>
+</li>
+<li>
+<p>為什麼 XOR 形狀的 4 點打不散 2D 直線？
+   （XOR = 對角同色 + 反對角不同色。任何直線都會把同對角的兩個點分到同一側——但 XOR 要求它們到不同側——所以找不到。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「VC 維度 = 模型參數量」——錯。它倆都是容量度量，但 VC 維度考慮的是<strong>假設類的表達力</strong>（能 shatter 多少點），不是參數量本身。</li>
+<li>誤解 2：「VC 維度大就是壞」——不一定。VC 維度大表示能學更複雜函數，但要更多資料才安全。</li>
+</ul>
+<p><strong>口訣</strong>：<em>打散最幾個點、VC 維度說了算；表達力 vs 樣本數的拔河。</em></p>
+</div>
+<!-- == Phase D kp-5 guide END == -->
+<!-- == Phase D kp-6 guide == -->
+<div id="guide-content-kp-6" data-title="教授祕笈：樣本複雜度 — 多少資料才夠？" style="display:none">
+<h1>教授祕笈：樣本複雜度 — 多少資料才夠？</h1>
+<p>「學得起來」要多少資料？這是 PAC 框架的實務核心。我用「<strong>考試考古題</strong>」做比喻。</p>
+<p>考試要 100 分，你目標 80 分通過。</p>
+<ul>
+<li>考古題要少（資料少）→ 模擬考可能不準（泛化差）。</li>
+<li>考古題要多（資料多）→ 模擬考準（泛化好）。</li>
+</ul>
+<p>具體要幾題？樣本複雜度函數 $n_\mathcal{H}(\epsilon,\delta)$ 給了兩個關鍵公式：</p>
+<p><strong>Realizable</strong>：
+$$n_\mathcal{H} = O\left(\frac{1}{\epsilon}\left(d\log\frac{1}{\epsilon}+\log\frac{1}{\delta}\right)\right)$$</p>
+<p><strong>Agnostic</strong>：
+$$n_\mathcal{H} = O\left(\frac{1}{\epsilon^2}\left(d+\log\frac{1}{\delta}\right)\right)$$</p>
+<p>三個值得記住的指數關係：</p>
+<ol>
+<li><strong>對 $\epsilon$</strong>：realizable $1/\epsilon$，agnostic $1/\epsilon^2$。Agnostic 對「想更小錯誤率」反應更劇烈，因為要同時處理「找對模型」與「處理雜訊」。</li>
+<li><strong>對 $d$</strong>：兩者都 $d$ 線性。VC 維度是學習難度的代理。</li>
+<li><strong>對 $\delta$</strong>：兩者都 $\log(1/\delta)$。把信心從 95% 提到 99% 只需多一點點樣本。</li>
+</ol>
+<p>實際數字：$d=10^6$（百萬參數）、$\epsilon=0.01$、$\delta=0.05$，agnostic 給的 $n\sim 10^{10}$——比 ImageNet（$10^6$ 張圖）大 $10^4$ 倍！這就是所謂「<strong>上界是空的（vacuous）</strong>」。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>把 $d=1000, \epsilon=0.05, \delta=0.05$ 代入兩個公式，比較 realizable 跟 agnostic 的 $n_\mathcal{H}$。
+   （realizable: $n\approx 25000$；agnostic: $n\approx 420000$。差距約 17 倍。）</p>
+</li>
+<li>
+<p>為什麼 $d$ 在 $\delta$ 那項的係數是 $\log(1/\delta)$ 而不是 1？
+   （union bound：對每個 $h$ 都要滿足 $|\text{err}_\mathcal{D}(h) - \text{err}_S(h)|<\epsilon$ 的機率 $\ge 1-\delta$。若 $|\mathcal{H}|$ 個假設各自機率 $\ge 1-\delta/|\mathcal{H}|$，用 union bound 推得 $n$ 多 $\log|\mathcal{H}|$ 樣本即夠。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「樣本數公式就是『一定要這麼多』」——錯。這是「<strong>最壞情況</strong>保證」，實際上若資料有結構，可能少很多。</li>
+<li>誤解 2：「$\delta$ 沒差」——差，$1/\delta$ 在 $\log$ 內影響小，但 $\delta=10^{-6}$ 仍會比 $\delta=0.05$ 多幾倍樣本。</li>
+</ul>
+<p><strong>口訣</strong>：<em>$1/\epsilon$ realizable、$1/\epsilon^2$ agnostic；VC 線性、信心對數、實務上界多為空。</em></p>
+</div>
+<!-- == Phase D kp-6 guide END == -->
+<!-- == Phase D kp-7 guide == -->
+<div id="guide-content-kp-7" data-title="教授祕笈：複雜度依賴誤差上界 — 測試誤差被什麼卡住" style="display:none">
+<h1>教授祕笈：複雜度依賴誤差上界 — 測試誤差被什麼卡住</h1>
+<p>定理 3 給了一個比樣本數更實用的形式：「已知訓練資料 $n$，測試誤差被什麼卡住？」</p>
+<p>$$\text{err}_\mathcal{D}(h) \le \inf_{h'\in\mathcal{H}}\text{err}_\mathcal{D}(h') + f(c(h), n)$$</p>
+<p>$c(h)$ 是某個複雜度度量（VC 維度就是一種），$f$ 隨 $c$ 遞增、隨 $n$ 遞減。</p>
+<p>具體到神經網路（§3.2），$f = \sqrt{(|\mathcal{E}|+\log(1/\delta))/n}$，$|\mathcal{E}|$ 是權重總數。</p>
+<p>我用「<strong>搬家打包</strong>」做比喻。你的家當（$|\mathcal{E}|$）越多、卡車（$n$）越小，東西一定會掉一些（測試誤差大）。$f$ 函數就是「掉落率」。</p>
+<p><strong>三個關鍵含義</strong>：</p>
+<ol>
+<li><strong>模型複雜度↑ → 上界↑</strong>：大模型 = 大 $c(h)$ = 上界鬆。經典的 bias-variance 取捨。</li>
+<li><strong>資料量↑ → 上界↓</strong>：多看資料永遠有用。</li>
+<li><strong>$|\mathcal{E}|\gg n$ → 上界=1（廢話）</strong>：若參數遠多於資料，上界 $\sqrt{1}\approx 1$，等於「$\text{err}\le 1$」這種空話。</li>
+</ol>
+<p>把數字塞進去：$|\mathcal{E}|=10^6$（百萬參數 CNN）、$n=10^4$（萬張圖），$f\approx \sqrt{10^6/10^4}=\sqrt{100}=10$——<strong>上界 10 已經超過 1，徹底失效</strong>。這是後面 §3.3「為什麼 PAC 在 NN 不 work」的核心矛盾。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>給定 $|\mathcal{E}|=10^5$（小 CNN）、$n=10^6$（百萬張圖），上界是多少？
+   （$f\approx \sqrt{10^5/10^6}=\sqrt{0.1}=0.32$。上界 $\text{err}\le 0.32+$ 雜訊項——還算合理。）</p>
+</li>
+<li>
+<p>為什麼 $f$ 是 $\sqrt{\cdot/n}$ 而不是 $1/n$ 或 $1/\sqrt{n}$？
+   （Hoeffding 不等式給 $\sqrt{1/n}$，union bound 給 $d$ 線性，所以 $f\propto\sqrt{d/n}$。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「上界失效所以現代 DL 沒理論」——上界失效是因為 $\mathcal{H}$ 太大、資料不夠，但<strong>不代表現代 DL 沒泛化</strong>——只是 PAC 這個特定框架解釋不了。</li>
+<li>誤解 2：「模型越小上界越緊，所以要選最小模型」——上界緊 ≠ 實際誤差小。<strong>小模型可能 underfit</strong>（$f$ 小但 $\inf\text{err}$ 大）。</li>
+</ul>
+<p><strong>口訣</strong>：<em>模型大、資料少、上界膨脹到 1；不是沒泛化，是上界不夠用。</em></p>
+</div>
+<!-- == Phase D kp-7 guide END == -->
+<!-- == Phase D kp-8 guide == -->
+<div id="guide-content-kp-8" data-title="教授祕笈：神經網路的表達力 — 通用逼近定理" style="display:none">
+<h1>教授祕笈：神經網路的表達力 — 通用逼近定理</h1>
+<p>通用逼近定理（Universal Approximation Theorem, UAT, 1989）：<strong>存在</strong>一個夠大的神經網路可以逼近任何連續函數。</p>
+<p>我用「<strong>鋼琴 vs 拇指琴</strong>」做比喻。</p>
+<p>拇指琴只有 8 個鍵，能彈的旋律有限。鋼琴有 88 個鍵，能彈幾乎所有旋律。<strong>通用逼近定理保證：給你 88 鍵的鋼琴，總能彈出任何旋律</strong>。但這不保證你能「學會」彈。</p>
+<p>定理 4 形式化：$d$ 維資料，存在有 $s(d)$ 個神經元的前饋網路可逼近 $f:[0,1]^d\to[0,1]$，誤差至多 $\epsilon$。其中 $s(d)$ 是 $d$ 的指數函數。</p>
+<p><strong>關鍵保留詞</strong>：「存在」。</p>
+<p>UAT 只保證「<strong>有這個網路</strong>」，但：</p>
+<ol>
+<li><strong>多大？</strong> $s(d)$ 對 $d=100$ 已是天文數字。</li>
+<li><strong>找得到嗎？</strong> 訓練演算法（SGD）是否收斂到那個網路？這是優化問題，不是表達力問題。</li>
+<li><strong>泛化嗎？</strong> 找到的網路在新資料上表現如何？這是 §3.2–§3.3 的主題。</li>
+</ol>
+<p><strong>深度的好處</strong>：UAT 還有個常被忽略的版本——對某些函數（如 parity、層疊的 XOR），<strong>深度網路</strong>所需參數量是淺層網路的指數分之一。深度不只是「多幾層」，是用指數效率表達某些函數族。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>一個 XOR-like 函數需要 $2^d$ 個神經元才能用單層網路逼近（$d$ 層 XOR）。若 $d=20$，需多少神經元？
+   （$2^{20}\approx 10^6$——百萬級。但用 20 層深網路可能只需 20×20=400 個神經元。指數級差距。）</p>
+</li>
+<li>
+<p>為什麼「存在」跟「找得到」是兩件事？
+   （UAT 不告訴你<strong>訓練演算法</strong>能不能抵達那個最佳解。事實上 SGD 常陷在次優解，但實務上泛化仍好——這是 §5.4 implicit bias 的主題。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「UAT 表示 NN 能學任何東西」——只表示<strong>存在夠大</strong>的網路能逼近，不是給定網路都能學。</li>
+<li>誤解 2：「深度無用」——事實上深度讓某些函數族的表達力指數級提升。</li>
+<li>誤解 3：「更大的網路一定更好」——大網路需要更多資料才不過擬合（見定理 3）。</li>
+</ul>
+<p><strong>口訣</strong>：<em>存在夠大能逼近，找不找得到另一回事；深度省的是指數倍參數。</em></p>
+</div>
+<!-- == Phase D kp-8 guide END == -->
+<!-- == Phase D kp-9 guide == -->
+<div id="guide-content-kp-9" data-title="教授祕笈：神經網路的複雜度誤差上界 — 為何理論給的界是空的" style="display:none">
+<h1>教授祕笈：神經網路的複雜度誤差上界 — 為何理論給的界是空的</h1>
+<p>把定理 3 套到神經網路——用「權重數 $|\mathcal{E}|$」當複雜度度量：</p>
+<p>$$\text{err}_\mathcal{D}(h) \le \inf_{h'\in\mathcal{H}}\text{err}_\mathcal{D}(h') + \sqrt{\frac{|\mathcal{E}|+\log(1/\delta)}{n}}$$</p>
+<p><strong>三個推論</strong>：</p>
+<ol>
+<li><strong>網路越大 → 上界越鬆</strong>。$|\mathcal{E}|$ 變大 → 根號項變大。</li>
+<li><strong>資料越多 → 上界越緊</strong>。$n$ 變大 → 根號項變小。</li>
+<li><strong>$|\mathcal{E}|\approx n$ → 上界 $\approx 1$</strong>。若訓練樣本數 ≈ 參數量，根號項 $\approx 1$，上界等於「$\text{err}\le 1$」這種空話。</li>
+</ol>
+<p>我用「<strong>考試時間 vs 題目難度</strong>」做比喻。考試時間（$n$）越長、題目（$|\mathcal{E}|$）越簡單，分數越高。<strong>如果時間等於題目數，剛好擦邊過</strong>。參數遠多於資料的 NN 就像「時間只有 1 小時、題目 10 小時的考試」——理論上必失敗。</p>
+<p>但實務上：GPT-3（$|\mathcal{E}|\sim 10^{11}$）在 $n\sim 10^{11}$ token 上仍泛化良好。<strong>這個矛盾就是現代 DL 理論的核心謎題</strong>。</p>
+<p>直觀解釋：$|\mathcal{E}|$ 是「<strong>最壞情況</strong>的容量」，但 SGD 找到的解其實落在參數空間的某個小子集合（見 §5.4 implicit bias），這個子集的「有效容量」可能遠小於 $|\mathcal{E}|$。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>一個 $|\mathcal{E}|=10^6$ 的 CNN，$n=10^4$ 訓練圖。上界約多少？
+   （$\sqrt{10^6/10^4}=\sqrt{100}=10$——<strong>比 1 大，上界失效</strong>。）</p>
+</li>
+<li>
+<p>為什麼「網路越大泛化越差」對應到古典統計學習，但實務上不成立？
+   （古典界給「最壞情況保證」，對所有可學習的假設都成立。實務上 SGD 找到的解不是「所有可能」，是某個小子集。古典界沒考慮「演算法的偏置」。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「既然上界失效，乾脆不用理會 $|\mathcal{E}|$」——上界失效<strong>不代表</strong> $|\mathcal{E}|$ 不重要。資料不夠時，模型小一點仍是安全策略。</li>
+<li>誤解 2：「現代 DL 不用在乎理論」——錯。理論告訴我們「<strong>為什麼</strong>」，即使上界失效，我們仍要知道「古典界失效的原因」（§3.3 兩個實驗）才能設計更好的演算法。</li>
+</ul>
+<p><strong>口訣</strong>：<em>$|\mathcal{E}|/n$ 控制上界；實務 NN 違反此界，靠 SGD 隱式偏置救回。</em></p>
+</div>
+<!-- == Phase D kp-9 guide END == -->
+<!-- == Phase D kp-10 guide == -->
+<div id="guide-content-kp-10" data-title="教授祕笈：古典 PAC 與 NN 實務為何脫節" style="display:none">
+<h1>教授祕笈：古典 PAC 與 NN 實務為何脫節</h1>
+<p>一句話總結這個張力：<strong>理論上界給的是「對所有可學習假設都成立」的最壞情況保證；神經網路實際依賴某些結構假設（資料的低維流形、標籤的可學規律）</strong>，讓最壞情況不會發生。</p>
+<p>我用「<strong>保險公司 vs 個人</strong>」做比喻。保險公司算保費時，假設「任何客戶都可能出車禍」（最壞情況）。但統計上 25 歲男性 vs 60 歲女性的出險率差很多。保險公司用「群體統計」收費，<strong>個人實際出險率可能比最壞情況好很多</strong>。</p>
+<p>PAC 給的「最壞情況保證」就像保險公司的計算方式：對所有可能的「客戶」（假設）都收一樣的費率。NN 實務上是「精準定價」：只對「群體中的某個小子集」（SGD 找到的解）做泛化保證。</p>
+<p>兩個方向實驗展示這個落差：</p>
+<ol>
+<li><strong>§3.3.1 隨機標籤（Zhang et al. 2017）</strong>：把 ImageNet 標籤完全打亂，CNN 仍能訓練誤差降到 0——網路有足夠容量記住任何函數。但測試誤差接近亂猜。<strong>能記住 ≠ 會記住</strong>：SGD 配合真實資料時會找到可泛化解，配合隨機資料時只能死記。</li>
+<li><strong>§3.3.2 Uniform convergence 不足（Nagarajan &amp; Kolter 2019）</strong>：在線性 NN 上，bound 可能隨 $n$ 增加而變鬆，與真實測試誤差方向相反。bound 與真實泛化完全脫鉤。</li>
+</ol>
+<p>這些證據告訴我們：<strong>解釋深度學習泛化，必須引入「超出模型容量」的東西</strong>——資料結構、SGD 動力學、模型架構的歸納偏置。後面 §4（IB）與 §5（六現象）就是這些嘗試。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>為什麼「能記住隨機標籤」是「能擬合任何函數」的意思？
+   （$n$ 個訓練樣本、$|\mathcal{Y}|^n$ 種可能標籤。NN 若能實作所有 $n\to y$ 函數（$|\mathcal{Y}|^n$ 個），就能記住任何隨機標籤。$|\mathcal{E}|$ 夠大時 NN 確實能。）</p>
+</li>
+<li>
+<p>為什麼「$n$ 增加但 bound 變鬆」是奇怪現象？
+   （古典 PAC 框架保證：bound 應隨 $n$ 遞減。Nagarajan-Kolter 顯示在 NN 上，bound 不一定遞減——這違背了 PAC 的基本假設。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「既然最壞情況保證失效，PAC 框架就沒用」——PAC 仍是<strong>理解</strong>泛化的起點，不是終點。它告訴我們「為什麼不夠用」，指引尋找新框架。</li>
+<li>誤解 2：「NN 神秘泛化 = 物理奇蹟」——NN 的泛化靠的是<strong>資料結構 + 歸納偏置 + 優化動力學</strong>三者共同作用，不是什麼神秘力量。</li>
+</ul>
+<p><strong>口訣</strong>：<em>最壟情況保證 vs 結構性資料；能記住 ≠ 會記住；SGD 偏置 + 資料規律 = 泛化真正來源。</em></p>
+</div>
+<!-- == Phase D kp-10 guide END == -->
+<!-- == Phase D kp-11 guide == -->
+<div id="guide-content-kp-11" data-title="教授祕笈：隨機標籤實驗 — 容量不是泛化的瓶頸" style="display:none">
+<h1>教授祕笈：隨機標籤實驗 — 容量不是泛化的瓶頸</h1>
+<p>Zhang et al. (2017) 做了兩個乾淨的實驗，結論震動了整個 ML 社群：<strong>「能記住」不等於「會記住」</strong>。</p>
+<p>我用「<strong>考試答題</strong>」做比喻。</p>
+<p>實驗 A（隨機標籤）：把 ImageNet 圖片的標籤完全打亂，給 CNN 訓練。<strong>CNN 仍能訓練誤差降到 0</strong>——它「記住」了每張圖的隨機標籤。測試時標籤也是隨機的，所以測試誤差接近 1/類別數（隨機猜測）。<strong>CNN 有足夠容量記住任何函數</strong>。</p>
+<p>實驗 B（隨機像素）：標籤用真實的，但把圖片打亂成高斯雜訊。同樣能訓練誤差 0、測試誤差亂猜。<strong>只要輸入有足夠資訊量，CNN 都能記住</strong>。</p>
+<p>這兩個實驗的破壞性在哪？它們證明：</p>
+<ol>
+<li><strong>「泛化不是模型容量問題」</strong>。同樣的 CNN，在真實資料上會學到可泛化解，在隨機資料上只能死記。可見泛化不是「模型容量不夠」造成的——而是訓練演算法（SGD）有偏置。</li>
+<li><strong>「正則化無法解釋一切」</strong>。即使加 weight decay、dropout 顯式正則化，隨機標籤實驗的訓練誤差仍能降到 0。換言之，<strong>正則化不是泛化的唯一來源</strong>。</li>
+</ol>
+<p>後續工作（Poggio et al. 2018）把「額外的泛化來源」歸因於 <strong>loss landscape 的幾何</strong> + <strong>優化過程的隱式正則化</strong>——也就是 §5.4 implicit bias。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>為什麼「記住隨機標籤」是「CNN 有足夠容量」的證明？
+   （$n$ 筆訓練樣本有 $|\mathcal{Y}|^n$ 種可能標籤組合。CNN 若能學到所有可能標籤，<strong>就是說它有足夠容量實作所有 $n$ 個輸入的任意函數</strong>。訓練誤差 0 = 找到這個任意函數之一。）</p>
+</li>
+<li>
+<p>為什麼加 dropout 仍能記住隨機標籤？
+   （dropout 是顯式正則化，鼓勵<strong>權重小</strong>、<strong>對小擾動穩健</strong>。但記住 $n$ 個隨機樣本不需要權重小——只要 CNN 夠大（$|\mathcal{E}|$ 遠大於 $n$），它有「足夠空間」記住每個樣本，<strong>不依賴小權重</strong>。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「能記住隨機標籤 = 過擬合」——能記住但測試仍亂猜，<strong>這就是過擬合的極致</strong>。但 CNN 在真實資料上<strong>不會這樣</strong>——它會自動找可泛化解。</li>
+<li>誤解 2：「這表示 CNN 不需要正則化」——錯。在小資料集上，dropout/weight decay 仍能提升泛化（只是不能解釋「現代大模型在巨大資料上泛化」這個現象）。</li>
+</ul>
+<p><strong>口訣</strong>：<em>能記住 vs 會記住；容量不是瓶頸；SGD 隱式偏置選可泛化解。</em></p>
+</div>
+<!-- == Phase D kp-11 guide END == -->
+<!-- == Phase D kp-12 guide == -->
+<div id="guide-content-kp-12" data-title="教授祕笈：Uniform Convergence 為什麼解釋不了現代 NN" style="display:none">
+<h1>教授祕笈：Uniform Convergence 為什麼解釋不了現代 NN</h1>
+<p><strong>Uniform convergence（均勻收斂）</strong>是經典泛化框架：要求「所有假設的訓練誤差都收斂到測試誤差」。如果成立，ERM 挑出的最佳假設自然泛化。</p>
+<p>我用「<strong>模擬考 vs 正式考</strong>」做比喻。模擬考分數（訓練誤差）對每個學生（每個假設）都接近正式考分數（測試誤差），那「模擬考最高分」的學生就是正式考最高分。Uniform convergence 就是「這個接近程度對所有學生都成立」。</p>
+<p>Nagarajan &amp; Kolter (2019) 用線性 NN 展示：<strong>uniform convergence 不成立</strong>。</p>
+<ul>
+<li>訓練過程中，<strong>測試誤差持續下降</strong>（模型確實在學）。</li>
+<li>但 <strong>uniform convergence bound 隨 $n$ 增加而變鬆</strong>——bound 與真實泛化脫鉤。</li>
+</ul>
+<p>這告訴我們什麼？</p>
+<ol>
+<li><strong>Uniform convergence 是泛化的充分條件，不是必要條件</strong>。NN 可能有泛化但沒有 uniform convergence。</li>
+<li><strong>bound 鬆到沒用</strong>。即使它成立，bound 也可能鬆到不反映真實情況。</li>
+</ol>
+<p>要解釋深度學習泛化，需要<strong>超出 uniform convergence 的新框架</strong>。§4 資訊瓶頸是一種嘗試；§5 介紹的六大現象是另一種「現象學」視角。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>為什麼「$n$ 增加但 bound 變鬆」是反直覺？
+   （直覺：資料多 → 模型在更多樣本上訓練 → 模型泛化更好 → bound 應更緊。但實驗顯示 bound 反而變鬆。）</p>
+</li>
+<li>
+<p>為什麼「對所有假設都收斂」這個要求太強？
+   （NN 假設類 $|\mathcal{H}|$ 可能是無窮大，且 SGD 只挑出某個小子集。對<strong>所有</strong>可能假設都成立的要求過度泛化，特別是 NN 真正用到的那個小子集。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「Uniform convergence 失效 = PAC 失效」——兩者不同。PAC 是更廣的框架（含 realizable/agnostic），uniform convergence 是其中一種分析工具。</li>
+<li>誤解 2：「既然 bound 沒用，幹嘛算 bound」——bound 仍給「最壞情況保證」，是「不能期望更多」的基線。實務上泛化比 bound 好是額外紅利。</li>
+</ul>
+<p><strong>口訣</strong>：<em>所有假設都收斂，太強不必要；bound 與真實泛化脫鉤是 NN 的特色。</em></p>
+</div>
+<!-- == Phase D kp-12 guide END == -->
+<!-- == Phase D kp-13 guide == -->
+<div id="guide-content-kp-13" data-title="教授祕笈：資訊瓶頸 — 換個鏡頭看泛化" style="display:none">
+<h1>教授祕笈：資訊瓶頸 — 換個鏡頭看泛化</h1>
+<p><strong>資訊瓶頸（Information Bottleneck, IB）</strong>：Tishby 等人 (2000) 提出的資訊論框架。核心想法：<strong>學一個壓縮表示，保留與標籤相關的資訊、丟掉其他</strong>。</p>
+<p>我用「<strong>秘書整理報告</strong>」做比喻。</p>
+<p>老闆給你 1000 頁原始資料（輸入 $X$），要你寫 1 頁摘要（表示 $\tilde{X}$）給他看，讓他能做出決策（預測 $\hat{Y}\approx Y$）。</p>
+<ul>
+<li>摘要要<strong>短</strong>（rate 小 = $I(X;\tilde{X})$ 小 = 壓縮）</li>
+<li>但<strong>重要資訊要保留</strong>（distortion 小 = $I(\tilde{X};Y)$ 大）</li>
+</ul>
+<p>IB 形式化：</p>
+<p>$$\min_{P(\tilde{x}|x)} I(X;\tilde{X}) - \beta I(\tilde{X};Y)$$</p>
+<p>$\beta$ 是「預測多重要」的旋鈕。$\beta$ 大 = 重預測；$\beta$ 小 = 重壓縮。</p>
+<p><strong>把 NN 當 IB</strong>：Tishby-Zaslavsky (2015) 把<strong>隱藏層輸出</strong>視為 $\tilde{X}$——隱藏層是「資訊瓶頸」，資料通過它被壓縮、但保留對預測有用的部分。Fig.2a/b/c 展示三個版本：抽象的瓶頸、autoencoder 的 code 層、一般多層網路。</p>
+<p><strong>與 PAC 的差別</strong>：PAC 用「<strong>樣本數量</strong>」看泛化（$n$ 多 = 泛化好）；IB 用「<strong>資訊量</strong>」看泛化（$I(\tilde{X};Y)$ 大、$I(X;\tilde{X})$ 小 = 泛化好）。直覺上，若表示 $\tilde{X}$ 與 $Y$ 互資訊大、與 $X$ 互資訊小，泛化應好——這是 §4.2 要形式化的命題。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>為什麼「$I(X;\tilde{X})$ 小、$I(\tilde{X};Y)$ 大」是好表示？
+   （$I(X;\tilde{X})$ 小 = $\tilde{X}$ 丟掉 $X$ 中很多資訊（壓縮）；$I(\tilde{X};Y)$ 大 = $\tilde{X}$ 保留足夠 $Y$ 相關資訊（預測有用）。兩者結合 = 「學到最小但足夠的特徵」。）</p>
+</li>
+<li>
+<p>$\beta\to\infty$ 與 $\beta=0$ 各代表什麼？
+   （$\beta=0$：完全忽略 $Y$ 預測，只壓縮到最小（可能單一神經元）。$\beta\to\infty$：忽略壓縮，保留所有 $Y$ 相關資訊（接近 hard clustering）。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「IB 給的界比 PAC 緊」——§4.2 才看，IB 給的「泛化差距上界 $\le\sqrt{(I(X;H_l|Y)+1)/n}$」在實務上同樣可能 vacuous。</li>
+<li>誤解 2：「NN 訓練會經歷 compression phase」——Tishby 等人主張，後續實驗（Saxe 等）質疑。IB 是「可能的」框架，不是「必經的」過程。</li>
+</ul>
+<p><strong>口訣</strong>：<em>壓縮 $X$、保留 $Y$ 資訊；$\beta$ 旋鈕調平衡；NN 隱藏層是瓶頸。</em></p>
+</div>
+<!-- == Phase D kp-13 guide END == -->
+<!-- == Phase D kp-14 guide == -->
+<div id="guide-content-kp-14" data-title="教授祕笈：Rate-Distortion — 壓縮率與預測力的拔河" style="display:none">
+<h1>教授祕笈：Rate-Distortion — 壓縮率與預測力的拔河</h1>
+<p>Rate-distortion（速率-失真）是經典資訊論問題：給失真預算，找最小 rate 的編碼。IB 是它的特例——失真度量換成「$I(\tilde{X};Y)$」。</p>
+<p>我用「<strong>包裹郵寄</strong>」做比喻。</p>
+<p>你要寄一盒東西（輸入 $X$），可以打包得很鬆（rate 大 = 沒壓縮、運費貴）也可以壓得很緊（rate 小 = 省錢）。但壓太緊會壓壞內容（distortion 大）。Rate-distortion 就是找出「特定失真下最小 rate」或「特定 rate 下最小失真」的曲線。</p>
+<p>IB 目標函數（重述）：</p>
+<p>$$\min I(X;\tilde{X}) - \beta I(\tilde{X};Y)$$</p>
+<p><strong>兩個旋鈕</strong>：</p>
+<ul>
+<li><strong>Rate</strong> $I(X;\tilde{X})$：表示還保留多少 $X$ 資訊。Rate 越小 = 壓縮越狠。</li>
+<li><strong>Distortion</strong> $I(\tilde{X};Y)$：表示 $\tilde{X}$ 對預測 $Y$ 有多有用。失真越小（$I(\tilde{X};Y)$ 越大）= 預測越準。</li>
+</ul>
+<p>$\beta$ 越大，越重視預測準確度（容忍更多 rate）；$\beta$ 越小，越重視壓縮（容忍更多 distortion）。</p>
+<p><strong>為什麼對 NN 重要</strong>：Kawaguchi 等 (2023) 沿這條思路證明——<strong>泛化差距可用「$X$ 與隱藏層的條件互資訊」上界</strong>（§4.2 定理 6）。換言之，<strong>若隱藏層有效壓縮與 $Y$ 無關的資訊，泛化差距會小</strong>。這給了 IB 在深度學習中重新被關注的理論理由。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>$\beta$ 變大時，rate 跟 distortion 各怎麼變？
+   （$\beta$ 大 → 重預測 → distortion 小（$I(\tilde{X};Y)$ 大）、rate 大（$I(X;\tilde{X})$ 大，因為要保留更多 $Y$ 資訊）。）</p>
+</li>
+<li>
+<p>為什麼 IB 比直接優化「分類錯誤」更好？
+   （直接優化錯誤率只看 $\hat{Y}$，不看 $\tilde{X}$ 學到的表示。IB 強制 $\tilde{X}$ 緊緻但仍保留 $Y$ 資訊，<strong>有助於泛化</strong>——表示越簡單，越不易過擬合。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「Rate-distortion 是純理論，實務無用」——JPEG、MPEG 等壓縮標準都基於它。</li>
+<li>誤解 2：「IB 給的界一定緊」——不見得。高維下 $I(X;\tilde{X})$ 難估計，bound 可能是空話。</li>
+</ul>
+<p><strong>口訣</strong>：<em>Rate 小 distortion 小，$\beta$ 平衡二者；緊緻表示利泛化，IB 給理論依據。</em></p>
+</div>
+<!-- == Phase D kp-14 guide END == -->
+<!-- == Phase D kp-15 guide == -->
+<div id="guide-content-kp-15" data-title="教授祕笈：各隱藏層的互資訊單調遞減" style="display:none">
+<h1>教授祕笈：各隱藏層的互資訊單調遞減</h1>
+<p>這節是 IB 框架的三個關鍵不等式。用「<strong>層層篩選</strong>」做比喻。</p>
+<p>你從老闆拿到 1000 頁原始報告（$X$）。第一層助理整理出 100 頁摘要（$H_1$）。第二層助理看 100 頁寫 10 頁（$H_2$）。第三層助理看 10 頁寫 1 頁（$H_3$），給老闆（$\hat{Y}$）。<strong>每多過一層，資訊就少一些</strong>——這就是 DPI。</p>
+<p><strong>不等式 1：壓縮必失資訊</strong>
+$$I(\tilde{X};Y) \le I(X;Y)$$</p>
+<p>壓縮後的表示最多保留與原資料一樣多的標籤資訊。</p>
+<p><strong>不等式 2：各層資訊單調遞減（DPI）</strong>
+$$I(\hat{Y};Y) \le I(H_i;Y) \le I(H_j;Y) \le I(X;Y), \quad i\ge j$$</p>
+<p>更深的隱藏層保留的標籤資訊<strong>不會比淺層多</strong>。這是 Tishby 等主張的依據：訓練應讓深層 $I(H_i;Y)$ 「先升後降」（fitting → compression phase）。</p>
+<p><strong>不等式 3：有限樣本估計的修正</strong>（Shamir-Sabato-Tishby 2010）</p>
+<p>$$I(\tilde{X};Y) \le \hat{I}(\tilde{X};Y) + O\left(\frac{|\tilde{\mathcal{X}}||\mathcal{Y}|}{\sqrt{n}}\right)$$</p>
+<p>$$\hat{I}$是有限樣本的實證估計。這告訴我們：<strong>壓縮越狠（$|\tilde{\mathcal{X}}|$ 越小），有限樣本估計越準</strong>。這是為什麼「模型自動學到緊緻表示」對泛化有益的量化理由。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>為什麼「深度層 $I(H_l;Y)$ 較低」是好的？
+   （$I(H_l;Y)$ 低 = 該層不再需要保存那麼多 $Y$ 資訊 = 該層在做「壓縮 $X$ 中與 $Y$ 無關的訊息」。配合不等式 1，這是 representation 該有的樣子。）</p>
+</li>
+<li>
+<p>為什麼 DPI 跟「深度 NN 自動學特徵」不衝突？
+   （DPI 限制<strong>逐層</strong>互資訊單調遞減。但每一層學什麼特徵（DPI 沒說），由 SGD 動態決定。DPI 是必要條件，不是充分條件。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「DPI 證明深網一定 compression」——DPI 是定理（數學必然），compression 是經驗假說（訓練過程是否真如此有爭議）。</li>
+<li>誤解 2：「$I(H_l;Y)$ 越低越好」——$I(H_l;Y)$ 過低 = 該層丟掉太多 $Y$ 資訊，連 $\hat{Y}\approx Y$ 都做不到了。</li>
+</ul>
+<p><strong>口訣</strong>：<em>層層篩選、逐層遞減；資料處理不等式給單調性；壓縮越狠估計越準。</em></p>
+</div>
+<!-- == Phase D kp-15 guide END == -->
+<!-- == Phase D kp-16 guide == -->
+<div id="guide-content-kp-16" data-title="教授祕笈：IB 最佳化解的閉式表達" style="display:none">
+<h1>教授祕笈：IB 最佳化解的閉式表達</h1>
+<p>把 IB 最佳化（式 12/13）對 $P(\tilde{x}|x)$ 做變分，會得到一個非常乾淨的閉式解（Tishby 2000 定理 5）：</p>
+<p>$$\mathbb{P}(\tilde{x}|x) = \frac{\mathbb{P}(\tilde{x})}{Z(x,\beta)} \exp\left(-\beta\,D_{\mathrm{KL}}(\mathbb{P}(y|x) \| \mathbb{P}(y|\tilde{x}))\right)$$</p>
+<p>其中 $Z(x,\beta)=\sum_{\tilde{x}}\mathbb{P}(\tilde{x})\exp(-\beta\,D_{\mathrm{KL}})$ 是配分函數。</p>
+<p>我用「<strong>學生選社團</strong>」做比喻。</p>
+<p>每個學生 $x$ 要選一個社團 $\tilde{x}$。選 $\tilde{x}$ 的機率正比於「$x$ 與 $\tilde{x}$ 的<strong>匹配度</strong>」。匹配度用「知道 $\tilde{x}$ 後、對 $y$ 的預測有多接近知道 $x$」衡量（即 KL 散度）：</p>
+<ul>
+<li>$D_{\mathrm{KL}}(\mathbb{P}(y|x) \| \mathbb{P}(y|\tilde{x}))$ 小 = 知道 $\tilde{x}$ 後預測 $y$ 跟知道 $x$ 一樣準 = 這個 $\tilde{x}$ 是 $x$ 的好代表。</li>
+<li>機率 $\propto \exp(-\beta D_{\mathrm{KL}})$：KL 越小，機率越大（softmax 形式）。</li>
+<li>$\beta$ 大：只選 KL 極小的 $\tilde{x}$（強壓縮）；$\beta$ 小：寬鬆選。</li>
+</ul>
+<p><strong>這是 soft clustering 版的 IB</strong>：每個 $x$ 依 KL 大小「軟式」分配到各 $\tilde{x}$，不是 hard cluster。</p>
+<p>實務上直接算這個解需要知道 $\mathbb{P}(x,y)$ 與所有候選 $\tilde{x}$ 的聯合分佈——<strong>高維時不可行</strong>（這是 §4.3 的批評之一）。但作為「理想解」，它清楚展示了<strong>好的表示應如何平衡壓縮與預測</strong>。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>為什麼這是「soft」而不是「hard」分群？
+   （機率 $\propto \exp(-\beta D_{\mathrm{KL}})$ 是連續的；每個 $x$ 對所有 $\tilde{x}$ 都有非零機率（即使很小）。hard cluster 會把機率全集中在「最近的」$\tilde{x}$。）</p>
+</li>
+<li>
+<p>為什麼 $Z$ 稱為「配分函數」？
+   （確保 $\sum_{\tilde{x}}\mathbb{P}(\tilde{x}|x)=1$。命名來自統計力學，$Z$ 對應「所有狀態的權重和」。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「這個解可以直接用」——不，$\mathbb{P}(x,y)$ 與 $\mathbb{P}(y|\tilde{x})$ 高維下不可得。</li>
+<li>誤解 2：「$\beta$ 大就一定好」——大 $\beta$ 強壓縮但若 $Y$ 相關資訊被丟，預測會壞。要看具體任務。</li>
+</ul>
+<p><strong>口訣</strong>：<em>softmax 選 $\tilde{x}$、權重 $\exp(-\beta\cdot\mathrm{KL})$；理想解清楚、實務難算。</em></p>
+</div>
+<!-- == Phase D kp-16 guide END == -->
+<!-- == Phase D kp-17 guide == -->
+<div id="guide-content-kp-17" data-title="教授祕笈：泛化差距的 IB 上界 — 壓縮越狠泛化越好" style="display:none">
+<h1>教授祕笈：泛化差距的 IB 上界 — 壓縮越狠泛化越好</h1>
+<p>Kawaguchi 等 (2023, 定理 6) 把 IB 連到泛化的核心定理：</p>
+<p>對於任何 $\delta>0$，以至少 $1-\delta$ 機率，</p>
+<p>$$\lim_{n\to\infty} O(\Delta(\mathcal{D})) \le \min_{l\in\{1,\ldots,L\}} \sqrt{\frac{I(X;H_l|Y)+1}{n}}$$</p>
+<p>其中 $\Delta(\mathcal{D}) = \mathbb{E}[\ell(f(X),Y)] - \frac{1}{n}\sum_{i=1}^n \ell(f(x_i),y_i)$ 是泛化差距，$I(X;H_l|Y)$ 是 $X$ 與第 $l$ 個隱藏層的<strong>條件互資訊</strong>（$X$ 還保留多少 $Y$ 無關的資訊）。</p>
+<p>我用「<strong>海關檢查</strong>」做比喻。</p>
+<p>旅客 $X$ 帶著行李入境，海關（隱藏層 $H_l$）檢查過濾。如果海關能從 $H_l$ 完全還原 $X$ 與 $Y$ 的關係（$I(X;H_l|Y)$ 大），表示檢查<strong>不夠嚴</strong>、太多 $Y$ 無關雜訊被保留——泛化差距大。如果海關徹底過濾（$I(X;H_l|Y)$ 小），泛化差距小。</p>
+<p><strong>關鍵意涵</strong>：</p>
+<ol>
+<li><strong>存在某個隱藏層 $H_l$</strong>，讓 $\sqrt{(I(X;H_l|Y)+1)/n}$ 是上界——即使其他層不夠好，至少有一層做對了。</li>
+<li>給了「有效的表示 = 壓縮掉所有 $Y$ 無關資訊」一個<strong>嚴格的量化意義</strong>。</li>
+<li>限制：$I(X;H_l|Y)$ 在高維下<strong>難以估計</strong>，這個 bound 在實務中同樣可能是 vacuous 的。</li>
+</ol>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>為什麼 bound 是「$\min$ over $l$」而不是「$l=L$」（最末層）？
+   （最末層 $\hat{Y}$ 已接近 $Y$，可能 $I(\hat{Y};Y)$ 小（即 $\hat{Y}$ 與 $Y$ 相關性高），但 $\hat{Y}$ 已不是「表示」了。$\min$ over all $l$ 保證我們找的是「最有壓縮效果的中間表示」。）</p>
+</li>
+<li>
+<p>為什麼 $I(X;H_l|Y)$ 比 $I(X;H_l)$ 更能代表「泛化相關的」冗餘？
+   （$I(X;H_l)$ 包含所有 $H_l$ 從 $X$ 學到的資訊，包括 $Y$ 相關的（必要）與無關的（冗餘）。條件在 $Y$ 下 = 扣除必要部分 = 只剩冗餘。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「$I(X;H_l|Y)$ 越小，泛化越好」——大致對，但要小心：若 $H_l$ 連 $Y$ 必要資訊都丟了，$I(X;H_l|Y)$ 也小但預測變差。界仍成立（只是 $\inf\text{err}$ 變大）。</li>
+<li>誤解 2：「這個 bound 比 §3 緊」——實務上同樣可能 vacuous，因為 $I$ 難估。</li>
+</ul>
+<p><strong>口訣</strong>：<em>某隱藏層壓縮好、泛化差距小；$\sqrt{(I(X;H_l|Y)+1)/n}$ 是上界。</em></p>
+</div>
+<!-- == Phase D kp-17 guide END == -->
+<!-- == Phase D kp-18 guide == -->
+<div id="guide-content-kp-18" data-title="教授祕笈：IB 理論的三大批評" style="display:none">
+<h1>教授祕笈：IB 理論的三大批評</h1>
+<p>IB 框架漂亮但有局限，§4.3 列了三大批評。</p>
+<p>我用「<strong>減肥書</strong>」做比喻。減肥書說「少吃多動」很漂亮，但具體執行有三難：算熱量難、堅持難、個體差異大。IB 也類似——理論漂亮但實務受限。</p>
+<p><strong>批評 1：互資訊難以估計</strong></p>
+<p>$I(X;\tilde{X})$ 在高維、連續空間下需要 $\mathbb{P}(x,\tilde{x})$ 與 $\mathbb{P}(x)$——通常不可得。變分下界如 MINE、InfoNCE 可逼近，但<strong>各有自己的假設與偏差</strong>。</p>
+<p>換言之，IB 的「實驗可驗證性」受限。我們很難直接量「表示到底壓縮了多少 $Y$ 無關資訊」。</p>
+<p><strong>批評 2：深網未必進入壓縮階段</strong></p>
+<p>Tishby 等人主張訓練會經歷 fitting phase（$I(H_i;Y)$ 上升）→ compression phase（$I(X;H_i)$ 下降）。但 Saxe 等人 (2018) 與 Geiger (2020) 實驗顯示，<strong>許多網路沒有明顯的壓縮階段</strong>——$I(X;H_i)$ 在整個訓練過程中都不下降。</p>
+<p><strong>批評 3：壓縮不是泛化的唯一來源</strong></p>
+<p>loss landscape 的幾何（平坦最小值）、SGD 的隨機性、模型架構的歸納偏置（CNN 的平移不變、RNN 的時序歸納）——這些都可能獨立地貢獻泛化，<strong>不一定要靠 IB 解釋</strong>。</p>
+<p><strong>結論</strong>：IB 應被視為「有用的視角，但非泛化的完整解釋」。它解釋了一片，§5 六大現象解釋了其他切片。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼 MINE（Mutual Information Neural Estimation）有偏差？
+   （MINE 用 Donsker-Varadhan 表示估計 $I$，需要訓練一個 critic network。critic 估得不好時，$I$ 的估計就偏。MINE 給的是下界，不是真值。）</p>
+</li>
+<li>
+<p>為什麼「沒有 compression phase」就足以反駁 IB？
+   （IB 主張<strong>壓縮是泛化的必要機制</strong>。若實驗顯示 $I(X;H_l)$ 從不下降卻仍泛化良好，則壓縮<strong>不是必要</strong>——IB 就不是 universal 框架。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「IB 失敗 = 不能解釋 DL」——IB 解釋了一部分，§5 的其他現象解釋其他部分。沒人說單一框架。</li>
+<li>誤解 2：「批評 IB 就是在反對它」——批評是「IB 是有用的視角但有限制」，不是「IB 錯了」。</li>
+</ul>
+<p><strong>口訣</strong>：<em>估計難、未必要壓縮、非唯一來源；IB 是視角非全貌。</em></p>
+</div>
+<!-- == Phase D kp-18 guide END == -->
+<!-- == Phase D kp-19 guide == -->
+<div id="guide-content-kp-19" data-title="教授祕笈：Double Descent — U 形曲線再下降" style="display:none">
+<h1>教授祕笈：Double Descent — U 形曲線再下降</h1>
+<p>經典 bias-variance tradeoff：模型太小 underfit（測試誤差高），中等 sweet spot（測試誤差低），太大 overfit（測試誤差又升高）。畫出來是 U 形。</p>
+<p>但 Belkin 等 (2019) 與 Nakkiran 等 (2021) 觀察到：<strong>把模型大小繼續往上推、超過 interpolation threshold（能完美擬合訓練資料的最小大小）時，測試誤差再次下降</strong>。U 形 + 再下降 = <strong>double descent</strong>。</p>
+<p>我用「<strong>考試策略</strong>」做比喻。</p>
+<p>你準備期末考三種策略：</p>
+<ul>
+<li>策略 A（看少不練習）：看到題目但只大概看，測試成績差。</li>
+<li>策略 B（適中練習）：練習適中，成績好。</li>
+<li>策略 C（過度刷題）：把考古題每一題都死背。</li>
+</ul>
+<p>直覺：策略 C 過擬合，成績反而差。但實驗顯示：<strong>如果你把策略 C 推到極致（每題背 100 遍、用超強記憶法），成績反而再次上升</strong>。這聽起來不可思議，但就是 double descent。</p>
+<p><strong>為什麼會這樣？</strong> 直覺：在 interpolation threshold 附近，模型必須精細擬合每個訓練點（含雜訊），沒有餘裕學規律；過了這個門檻，模型雖然大到能擬合任何東西，但梯度下降會找到更平滑、泛化更好的解（<strong>隱式正則化</strong>，見 §5.4）。</p>
+<p><strong>對實作者的啟示</strong>：不要因為「模型太大會過擬合」就在 sweet spot 之前停下來。在有充足資料、合適歸納偏置時，<strong>更大的模型可能反而泛化更好</strong>。這也是現代 LLM 一路把參數量推上去的核心動機之一。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼 U 形曲線 + 再下降是反直覺的？
+   （古典 bias-variance 認為「越大越糟」是單調的。double descent 顯示存在「更大的反而更好」的二次轉折。）</p>
+</li>
+<li>
+<p>為什麼「interpolation threshold」是轉折點？
+   （這個點之前：模型不夠大，學不到訓練資料完美擬合 → 測試誤差被「欠擬合」主導。這個點之後：模型夠大，學到完美擬合 → 進入「隱式正則化」新機制 → 測試誤差再次下降。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「Double descent = U 形 + 凸起」——對。但凸起區可能很窄，在現代大模型實務上常被跳過。</li>
+<li>誤解 2：「越大越好，所以不用選模型」——錯。資料量、計算資源、推論成本都限制。Double descent 是「過了某個門檻後更大可能更好」，不是「無限大一定最好」。</li>
+</ul>
+<p><strong>口訣</strong>：<em>U 形右側、再下降；過插值點後，隱式正則化救回泛化。</em></p>
+</div>
+<!-- == Phase D kp-19 guide END == -->
+<!-- == Phase D kp-20 guide == -->
+<div id="guide-content-kp-20" data-title="教授祕笈：Grokking — 過擬合後突然頓悟" style="display:none">
+<h1>教授祕笈：Grokking — 過擬合後突然頓悟</h1>
+<p>Power et al. (2022) 發現一個戲劇化現象：在小型演算法資料集（如模算術）上，模型可能：</p>
+<ol>
+<li>快速達到訓練誤差 0（過擬合、記住所有訓練樣本）。</li>
+<li>測試誤差初期高（沒泛化）。</li>
+<li>若繼續訓練很久很久，<strong>測試誤差突然從隨機水準掉到接近完美</strong>。</li>
+</ol>
+<p>這個「過擬合後突然泛化」叫 <strong>grokking</strong>。</p>
+<p>我用「<strong>學語言</strong>」做比喻。</p>
+<p>你學日文，背 100 個句子（過擬合 = 死記）。前 3 個月你只會背、不會用（測試差）。第 4 個月某天突然開竅：「啊，原來這句型是這個意思！」——這就是 grok。</p>
+<p><strong>和 double descent 的差別</strong>：</p>
+<ul>
+<li>Double descent 是<strong>模型大小</strong>掃出來的曲線。</li>
+<li>Grokking 是<strong>同一個模型在訓練時間</strong>上演的曲線。</li>
+</ul>
+<p><strong>為什麼會 grok？</strong> 主流假設是 SGD 的<strong>隱式正則化</strong>：剛開始 SGD 快速擬合資料（記住），但因為它偏好平坦最小值（§5.4），長時間訓練後模型會慢慢「漂」到一個更結構化、更泛化解的區域。</p>
+<p>換言之，<strong>泛化不是訓練初期就到位，而是 SGD 慢慢逼出來的</strong>。</p>
+<p><strong>對實作者的啟示</strong>：在小型資料集上，若模型早期過擬合但測試仍有機會上來，可以考慮<strong>給它時間</strong>——learning rate 衰減策略、訓練長度可能比架構調整更關鍵。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼 grokking 是「突然」而不是「漸進」？
+   （這仍是 open question。一個假設：loss landscape 中存在「記憶盆地」與「泛化盆地」，中間有狹窄的鞍部。SGD 隨機性慢慢累積，累積夠大時突然越過鞍部到泛化盆地。）</p>
+</li>
+<li>
+<p>為什麼 grokking 在大資料集上看不到？
+   （大資料集上 SGD 已經在「泛化盆地」內，不需要 grok。Grokking 專屬於小資料 + 過擬合的情境。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「給它時間永遠會 grok」——錯。模型架構、學習率、資料特性都影響。</li>
+<li>誤解 2：「Grokking 違反 PAC」——不違反。Grokking 期間測試誤差最後變好，整個訓練 + 測試的最終狀態仍滿足泛化。</li>
+</ul>
+<p><strong>口訣</strong>：<em>過擬合後突然頓悟；隱式正則化慢慢漂；給它時間可能 grok。</em></p>
+</div>
+<!-- == Phase D kp-20 guide END == -->
+<!-- == Phase D kp-21 guide == -->
+<div id="guide-content-kp-21" data-title="教授祕笈：Benign Overfitting — 過擬合但無害" style="display:none">
+<h1>教授祕笈：Benign Overfitting — 過擬合但無害</h1>
+<p>Bartlett 等 (2020, 2021) 提出並形式化一個反直覺現象：<strong>當資料有底層訊號 + 一些雜訊、且資料分佈有特定幾何結構（如高維下的特徵協方差結構）時，過參數化的模型可以同時</strong>：</p>
+<ol>
+<li>完美擬合訓練資料（包括雜訊）</li>
+<li>在測試資料上仍表現良好</li>
+</ol>
+<p>「過擬合但無害」叫 <strong>benign overfitting</strong>。</p>
+<p>我用「<strong>會議室</strong>」做比喻。</p>
+<p>10 人會議室，9 人正常發言、1 人胡言亂語。會議錄音需要被完美存檔（訓練）。<strong>如果「胡言亂語」這 1 個訊號剛好集中在某個獨特維度（音調特高）</strong>，存檔系統可以：</p>
+<ul>
+<li>用 9 維存正常發言（訊號）</li>
+<li>用 1 維存胡言亂語（雜訊）</li>
+</ul>
+<p>測試時若有 10 個新發言人（訊號維度相同、雜訊方向隨機），系統<strong>把 9 維訊號用於決策、1 維雜訊被視為「特定環境的特例」</strong>——泛化良好。</p>
+<p><strong>為什麼「記住雜訊」不等於「測試會爆」？</strong></p>
+<p>直覺：在高維空間，<strong>雜訊的方向有很多很多</strong>，模型把它們分散到很多參數去擬合；訊號的方向只有少數幾個，模型把大部分容量集中在訊號方向上。測試時，<strong>訊號方向上的權重主導預測，雜訊方向的權重互相抵消</strong>，所以泛化不受影響。</p>
+<p>這個現象在線性回歸裡已經有嚴格證明（Bartlett-Long-Lugosi-Tsigler 2020 證明了在某些協方差結構下，<strong>插值（interpolating）解</strong>可以達到 bayes-optimal 風險的常數倍）。</p>
+<p><strong>對實作者的啟示</strong>：在資料「訊號強於雜訊」、特徵有結構的情況下，<strong>不必為了避免過擬合而刻意縮小模型</strong>。讓它過擬合，測試也不一定崩。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼「高維幾何」是關鍵？
+   （低維下，雜訊可能跟訊號在同一方向、難以分離。高維下，幾乎正交的方向很多，模型可學到「訊號子空間」與「雜訊子空間」分離。）</p>
+</li>
+<li>
+<p>為什麼這是「benign」而不是「good」？
+   （「Benign」是「無害」——測試不會因此崩，但也不代表測試誤差 &lt; 訓練誤差。實務上泛化仍受訊號強度、樣本量、模型架構影響。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「任何過擬合都無害」——錯。Benign overfitting 需要特定幾何結構（高維 + 雜訊方向多 + 訊號方向少）。</li>
+<li>誤解 2：「可以放心讓模型過擬合」——實務上仍要驗證。在訊號弱、雜訊強、資料維度低的場景，過擬合仍會爆。</li>
+</ul>
+<p><strong>口訣</strong>：<em>訊號強於雜
+<strong>口訣</strong>：<em>訊號強於雜訊、雜訊互相抵消；高維幾何下過擬合仍可泛化。</em></p>
+</div>
+<!-- == Phase D kp-21 guide END == -->
+<!-- == Phase D kp-22 guide == -->
+<div id="guide-content-kp-22" data-title="教授祕笈：SGD 的隱式偏置 — 偏好平坦最小值" style="display:none">
+<h1>教授祕笈：SGD 的隱式偏置 — 偏好平坦最小值</h1>
+<p>很多深度學習的 loss 函數是<strong>欠定的</strong>——同一個訓練資料可能對應無限多組零訓練誤差的參數（特別是過參數化模型）。SGD 不會隨便挑一組；它有自己的<strong>隱式偏置</strong>（implicit bias），偏好某些解。</p>
+<p>我用「<strong>下坡滑雪</strong>」做比喻。</p>
+<p>山頂（loss 起始）有很多條下山的路。每條路都到山底（零訓練誤差）。聰明的滑雪者會挑<strong>寬闊緩坡</strong>（平坦最小值），不挑<strong>狹窄陡坡</strong>（狹窄最小值）。即使陡坡看起來最短（局部損失小），寬闊緩坡比較安全（對未知的雪況有緩衝）。</p>
+<p><strong>三個來源</strong>：</p>
+<ol>
+<li><strong>Step size / 學習率</strong>：較大的學習率讓 SGD 難以收斂到狹窄的最小值（會被「彈出來」），所以偏好較寬的最小值。</li>
+<li><strong>Mini-batch 雜訊</strong>：每次更新只用一小批樣本，引入隨機性；這個隨機性等同於對參數做某種隨機微分方程的「擴散」效應，也傾向平坦解。</li>
+<li><strong>初始化</strong>：不同的初始化讓 SGD 走向不同解，特別在小初始化時偏好「低秩/簡單」解。</li>
+</ol>
+<p><strong>為什麼「平坦最小值」與泛化有關？</strong> 經驗上，<strong>平坦最小值（hessian 特徵值小）對應的測試誤差較低，狹窄最小值（hessian 特徵值大）對應的測試誤差較高</strong>。</p>
+<p>直觀解釋：平坦最小值附近的 loss landscape 較平緩，<strong>對訓練/測試資料的小擾動更不敏感</strong>。</p>
+<p>SAM (Sharpness-Aware Minimization, Foret et al. 2021) 是把這個觀察做成演算法——它顯式尋找「附近所有點都 loss 低的參數」，等同於尋找平坦最小值，實驗上能提升泛化。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼 mini-batch 雜訊等同「平坦偏置」？
+   （SGD 加上 mini-batch 雜訊 = 隨機微分方程。隨機微分方程的 stationary 分佈正比於 exp(-loss/T)，T 是雜訊溫度。這個分佈偏好 loss 小、且 loss 變化緩慢的區域——即平坦最小值。）</p>
+</li>
+<li>
+<p>為什麼 SAM 能提升泛化？
+   （SAM 在每步加一個「找最壟擾動」的內層最佳化，再對擾動後的損失做梯度下降。這個過程等同於尋找「在 l2 球內最壞情況下仍表現好」的參數——即平坦最小值。實驗上 SAM 能在多個基準上提升測試準確度。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「SGD 總是找全局最小值」——錯。SGD 是「找平坦最小值」，全局最小值可能是狹窄谷。</li>
+<li>誤解 2：「平坦 = 一定泛化好」——相關但非因果。平坦最小值常泛化好，但有些平坦區域可能泛化差。</li>
+</ul>
+<p><strong>口訣</strong>：<em>學習率 + mini-batch + init = 隱式偏置；偏好平坦最小值；SAM 顯式化。</em></p>
+</div>
+<!-- == Phase D kp-22 guide END == -->
+<!-- == Phase D kp-23 guide == -->
+<div id="guide-content-kp-23" data-title="教授祕笈：Neural Tangent Kernel — 無限寬凍結、有限寬學到" style="display:none">
+<h1>教授祕笈：Neural Tangent Kernel — 無限寬凍結、有限寬學到</h1>
+<p>Jacot et al. (2018) 與 Lee et al. (2019) 發現：在<strong>無限寬度</strong>極限下（每層神經元數 →∞），用 gradient descent 訓練神經網路<strong>等價於</strong>用某個固定的 kernel 做<strong>kernel regression</strong>。這個 kernel 就是 <strong>Neural Tangent Kernel (NTK)</strong>，由網路架構與初始化決定、訓練過程中不變。</p>
+<p>我用「<strong>老師 vs 學生</strong>」做比喻。</p>
+<p>老師（無限寬 NTK）：上課用固定套路，學生照抄就得分。學生髮揮空間小。
+學生（有限寬）：可以慢慢學會「為什麼」這題要這樣解——但也可能走偏。</p>
+<p><strong>NTK 的兩個關鍵含義</strong>：</p>
+<ol>
+<li><strong>無限寬度 → 線性模型行為</strong>。在無限寬度下，訓練過程可以用 NTK 線性化——效果等同於在 NTK 定義的高維特徵空間做線性回歸。預測函式的訓練動態是閉式的、可分析的。</li>
+<li><strong>無限寬度 → 凍結特徵</strong>。在這個極限下，<strong>有效特徵在整個訓練過程中保持不變</strong>（凍結在初始化），只更新線性係數。這解釋了為什麼無限寬網路泛化行為像 kernel method，而有限寬網路能學到新特徵。</li>
+</ol>
+<p><strong>與通用逼近定理的互補</strong>：</p>
+<ul>
+<li>通用逼近說「夠寬的網路可表達任意函數」（<strong>表達力</strong>）</li>
+<li>NTK 說「夠寬的網路訓練起來像 kernel method」（<strong>訓練動力學</strong>）</li>
+</ul>
+<p>兩者一起給出無限寬極限的完整圖像。</p>
+<p><strong>對實作者的限制</strong>：實際模型不是無限寬。NTK 對有限寬仍提供<strong>近似</strong>，但「特徵學得到」這件事在有限寬才明顯。所以 NTK 更像「理解極限的解析工具」，而非「實務設計指南」。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼「NTK 不變」是無限寬度的特殊結果？
+   （在有限寬度下，訓練過程中特徵在變化，所以 NTK 也在變化（不是 kernel method）。無限寬度下，每個神經元的影響被稀釋，<strong>集體行為退化成固定的 kernel</strong>——這是「大數法則」式的結果。）</p>
+</li>
+<li>
+<p>為什麼「凍結特徵」對泛化是雙刃劍？
+   （好處：可分析、可預測、訓練穩定。壞處：無法學到資料特徵、無法 adapt。實務上我們希望「有限寬」能學到新特徵，所以 NTK 是「極端但有用的近似」。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「NTK 適用於所有 NN」——不，只在無限寬度極限下成立。有限寬是另一個故事。</li>
+<li>誤解 2：「NTK 證明 NN 等於 kernel method」——NTK 是「無限寬 NN 在訓練時像 kernel method」，不是「所有 NN 永遠像 kernel method」。</li>
+</ul>
+<p><strong>口訣</strong>：<em>無限寬凍結、有限寬學到；NTK 解析極限、實務用其他視角。</em></p>
+</div>
+<!-- == Phase D kp-23 guide END == -->
+<!-- == Phase D kp-24 guide == -->
+<div id="guide-content-kp-24" data-title="教授祕笈：彩票假說與 Scaling Laws — 大網路藏寶、放大有規律" style="display:none">
+<h1>教授祕笈：彩票假說與 Scaling Laws — 大網路藏寶、放大有規律</h1>
+<p>這節合併兩個獨立的理論視角。</p>
+<p><strong>彩票假說（Lottery Ticket Hypothesis, Frankle &amp; Carlin 2019）</strong>：大型過參數化網路通常包含<strong>較小的子網路</strong>（「中獎彩券」），若僅訓練這個子網路（用合適的初始化），可以達到與完整網路相當的效能。換言之，<strong>大網路之所以有效，是因為裡面藏了可以獨立成功的小網路</strong>。</p>
+<p>我用「<strong>人才市場</strong>」做比喻。</p>
+<p>大公司（過參數化網路）有很多員工。員工中一定有些「中堅份子」（子網路）即使單獨拉出來成立小公司也能做出同樣產品。大公司的價值不在於「人多」，而在於「容錯空間大、有足夠多中堅份子可以找到」。</p>
+<p><strong>Scaling laws（Kaplan et al. 2020；Hoffmann et al. 2022）</strong>：模型效能（loss）隨模型大小、資料量、計算量呈<strong>冪律（power law）</strong>關係。例如，L(N)~N^(-alpha_N)，其中 N 是參數量，alpha_N 是某個固定指數。</p>
+<p>實務含義：</p>
+<ol>
+<li><strong>沿三個軸放大</strong>（N、資料、計算）就能穩定提升效能。</li>
+<li><strong>偏離冪律</strong>通常預示資料品質或架構問題。</li>
+<li>可用於<strong>預測最佳資源分配</strong>：如 Chinchilla 論文發現，在固定計算下，模型大小與資料量應等比放大。</li>
+</ol>
+<p><strong>兩者結合的觀點</strong>：彩票假說解釋了「為什麼大網路內能找到好子網路」；scaling laws 給了「要把資源放在哪」的量化指引。兩者都強調：<strong>現代深度學習的進展，很大程度來自「放大」與「剪枝」這一對張力</strong>。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼 scaling law 用「冪律」而不是線性、指數？
+   （實驗上 loss 隨 N 變化畫在 log-log 軸上是直線——這是冪律的特徵。理論上某些假設（如 neural tangent kernel）能推導出冪律形式。）</p>
+</li>
+<li>
+<p>為什麼「偏離冪律」= 警示？
+   （冪律區是模型能有效利用資源的區域。偏離（loss 下降變慢或反升）= 邊際效益遞減 = 該擴大資料、改架構、或檢查實作 bug。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「Scaling law 保證一直放大一直好」——不保證。偏離冪律時，繼續放大邊際效益遞減。</li>
+<li>誤解 2：「彩票假說 = 剪枝不重要」——彩票假說是「剪枝後仍能達到原效能」，不是「剪枝無損」。剪枝仍可能損失部分泛化。</li>
+</ul>
+<p><strong>口訣</strong>：<em>大網路藏中堅、放大有冪律；資源分配 Chinchilla、剪枝仍有效。</em></p>
+</div>
+<!-- == Phase D kp-24 guide END == -->
+<!-- == Phase D kp-25 guide == -->
+<div id="guide-content-kp-25" data-title="教授祕笈：結論 — 對實作者的三個啟示" style="display:none">
+<h1>教授祕笈：結論 — 對實作者的三個啟示</h1>
+<p>本章把「為什麼神經網路能泛化」繞了一大圈。可以濃縮成對實作者的三個有意義的結論。</p>
+<p>我用「<strong>考試準備策略</strong>」做比喻。</p>
+<p>學生面對期末考有三種策略：</p>
+<ul>
+<li>策略 A（只信課本）：依賴古典理論（PAC/VC），結果發現考試題目根本不是課本那種。</li>
+<li>策略 B（只刷考古題）：依賴 scaling laws，一直做題目，結果撞到 double descent 的凸起。</li>
+<li>策略 C（理解原理 + 策略調整）：理解 §5 的現象，搭配架構與資料調整，泛化穩定。</li>
+</ul>
+<p>策略 C 是實務勝出者。</p>
+<p><strong>三個結論</strong>：</p>
+<ol>
+<li>
+<p><strong>古典 PAC/VC 給的上界是 vacuous 的</strong>。現代神經網路 |E|&gt;&gt;n 是常態，§3.2 的上界因此是廢話。把它當真理是錯的，把它當完全無用也是錯的——它告訴你「需要新框架」這件事本身是對的。</p>
+</li>
+<li>
+<p><strong>用現象學而非單一理論指導實務</strong>。double descent、grokking、benign overfitting、implicit bias、NTK、lottery、scaling laws——這些不是一個統一理論的不同面相，而是<strong>各自解釋不同切片</strong>的「現象指南」。實作者用它們形成直覺（如「在訊號強於雜訊時放大模型」、「SGD 偏平坦最小值」），比死記某個 bound 更有用。</p>
+</li>
+<li>
+<p><strong>架構、資料、優化的歸納偏置比模型大小更關鍵</strong>。CNN 的平移不變、Transformer 的 attention、預訓練 + fine-tune 的遷移能力——這些結構性偏置往往比「再多 10 億參數」更能決定泛化。Scaling laws 的冪律只在「其他條件不變」時成立——改架構或資料 pipeline，常能跳出冪律獲得額外紅利。</p>
+</li>
+</ol>
+<p><strong>一句話總結</strong>：<em>泛化不是靠「理論上界小」保證的，而是靠「資料結構 + 歸納偏置 + 優化動力學」共同決定的。</em></p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼「現象學」是務實的指導？
+   （理論給的是「最壟情況保證」，對實務幫助有限。現象學是「實驗觀察 + 部分理論」混合，更貼近實作。兩者互補，不是對立。）</p>
+</li>
+<li>
+<p>為什麼「架構、資料、優化」比「模型大小」更關鍵？
+   （scaling law 只在固定架構/資料/優化下才冪律。換架構（如 MLP→Transformer）可以跳脫冪律獲得大紅利。改資料 pipeline（如預訓練+微調）也是同樣道理。模型大小只是 scaling law 的一個軸。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>誤解 1：「學完本章就懂泛化了」——你懂了<em>為什麼不懂</em>。現代 DL 泛化沒有統一理論，這是事實。</li>
+<li>誤解 2：「現象學就夠了，理論沒用」——錯。理論給的是「為什麼」，現象給的是「怎麼辦」。兩者都重要。</li>
+</ul>
+<p><strong>口訣</strong>：<em>古典上界空、現象學有用、歸納偏置勝過參數量；資料 + 架構 + 優化 = 泛化真正來源。</em></p>
+</div>
+<!-- == Phase D kp-25 guide END == -->
+<!-- == Phase D guides block END == -->
+</body>
+</html>
