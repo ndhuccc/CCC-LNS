@@ -1,0 +1,3261 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch12 變分模型 — 互動自學講義</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<style>
+:root {
+  --bg: #f8fafc;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --accent: #0d9488;          /* teal，VAE 主題色 */
+  --accent-2: #0f766e;
+  --accent-bg: #ecfeff;
+  --ok: #16a34a;
+  --err: #dc2626;
+  --code-bg: #f1f5f9;
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.6 "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+header.page-head {
+  padding: 28px 24px 16px;
+  background: linear-gradient(135deg, #7c3aed22 0%, #db277722 100%);
+  border-bottom: 1px solid var(--card-border);
+}
+header.page-head h1 { margin: 0 0 6px; font-size: 1.6rem; line-height: 1.3; }
+header.page-head .sub { color: var(--muted); font-size: .98rem; }
+.layout { display: flex; gap: 24px; align-items: flex-start; padding: 24px; max-width: 1200px; margin: 0 auto; }
+nav.toc {
+  position: sticky; top: 90px;
+  flex: 0 0 260px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 12px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  font-size: .9rem;
+}
+nav.toc h3 { margin: 0 0 8px; font-size: .9rem; color: var(--muted); }
+nav.toc ol { list-style: none; padding: 0; margin: 0; }
+nav.toc li { margin: 2px 0; }
+nav.toc a {
+  display: flex; gap: 6px; align-items: baseline;
+  color: var(--fg); text-decoration: none;
+  padding: 4px 6px; border-radius: 6px;
+}
+nav.toc a:hover { background: var(--accent-bg); }
+nav.toc .toc-badge { color: var(--accent); font-variant-numeric: tabular-nums; min-width: 36px; }
+main.cards { flex: 1; min-width: 0; }
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  margin-bottom: 18px;
+  scroll-margin-top: 90px;
+  overflow: hidden;
+}
+.card-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, var(--accent-bg) 0%, transparent 100%);
+  border-bottom: 1px solid var(--card-border);
+}
+.card-head .badge {
+  background: var(--accent); color: #fff;
+  padding: 2px 8px; border-radius: 6px;
+  font-size: .82rem; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.card-head .card-title { margin: 0; font-size: 1.08rem; flex: 1; }
+.card-head .toggle {
+  background: transparent; border: 1px solid var(--card-border);
+  width: 28px; height: 28px; border-radius: 6px;
+  font-size: 1.2rem; cursor: pointer; line-height: 1;
+}
+.card-body { padding: 14px 18px; }
+.card.collapsed .card-body { display: none; }
+.kp-content p { margin: .6em 0; }
+.kp-content ol, .kp-content ul { margin: .5em 0; padding-left: 1.6em; }
+.kp-content li { margin: .2em 0; }
+.kp-content strong { color: var(--accent-2); }
+.kp-content em { color: var(--accent-2); font-style: normal; font-weight: 600; }
+figure.orig-fig {
+  margin: 14px 0; padding: 8px;
+  border: 1px solid var(--card-border); border-radius: 8px; background: #fff;
+  text-align: center;
+}
+figure.orig-fig img { max-width: 100%; height: auto; border-radius: 4px; }
+.diag-figure, .diagram-figure {
+  margin: 14px 0; padding: 12px;
+  border: 1px solid var(--card-border); border-radius: 12px; background: #fff;
+  text-align: center;
+}
+.diag-figure img, .diagram-figure img { max-width: 100%; height: auto; border-radius: 8px; }
+.diag-figure figcaption, .diagram-figure figcaption { margin-top: 8px; font-size: .85rem; color: var(--muted); }
+.diag-figure svg { max-width: 100%; height: auto; }
+svg.inline-svg { max-width: 100%; height: auto; display: block; margin: 12px auto; }
+.quiz {
+  margin: 14px 0; padding: 10px 12px;
+  background: var(--accent-bg); border-radius: 8px;
+  border-left: 4px solid var(--accent);
+}
+.quiz-q { margin: 0 0 6px; font-size: .95rem; }
+.quiz-opts { list-style: none; padding: 0; margin: 4px 0; }
+.quiz-opts li { margin: 3px 0; }
+.quiz-opts label { display: flex; gap: 6px; align-items: flex-start; cursor: pointer; font-size: .9rem; }
+.quiz-check {
+  margin-top: 6px;
+  background: var(--accent); color: #fff;
+  border: none; padding: 4px 12px; border-radius: 6px;
+  cursor: pointer; font-size: .85rem;
+}
+.quiz-check:hover { background: var(--accent-2); }
+.quiz-feedback { margin-top: 6px; font-size: .88rem; min-height: 1.2em; }
+.quiz-feedback.ok { color: var(--ok); font-weight: 600; }
+.quiz-feedback.err { color: var(--err); font-weight: 600; }
+.guide-btn {
+  display: inline-block;
+  margin: 10px 0 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  color: #fff; border: none; border-radius: 8px;
+  font-size: .92rem; font-weight: 600; cursor: pointer;
+  box-shadow: 0 2px 6px rgba(124,58,237,.3);
+  transition: transform .15s;
+}
+.guide-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(124,58,237,.4); }
+.guide-btn .guide-flag {
+  display: inline-block; margin-right: 6px; padding: 1px 6px;
+  background: #fbbf24; color: #78350f; border-radius: 4px;
+  font-size: .72rem; font-weight: 700;
+}
+.demo {
+  margin: 16px 0; padding: 12px;
+  border: 1px solid #ddd6fe; border-radius: 12px;
+  background: #faf5ff;
+}
+.demo h4 { margin: 0 0 6px; color: var(--accent-2); font-size: 1rem; }
+.demo .demo-theory { background: #fff; padding: 8px 10px; border-radius: 6px; margin: 6px 0; }
+.demo .demo-controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0; align-items: center; }
+.demo .demo-controls label { display: flex; align-items: center; gap: 4px; font-size: .88rem; }
+.demo canvas { display: block; max-width: 100%; background: #fff; border: 1px solid var(--card-border); border-radius: 4px; margin: 6px auto; }
+.demo .demo-readout { font-family: monospace; font-size: .85rem; background: #fff; padding: 6px 8px; border-radius: 4px; margin-top: 4px; min-height: 1.4em; }
+.ai-illustration {
+  margin: 10px 0; padding: 6px 8px;
+  border: 1px dashed #cbd5e1; border-radius: 6px;
+  background: #f8fafc; font-size: .82rem; color: var(--muted);
+}
+.ai-illustration summary { cursor: pointer; }
+.ai-illustration-prompt {
+  white-space: pre-wrap; font-family: monospace; font-size: .78rem;
+  background: #fff; padding: 6px; border-radius: 4px; margin: 6px 0 0;
+}
+#guide-modal { display: none; }
+#guide-modal.open { display: flex; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+#guide-modal .modal-box { background: #fff; border-radius: 12px; max-width: 800px; width: 100%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+#guide-modal .modal-head { padding: 12px 16px; background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); color: #fff; display: flex; justify-content: space-between; align-items: center; }
+#guide-modal .modal-head h3 { margin: 0; font-size: 1.1rem; }
+#guide-modal .modal-close { background: transparent; border: 1px solid #fff; color: #fff; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; }
+#guide-modal .modal-body { padding: 16px 20px; overflow-y: auto; line-height: 1.7; }
+#guide-modal .modal-body p { margin: .5em 0; }
+#guide-modal .modal-body h4 { margin: 1em 0 .4em; color: var(--accent-2); }
+#progress-bar {
+  position: fixed; top: 0; left: 0; right: 0; height: 4px;
+  background: #e2e8f0; z-index: 999;
+}
+#progress-bar .bar { height: 100%; background: var(--accent); width: 0%; transition: width .25s; }
+#progress-text {
+  position: fixed; top: 8px; right: 16px;
+  background: var(--accent); color: #fff;
+  padding: 2px 10px; border-radius: 10px;
+  font-size: .8rem; z-index: 999;
+}
+code { background: var(--code-bg); padding: 1px 4px; border-radius: 3px; font-family: "JetBrains Mono", "Consolas", monospace; font-size: .9em; }
+@media (max-width: 800px) {
+  .layout { flex-direction: column; }
+  nav.toc { position: static; max-height: none; }
+}
+</style>
+</head>
+<body>
+<div id="progress-bar"><div class="bar"></div></div>
+<div id="progress-text">進度 0%</div>
+<header class="page-head">
+  <h1>Ch12 — 變分模型（Variational Models / Variational Autoencoder）</h1>
+  <div class="sub">從潛在變數、變分推論、ELBO 到 VAE 與 reparameterization trick</div>
+</header>
+<div class="layout">
+<nav class="toc" id="toc"><h3>章節導覽</h3><ol>
+  <li><a href="#kp1"><span class="toc-badge">1</span><span>全章地圖：潛在變數、變分推論、VAE</span></a></li>
+  <li><a href="#kp2"><span class="toc-badge">2</span><span>變分推論：為什麼需要近似後驗</span></a></li>
+  <li><a href="#kp3"><span class="toc-badge">2.1</span><span>ELBO：log-likelihood 的下界</span></a></li>
+  <li><a href="#kp4"><span class="toc-badge">2.2</span><span>EM：missing data 的迭代解法</span></a></li>
+  <li><a href="#kp5"><span class="toc-badge">2.2.1</span><span>EM 背景：把缺失值換成期望</span></a></li>
+  <li><a href="#kp6"><span class="toc-badge">2.2.2</span><span>變分推論的 EM</span></a></li>
+  <li><a href="#kp7"><span class="toc-badge">3</span><span>VAE：用神經網路做變分推論</span></a></li>
+  <li><a href="#kp8"><span class="toc-badge">3.1</span><span>VAE 的組成：encoder/decoder</span></a></li>
+  <li><a href="#kp9"><span class="toc-badge">3.1.1</span><span>Encoder：輸出 $\mu, \sigma$</span></a></li>
+  <li><a href="#kp10"><span class="toc-badge">3.1.2</span><span>Latent 採樣</span></a></li>
+  <li><a href="#kp11"><span class="toc-badge">3.1.3</span><span>Decoder：從 $z$ 重建 $x$</span></a></li>
+  <li><a href="#kp12"><span class="toc-badge">3.2</span><span>用 EM 訓練 VAE</span></a></li>
+  <li><a href="#kp13"><span class="toc-badge">3.2.1</span><span>ELBO 簡化 Type 1：直接 Monte Carlo</span></a></li>
+  <li><a href="#kp14"><span class="toc-badge">3.2.2</span><span>ELBO 簡化 Type 2：KL 拆解</span></a></li>
+  <li><a href="#kp15"><span class="toc-badge">3.2.3</span><span>高斯特例的解析 KL</span></a></li>
+  <li><a href="#kp16"><span class="toc-badge">3.2.4</span><span>用近似 ELBO 訓練</span></a></li>
+  <li><a href="#kp17"><span class="toc-badge">3.2.5</span><span>Prior regularization</span></a></li>
+  <li><a href="#kp18"><span class="toc-badge">3.3</span><span>Reparameterization trick</span></a></li>
+  <li><a href="#kp19"><span class="toc-badge">3.4</span><span>用 backpropagation 訓練</span></a></li>
+  <li><a href="#kp20"><span class="toc-badge">3.5</span><span>測試階段：採樣 vs 重建</span></a></li>
+  <li><a href="#kp21"><span class="toc-badge">3.6</span><span>其他 VAE 變體</span></a></li>
+  <li><a href="#kp22"><span class="toc-badge">4</span><span>結論：VAE 的優缺與後續</span></a></li>
+</ol></nav>
+<main class="cards">
+<section class="card" id="kp1" data-kp="1">
+  <header class="card-head">
+    <span class="badge">1</span>
+    <h2 class="card-title">全章地圖：潛在變數、變分推論、VAE</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-1 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-1-svg">
+  <svg class="inline-svg" viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr12" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/>
+    </marker>
+  </defs>
+  <ellipse cx="300" cy="140" rx="90" ry="40" fill="#ecfeff" stroke="#0d9488" stroke-width="2"/>
+  <text x="300" y="135" text-anchor="middle" font-size="14" font-weight="600" fill="#0f766e">變分模型</text>
+  <text x="300" y="155" text-anchor="middle" font-size="14" font-weight="600" fill="#0f766e">（Variational）</text>
+  <line x1="390" y1="120" x2="490" y2="50" stroke="#0f766e" stroke-width="1.5" marker-end="url(#arr12)"/>
+  <line x1="390" y1="130" x2="500" y2="100" stroke="#0f766e" stroke-width="1.5" marker-end="url(#arr12)"/>
+  <line x1="390" y1="140" x2="510" y2="160" stroke="#0f766e" stroke-width="1.5" marker-end="url(#arr12)"/>
+  <line x1="390" y1="155" x2="500" y2="215" stroke="#0f766e" stroke-width="1.5" marker-end="url(#arr12)"/>
+  <text x="495" y="48" text-anchor="end" font-size="11" fill="#0f172a">§2 變分推論（ELBO/EM）</text>
+  <text x="510" y="100" text-anchor="end" font-size="11" fill="#0f172a">§3 VAE（encoder+decoder）</text>
+  <text x="515" y="163" text-anchor="end" font-size="11" fill="#0f172a">§3.3 Reparameterization</text>
+  <text x="510" y="218" text-anchor="end" font-size="11" fill="#0f172a">§3.4 Backprop 訓練 / 測試</text>
+  <text x="300" y="30" text-anchor="middle" font-size="12" font-style="italic" fill="#64748b">4 條主軸，本章按此順序展開</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-1 diagram END == -->
+
+      <p>本章談一個核心問題：<strong>資料背後有沒有「看不見的因子」在操控可觀察的現象？</strong>如果有，深度學習怎麼學出來？</p>
+<p>原文用一個生動例子：你觀察到「穿鞋睡覺的人早上頭痛」。直覺說「穿鞋造成頭痛」，但觀察到「穿鞋的人都是酒醉」——<strong>真正原因是酒醉（latent variable），穿鞋只是共現</strong>。藥物研發、因果推論裡到處是這種陷阱。</p>
+<p>機器學習的設定：給 $n$ 筆資料 $\{\boldsymbol{x}_i\}_{i=1}^n$，每筆 $\boldsymbol{x}_i\in\mathbb{R}^d$ 是可觀察變數，背後有 latent variable $z_i\in\mathbb{R}^p$ 操控。學習目標：給定 $\boldsymbol{x}_i$，估計 $z_i$ 的後驗 $\mathbb{P}(z_i\mid\boldsymbol{x}_i)$。</p>
+<figure class="orig-fig"><img src="assets/orig-fig1-latent-variable.jpg" alt="latent variable 範例" loading="lazy"></figure>
+<p>本章三層架構：</p>
+<ol>
+<li><strong>§2 變分推論（Variational Inference）</strong>：<strong>近似</strong>後驗的通用框架——ELBO 推導 + EM 演算法。</li>
+<li><strong>§3 VAE（Variational Autoencoder）</strong>：用 encoder/decoder 神經網路把變分推論做成可微、可 backprop 的模型。</li>
+<li><strong>§3.x 訓練細節</strong>：reparameterization trick、prior regularization、backprop 訓練、測試階段。</li>
+</ol>
+<p>VAE 是「機率深度學習」的代表作——把貝氏推論、神經網路、資訊壓縮三件事織在一起。它不再是最強的圖像生成模型（被 diffusion / autoregressive 取代），但仍是 anomaly detection、半監督學習、科學建模的基石。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-1" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：全章地圖 — 潛在變數、變分推論、VAE</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 本章核心想問的問題是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">如何訓練更大的神經網路</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">如何估計「看不見的因子」對可觀察資料的影響</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">如何加速 SGD 收斂</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">如何設計 CNN 架構</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp2" data-kp="2">
+  <header class="card-head">
+    <span class="badge">2</span>
+    <h2 class="card-title">變分推論：為什麼需要近似後驗</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-2 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-2-svg">
+  <svg class="inline-svg" viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr12b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/>
+    </marker>
+  </defs>
+  <!-- 真後驗：複雜分佈 -->
+  <rect x="40" y="40" width="180" height="160" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+  <text x="130" y="65" text-anchor="middle" font-size="14" font-weight="700" fill="#991b1b">真後驗 $p(z|x,\theta)$</text>
+  <text x="130" y="90" text-anchor="middle" font-size="11" fill="#0f172a">需要計算</text>
+  <text x="130" y="110" text-anchor="middle" font-size="13" font-weight="600" fill="#dc2626">$\int p(x|z,\theta)p(z)\,dz$</text>
+  <text x="130" y="140" text-anchor="middle" font-size="11" fill="#0f172a">高維 → intractable</text>
+  <text x="130" y="170" text-anchor="middle" font-size="11" font-style="italic" fill="#991b1b">「解不出來！」</text>
+  <!-- 箭頭：approximate -->
+  <line x1="230" y1="120" x2="370" y2="120" stroke="#0f766e" stroke-width="2" marker-end="url(#arr12b)"/>
+  <text x="300" y="105" text-anchor="middle" font-size="13" font-weight="600" fill="#0f766e">近似</text>
+  <text x="300" y="143" text-anchor="middle" font-size="11" fill="#64748b">min $D_{KL}(q\|p)$</text>
+  <!-- 變分近似：簡單分佈（高斯） -->
+  <rect x="380" y="40" width="180" height="160" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="470" y="65" text-anchor="middle" font-size="14" font-weight="700" fill="#166534">$q(z)$（高斯）</text>
+  <text x="470" y="90" text-anchor="middle" font-size="11" fill="#0f172a">選指數族</text>
+  <text x="470" y="120" text-anchor="middle" font-size="11" fill="#0f172a">tractable</text>
+  <text x="470" y="150" text-anchor="middle" font-size="11" fill="#0f172a">可 backprop</text>
+  <text x="470" y="180" text-anchor="middle" font-size="11" font-style="italic" fill="#166534">「可微！」</text>
+  <text x="300" y="220" text-anchor="middle" font-size="11" fill="#64748b">找最佳 $q$ = 變分推論的核心</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-2 diagram END == -->
+
+      <p>設資料 $\boldsymbol{x}_i$ 來自「latent $z_i$ 生成的條件分佈 $\mathbb{P}(\boldsymbol{x}_i\mid z_i,\theta)$」，$z_i$ 有先驗 $\mathbb{P}(z_i\mid\theta)$。<strong>貝氏定理</strong>告訴我們後驗：</p>
+<p>$$\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta) = \frac{\mathbb{P}(\boldsymbol{x}_i\mid z_i,\theta)\mathbb{P}(z_i\mid\theta)}{\mathbb{P}(\boldsymbol{x}_i\mid\theta)}$$</p>
+<p>看起來簡單，但<strong>分母 $\mathbb{P}(\boldsymbol{x}_i\mid\theta)=\int\mathbb{P}(\boldsymbol{x}_i\mid z_i,\theta)\mathbb{P}(z_i\mid\theta)\,dz_i$ 是對所有 $z_i$ 的積分</strong>——$z_i$ 是高維連續時，**這個積分沒有解析解**，暴力數值積分也做不到。</p>
+<p>這就是「<strong>後驗不可解</strong>（intractable）」問題，是機率模型的核心痛點。</p>
+<p><strong>變分推論的核心想法</strong>：既然 $\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta)$ 算不出來，<strong>找一個簡單的分佈 $q(z_i)$ 來近似它</strong>——這是「variational approximation」。$q$ 通常選指數族（高斯、Bernoulli），讓計算 tractable。</p>
+<p>逼近的指標是 <strong>KL 散度</strong> $D_{\text{KL}}(q\|\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta))$——越小代表 $q$ 越接近真後驗。最小化 KL = 找最好的 $q$。</p>
+<p>但 $D_{\text{KL}}(q\|\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta))$ 本身包含不可解的後驗，所以下一節要把 KL「翻過來」——用 ELBO 繞過。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-2" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：變分推論 — 為什麼需要近似後驗</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 變分推論為什麼需要「近似」後驗？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">因為資料量太少</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">因為真後驗的分母是 intractable 積分</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">因為神經網路不夠深</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">因為最佳化方法不夠好</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp3" data-kp="3">
+  <header class="card-head">
+    <span class="badge">2.1</span>
+    <h2 class="card-title">ELBO：log-likelihood 的下界</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-3 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-3">
+  <img src="assets/diagram-kp3-elbo.png" alt="kp-3 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-3" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 兩條水平線：上方綠色實線 = log p(x|θ) 真實 log-likelihood（高度 = 0），下方 teal 實線 = ELBO（隨 KL 散度遞減的曲線，從 ELBO=0 隨 KL 遞減）。中間填充半透明 teal 標籤「差距 = D_KL」；KL=0 處有紅色圓點 + 紅色文字「等號成立 q(z)=p(z|x,θ)」。
+WHY: 凸顯 ELBO 是 log-likelihood 的下界，且差距恰好 = D_KL(q||p(z|x,θ))。視覺上讓「ELBO ≤ log p」這個不等式一眼可讀。
+MUST show: (1) 上方水平 log p 線；(2) 下方斜下的 ELBO 曲線；(3) 兩線間的差距區填色標 KL；(4) KL=0 處紅點標等號條件；(5) x 軸標 D_KL、y 軸標「值」。
+AVOID: 不要用隨機散點、不要用柱狀圖、不要把 ELBO 畫成比 log p 高。
+STYLE: clean scientific plot, white background, 標題「ELBO 是 log-likelihood 的下界（差距 = KL 散度）」。</pre>
+  </details>
+<!-- == Phase C kp-3 demo == -->
+<div class="demo" id="demo-kp3" data-demo-id="kp-3">
+  <h4>互動 demo：ELBO 視覺化：log p 與 ELBO 的差距 = KL</h4>
+  <div class="demo-theory"><p>ELBO 是 log-likelihood 的下界：<br>$\log p(x\mid\theta) = \text{ELBO} + D_{KL}(q(z)\|p(z\mid x,\theta))$</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>觀察不同 KL 值時，log-likelihood 線（綠）與 ELBO 曲線（teal）的差距。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>差距 = $D_{KL}$ 隨 q 與真後驗的差異擴大而增加。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>KL=0 時差距為 0，ELBO = log p；q 越偏離真後驗，差距越大。</div>
+  <div class="demo-controls"><span class="demo-readout-inline" id="d3-ep"></span><div class="demo-readout-inline" id="d3-out-inline"></div></div>
+  <canvas id="d3-canvas" width="500" height="200" aria-label="ELBO 視覺化：log p 與 ELBO 的差距 = KL 互動圖"></canvas>
+  <div class="demo-readout" id="d3-out"></div>
+</div>
+<!-- == Phase C kp-3 demo END == -->
+</div>
+<!-- == Phase B kp-3 diagram END == -->
+
+      <p>ELBO（Evidence Lower Bound）是變分推論的<strong>核心數學工具</strong>——一個我們<strong>真的能算</strong>的量，且它跟 log-likelihood 只差一個非負的 KL。</p>
+<p>推導（重點是「翻轉 KL 方向」）：</p>
+<p>$$D_{\text{KL}}(q(z_i)\|\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta)) = \log\mathbb{P}(\boldsymbol{x}_i\mid\theta) + D_{\text{KL}}(q(z_i)\|\mathbb{P}(\boldsymbol{x}_i,z_i\mid\theta))$$</p>
+<p>第二項 $D_{\text{KL}}(q\|\mathbb{P}(\boldsymbol{x}_i,z_i\mid\theta))$ 涉及聯合分佈（traetable），不是後驗。重新整理：</p>
+<p>$$\log\mathbb{P}(\boldsymbol{x}_i\mid\theta) = D_{\text{KL}}(q\|\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta)) + \underbrace{-D_{\text{KL}}(q\|\mathbb{P}(\boldsymbol{x}_i,z_i\mid\theta))}_{\text{ELBO}\,\mathcal{L}}$$</p>
+<p>因為 KL $\ge 0$，得 $\mathcal{L}(q,\theta) \le \log\mathbb{P}(\boldsymbol{x}_i\mid\theta)$——<strong>ELBO 是 log-likelihood 的下界</strong>。</p>
+<figure class="orig-fig"><img src="assets/orig-fig2-elbo.jpg" alt="ELBO 視覺化" loading="lazy"></figure>
+<p><strong>等號成立條件</strong>：$q(z_i)=\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta)$（即 $q$ 等於真後驗）。此時 ELBO = log-likelihood。</p>
+<p><strong>實務意涵</strong>：與其最大化 intractable 的 log-likelihood，不如<strong>最大化 ELBO</strong>（可算），同時<strong>最小化 $D_{\text{KL}}(q\|\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta))$</strong>（讓 $q$ 接近真後驗）——兩者<strong>等價</strong>，因為只差一個常數（log-likelihood）。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-3" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：ELBO — log-likelihood 的下界</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> ELBO 與 log-likelihood 的關係是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">ELBO = log-likelihood</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">ELBO ≤ log-likelihood，且差距 = $D_{\text{KL}}(q\|\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta))$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">ELBO ≥ log-likelihood</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">ELBO 與 log-likelihood 無關</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp4" data-kp="4">
+  <header class="card-head">
+    <span class="badge">2.2</span>
+    <h2 class="card-title">EM：missing data 的迭代解法</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-4 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-4">
+  <img src="assets/diagram-kp4-em.png" alt="kp-4 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-4" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸是 EM 迭代次數 0–29，y 軸是值 0–1.15。兩條曲線：teal 實線 = ELBO（單調上升到 1.0），紫色虛線 = log p(x|θ) 真實 log-likelihood（永遠在 ELBO 上方一點點）。x 軸上有黃色半透明垂直條紋在每個整數 iteration（標 E-step）；標籤「E」「M」交替在底部。紅色虛線水平線 y=1.0 標「收斂值 log p*」。
+WHY: 凸顯 EM 的兩個保證：(1) ELBO 單調遞增；(2) ELBO 始終 ≤ log p（緊度隨迭代改進）。E/M 條紋標出交替更新的節奏。
+MUST show: (1) 兩條曲線（ELBO、log p）皆單調上升；(2) E/M 垂直條紋；(3) 收斂水平線；(4) E/M 標籤。
+AVOID: 不要用對數軸、不要省略 E/M 標記、不要把 log p 畫成下降。
+STYLE: clean scientific plot, 標題「EM 演算法收斂：ELBO 與 log-likelihood 單調上升」。</pre>
+  </details>
+<!-- == Phase C kp-4 demo == -->
+<div class="demo" id="demo-kp4" data-demo-id="kp-4">
+  <h4>互動 demo：EM 演算法收斂：ELBO 與 log p 同步上升</h4>
+  <div class="demo-theory"><p>EM 兩步交替：<br>E-step：$q^{(t)}\leftarrow p(z\mid x,\theta^{(t-1)})$<br>M-step：$\theta^{(t)}\leftarrow\arg\max_\theta\mathcal{L}(q^{(t)},\theta)$</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 steps 滑桿觀察 EM 迭代的進度。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>ELBO（teal）隨迭代單調上升逼近 log-likelihood 漸近線（紅色虛線）。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>n=30 步後 ELBO ≈ log p* = 1.0；ELBO 永遠 ≤ log p。</div>
+  <div class="demo-controls"><label>迭代步數：<input type="range" id="d4-steps" min="0" max="30" value="20"></label><span class="demo-val" id="d4-steps-val"></span><div class="demo-readout-inline" id="d4-out-inline"></div></div>
+  <canvas id="d4-canvas" width="500" height="200" aria-label="EM 演算法收斂：ELBO 與 log p 同步上升 互動圖"></canvas>
+  <div class="demo-readout" id="d4-out"></div>
+</div>
+<!-- == Phase C kp-4 demo END == -->
+</div>
+<!-- == Phase B kp-4 diagram END == -->
+
+      <p>EM（Expectation-Maximization）是處理「<strong>資料不完整</strong>（missing data）」的經典演算法，<strong>把 missing 換成期望</strong>，再用 MLE。</p>
+<p>原文的對話（簡化版）：</p>
+<ol>
+<li>「資料有 missing 怎麼辦？」</li>
+<li>「用 missing 的期望代替！」</li>
+<li>「然後 MLE 就 work 了！」</li>
+</ol>
+<p><strong>兩個步驟</strong>：</p>
+<p><strong>E-step（Expectation）</strong>：對 missing/latent 變數取期望，算出 conditional expectation of log-likelihood $\mathcal{Q}(\theta\mid\theta^{(t-1))}$。</p>
+<p><strong>M-step（Maximization）</strong>：最大化 E-step 算出的 $\mathcal{Q}$，更新參數 $\theta^{(t)}=\arg\max_\theta\mathcal{Q}(\theta\mid\theta^{(t-1))}$。</p>
+<p><strong>收斂保證</strong>：EM 演算法每一步都<strong>單調提升 log-likelihood</strong>（$\log\mathbb{P}(X\mid\theta^{(t)})\ge\log\mathbb{P}(X\mid\theta^{(t-1))}$），所以一定收斂到 local maximum。</p>
+<p><strong>直覺比喻</strong>：你在找最高山的山頂。E-step 估算「我在哪條等高線上」，M-step 沿著切線往上爬。兩步交替，重複到不再上升。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-4" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：EM — missing data 的迭代解法</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> EM 的 E-step 做什麼？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">更新參數 θ</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">對 missing/latent 變數取期望</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">直接計算 MLE</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">做梯度下降</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp5" data-kp="5">
+  <header class="card-head">
+    <span class="badge">2.2.1</span>
+    <h2 class="card-title">EM 背景：把缺失值換成期望</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-5 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-5-svg">
+  <svg class="inline-svg" viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">EM 對話流程</text>
+  <rect x="40" y="50" width="510" height="60" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="60" y="78" font-size="12" font-weight="600" fill="#92400e">Q：</text>
+  <text x="80" y="78" font-size="12" fill="#0f172a">「資料有 missing — MLE 不能用！」</text>
+  <text x="60" y="100" font-size="12" font-weight="600" fill="#92400e">A：</text>
+  <text x="80" y="100" font-size="12" fill="#0f172a">「用 missing 的<tspan font-weight="600" fill="#16a34a">期望</tspan>代替！」</text>
+  <rect x="40" y="130" width="510" height="60" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="60" y="158" font-size="12" font-weight="600" fill="#1e40af">E-step：</text>
+  <text x="120" y="158" font-size="12" fill="#0f172a">$\mathbb{E}_{p(z|x,\theta^{(t-1)})}[\log p(x,z|\theta)]$（算期望）</text>
+  <text x="60" y="180" font-size="12" font-weight="600" fill="#1e40af">M-step：</text>
+  <text x="120" y="180" font-size="12" fill="#0f172a">$\theta^{(t)} = \arg\max_\theta \mathcal{Q}(\theta|\theta^{(t-1)})$（最大化）</text>
+  <text x="300" y="220" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">反覆迭代，ELBO 單調上升（收斂到 local max）</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-5 diagram END == -->
+
+      <p>EM 的直覺起點：<strong>當資料不完整時，MLE 失效</strong>。</p>
+<p>例：病人血壓資料中，有些測量值是 0（真的 0），有些是 missing（未知）。如果把所有 0 當成「真的 0」去 fit 高斯，會嚴重偏差——missing 不等於 0。</p>
+<p>EM 的<strong>樸素想法</strong>：</p>
+<ol>
+<li>「資料有 missing——丟掉吧」→ 浪費資料。</li>
+<li>「missing 用某個猜測補上（例如平均值）」→ 不準。</li>
+<li>「missing 用它的<strong>期望</strong>補上」→ 對了！</li>
+<li>「把補完的「期望 log-likelihood」做 MLE」→ EM。</li>
+</ol>
+<p>這個想法在 EM 的兩個步驟之間反覆：</p>
+<ol>
+<li><strong>E-step</strong>：給當前 $\theta^{(t)}$，對 missing 算 $\mathbb{E}_{\mathbb{P}(Z\mid X,\theta^{(t)})}[\log\mathbb{P}(X,Z\mid\theta)]$（期望 log-likelihood）。</li>
+<li><strong>M-step</strong>：$\theta^{(t+1)}=\arg\max_\theta\mathbb{E}[\log\mathbb{P}\mid\theta^{(t)}]$（對期望的 log-likelihood 做 MLE）。</li>
+</ol>
+<p><strong>為什麼 EM 在變分推論也適用？</strong> 因為變分推論的「真實後驗 $\mathbb{P}(z\mid X,\theta)$ 不可解」等同於「latent $z$ 的值不完整」——E-step 用 $q(z)$（變分近似）填補這個不完整。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-5" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：EM 背景 — 把缺失值換成期望</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> EM 演算法對 missing data 的核心想法是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">直接丟掉</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">用 0 填補</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">用 missing 的期望填補再 MLE</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">用線性回歸估計</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp6" data-kp="6">
+  <header class="card-head">
+    <span class="badge">2.2.2</span>
+    <h2 class="card-title">變分推論的 EM</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-6 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-6">
+  <img src="assets/diagram-kp6-vi-em.png" alt="kp-6 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-6" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸是 latent z（-4 到 4），y 軸是密度 0–0.9。四條曲線疊加：灰色「q^(0)（初始）」高斯中心 -1.5、寬度大；深灰「q^(1)」中心 -0.5、寬度中；teal「q^(2)」中心 0、寬度窄；紅色「p(z|x,θ) 真後驗」中心 0.5、寬度最窄。紅色曲線下方有淡紅色填色區。
+WHY: 凸顯「變分 EM 反覆更新 q，最終 q^(t) → p(z|x,θ) 真後驗」——視覺上的「逐步逼近」概念。
+MUST show: (1) 四條高斯曲線由寬到窄、由偏離到對齊的過渡；(2) 真後驗用紅色區分；(3) 圖例標每條線的迭代次數；(4) x 軸標 z。
+AVOID: 不要只畫一條曲線、不要用柱狀圖、不要省略迭代順序。
+STYLE: clean scientific plot, 標題「變分 EM：q^(t) → p(z|x,θ)」。</pre>
+  </details>
+<!-- == Phase C kp-6 demo == -->
+<div class="demo" id="demo-kp6" data-demo-id="kp-6">
+  <h4>互動 demo：變分 EM：q^(t) 逐步逼近真後驗</h4>
+  <div class="demo-theory"><p>變分推論的 E-step 目標：$q^{(t)}\approx p(z\mid x,\theta^{(t-1)})$<br>用 KL 散度衡量逼近程度。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 t 滑桿觀察 q^(t) 隨迭代變化。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>q 從偏離的初始分佈，逐步逼近真後驗（紅色）。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>t=5：q center 0.45, sig 0.51（接近真後驗 μ=0.5, σ=0.5）。</div>
+  <div class="demo-controls"><label>迭代 $t$：<input type="range" id="d6-t" min="0" max="5" value="3"></label><span class="demo-val" id="d6-t-val"></span><div class="demo-readout-inline" id="d6-out-inline"></div></div>
+  <canvas id="d6-canvas" width="500" height="200" aria-label="變分 EM：q^(t) 逐步逼近真後驗 互動圖"></canvas>
+  <div class="demo-readout" id="d6-out"></div>
+</div>
+<!-- == Phase C kp-6 demo END == -->
+</div>
+<!-- == Phase B kp-6 diagram END == -->
+
+      <p>把 EM 套到變分推論：把 ELBO 拆成 E-step（找最佳 $q$）和 M-step（找最佳 $\theta$）。</p>
+<p>由式 (5)：$\mathcal{L}(q,\theta) = \log\mathbb{P}(\boldsymbol{x}_i\mid\theta) - D_{\text{KL}}(q(z_i)\|\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta))$</p>
+<p>EM for Variational Inference：</p>
+<p>$$\text{E-step:}\quad q^{(t)} := \arg\max_q\mathcal{L}(q,\theta^{(t-1)})$$</p>
+<p>$$\text{M-step:}\quad \theta^{(t)} := \arg\max_\theta\mathcal{L}(q^{(t)},\theta)$$</p>
+<p><strong>E-step</strong>：因為 $\log\mathbb{P}(\boldsymbol{x}_i\mid\theta^{(t-1)})$ 跟 $q$ 無關，最大化 $\mathcal{L}$ = 最小化 $D_{\text{KL}}(q\|\mathbb{P}(z\mid\boldsymbol{x},\theta^{(t-1)})) \ge 0$，最小值為 0。所以</p>
+<p>$$q^{(t)}(z_i) \leftarrow \mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta^{(t-1)})$$</p>
+<p>（E-step 讓 $q$ 盡量接近真後驗——但若真後驗不可解，實際上是用近似的 $q$ 家族最佳匹配）</p>
+<p><strong>M-step</strong>：固定 $q^{(t)}$，$\mathcal{L}(q^{(t)},\theta) = -D_{\text{KL}}(q^{(t)}\|\mathbb{P}(\boldsymbol{x},z\mid\theta)) + \text{const}$，最大化 = 最小化 $D_{\text{KL}}$ =</p>
+<p>$$\theta^{(t)} \leftarrow \arg\max_\theta\mathbb{E}_{q^{(t)}(z_i)}[\log\mathbb{P}(\boldsymbol{x}_i,z_i\mid\theta)]$$</p>
+<p>這就是 EM 在變分推論的形式。直覺：E-step「把 ELBO 拉向 log-likelihood」（讓 $q$ 更接近後驗），M-step「把 log-likelihood 拉高」。兩者反覆，互相抬升。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-6" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：變分推論的 EM</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 變分推論的 E-step 給的 $q^{(t)}$ 是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">隨機初始化</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">$\arg\max_q\mathcal{L}(q,\theta^{(t-1)})$，通常 = $\mathbb{P}(z\mid\boldsymbol{x},\theta^{(t-1)})$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">直接等於先驗</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">固定不更新</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp7" data-kp="7">
+  <header class="card-head">
+    <span class="badge">3</span>
+    <h2 class="card-title">VAE：用神經網路做變分推論</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-7 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-7-svg">
+  <svg class="inline-svg" viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr12c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/>
+    </marker>
+  </defs>
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">VAE 結構：encoder → latent → decoder</text>
+  <!-- x -->
+  <circle cx="70" cy="140" r="35" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="70" y="135" text-anchor="middle" font-size="13" font-weight="700" fill="#1e40af">$x$</text>
+  <text x="70" y="152" text-anchor="middle" font-size="10" fill="#1e40af">資料</text>
+  <!-- encoder -->
+  <rect x="150" y="105" width="120" height="70" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="210" y="135" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">Encoder</text>
+  <text x="210" y="155" text-anchor="middle" font-size="10" fill="#92400e">NN：$x\to\mu,\sigma$</text>
+  <!-- 採樣 -->
+  <polygon points="290,120 360,120 325,150" fill="#ddd6fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="325" y="143" text-anchor="middle" font-size="11" font-weight="700" fill="#5b21b6">採樣 $z$</text>
+  <!-- latent -->
+  <text x="325" y="100" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">latent space</text>
+  <!-- decoder -->
+  <rect x="380" y="105" width="120" height="70" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="440" y="135" text-anchor="middle" font-size="13" font-weight="700" fill="#166534">Decoder</text>
+  <text x="440" y="155" text-anchor="middle" font-size="10" fill="#166534">NN：$z\to\hat x$</text>
+  <!-- x_hat -->
+  <circle cx="550" cy="140" r="35" fill="#fed7aa" stroke="#ea580c" stroke-width="2"/>
+  <text x="550" y="135" text-anchor="middle" font-size="13" font-weight="700" fill="#9a3412">$\hat x$</text>
+  <text x="550" y="152" text-anchor="middle" font-size="10" fill="#9a3412">重建</text>
+  <!-- arrows -->
+  <line x1="105" y1="140" x2="148" y2="140" stroke="#0f766e" stroke-width="2" marker-end="url(#arr12c)"/>
+  <line x1="272" y1="140" x2="288" y2="140" stroke="#0f766e" stroke-width="2" marker-end="url(#arr12c)"/>
+  <line x1="362" y1="140" x2="378" y2="140" stroke="#0f766e" stroke-width="2" marker-end="url(#arr12c)"/>
+  <line x1="502" y1="140" x2="513" y2="140" stroke="#0f766e" stroke-width="2" marker-end="url(#arr12c)"/>
+  <!-- 底部：ELBO 兩項 -->
+  <text x="300" y="220" text-anchor="middle" font-size="12" font-weight="600" fill="#0f172a">訓練目標 ELBO =</text>
+  <text x="300" y="245" text-anchor="middle" font-size="12" fill="#0f172a">$\underbrace{\mathbb{E}_{q(z|x)}[\log p(x|z)]}_{\text{reconstruction}} - \underbrace{D_{KL}(q(z|x)\|p(z))}_{\text{regularization}}$</text>
+  <text x="300" y="270" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">重建要準、latent 不要離 prior 太遠</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-7 diagram END == -->
+
+      <p>VAE（Variational Autoencoder, Kingma 2014）把變分推論放進 autoencoder 架構，<strong>讓 ELBO 可以用 backpropagation 訓練</strong>。</p>
+<figure class="orig-fig"><img src="assets/orig-fig3-vae-structure.jpg" alt="VAE 結構" loading="lazy"></figure>
+<p><strong>VAE 結構</strong>：</p>
+<ul>
+<li><strong>Encoder（推論網路）</strong>：輸入 $\boldsymbol{x}_i$，輸出 latent 分佈的參數（常用多元高斯的 $\mu_{z\mid x}$ 和 $\Sigma_{z\mid x}$）。</li>
+<li><strong>Sampling</strong>：從 $\mathcal{N}(\mu_{z\mid x},\Sigma_{z\mid x})$ 抽 $z_i$。</li>
+<li><strong>Decoder（生成網路）</strong>：輸入 $z_i$，輸出重建 $\hat{\boldsymbol{x}}_i$ 或 $\mathbb{P}(\boldsymbol{x}_i\mid z_i,\theta_d)$ 的參數。</li>
+</ul>
+<p><strong>VAE vs AE（標準 autoencoder）</strong>：</p>
+<ul>
+<li>AE：encoder 直接輸出 $z$（確定性）。</li>
+<li>VAE：encoder 輸出 $z$ 的<strong>分佈參數</strong>（隨機性），再從中採樣。</li>
+</ul>
+<p>這個差異讓 latent space 變成「連續的機率分佈」而非「離散的編碼」——這是 VAE 能<strong>生成新資料</strong>的關鍵：從 prior $p(z)$ 抽 $z$，過 decoder 就能生成新 $\hat{\boldsymbol{x}}$。</p>
+<p>VAE 的 ELBO 目標：</p>
+<p>$$\mathcal{L}=\underbrace{\mathbb{E}_{q(z\mid x)}[\log\mathbb{P}(\boldsymbol{x}\mid z)]}_{\text{reconstruction}} - \underbrace{D_{\text{KL}}(q(z\mid x)\|p(z))}_{\text{regularization}}$$</p>
+<p>第一項「reconstruction」讓 $z$ 經 decoder 後能重建 $\boldsymbol{x}$；第二項「KL」讓 $q(z\mid x)$ 不要偏離 prior $p(z)$（常用 $\mathcal{N}(0,I)$）。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-7" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：VAE — 用神經網路做變分推論</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> VAE 與標準 autoencoder 的關鍵差別？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">VAE 用更深的網路</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">VAE 的 encoder 輸出 latent 分佈參數（隨機性），AE 輸出確定編碼</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">VAE 不用 backprop</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">VAE 不需要 decoder</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp8" data-kp="8">
+  <header class="card-head">
+    <span class="badge">3.1</span>
+    <h2 class="card-title">VAE 的組成：encoder/decoder</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-8 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-8-svg">
+  <svg class="inline-svg" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">VAE 三部件</text>
+  <rect x="40" y="50" width="160" height="130" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="120" y="75" text-anchor="middle" font-size="14" font-weight="700" fill="#92400e">① Encoder</text>
+  <text x="120" y="100" text-anchor="middle" font-size="11" fill="#0f172a">$x\in\mathbb{R}^d$</text>
+  <text x="120" y="120" text-anchor="middle" font-size="11" fill="#0f172a">$\to (\mu_{z|x},\Sigma_{z|x})$</text>
+  <text x="120" y="140" text-anchor="middle" font-size="10" fill="#92400e">常用 $q(z|x)=\mathcal{N}(\mu,\Sigma)$</text>
+  <text x="120" y="160" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">輸出 latent 分佈參數</text>
+  <rect x="220" y="50" width="160" height="130" rx="10" fill="#ddd6fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="300" y="75" text-anchor="middle" font-size="14" font-weight="700" fill="#5b21b6">② Sampling</text>
+  <text x="300" y="105" text-anchor="middle" font-size="13" fill="#0f172a">$z\sim q(z|x)$</text>
+  <text x="300" y="125" text-anchor="middle" font-size="10" fill="#5b21b6">隨機性來源</text>
+  <text x="300" y="145" text-anchor="middle" font-size="10" fill="#5b21b6">→ 讓 latent space 連續</text>
+  <text x="300" y="165" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">需 reparameterization</text>
+  <rect x="400" y="50" width="160" height="130" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="480" y="75" text-anchor="middle" font-size="14" font-weight="700" fill="#166534">③ Decoder</text>
+  <text x="480" y="100" text-anchor="middle" font-size="11" fill="#0f172a">$z\in\mathbb{R}^p$</text>
+  <text x="480" y="120" text-anchor="middle" font-size="11" fill="#0f172a">$\to \hat x\in\mathbb{R}^d$</text>
+  <text x="480" y="145" text-anchor="middle" font-size="10" fill="#166534">常用高斯 / Bernoulli</text>
+  <text x="480" y="165" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">從 $z$ 重建 $\hat x$</text>
+  <text x="300" y="205" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">三塊都參與 backprop 訓練</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-8 diagram END == -->
+
+      <p>VAE 由三大塊組成，每塊都<strong>可微</strong>，所以整個網路可以用 backpropagation 端到端訓練。</p>
+<ol>
+<li><strong>Encoder</strong>：$\boldsymbol{x}_i\in\mathbb{R}^d \to z_i\in\mathbb{R}^p$ 的條件分佈 $q(z_i)=\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta_e)$。常用多元高斯，輸出 $m$ 組神經元（mean + covariance + 其他參數）。</li>
+<li><strong>Latent 採樣</strong>：$z_i \sim q(z_i)$（這個隨機性是 VAE 的關鍵）。</li>
+<li><strong>Decoder</strong>：$z_i\in\mathbb{R}^p \to \hat{\boldsymbol{x}}_i\in\mathbb{R}^d$。常用高斯，輸出 $\boldsymbol{x}_i$ 的重建或 $\mathbb{P}(\boldsymbol{x}_i\mid z_i,\theta_d)$ 的參數。</li>
+</ol>
+<p>訓練目標：<strong>最大化 ELBO</strong>，等價於：</p>
+<ol>
+<li>Reconstruction 項：$z$ 過 decoder 要能重建 $\boldsymbol{x}$。</li>
+<li>KL 項：$q(z\mid x)$ 不要離 prior $p(z)=\mathcal{N}(0,I)$ 太遠（讓 latent space 有結構）。</li>
+</ol>
+<p>這兩項形成張力：reconstruction 想把 $z$ 編碼得「專屬每筆資料」，KL 想讓 $z$ 都「接近標準常態」。VAE 的解是<strong>在這兩者間取平衡</strong>——所以學出來的 latent space 連續、有結構、可採樣生成。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-8" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：VAE 的三部件 — encoder/sampling/decoder</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> VAE 訓練時，KL 項的作用是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">讓重建更精確</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">讓 $q(z\mid x)$ 不要偏離 prior $p(z)$，讓 latent space 有結構</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">增加模型容量</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">避免過擬合的唯一方法</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp9" data-kp="9">
+  <header class="card-head">
+    <span class="badge">3.1.1</span>
+    <h2 class="card-title">Encoder：輸出 $\mu, \sigma$</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-9 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-9">
+  <img src="assets/diagram-kp9-encoder.png" alt="kp-9 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-9" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 左右兩子圖。左：單一輸入 x（藍點）→ Encoder 神經網路方塊 → 輸出兩個框標 μ=0.4 和 σ=0.7 → 插圖顯示 N(0.4, 0.7²) 高斯曲線。右：4 個輸入 → 對角 Σ（只畫對角線，灰色非對角淡化），標題「多維：對角 Σ（p 個參數，O(p) 計算）」。
+WHY: 凸顯 VAE encoder 設計的兩個關鍵：(1) 單一輸入 → 兩個參數 μ, σ；(2) 對角協方差省記憶體省計算。
+MUST show: (1) 左：x → 兩個分開的輸出框；(2) 左：插圖高斯形狀；(3) 右：4 維對角示意，只對角線明顯、非對角淡化；(4) 整體標題。
+AVOID: 不要把 encoder 畫成黑箱、不要把對角畫成完整矩陣。
+STYLE: clean scientific plot, 標題「VAE Encoder：輸出多元高斯參數」。</pre>
+  </details>
+<!-- == Phase C kp-9 demo == -->
+<div class="demo" id="demo-kp9" data-demo-id="kp-9">
+  <h4>互動 demo：VAE Encoder：對角協方差節省參數</h4>
+  <div class="demo-theory"><p>VAE encoder 輸出多元高斯參數 $(\mu_{z\mid x},\Sigma_{z\mid x})$，<br>常用對角協方差：$p$ 個神經元 vs 完整 $p^2$ 個。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $p$ 滑桿改變 latent 維度。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>對角矩陣非對角元素為 0（淡灰），只有 $p$ 個 σ 值（teal）。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$p=4$ 時對角需 4 個參數，完整需 16 個；對角省 75% 參數。</div>
+  <div class="demo-controls"><label>latent 維度 $p$：<input type="range" id="d9-p" min="2" max="10" value="4"></label><span class="demo-val" id="d9-p-val"></span><div class="demo-readout-inline" id="d9-out-inline"></div></div>
+  <canvas id="d9-canvas" width="500" height="200" aria-label="VAE Encoder：對角協方差節省參數 互動圖"></canvas>
+  <div class="demo-readout" id="d9-out"></div>
+</div>
+<!-- == Phase C kp-9 demo END == -->
+</div>
+<!-- == Phase B kp-9 diagram END == -->
+
+      <p>Encoder 是一個神經網路，輸入 $\boldsymbol{x}_i\in\mathbb{R}^d$，輸出 latent $z_i$ 的條件分佈參數。最常見的選擇是<strong>多元高斯（對角共變異數）</strong>：</p>
+<p>$$q(z_i) = \mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta_e) = \mathcal{N}(z_i\mid\mu_{z\mid x},\Sigma_{z\mid x})$$</p>
+<p>其中：</p>
+<ul>
+<li>$\mu_{z\mid x}=\boldsymbol{e}_1(\boldsymbol{x}_i,\theta_{e,1})\in\mathbb{R}^p$（$p$ 個神經元）</li>
+<li>$\Sigma_{z\mid x}=\text{diag}(\boldsymbol{e}_2(\boldsymbol{x}_i,\theta_{e,2}))$（$p$ 個神經元，對角矩陣）</li>
+</ul>
+<p>為什麼要對角共變異數？<strong>計算便宜 + 仍能表達多維分佈</strong>。完整共變異數要 $p\times p$ 個參數、$O(p^3)$ 反矩陣運算；對角只要 $p$ 個、$O(p)$ 即可。</p>
+<p><strong>實作細節</strong>：常讓 encoder 輸出 $\log\sigma^2$（而不是 $\sigma^2$），再用 $\exp$ 還原——避免 $\sigma^2$ 為負，且梯度更穩定。</p>
+<p>若想用更複雜的分佈（如 normalizing flow、混合高斯），可擴充 encoder 輸出更多參數——但訓練難度也增加。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-9" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Encoder — 輸出 $\mu$ 與 $\sigma$</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> VAE encoder 為什麼常輸出對角共變異數？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">完全沒理由</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">計算便宜且仍能表達多維分佈</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">對角才能用 backprop</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">非對角會爆炸</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp10" data-kp="10">
+  <header class="card-head">
+    <span class="badge">3.1.2</span>
+    <h2 class="card-title">Latent 採樣</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-10 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-10">
+  <img src="assets/diagram-kp10-reparam.png" alt="kp-10 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-10" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸是 latent z（-1 到 4.5），y 軸是 σ（0.1 到 1.1）。5 個 (μ, σ) 紅圓點，旁邊用紅色虛線箭頭指向右上的「x 標記」表示直接採樣 z ~ N(μ,σ)（不可微）。同樣 5 個點用 teal 實線箭頭指向右邊的 teal 方塊表示 reparameterization z = μ + σ·ε（可微）。圖例分別標「採樣 z~N（不可微）」、「z=μ+σε（可微）」。
+WHY: 凸顯 reparameterization 的關鍵：把隨機性「轉嫁」到 ε，讓 z 對 μ, σ 可微。
+MUST show: (1) 同樣 5 個 (μ,σ) 點，但兩種方式連出去（紅虛/紅叉、teal 實/teal 方）；(2) 圖例清楚區分；(3) 紅色虛線表示「不連續 / 不可微」；(4) teal 實線表示「連續可微」。
+AVOID: 不要只用一條曲線、不要省略圖例、不要混用顏色。
+STYLE: clean scientific plot, 標題「採樣（紅 ✗ 斷裂）vs Reparameterization（綠 ■ 連續可微）」。</pre>
+  </details>
+<!-- == Phase C kp-10 demo == -->
+<div class="demo" id="demo-kp10" data-demo-id="kp-10">
+  <h4>互動 demo：Reparameterization：採樣變可微</h4>
+  <div class="demo-theory"><p>Reparameterization：$z = \mu + \sigma \cdot \epsilon$，其中 $\epsilon\sim\mathcal{N}(0,1)$ 與 $\mu,\sigma$ 無關。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $\mu$、$\sigma$ 滑桿觀察兩種採樣方式。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>直接採樣 $z\sim\mathcal{N}$（紅）不可微；reparameterization（teal）讓 $z$ 對 $\mu,\sigma$ 可微。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>兩種採樣的分佈相同（都是 $\mathcal{N}(\mu,\sigma^2)$），但只有 reparameterization 讓 backprop 流通。</div>
+  <div class="demo-controls"><label>$\mu$：<input type="range" id="d10-mu" min="-3" max="3" step="0.1" value="0.5"></label><span class="demo-val" id="d10-mu-val"></span><label style="margin-left:12px">$\sigma$：<input type="range" id="d10-sig" min="0.3" max="2" step="0.1" value="0.8"></label><span class="demo-val" id="d10-sig-val"></span><div class="demo-readout-inline" id="d10-out-inline"></div></div>
+  <canvas id="d10-canvas" width="500" height="200" aria-label="Reparameterization：採樣變可微 互動圖"></canvas>
+  <div class="demo-readout" id="d10-out"></div>
+</div>
+<!-- == Phase C kp-10 demo END == -->
+</div>
+<!-- == Phase B kp-10 diagram END == -->
+
+      <p>Encoder 給出 $q(z_i)$ 的參數後，<strong>從中採樣</strong>得到 $z_i$：</p>
+<p>$$z_i \sim q(z_i) = \mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta_e)$$</p>
+<p>這個採樣是 VAE 的核心——<strong>隨機性</strong>讓 latent space 是連續分佈而非離散編碼。但採樣在 backprop 中有個問題：</p>
+<p>$$z_i \sim \mathcal{N}(\mu_{z\mid x},\Sigma_{z\mid x}) \Rightarrow \frac{\partial z_i}{\partial \mu_{z\mid x}}\,\text{不存在（不確定性）}$$</p>
+<p><strong>reparameterization trick</strong>：把採樣的隨機性「拉出來」，讓梯度可以流過：</p>
+<p>$$z_i = \mu_{z\mid x} + \sigma_{z\mid x}\odot\epsilon_i, \quad \epsilon_i\sim\mathcal{N}(0,I)$$</p>
+<p>現在 $z_i$ 是 $\mu$、$\sigma$ 的<strong>確定性函數</strong>（再加上外部隨機變數 $\epsilon_i$），梯度可流：$\frac{\partial z_i}{\partial \mu_{z\mid x}}=1$、$\frac{\partial z_i}{\partial \sigma_{z\mid x}}=\epsilon_i$。</p>
+<p><strong>為什麼這個 trick 重要？</strong> 沒有它，採樣的隨機性會讓 backprop 中斷、無法用 SGD 訓練整個 VAE。有了它，VAE 才能用標準 backprop 端到端訓練。</p>
+<p>推廣：對任何可重參數化的分佈（高斯、連續 flow 等），都可以寫成 $z=g(\theta,\epsilon)$，其中 $\epsilon$ 與 $\theta$ 獨立——這就是「reparameterization」的一般形式。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-10" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Latent 採樣</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> reparameterization trick 的核心是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">用更多層 NN</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">把採樣隨機性拉到 $\epsilon$ 上，讓 $z=\mu+\sigma\epsilon$ 對 $\mu,\sigma$ 可微</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">改用 discrete latent</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">放棄 backprop</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp11" data-kp="11">
+  <header class="card-head">
+    <span class="badge">3.1.3</span>
+    <h2 class="card-title">Decoder：從 $z$ 重建 $x$</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-11 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-11-svg">
+  <svg class="inline-svg" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Decoder 兩種設計</text>
+  <rect x="40" y="50" width="240" height="140" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="160" y="78" text-anchor="middle" font-size="13" font-weight="700" fill="#166534">(1) 直接重建</text>
+  <text x="160" y="110" text-anchor="middle" font-size="13" fill="#0f172a">$z \to \hat{x}$</text>
+  <text x="160" y="135" text-anchor="middle" font-size="11" fill="#0f172a">Loss = $\|\hat x - x\|^2$</text>
+  <text x="160" y="160" text-anchor="middle" font-size="10" fill="#166534">連續資料最常見</text>
+  <rect x="320" y="50" width="240" height="140" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="440" y="78" text-anchor="middle" font-size="13" font-weight="700" fill="#1e40af">(2) 輸出分佈參數</text>
+  <text x="440" y="110" text-anchor="middle" font-size="13" fill="#0f172a">$z \to (\mu_x, \sigma_x)$ 或 $p$</text>
+  <text x="440" y="135" text-anchor="middle" font-size="11" fill="#0f172a">Loss = $-\log p(x|z)$</text>
+  <text x="440" y="160" text-anchor="middle" font-size="10" fill="#1e40af">binary 用 Bernoulli</text>
+  <text x="300" y="210" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">Decoder 是「生成器」：訓練後可從 prior 抽 $z$ 產新 $\hat x$</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-11 diagram END == -->
+
+      <p>Decoder 也是一個神經網路，輸入 latent $z_i\in\mathbb{R}^p$，輸出 $\hat{\boldsymbol{x}}_i$（重建）或 $\mathbb{P}(\boldsymbol{x}_i\mid z_i,\theta_d)$ 的參數。</p>
+<p>兩種設計：</p>
+<ol>
+<li><strong>直接重建</strong>：decoder 輸出 $\hat{\boldsymbol{x}}_i$，loss = $\|\hat{\boldsymbol{x}}_i - \boldsymbol{x}_i\|^2$。最常見於連續資料。</li>
+<li><strong>輸出分佈參數</strong>：decoder 輸出 $\mu_x$ 和 $\sigma_x$（多元高斯）或 Bernoulli 的機率 $p$。Loss = $-\log\mathbb{P}(\boldsymbol{x}_i\mid z_i,\theta_d)$。</li>
+</ol>
+<p>實務上，連續影像常用 (1) + Gaussian loss；binary 影像用 (2) + Bernoulli loss。</p>
+<p>Decoder 的角色：作為「<strong>生成器</strong>」——$z\to\hat{\boldsymbol{x}}$ 是可微函數。訓練完成後，<strong>從 prior $\mathcal{N}(0,I)$ 抽 $z$，過 decoder 就能生成新資料</strong>——這是 VAE 的生成能力。</p>
+<p>Decoder 設計的限制：<strong>解碼空間</strong>受限於 decoder 的容量。若 decoder 太簡單（如單層線性），就只能生成簡單資料；複雜資料需要深 decoder（CNN for images, Transformer for text）。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-11" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Decoder — 從 $z$ 重建 $x$</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> VAE decoder 訓練完成後的「生成」流程是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">用真實 $\boldsymbol{x}_i$ encoder 後取 mean</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">從 prior $p(z)=\mathcal{N}(0,I)$ 抽 $z$，過 decoder 輸出新 $\hat{\boldsymbol{x}}$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">隨機初始化 decoder weights</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">用 K-means 聚類 $z$</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp12" data-kp="12">
+  <header class="card-head">
+    <span class="badge">3.2</span>
+    <h2 class="card-title">用 EM 訓練 VAE</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-12 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-12-svg">
+  <svg class="inline-svg" viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">VAE 的 EM 訓練</text>
+  <rect x="40" y="50" width="240" height="160" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="160" y="80" text-anchor="middle" font-size="14" font-weight="700" fill="#92400e">E-step</text>
+  <text x="160" y="110" text-anchor="middle" font-size="12" fill="#0f172a">更新 encoder $\theta_e$</text>
+  <text x="160" y="135" text-anchor="middle" font-size="12" fill="#0f172a">$q^{(t)}\approx p(z|x,\theta^{(t-1)})$</text>
+  <text x="160" y="165" text-anchor="middle" font-size="11" font-style="italic" fill="#92400e">「拉 ELBO 接近 LL」</text>
+  <rect x="320" y="50" width="240" height="160" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="440" y="80" text-anchor="middle" font-size="14" font-weight="700" fill="#166534">M-step</text>
+  <text x="440" y="110" text-anchor="middle" font-size="12" fill="#0f172a">更新 decoder $\theta_d$</text>
+  <text x="440" y="135" text-anchor="middle" font-size="12" fill="#0f172a">$\theta^{(t)} = \arg\max \mathcal{L}$</text>
+  <text x="440" y="165" text-anchor="middle" font-size="11" font-style="italic" fill="#166534">「抬高 LL」</text>
+  <text x="300" y="225" text-anchor="middle" font-size="11" fill="#64748b">實務上常見簡化：用 backprop 一起更新（§3.4）</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-12 diagram END == -->
+
+      <p>VAE 訓練可以用 EM 框架理解：encoder 參數 $\theta_e$ 是「變分近似 $q$ 的角色」，decoder 參數 $\theta_d$ 是「生成分佈 $\mathbb{P}(\boldsymbol{x}\mid z)$ 的角色」。</p>
+<p>EM for VAE（per data point）：</p>
+<p>$$\text{E-step:}\quad \theta_e^{(t)} := \arg\max_{\theta_e}\mathcal{L}(\theta_e,\theta_d^{(t-1)},\boldsymbol{x}_i)$$</p>
+<p>$$\text{M-step:}\quad \theta_d^{(t)} := \arg\max_{\theta_d}\mathcal{L}(\theta_e^{(t)},\theta_d,\boldsymbol{x}_i)$$</p>
+<p>實際上 EM 不直接算 argmax（可能 intractable），改用<strong>小批次 SGD</strong>：每個 batch $b$ 筆資料，每步做一次 gradient ascent on E-step、一次 on M-step：</p>
+<p>$$\theta_e^{(t)} \leftarrow \theta_e^{(t-1)} + \eta_e\frac{\partial\sum_{i=1}^b\mathcal{L}(\theta_e,\theta_d^{(t-1)},\boldsymbol{x}_i)}{\partial\theta_e}$$</p>
+<p>$$\theta_d^{(t)} \leftarrow \theta_d^{(t-1)} + \eta_d\frac{\partial\sum_{i=1}^b\mathcal{L}(\theta_e^{(t)},\theta_d,\boldsymbol{x}_i)}{\partial\theta_d}$$</p>
+<p>ELBO 簡化（式 20）：</p>
+<p>$$\sum_{i=1}^b\mathcal{L}(q,\theta) = -\sum_{i=1}^b D_{\text{KL}}(\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta_e)\|\mathbb{P}(\boldsymbol{x}_i,z_i\mid\theta_d))$$</p>
+<p>這個式子仍含 intractable 的 $\mathbb{P}(\boldsymbol{x}_i,z_i\mid\theta_d)$（要對 $z$ 積分），所以接下來 §3.2.1/§3.2.2 給兩個 Monte Carlo 簡化方案。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-12" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：用 EM 訓練 VAE</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> VAE 的 E-step 在更新誰的參數？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">decoder $\theta_d$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">encoder $\theta_e$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">prior</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">loss function</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp13" data-kp="13">
+  <header class="card-head">
+    <span class="badge">3.2.1</span>
+    <h2 class="card-title">ELBO 簡化 Type 1：直接 Monte Carlo</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-13 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-13">
+  <img src="assets/diagram-kp13-type1.png" alt="kp-13 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-13" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸是對數刻度的樣本數 ℓ（1, 5, 10, 50, 100, 500, 1000），y 軸是 ELBO 估計值。teal 圓點 + 誤差棒，隨 ℓ 增大誤差棒越短。紅色水平虛線 y=0.8 是「真值」。右上方有圖例標「Monte Carlo 估計」、「真值」。
+WHY: 凸顯「Type 1 簡化用 Monte Carlo 估計 ELBO，樣本越多越準」的性質。
+MUST show: (1) 對數 x 軸；(2) 誤差棒隨 ℓ 縮小；(3) 紅色虛線標真值；(4) 至少 5 個 ℓ 點。
+AVOID: 不要用線性 x 軸、不要省略誤差棒、不要畫隨機散點。
+STYLE: clean scientific plot, 標題「Type 1 簡化：Monte Carlo 估計隨 ℓ 收斂」。</pre>
+  </details>
+<!-- == Phase C kp-13 demo == -->
+<div class="demo" id="demo-kp13" data-demo-id="kp-13">
+  <h4>互動 demo：Type 1 簡化：Monte Carlo 估計 ELBO</h4>
+  <div class="demo-theory"><p>Type 1 簡化：<br>$\mathcal{L}\approx\frac{1}{\ell}\sum_{j=1}^\ell[\log p(x,z_{i,j}\mid\theta_d) - \log p(z_{i,j}\mid x,\theta_e)]$<br>誤差 $\propto 1/\sqrt{\ell}$。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $\ell$ 滑桿改變採樣數。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>$\ell$ 增大，估計值的誤差棒變短，趨近真值 0.8。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$\ell=1$ 時誤差棒很大；$\ell\to\infty$ 時收斂到真值。</div>
+  <div class="demo-controls"><label>樣本數 $\ell$：<input type="range" id="d13-ell" min="1" max="10000" value="100"></label><span class="demo-val" id="d13-ell-val"></span><div class="demo-readout-inline" id="d13-out-inline"></div></div>
+  <canvas id="d13-canvas" width="500" height="200" aria-label="Type 1 簡化：Monte Carlo 估計 ELBO 互動圖"></canvas>
+  <div class="demo-readout" id="d13-out"></div>
+</div>
+<!-- == Phase C kp-13 demo END == -->
+</div>
+<!-- == Phase B kp-13 diagram END == -->
+
+      <p>Type 1 簡化的精神：<strong>不拆 KL，直接對 ELBO 裡的期望做 Monte Carlo 估計</strong>。</p>
+<p>原 ELBO（式 20）：$\mathcal{L}=-\sum_i D_{\text{KL}}(\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta_e)\|\mathbb{P}(\boldsymbol{x}_i,z_i\mid\theta_d))$</p>
+<p>展開（用 KL 定義）：</p>
+<p>$$\mathcal{L}=-\sum_i\mathbb{E}_{\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta_e)}\left[\log\frac{\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta_e)}{\mathbb{P}(\boldsymbol{x}_i,z_i\mid\theta_d)}\right]$$</p>
+<p>這是個 $\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta_e)$ 下的期望，<strong>直接 Monte Carlo 估計</strong>：抽 $\ell$ 個樣本 $\{z_{i,j}\}_{j=1}^\ell \sim \mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta_e)$，</p>
+<p>$$\mathbb{E}_{\mathbb{P}(z\mid x)}[f(z)] \approx \frac{1}{\ell}\sum_{j=1}^\ell f(z_{i,j})$$</p>
+<p>代入 ELBO：</p>
+<p>$$\sum_i\mathcal{L} \approx \sum_i\frac{1}{\ell}\sum_{j=1}^\ell\left[\log\mathbb{P}(\boldsymbol{x}_i,z_{i,j}\mid\theta_d) - \log\mathbb{P}(z_{i,j}\mid\boldsymbol{x}_i,\theta_e)\right]$$</p>
+<p><strong>特性</strong>：</p>
+<ul>
+<li>簡單直接，<strong>不假設 $q$ 的分佈形式</strong>。</li>
+<li>但 KL 沒有拆開，<strong>兩個對數比的梯度都必須估計</strong>，有時數值不穩定。</li>
+<li>$\ell$ 越大估計越準，但計算成本也越高（常用 $\ell=1$，靠 mini-batch 增大等效樣本數）。</li>
+</ul>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-13" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：ELBO Type 1 — 直接 Monte Carlo 估計</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Type 1 簡化的特點是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">拆 KL 計算</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">不拆 KL，直接 Monte Carlo 估計期望</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">只適用高斯</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">需要 analytical KL</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp14" data-kp="14">
+  <header class="card-head">
+    <span class="badge">3.2.2</span>
+    <h2 class="card-title">ELBO 簡化 Type 2：KL 拆解</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-14 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-14">
+  <img src="assets/diagram-kp14-type2.png" alt="kp-14 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-14" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸是訓練 epoch 0–100。三條曲線：藍色 = reconstruction loss（從 55 指數衰減到 5）、紅色 = KL regularizer（從 0 上升到 25 漸近）、teal 虛線 = -ELBO（總 loss，下降趨勢）。圖例在右中。
+WHY: 凸顯 Type 2 簡化把 ELBO 拆成 reconstruction + KL 兩項後，兩項動態：reconstruction 快速下降、KL 緩慢上升，總體 ELBO 收斂。
+MUST show: (1) 三條曲線（recon、KL、-ELBO）；(2) recon 衰減、KL 上升；(3) -ELBO 整體下降趨勢。
+AVOID: 不要省略 -ELBO 線、不要讓曲線交叉時混淆。
+STYLE: clean scientific plot, 標題「Type 2 簡化：兩項平衡 → 收斂」。</pre>
+  </details>
+<!-- == Phase C kp-14 demo == -->
+<div class="demo" id="demo-kp14" data-demo-id="kp-14">
+  <h4>互動 demo：Type 2 簡化：β 權衡 KL 與 reconstruction</h4>
+  <div class="demo-theory"><p>Type 2：ELBO = $-\text{recon} - \beta \cdot D_{KL}$。<br>$\beta$ 越大 latent 越接近 prior（正則化強），但 reconstruction 變差。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $\beta$ 滑桿觀察權衡。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>$\beta$ 變大：recon loss 上升、$-\text{ELBO}$ 上升（loss 變大），trade-off 顯而易見。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$\beta=0.5$：recon ≈ 12.5、$-\text{ELBO}\approx 18.5$；$\beta=2.0$：recon ≈ 35、$-\text{ELBO}\approx 59$。</div>
+  <div class="demo-controls"><label>$\beta$：<input type="range" id="d14-beta" min="0.1" max="3" step="0.1" value="0.5"></label><span class="demo-val" id="d14-beta-val"></span><div class="demo-readout-inline" id="d14-out-inline"></div></div>
+  <canvas id="d14-canvas" width="500" height="200" aria-label="Type 2 簡化：β 權衡 KL 與 reconstruction 互動圖"></canvas>
+  <div class="demo-readout" id="d14-out"></div>
+</div>
+<!-- == Phase C kp-14 demo END == -->
+</div>
+<!-- == Phase B kp-14 diagram END == -->
+
+      <p>Type 2 簡化更乾淨：<strong>把 ELBO 拆成兩項</strong>，第一項是 tractable 的 KL、第二項是 Monte Carlo 可估計的 reconstruction。</p>
+<p>拆解：</p>
+<p>$$\mathcal{L}=-\sum_i D_{\text{KL}}(\mathbb{P}(z\mid\boldsymbol{x},\theta_e)\|\mathbb{P}(\boldsymbol{x},z\mid\theta_d))$$</p>
+<p>$$=-\sum_i D_{\text{KL}}(\mathbb{P}(z\mid\boldsymbol{x},\theta_e)\|\mathbb{P}(z)) + \sum_i\mathbb{E}_{\mathbb{P}(z\mid\boldsymbol{x},\theta_e)}[\log\mathbb{P}(\boldsymbol{x}\mid z,\theta_d)]$$</p>
+<p>第二項是「<strong>reconstruction log-likelihood</strong>」——$z$ 過 decoder 後能重建 $\boldsymbol{x}$ 的對數機率。</p>
+<p>第一項是「<strong>KL regularization</strong>」——$q(z\mid x)$ 不要偏離 prior $p(z)$。</p>
+<p>Monte Carlo 估計第二項（抽 $\ell$ 個 $z_{i,j}\sim\mathbb{P}(z_i\mid\boldsymbol{x}_i,\theta_e)$）：</p>
+<p>$$\sum_i\mathcal{L} \approx -\sum_i D_{\text{KL}}(q\|p) + \sum_i\frac{1}{\ell}\sum_{j=1}^\ell\log\mathbb{P}(\boldsymbol{x}_i\mid z_{i,j},\theta_d)$$</p>
+<p>進一步對第一項也用 MC 估計（抽同樣的 $z_{i,j}$）：</p>
+<p>$$\sum_i\mathcal{L} \approx -\sum_i\frac{1}{\ell}\sum_{j=1}^\ell\left[\log\mathbb{P}(z_{i,j}\mid\boldsymbol{x}_i,\theta_e)-\log\mathbb{P}(z_{i,j})\right] + \sum_i\frac{1}{\ell}\sum_{j=1}^\ell\log\mathbb{P}(\boldsymbol{x}_i\mid z_{i,j},\theta_d)$$</p>
+<p><strong>KL 項的解析解</strong>：若 $q$ 和 prior 都是高斯，KL 有<strong>解析解</strong>（§3.2.3）——這時訓練更穩定，這是「Type 2 + Gaussian」成為 VAE 標準做法的原因。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-14" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：ELBO Type 2 — KL 拆解</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Type 2 簡化後 ELBO 的兩項是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">reconstruction + KL regularization</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">MSE + 交叉熵</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">log-likelihood + entropy</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">prior + posterior</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp15" data-kp="15">
+  <header class="card-head">
+    <span class="badge">3.2.3</span>
+    <h2 class="card-title">高斯特例的解析 KL</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-15 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-15">
+  <img src="assets/diagram-kp15-gaussian-kl.png" alt="kp-15 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-15" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸是均值差 μ₁-μ₂（-3 到 3），y 軸是單變數高斯 KL 散度 0–5。三條曲線：σ=0.5（陡升）、σ=1.0（中）、σ=2.0（緩升）。灰色水平虛線 y=0 標 0 點。標題完整公式 KL(p1||p2) = log(σ₂/σ₁) + (σ₁²+(μ₁-μ₂)²)/(2σ₂²) - 1/2。
+WHY: 凸顯 Lemma 1 的解析表達式：KL 是均值差與標準差比的函數。
+MUST show: (1) 三條 σ 曲線；(2) 完整標題公式；(3) y=0 參考線；(4) 圖例標 σ 值。
+AVOID: 不要只畫一條曲線、不要省略公式標題。
+STYLE: clean scientific plot, 標題含 Lemma 1 公式。</pre>
+  </details>
+<!-- == Phase C kp-15 demo == -->
+<div class="demo" id="demo-kp15" data-demo-id="kp-15">
+  <h4>互動 demo：單變數高斯 KL：Lemma 1 解析式</h4>
+  <div class="demo-theory"><p>Lemma 1：$D_{KL}(\mathcal{N}(\mu_1,\sigma_1^2)\|\mathcal{N}(\mu_2,\sigma_2^2)) = \log\frac{\sigma_2}{\sigma_1}+\frac{\sigma_1^2+(\mu_1-\mu_2)^2}{2\sigma_2^2}-\frac{1}{2}$<br>固定 $p_2=\mathcal{N}(0,1)$，拖動 $p_1$ 參數。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $\mu_1$、$\sigma_1$ 滑桿。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>兩條高斯分佈隨參數變化；KL 公式給出精確值。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$\mu_1=2, \sigma_1=0.5$：KL ≈ log 2 + 0.25+4)/2 - 0.5 ≈ 2.443。</div>
+  <div class="demo-controls"><label>$\mu_1$：<input type="range" id="d15-mu" min="-3" max="3" step="0.1" value="0"></label><span class="demo-val" id="d15-mu-val"></span><label style="margin-left:12px">$\sigma_1$：<input type="range" id="d15-sig" min="0.3" max="2" step="0.1" value="1"></label><span class="demo-val" id="d15-sig-val"></span><div class="demo-readout-inline" id="d15-out-inline"></div></div>
+  <canvas id="d15-canvas" width="500" height="200" aria-label="單變數高斯 KL：Lemma 1 解析式 互動圖"></canvas>
+  <div class="demo-readout" id="d15-out"></div>
+</div>
+<!-- == Phase C kp-15 demo END == -->
+</div>
+<!-- == Phase B kp-15 diagram END == -->
+
+      <p>當 $q(z\mid x)$ 和 prior $p(z)$ 都是高斯時，KL 項有<strong>解析表達式</strong>，不用 Monte Carlo 估計——這讓 VAE 訓練更穩定、變異更小。</p>
+<p><strong>Lemma 1（單變數高斯 KL）</strong>：$p_1\sim\mathcal{N}(\mu_1,\sigma_1^2)$、$p_2\sim\mathcal{N}(\mu_2,\sigma_2^2)$，</p>
+<p>$$D_{\text{KL}}(p_1\|p_2) = \log\frac{\sigma_2}{\sigma_1} + \frac{\sigma_1^2+(\mu_1-\mu_2)^2}{2\sigma_2^2} - \frac{1}{2}$$</p>
+<p>證明見 Appendix A。</p>
+<p><strong>Lemma 2（多變數高斯 KL）</strong>：$p_1\sim\mathcal{N}(\mu_1,\Sigma_1)$、$p_2\sim\mathcal{N}(\mu_2,\Sigma_2)$，維度 $p$，</p>
+<p>$$D_{\text{KL}}(p_1\|p_2) = \frac{1}{2}\left[\log\frac{|\Sigma_2|}{|\Sigma_1|} - p + \text{tr}(\Sigma_2^{-1}\Sigma_1) + (\mu_2-\mu_1)^\top\Sigma_2^{-1}(\mu_2-\mu_1)\right]$$</p>
+<p>VAE 通常用 prior $p(z)=\mathcal{N}(0,I)$，所以 $\mu_z=0$, $\Sigma_z=I$。代入 Lemma 2：</p>
+<p>$$D_{\text{KL}}(\mathcal{N}(\mu_{z\mid x},\Sigma_{z\mid x})\|\mathcal{N}(0,I)) = \frac{1}{2}\left[-\log|\Sigma_{z\mid x}| - p + \text{tr}(\Sigma_{z\mid x}) + \|\mu_{z\mid x}\|^2\right]$$</p>
+<p>代入 ELBO Type 2 簡化：</p>
+<p>$$\sum_i\mathcal{L} \approx -\sum_i\frac{1}{2}\left[-\log|\Sigma_{z\mid x}^{(i)}| - p + \text{tr}(\Sigma_{z\mid x}^{(i)}) + \|\mu_{z\mid x}^{(i)}\|^2\right] + \sum_i\frac{1}{\ell}\sum_{j=1}^\ell\log\mathbb{P}(\boldsymbol{x}_i\mid z_{i,j},\theta_d)$$</p>
+<p>這就是標準 VAE 的 loss（前面加負號變成最小化）。第一項完全可微、無隨機性，訓練非常穩定——這也是為什麼 VAE 預設用高斯 + Standard Normal prior。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-15" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：高斯特例的解析 KL — Lemma 1 & 2</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> VAE 用 prior $p(z)=\mathcal{N}(0,I)$ 代入 Lemma 2 的結果是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">$-\frac{1}{2}\sum_i(\log|\Sigma_{z\mid x}|+p+\text{tr}(\Sigma_{z\mid x})+\|\mu_{z\mid x}\|^2)$（但符號應為 + log 項）</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">0</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">只取 trace 項</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">不可解析</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp16" data-kp="16">
+  <header class="card-head">
+    <span class="badge">3.2.4</span>
+    <h2 class="card-title">用近似 ELBO 訓練</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-16 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-16-svg">
+  <svg class="inline-svg" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr12d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/>
+    </marker>
+  </defs>
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">近似 ELBO 訓練流程</text>
+  <rect x="30" y="50" width="120" height="50" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="90" y="80" text-anchor="middle" font-size="12" fill="#1e40af">取 mini-batch $b$</text>
+  <rect x="180" y="50" width="120" height="50" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="240" y="80" text-anchor="middle" font-size="12" fill="#92400e">Encoder $\to\mu,\sigma$</text>
+  <rect x="330" y="50" width="120" height="50" rx="8" fill="#ddd6fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="390" y="80" text-anchor="middle" font-size="12" fill="#5b21b6">抽 $z$ + MC</text>
+  <rect x="480" y="50" width="90" height="50" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="525" y="80" text-anchor="middle" font-size="12" fill="#166534">Decoder $\to\hat x$</text>
+  <line x1="150" y1="75" x2="178" y2="75" stroke="#0f766e" stroke-width="1.5" marker-end="url(#arr12d)"/>
+  <line x1="300" y1="75" x2="328" y2="75" stroke="#0f766e" stroke-width="1.5" marker-end="url(#arr12d)"/>
+  <line x1="450" y1="75" x2="478" y2="75" stroke="#0f766e" stroke-width="1.5" marker-end="url(#arr12d)"/>
+  <text x="300" y="135" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">算 $\tilde{\mathcal{L}}\approx$ Reconstruction + KL</text>
+  <text x="300" y="160" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">gradient ascent on $\tilde{\mathcal{L}}$</text>
+  <text x="300" y="195" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">聯合更新 encoder + decoder（不用交替 E/M）</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-16 diagram END == -->
+
+      <p>把 Type 1 或 Type 2 的近似 ELBO 帶回 EM：每一步用 Monte Carlo 估計的 $\tilde{\mathcal{L}}$ 做 gradient ascent。</p>
+<p>VAE 訓練（per mini-batch）：</p>
+<p>$$\text{E-step:}\quad \theta_e^{(t)} := \theta_e^{(t-1)} + \eta_e\frac{\partial\sum_{i=1}^b\tilde{\mathcal{L}}(\theta_e,\theta_d^{(t-1)},\boldsymbol{x}_i)}{\partial\theta_e}$$</p>
+<p>$$\text{M-step:}\quad \theta_d^{(t)} := \theta_d^{(t-1)} + \eta_d\frac{\partial\sum_{i=1}^b\tilde{\mathcal{L}}(\theta_e^{(t)},\theta_d,\boldsymbol{x}_i)}{\partial\theta_d}$$</p>
+<p>其中 $\tilde{\mathcal{L}}$ 是 §3.2.1 或 §3.2.2 推導的近似 ELBO。</p>
+<p>實務上，<strong>VAE 幾乎不用交替 E/M，而是每步同時更新 encoder + decoder</strong>（§3.4 backprop 訓練），因為：</p>
+<ol>
+<li>現代框架（PyTorch/TF）能自動處理兩個 loss 的梯度。</li>
+<li>交替更新可能導致兩個網路「搶資源」，聯合更新更穩定。</li>
+<li>實驗上，§3.4 描述的「整體 backprop」效果等同或優於交替 EM。</li>
+</ol>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-16" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：用近似 ELBO 訓練</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 實務上 VAE 訓練採用？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">嚴格交替 E/M</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">聯合 backprop（encoder+decoder 一起更新）</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">只更新 decoder</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">完全隨機更新</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp17" data-kp="17">
+  <header class="card-head">
+    <span class="badge">3.2.5</span>
+    <h2 class="card-title">Prior regularization</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-17 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-17-svg">
+  <svg class="inline-svg" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Prior regularization 概念</text>
+  <!-- ELBO 標準 -->
+  <rect x="40" y="50" width="240" height="140" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="160" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#1e40af">標準 ELBO</text>
+  <text x="160" y="115" text-anchor="middle" font-size="12" fill="#0f172a">prior = $\mathcal{N}(0,I)$</text>
+  <text x="160" y="140" text-anchor="middle" font-size="11" fill="#0f172a">latent 學「標準常態」</text>
+  <text x="160" y="170" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">簡單、通用</text>
+  <!-- 自訂 prior -->
+  <rect x="320" y="50" width="240" height="140" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="440" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">自訂 prior + 正則</text>
+  <text x="440" y="115" text-anchor="middle" font-size="12" fill="#0f172a">prior = geodesic / Mixture</text>
+  <text x="440" y="140" text-anchor="middle" font-size="11" fill="#0f172a">latent 學領域結構</text>
+  <text x="440" y="170" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">可解釋、注入知識</text>
+  <text x="300" y="210" text-anchor="middle" font-size="11" fill="#64748b">trade-off：可解釋性 ↑ vs ELBO tightness ↓</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-17 diagram END == -->
+
+      <p>除了用 $\mathcal{N}(0,I)$ 作 prior，<strong>VAE 還可以加 prior regularization</strong>——在 ELBO 對 prior 加 penalty，鼓勵 $q(z\mid x)$ 匹配某個特定 prior $\mathbb{P}(z)$。</p>
+<p>常見 prior regularization 例子：</p>
+<ul>
+<li><strong>Geodesic priors</strong>：在流形上定義的 prior，鼓勵 latent 沿著資料的幾何流形分佈。</li>
+<li><strong>Optimal priors</strong>：根據資料特性動態學習最合適的 prior 形式。</li>
+<li><strong>Mixture of Gaussians</strong>：prior 本身是混合高斯，讓 latent 學到多模態分佈。</li>
+</ul>
+<p>為什麼要自訂 prior？</p>
+<ol>
+<li><strong>注入領域知識</strong>：如果資料有自然的群組結構（如細胞類型、語音 phoneme），可以設計 prior 鼓勵 latent 反映這個結構。</li>
+<li><strong>提升可解釋性</strong>：簡單/結構化的 prior 讓 latent 軸有可詮釋的意義。</li>
+<li><strong>改善生成品質</strong>：適合資料分佈的 prior 讓採樣更合理。</li>
+</ol>
+<p>但加 prior regularization 也可能<strong>犧牲 ELBO 的 tightness</strong>（KL 項不再精確對應 $D_{\text{KL}}(q\|\mathbb{P}(z\mid x,\theta))$）。這是 trade-off。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-17" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Prior regularization — 注入領域知識</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> VAE 用 prior regularization 的目的？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">加速訓練</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">注入領域知識、提升可解釋性、改善生成</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">取代 KL 項</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">避免 backprop</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp18" data-kp="18">
+  <header class="card-head">
+    <span class="badge">3.3</span>
+    <h2 class="card-title">Reparameterization trick</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-18 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-18">
+  <img src="assets/diagram-kp18-reparam-grad.png" alt="kp-18 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-18" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸是 latent z（-3 到 3），y 軸是密度 0–0.5。teal 直方圖（10000 樣本，透明度 0.4）疊加藍色理論高斯曲線 N(0.5, 0.64)。三條紅色虛線標 μ=0.5、μ-σ≈-0.3、μ+σ≈1.3。
+WHY: 凸顯 reparameterization 採樣 = 理論高斯，驗證數值正確性。
+MUST show: (1) 直方圖（teal 半透明）；(2) 理論曲線（藍實線）；(3) 三個統計量虛線（μ、μ±σ）；(4) 圖例。
+AVOID: 不要只有直方圖沒有曲線、不要省略統計量標記。
+STYLE: clean scientific plot, 標題「Reparameterization：採樣分佈 = 理論高斯」。</pre>
+  </details>
+<!-- == Phase C kp-18 demo == -->
+<div class="demo" id="demo-kp18" data-demo-id="kp-18">
+  <h4>互動 demo：Reparameterization 驗證：採樣分佈 = 理論高斯</h4>
+  <div class="demo-theory"><p>採樣 $z = \mu + \sigma\cdot\epsilon$，$\epsilon\sim\mathcal{N}(0,1)$ 應服從 $\mathcal{N}(\mu,\sigma^2)$。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $\mu$、$\sigma$ 滑桿，採樣 3000 個點。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>直方圖（teal）與理論高斯曲線（藍）高度吻合。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$\mu=0.5, \sigma=0.8$：採樣平均 ≈ 0.5、標準差 ≈ 0.8。</div>
+  <div class="demo-controls"><label>$\mu$：<input type="range" id="d18-mu" min="-2" max="2" step="0.1" value="0.5"></label><span class="demo-val" id="d18-mu-val"></span><label style="margin-left:12px">$\sigma$：<input type="range" id="d18-sig" min="0.3" max="1.5" step="0.05" value="0.8"></label><span class="demo-val" id="d18-sig-val"></span><div class="demo-readout-inline" id="d18-out-inline"></div></div>
+  <canvas id="d18-canvas" width="500" height="200" aria-label="Reparameterization 驗證：採樣分佈 = 理論高斯 互動圖"></canvas>
+  <div class="demo-readout" id="d18-out"></div>
+</div>
+<!-- == Phase C kp-18 demo END == -->
+</div>
+<!-- == Phase B kp-18 diagram END == -->
+
+      <p>採樣操作在 backprop 中<strong>不可微</strong>：$\frac{\partial z}{\partial\mu}$ 不存在（因為 $z$ 是隨機抽的）。這阻礙了 VAE 端到端訓練。</p>
+<p><strong>reparameterization trick</strong>（Kingma & Welling 2014）：把 $z$ 寫成 $\mu$、$\sigma$ 的<strong>確定性函數</strong>，加上<strong>外部隨機變數</strong> $\epsilon$：</p>
+<p>$$z = g(\epsilon, x, \theta_e) = \mu_{z\mid x}(x,\theta_e) + \sigma_{z\mid x}(x,\theta_e) \odot \epsilon, \quad \epsilon\sim\mathcal{N}(0,I)$$</p>
+<p>現在梯度可流：</p>
+<p>$$\frac{\partial z}{\partial\mu_{z\mid x}} = 1, \quad \frac{\partial z}{\partial\sigma_{z\mid x}} = \epsilon$$</p>
+<p>ELBO 期望改寫為：</p>
+<p>$$\mathbb{E}_{q(z\mid x)}[f(z)] = \mathbb{E}_{\epsilon\sim\mathcal{N}(0,I)}[f(g(\epsilon,x,\theta_e))]$$</p>
+<p><strong>為什麼重要？</strong> 採樣的隨機性被「轉嫁」到 $\epsilon$（不依賴 $\mu,\sigma$），所以 $z$ 對 encoder 參數變成可微。整個 ELBO 的 Monte Carlo 估計變成可微，可以用 backprop 訓練。</p>
+<p>推廣：<strong>任何可重參數化的分佈</strong>（高斯、Logistic、Gamma via location-scale）都能用同樣技巧。對<strong>離散分佈</strong>（如 Bernoulli、Categorical）採樣不可微——需要 Gumbel-Softmax、REINFORCE 等替代。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-18" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Reparameterization trick — 讓採樣可微</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> reparameterization trick 為何對 backprop 重要？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">加速採樣</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">把隨機性轉到 $\epsilon$，讓 $z=\mu+\sigma\epsilon$ 對 $\mu,\sigma$ 可微</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">減少參數量</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">避免 KL</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp19" data-kp="19">
+  <header class="card-head">
+    <span class="badge">3.4</span>
+    <h2 class="card-title">用 backpropagation 訓練</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-19 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-19-svg">
+  <svg class="inline-svg" viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr12e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/>
+    </marker>
+  </defs>
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">VAE 整體 backprop 訓練</text>
+  <text x="300" y="50" text-anchor="middle" font-size="12" fill="#0f172a">$\theta = \{\theta_e, \theta_d\}$（encoder + decoder 一起訓練）</text>
+  <rect x="40" y="80" width="120" height="40" rx="6" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="100" y="105" text-anchor="middle" font-size="11" fill="#1e40af">mini-batch $b$</text>
+  <rect x="180" y="80" width="100" height="40" rx="6" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="230" y="105" text-anchor="middle" font-size="11" fill="#92400e">Encoder</text>
+  <rect x="300" y="80" width="100" height="40" rx="6" fill="#ddd6fe" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="350" y="105" text-anchor="middle" font-size="11" fill="#5b21b6">$z=\mu+\sigma\epsilon$</text>
+  <rect x="420" y="80" width="100" height="40" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="470" y="105" text-anchor="middle" font-size="11" fill="#166534">Decoder</text>
+  <line x1="160" y1="100" x2="178" y2="100" stroke="#0f766e" stroke-width="1.5" marker-end="url(#arr12e)"/>
+  <line x1="280" y1="100" x2="298" y2="100" stroke="#0f766e" stroke-width="1.5" marker-end="url(#arr12e)"/>
+  <line x1="400" y1="100" x2="418" y2="100" stroke="#0f766e" stroke-width="1.5" marker-end="url(#arr12e)"/>
+  <text x="300" y="160" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">loss = MSE($\hat x, x$) + $\beta\cdot D_{KL}(q(z|x)\|p(z))$</text>
+  <text x="300" y="190" text-anchor="middle" font-size="12" fill="#0f172a">$\theta^{(t)} \leftarrow \theta^{(t-1)} - \eta\frac{\partial\text{loss}}{\partial\theta}$</text>
+  <text x="300" y="220" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">整個計算圖端到端可微</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-19 diagram END == -->
+
+      <p>實務上 VAE 不用交替 E/M，而用<strong>整體 backpropagation</strong>：把 encoder、reparameterization、decoder 串成一個可微計算圖，一次梯度下降更新所有參數。</p>
+<p>把所有參數 $\theta=\{\theta_e,\theta_d\}$ 一起訓練：</p>
+<p>$$\theta^{(t)} := \theta^{(t-1)} - \eta\frac{\partial\sum_{i=1}^b\left[-\tilde{\mathcal{L}}(\theta,\boldsymbol{x}_i)\right]}{\partial\theta}$$</p>
+<p>注意：<strong>最小化 $-\tilde{\mathcal{L}}$ = 最大化 ELBO</strong>。Loss = $-\tilde{\mathcal{L}}$ 包含兩項：</p>
+<ol>
+<li><strong>Reconstruction loss</strong>：$\|\hat{\boldsymbol{x}}_i - \boldsymbol{x}_i\|^2$（高斯 decoder）或 $-\log\mathbb{P}(\boldsymbol{x}_i\mid z_i)$（一般）。</li>
+<li><strong>KL loss</strong>：$D_{\text{KL}}(q(z\mid x)\|p(z))$（高斯先驗時有解析式）。</li>
+</ol>
+<p>實務 loss 寫法：</p>
+<p>$$\text{loss} = \text{MSE}(\hat{\boldsymbol{x}}_i, \boldsymbol{x}_i) + \beta\cdot D_{\text{KL}}(q(z\mid x)\|p(z))$$</p>
+<p>其中 $\beta$ 是「KL 權重」（$\beta$-VAE 概念），控制 reconstruction vs regularization 的權衡。</p>
+<p>訓練流程：</p>
+<ol>
+<li>Mini-batch 取 $b$ 筆 $\boldsymbol{x}_i$。</li>
+<li>Encoder 算 $\mu_{z\mid x},\sigma_{z\mid x}$。</li>
+<li>Reparameterization 抽 $z=\mu+\sigma\odot\epsilon$。</li>
+<li>Decoder 算 $\hat{\boldsymbol{x}}_i$。</li>
+<li>算 loss = MSE + $\beta\cdot$ KL。</li>
+<li>backprop 算 $\partial\text{loss}/\partial\theta$，更新 $\theta$。</li>
+</ol>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-19" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：用 backpropagation 訓練 VAE</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> VAE 整體 backprop 訓練時，loss 包含？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">只有 reconstruction</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">Reconstruction + $\beta\cdot$KL</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">只有 KL</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">reconstruction + entropy</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp20" data-kp="20">
+  <header class="card-head">
+    <span class="badge">3.5</span>
+    <h2 class="card-title">測試階段：採樣 vs 重建</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-20 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-20-svg">
+  <svg class="inline-svg" viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">VAE 測試階段兩種用法</text>
+  <rect x="40" y="50" width="240" height="160" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="160" y="78" text-anchor="middle" font-size="14" font-weight="700" fill="#1e40af">① 重建</text>
+  <text x="160" y="110" text-anchor="middle" font-size="11" fill="#0f172a">1. 輸入 $x_i$</text>
+  <text x="160" y="130" text-anchor="middle" font-size="11" fill="#0f172a">2. Encoder $\to z_i$</text>
+  <text x="160" y="150" text-anchor="middle" font-size="11" fill="#0f172a">3. Decoder $\to \hat x_i$</text>
+  <text x="160" y="175" text-anchor="middle" font-size="11" fill="#0f172a">4. 比較 $\hat x_i$ vs $x_i$</text>
+  <text x="160" y="200" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">用途：去噪、異常偵測</text>
+  <rect x="320" y="50" width="240" height="160" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="440" y="78" text-anchor="middle" font-size="14" font-weight="700" fill="#166534">② 生成</text>
+  <text x="440" y="110" text-anchor="middle" font-size="11" fill="#0f172a">1. 抽 $z\sim\mathcal{N}(0,I)$</text>
+  <text x="440" y="130" text-anchor="middle" font-size="11" fill="#0f172a">2. Decoder $\to \hat x_{new}$</text>
+  <text x="440" y="155" text-anchor="middle" font-size="11" fill="#0f172a">不用 encoder！</text>
+  <text x="440" y="200" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">用途：資料生成</text>
+  <text x="300" y="228" text-anchor="middle" font-size="11" fill="#64748b">KL 項讓 prior 抽的 $z$ 「像」encoder 抽的 $z$</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-20 diagram END == -->
+
+      <p>VAE 測試階段有兩種用法：</p>
+<p><strong>1. 重建（reconstruction）</strong>：</p>
+<ol>
+<li>輸入測試資料 $\boldsymbol{x}_i$。</li>
+<li>Encoder 算 $q(z_i\mid\boldsymbol{x}_i)$。</li>
+<li>採樣 $z_i\sim q(z_i\mid\boldsymbol{x}_i)$。</li>
+<li>Decoder 重建 $\hat{\boldsymbol{x}}_i$。</li>
+<li>比較 $\hat{\boldsymbol{x}}_i$ 與 $\boldsymbol{x}_i$（用 MSE、SSIM 等）。</li>
+</ol>
+<p>用途：去噪、壓縮、異常偵測（reconstruction error 大的視為異常）。</p>
+<p><strong>2. 生成（generation）</strong>：</p>
+<ol>
+<li>從 prior $p(z)=\mathcal{N}(0,I)$ <strong>直接抽樣</strong> $z_i$（不用 encoder）。</li>
+<li>Decoder 輸出 $\hat{\boldsymbol{x}}_i$。</li>
+</ol>
+<p>這是 VAE 的<strong>生成能力</strong>：<strong>沒看過的真實 latent $z$，decoder 仍能生成合理 $\hat{\boldsymbol{x}}$</strong>。原因是訓練時 KL 項把 $q(z\mid x)$ 拉向 prior $p(z)$，所以從 prior 抽的 $z$「看起來像」encoder 會抽出的 $z$。</p>
+<p>直覺：</p>
+<ul>
+<li>重建 = 對已知 $x$ 的「翻譯」。</li>
+<li>生成 = 從 latent 隨機樣本出發，「想像」一個新 $x$。</li>
+</ul>
+<p>VAE 的圖像品質<strong>通常模糊</strong>（vs GANs）——原因：Gaussian decoder 假設 + ELBO 下界 + 隨機性。三件事疊加讓模型傾向輸出平均。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-20" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：測試階段 — 採樣 vs 重建</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> VAE 的「生成」階段如何取 latent $z$？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">用 encoder 從測試 $\boldsymbol{x}$ 取</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">直接從 prior $p(z)=\mathcal{N}(0,I)$ 抽樣</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">用 K-means 聚類 $z$</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">用 PCA 取 $z$</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp21" data-kp="21">
+  <header class="card-head">
+    <span class="badge">3.6</span>
+    <h2 class="card-title">其他 VAE 變體</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-21 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-21-svg">
+  <svg class="inline-svg" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">VAE 變體（解模糊問題）</text>
+  <rect x="40" y="55" width="160" height="140" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="120" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">β-VAE</text>
+  <text x="120" y="105" text-anchor="middle" font-size="11" fill="#0f172a">loss + $\beta\cdot$KL</text>
+  <text x="120" y="130" text-anchor="middle" font-size="11" fill="#0f172a">$\beta>1$ 強壓縮</text>
+  <text x="120" y="160" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">disentangled latent</text>
+  <rect x="220" y="55" width="160" height="140" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="300" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#1e40af">Hierarchical</text>
+  <text x="300" y="105" text-anchor="middle" font-size="11" fill="#0f172a">多層 latent</text>
+  <text x="300" y="130" text-anchor="middle" font-size="11" fill="#0f172a">$z_1\to z_2\to z_3$</text>
+  <text x="300" y="160" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">多尺度特徵</text>
+  <rect x="400" y="55" width="160" height="140" rx="10" fill="#ddd6fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="480" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#5b21b6">VAE-GAN</text>
+  <text x="480" y="105" text-anchor="middle" font-size="11" fill="#0f172a">用 GAN discriminator</text>
+  <text x="480" y="130" text-anchor="middle" font-size="11" fill="#0f172a">取代 MSE loss</text>
+  <text x="480" y="160" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">影像更銳利</text>
+  <text x="300" y="210" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">共同動機：解決 VAE 影像模糊</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-21 diagram END == -->
+
+      <p>標準 VAE 在圖像生成上有<strong>模糊</strong>的問題——原因是 Gaussian decoder 的 mean-squared-error loss、ELBO 的下界特性、隨機性三件事疊加。</p>
+<p>為了解決模糊問題，衍生出多個變體：</p>
+<ol>
+<li><strong>β-VAE</strong>：在 ELBO 對 KL 項加權 $\beta$，$\beta>1$ 鼓勵更強的 latent compression，產生更 disentangled 的 latent。</li>
+<li><strong>Hierarchical VAE</strong>：多層 latent（latent of latent），捕捉不同尺度的特徵。</li>
+<li><strong>Adversarial VAE / VAE-GAN</strong>：用 GAN 的 discriminator 取代 MSE loss，可生成更銳利的影像。</li>
+<li><strong>VQ-VAE</strong>：latent 是離散的（從 codebook 選），用於音訊、影像。</li>
+<li><strong>Conditional VAE (CVAE)</strong>：latent 條件化於 label，支援 conditional generation。</li>
+</ol>
+<p>現代影像生成主流：<strong>diffusion models（Chap. 15）</strong> 和 <strong>autoregressive transformers（Chap. 9）</strong>。VAE 在以下場景仍有價值：</p>
+<ol>
+<li><strong>異常偵測</strong>：reconstruction error 訊號。</li>
+<li><strong>半監督學習</strong>：CVAE 用 label-conditioned latent。</li>
+<li><strong>科學建模</strong>：物理/化學資料的低維 latent。</li>
+<li><strong>語音合成</strong>：VQ-VAE 用於音訊 codec。</li>
+</ol>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-21" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：其他 VAE 變體</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> VAE 在圖像生成上為何模糊？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">訓練資料太少</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">Gaussian decoder + ELBO 下界 + 隨機採樣三因素疊加</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">網路太深</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">KL 權重過低</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp22" data-kp="22">
+  <header class="card-head">
+    <span class="badge">4</span>
+    <h2 class="card-title">結論：VAE 的優缺與後續</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-22 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-22-svg">
+  <svg class="inline-svg" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">VAE：機率深度學習的代表作</text>
+  <rect x="40" y="50" width="160" height="140" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="120" y="78" text-anchor="middle" font-size="13" font-weight="700" fill="#166534">優點</text>
+  <text x="120" y="110" text-anchor="middle" font-size="11" fill="#0f172a">● 原則性貝氏基礎</text>
+  <text x="120" y="130" text-anchor="middle" font-size="11" fill="#0f172a">● 可解釋 latent</text>
+  <text x="120" y="155" text-anchor="middle" font-size="11" fill="#0f172a">● 端到端可微</text>
+  <text x="120" y="175" text-anchor="middle" font-size="11" fill="#0f172a">● 應用：異常偵測</text>
+  <rect x="220" y="50" width="160" height="140" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+  <text x="300" y="78" text-anchor="middle" font-size="13" font-weight="700" fill="#991b1b">限制</text>
+  <text x="300" y="110" text-anchor="middle" font-size="11" fill="#0f172a">● 影像模糊</text>
+  <text x="300" y="130" text-anchor="middle" font-size="11" fill="#0f172a">● ELBO 是下界</text>
+  <text x="300" y="155" text-anchor="middle" font-size="11" fill="#0f172a">● 維度需預設</text>
+  <text x="300" y="175" text-anchor="middle" font-size="11" fill="#0f172a">● 不如 diffusion / AR</text>
+  <rect x="400" y="50" width="160" height="140" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="480" y="78" text-anchor="middle" font-size="13" font-weight="700" fill="#1e40af">後續</text>
+  <text x="480" y="110" text-anchor="middle" font-size="11" fill="#0f172a">● Diffusion (Chap.15)</text>
+  <text x="480" y="130" text-anchor="middle" font-size="11" fill="#0f172a">● AR Transformer</text>
+  <text x="480" y="155" text-anchor="middle" font-size="11" fill="#0f172a">● Latent diffusion</text>
+  <text x="480" y="175" text-anchor="middle" font-size="11" fill="#0f172a">● 仍活躍於科學領域</text>
+  <text x="300" y="210" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">「機率生成」思想仍影響現代生成模型</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-22 diagram END == -->
+
+      <p>VAE 是「<strong>機率深度學習</strong>」的代表作——把貝氏推論、神經網路、資訊壓縮三件事織在一起。</p>
+<p><strong>VAE 的核心優點</strong>：</p>
+<ol>
+<li><strong>原則性的貝氏基礎</strong>：ELBO 是 log-likelihood 的下界，有清楚的機率詮釋。</li>
+<li><strong>可解釋的 latent space</strong>：KL 項把 $q$ 拉向 prior，讓 latent 軸有可分析的結構。</li>
+<li><strong>靈活的應用</strong>：異常偵測、半監督、生成、壓縮、科學建模。</li>
+<li><strong>端到端可微</strong>：reparameterization trick + backprop，整個模型可聯合訓練。</li>
+</ol>
+<p><strong>VAE 的限制</strong>：</p>
+<ol>
+<li><strong>生成品質不如 GANs / diffusion / autoregressive</strong>（影像模糊）。</li>
+<li><strong>ELBO 是下界</strong>，不是真正 log-likelihood——最佳化 ELBO 不保證最佳化生成分佈。</li>
+<li><strong>latent 維度需預設</strong>，不易動態調整。</li>
+</ol>
+<p><strong>實作上的成功應用</strong>：</p>
+<ol>
+<li>異常偵測（reconstruction error 訊號）。</li>
+<li>半監督分類（CVAE + label）。</li>
+<li>語音合成（VQ-VAE 用於 SoundStream、MusicGen）。</li>
+<li>科學資料的 latent 表徵（蛋白質、藥物）。</li>
+</ol>
+<p>VAE 在 2014-2018 是影像生成主流；2018 以後被 GAN 追平，2020 以後被 diffusion / autoregressive 超越。但 VAE 的「<strong>機率生成</strong>」思想仍是現代生成模型的基礎——latent diffusion 就是用 VAE 編解碼影像再在 latent 上做 diffusion。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-22" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：結論 — VAE 的優缺與後續</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> VAE 在 2020 以後被什麼取代了影像生成的主流地位？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">更深的網路</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">Diffusion models 與 autoregressive transformers</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">強化學習</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">支持向量機</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+</main>
+</div>
+<div id="guide-modal" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="guide-title">教授祕笈</h3>
+      <button class="modal-close" type="button" aria-label="關閉">×</button>
+    </div>
+    <div class="modal-body"></div>
+  </div>
+</div>
+<!-- __GUIDES__ -->
+<script>
+
+(function(){
+  // Render math (idempotent thanks to ignoredClasses)
+  window.renderMath = function(){
+    if (window.renderMathInElement) {
+      try { renderMathInElement(document.body, {ignoredClasses:['katex'], delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]}); } catch(e){ console.error('renderMath err', e); }
+    }
+  };
+
+  // Card collapse toggle
+  document.querySelectorAll('.card-head .toggle').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const card = e.target.closest('.card');
+      card.classList.toggle('collapsed');
+      btn.textContent = card.classList.contains('collapsed') ? '+' : '−';
+      btn.setAttribute('aria-expanded', String(!card.classList.contains('collapsed')));
+      // Re-render math in case newly visible
+      if (!card.classList.contains('collapsed')) window.renderMath();
+    });
+  });
+
+  // Quiz check
+  document.querySelectorAll('.quiz').forEach(quiz=>{
+    const btn = quiz.querySelector('.quiz-check');
+    const fb = quiz.querySelector('.quiz-feedback');
+    btn.addEventListener('click', ()=>{
+      const checked = quiz.querySelector('input[type=radio]:checked');
+      if (!checked) { fb.textContent = '請先選一個選項。'; fb.className='quiz-feedback err'; return; }
+      const correct = checked.dataset.correct === '1';
+      fb.textContent = correct ? '✅ 答對了！' : '❌ 再想想，繼續看下一個知識點。';
+      fb.className = 'quiz-feedback ' + (correct ? 'ok' : 'err');
+      if (correct) updateProgress();
+    });
+  });
+
+  // Progress (any quiz answered = "completed")
+  function updateProgress(){
+    const total = document.querySelectorAll('.quiz').length;
+    const done = Array.from(document.querySelectorAll('.quiz-feedback.ok')).length;
+    const pct = total ? Math.round(done*100/total) : 0;
+    const bar = document.querySelector('#progress-bar .bar');
+    const txt = document.querySelector('#progress-text');
+    if (bar) bar.style.width = pct+'%';
+    if (txt) txt.textContent = '進度 '+pct+'%';
+  }
+  // expose for demo/guide integration
+  window.updateProgress = updateProgress;
+  updateProgress();
+
+  // Guide modal open/close (Phase D will populate content)
+  document.addEventListener('click', e=>{
+    const btn = e.target.closest('.guide-btn');
+    if (btn) { openGuide(btn.dataset.guide); return; }
+    if (e.target.id === 'guide-modal' || e.target.classList.contains('modal-close')) {
+      closeGuide();
+    }
+  });
+  document.addEventListener('keydown', e=>{ if (e.key === 'Escape') closeGuide(); });
+
+  function openGuide(kpId){
+    const modal = document.getElementById('guide-modal');
+    const body = modal.querySelector('.modal-body');
+    const head = modal.querySelector('.modal-head h3');
+    const src = document.getElementById('guide-content-'+kpId);
+    if (!src) { console.warn('No guide for', kpId); return; }
+    head.textContent = src.dataset.title || ('教授祕笈：kp-'+kpId);
+    body.innerHTML = src.innerHTML;
+    modal.classList.add('open');
+    if (window.renderMathInElement) {
+      try { renderMathInElement(body, {ignoredClasses:['katex'], delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]}); } catch(e){}
+    }
+  }
+  function closeGuide(){
+    const modal = document.getElementById('guide-modal');
+    if (modal) modal.classList.remove('open');
+  }
+  window.openGuide = openGuide;
+  window.closeGuide = closeGuide;
+
+  // Initial render
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.renderMath);
+  } else {
+    window.renderMath();
+  }
+})();
+
+</script>
+<!-- __DEMOS_JS__ -->
+<script>
+  /*
+IDL_115 Ch12 — Phase C 互動 demo 集合（9 個）。
+每個 demo 為 initXxx() 函式，掛在 initDemos() 下。
+所有 demo 用 vanilla JS + canvas/SVG，零外部依賴。
+公式採閉式（含 KaTeX 渲染於靜態面板）。
+Canvas 文字用 Unicode（μ, σ, ε, ², ₁ ...）。
+JS 字串中的 LaTeX 反斜線一律雙寫（\\）。
+*/
+(function(){
+  function $(s, root=document){ return root.querySelector(s); }
+  function $$(s, root=document){ return Array.from(root.querySelectorAll(s)); }
+  function txt(el, s){ if (el) el.textContent = s; }
+  function clearCanvas(c){ if (!c) return; const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); }
+
+  // ============================================================
+  // kp 3 — ELBO 視覺化：log p 與 ELBO 的差距
+  // ============================================================
+  window.initDemoKp3 = function(){
+    const root = $('#demo-kp3'); if (!root) return;
+    const canvas = $('#d3-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d3-out', root);
+    const outEp = $('#d3-ep', root);
+    function draw(){
+      clearCanvas(canvas); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      // 軸
+      const x0 = 40, y0 = H-30;
+      ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x0, 20); ctx.lineTo(x0, y0); ctx.lineTo(W-20, y0); ctx.stroke();
+      // log p（水平線，y=0.2*H）
+      const yLp = 40;
+      ctx.strokeStyle = '#16a34a'; ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.moveTo(x0, yLp); ctx.lineTo(W-20, yLp); ctx.stroke();
+      ctx.fillStyle = '#16a34a'; ctx.font = '11px sans-serif';
+      ctx.fillText('log p(x|θ)', W-80, yLp-4);
+      // ELBO 曲線：隨 KL 增加而遞減
+      ctx.strokeStyle = '#0d9488'; ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      const xs = [];
+      for (let i=0;i<200;i++) xs.push(i*0.025);
+      xs.forEach((kl,i)=>{
+        const x = x0 + i*(W-x0-30)/200;
+        const y = yLp + Math.min(y0-yLp, kl*70);
+        i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      });
+      ctx.stroke();
+      // 差距區填色
+      const grad = ctx.createLinearGradient(0, yLp, 0, y0);
+      grad.addColorStop(0, 'rgba(13,148,136,0.25)');
+      grad.addColorStop(1, 'rgba(13,148,136,0.05)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(x0, yLp);
+      xs.forEach((kl,i)=>{
+        const x = x0 + i*(W-x0-30)/200;
+        const y = yLp + Math.min(y0-yLp, kl*70);
+        ctx.lineTo(x, y);
+      });
+      ctx.lineTo(x0+(W-x0-30), yLp);
+      ctx.closePath(); ctx.fill();
+      // 等號點 KL=0
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath(); ctx.arc(x0, yLp, 6, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#dc2626'; ctx.font = '10px sans-serif';
+      ctx.fillText('KL=0: ELBO = log p', x0+10, yLp+15);
+      // 標籤
+      ctx.fillStyle = '#0d9488'; ctx.fillText('ELBO', 50, yLp+Math.min(y0-yLp, 1.0*70)+4);
+      ctx.fillStyle = '#000'; ctx.font = '10px sans-serif';
+      ctx.fillText('D_KL(q||p(z|x))', W-130, y0+15);
+      // readout
+      const klSample = 0.7;
+      const elbo = -klSample;
+      txt(out, `在 D_KL = ${klSample} 時，ELBO = log p - ${klSample.toFixed(2)} = ${elbo.toFixed(2)}`);
+      txt(outEp, `log p = 0, ELBO = ${elbo.toFixed(2)}（差距 = ${klSample}）`);
+    }
+    draw();
+  };
+
+  // ============================================================
+  // kp 4 — EM 演算法收斂
+  // ============================================================
+  window.initDemoKp4 = function(){
+    const root = $('#demo-kp4'); if (!root) return;
+    const stepsSlider = $('#d4-steps', root);
+    const stepsVal = $('#d4-steps-val', root);
+    const canvas = $('#d4-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d4-out', root);
+    function draw(){
+      const nSteps = parseInt(stepsSlider.value,10);
+      txt(stepsVal, nSteps);
+      clearCanvas(canvas); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      // 真實 log p（水平線，漸近）
+      const x0=40, y0=H-30;
+      ctx.strokeStyle = '#94a3b8'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(x0,20); ctx.lineTo(x0,y0); ctx.lineTo(W-20,y0); ctx.stroke();
+      const yLpMax = 35;
+      ctx.strokeStyle = '#dc2626'; ctx.setLineDash([3,3]); ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.moveTo(x0, yLpMax); ctx.lineTo(W-20, yLpMax); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#dc2626'; ctx.font='10px sans-serif'; ctx.fillText('log p*', W-50, yLpMax-4);
+      // ELBO 曲線
+      const trueLl = 1.0;
+      const elboCurve = [];
+      for (let i=0;i<=nSteps;i++) {
+        elboCurve.push(trueLl * (1 - Math.exp(-i/5)) + 0.05*Math.exp(-i/3));
+      }
+      ctx.strokeStyle = '#0d9488'; ctx.lineWidth=2.6;
+      ctx.beginPath();
+      elboCurve.forEach((v,i)=>{
+        const x = x0 + i*(W-x0-20)/30;
+        const y = y0 - (v/trueLl)*(y0-yLpMax);
+        i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      });
+      ctx.stroke();
+      // 當前點
+      const curI = Math.min(nSteps, 29);
+      const curV = elboCurve[curI];
+      const curX = x0 + curI*(W-x0-20)/30;
+      const curY = y0 - (curV/trueLl)*(y0-yLpMax);
+      ctx.fillStyle = '#0d9488'; ctx.beginPath(); ctx.arc(curX, curY, 6, 0, Math.PI*2); ctx.fill();
+      // 標籤
+      ctx.fillStyle = '#0d9488'; ctx.font='10px sans-serif'; ctx.fillText('ELBO', 50, 100);
+      txt(out, `第 ${nSteps} 步：ELBO = ${curV.toFixed(3)}（漸近線 log p* = ${trueLl}）`);
+    }
+    stepsSlider.addEventListener('input', draw);
+    draw();
+  };
+
+  // ============================================================
+  // kp 6 — 變分 EM：q 反覆更新接近後驗
+  // ============================================================
+  window.initDemoKp6 = function(){
+    const root = $('#demo-kp6'); if (!root) return;
+    const tSlider = $('#d6-t', root);
+    const tVal = $('#d6-t-val', root);
+    const canvas = $('#d6-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d6-out', root);
+    function gaussian(x, mu, sig){
+      return Math.exp(-1*((x-mu)**2)/(2*sig**2))/(sig*Math.sqrt(2*Math.PI));
+    }
+    function draw(){
+      const t = parseInt(tSlider.value,10);
+      txt(tVal, t);
+      clearCanvas(canvas); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      const x0=30, y0=H-30;
+      // 真後驗 N(0.5, 0.5)
+      const xs=[]; for(let i=0;i<200;i++) xs.push(-4+i*8/200);
+      // 迭代軌跡
+      const traj = [
+        {mu:-1.5, sig:1.0},  // t=0
+        {mu:-0.5, sig:0.7},  // t=1
+        {mu:0,    sig:0.55}, // t=2
+        {mu:0.3,  sig:0.52},// t=3
+        {mu:0.45, sig:0.51},// t=4
+        {mu:0.5,  sig:0.5}, // t=∞
+      ];
+      const colors = ['#94a3b8','#64748b','#0891b2','#0d9488','#16a34a','#dc2626'];
+      const labels = ['q⁰','q¹','q²','q³','q⁴','q*=p(z|x)'];
+      traj.forEach((q,i)=>{
+        const pdf = xs.map(x=>gaussian(x,q.mu,q.sig));
+        const maxP = gaussian(q.mu, q.mu, q.sig);
+        ctx.strokeStyle = colors[i]; ctx.lineWidth = i===traj.length-1?2.6:1.6;
+        ctx.beginPath();
+        pdf.forEach((p,j)=>{
+          const x=x0+j*(W-x0-20)/200, y=y0-p/maxP*180;
+          j?ctx.lineTo(x,y):ctx.moveTo(x,y);
+        });
+        ctx.stroke();
+        if (i<=t) {
+          // 標籤
+          ctx.fillStyle = colors[i]; ctx.font='10px sans-serif';
+          ctx.fillText(labels[i], x0+5+i*60, y0-180*0.95);
+        }
+      });
+      txt(out, `第 ${t} 步：q 的中心 ${traj[t].mu.toFixed(2)}, 寬度 ${traj[t].sig.toFixed(2)}（接近真後驗 μ=0.5, σ=0.5）`);
+    }
+    tSlider.addEventListener('input', draw);
+    draw();
+  };
+
+  // ============================================================
+  // kp 9 — Encoder 多元高斯
+  // ============================================================
+  window.initDemoKp9 = function(){
+    const root = $('#demo-kp9'); if (!root) return;
+    const pSlider = $('#d9-p', root);
+    const pVal = $('#d9-p-val', root);
+    const canvas = $('#d9-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d9-out', root);
+    function draw(){
+      const p = parseInt(pSlider.value,10);
+      txt(pVal, p);
+      clearCanvas(canvas); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      // 對角矩陣示意
+      const cell = 24;
+      const x0 = (W - p*cell)/2, y0 = 30;
+      for (let i=0;i<p;i++) {
+        for (let j=0;j<p;j++) {
+          ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5;
+          if (i===j) {
+            ctx.fillStyle = '#0d9488'; ctx.fillRect(x0+j*cell, y0+i*cell, cell-1, cell-1);
+            ctx.fillStyle = '#fff'; ctx.font='bold 10px sans-serif';
+            ctx.fillText('σ', x0+j*cell+7, y0+i*cell+15);
+          } else {
+            ctx.strokeRect(x0+j*cell, y0+i*cell, cell-1, cell-1);
+            ctx.fillStyle = '#e2e8f0'; ctx.font='8px sans-serif';
+            ctx.fillText('0', x0+j*cell+9, y0+i*cell+15);
+          }
+        }
+      }
+      // 標題
+      ctx.fillStyle = '#0f172a'; ctx.font='12px sans-serif';
+      ctx.fillText(`對角協方差 Σ = diag(σ₁², ..., σ${p}²)，共 ${p} 個參數`, 30, y0 + p*cell + 30);
+      txt(out, `p=${p} 維：對角 Σ 需要 ${p} 個神經元、O(p) 反矩陣計算（vs 完整共變異數要 p² 個）`);
+    }
+    pSlider.addEventListener('input', draw);
+    draw();
+  };
+
+  // ============================================================
+  // kp 10 — Reparameterization
+  // ============================================================
+  window.initDemoKp10 = function(){
+    const root = $('#demo-kp10'); if (!root) return;
+    const muSlider = $('#d10-mu', root);
+    const sigSlider = $('#d10-sig', root);
+    const muVal = $('#d10-mu-val', root);
+    const sigVal = $('#d10-sig-val', root);
+    const canvas = $('#d10-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d10-out', root);
+    function draw(){
+      const mu = parseFloat(muSlider.value);
+      const sig = parseFloat(sigSlider.value);
+      txt(muVal, mu.toFixed(2));
+      txt(sigVal, sig.toFixed(2));
+      clearCanvas(canvas); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      const x0=30, y0=H-30;
+      // 軸
+      ctx.strokeStyle = '#94a3b8'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(x0,20); ctx.lineTo(x0,y0); ctx.lineTo(W-20,y0); ctx.stroke();
+      // 高斯理論曲線
+      const xs=[]; for(let i=0;i<200;i++) xs.push(mu-4*sig+i*8*sig/200);
+      const pdf = xs.map(x => Math.exp(-1*((x-mu)**2)/(2*sig**2))/(sig*Math.sqrt(2*Math.PI)));
+      const maxP = 1/(sig*Math.sqrt(2*Math.PI));
+      ctx.strokeStyle = '#0d9488'; ctx.lineWidth=2.4;
+      ctx.beginPath();
+      pdf.forEach((p,i)=>{
+        const x=x0+i*(W-x0-20)/200, y=y0-p/maxP*200;
+        i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      });
+      ctx.stroke();
+      // 採樣點（用 mulberry32-ish）
+      let seed = 42;
+      function rand(){ seed = (seed*9301+49297) % 233280; return seed/233280; }
+      function randn(){
+        const u1=Math.max(rand(),1e-9), u2=rand();
+        return Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+      }
+      const samples = [];
+      for (let i=0;i<20;i++) {
+        // 兩種方式：直接採樣 / reparameterization
+        const eps = randn();
+        samples.push({direct: mu + sig*randn(), rep: mu + sig*eps, eps: eps});
+      }
+      // 畫兩種採樣點
+      samples.forEach(s=>{
+        const x1 = x0 + (s.direct - (mu-4*sig))/(8*sig) * (W-x0-20);
+        const x2 = x0 + (s.rep - (mu-4*sig))/(8*sig) * (W-x0-20);
+        ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.arc(x1, 60+rand()*30, 4, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#0d9488'; ctx.beginPath(); ctx.arc(x2, 100+rand()*30, 4, 0, Math.PI*2); ctx.fill();
+      });
+      // 標籤
+      ctx.fillStyle = '#dc2626'; ctx.font='10px sans-serif'; ctx.fillText('直接採樣 z~N(不可微)', 50, 50);
+      ctx.fillStyle = '#0d9488'; ctx.font='10px sans-serif'; ctx.fillText('z = μ+σ·ε (可微)', 50, 90);
+      txt(out, `μ=${mu.toFixed(2)}, σ=${sig.toFixed(2)}：reparameterization z = ${mu.toFixed(2)} + ${sig.toFixed(2)}·ε，ε ~ N(0,1)`);
+    }
+    [muSlider, sigSlider].forEach(s=>s.addEventListener('input', draw));
+    draw();
+  };
+
+  // ============================================================
+  // kp 13 — ELBO Type 1：Monte Carlo 估計
+  // ============================================================
+  window.initDemoKp13 = function(){
+    const root = $('#demo-kp13'); if (!root) return;
+    const ellSlider = $('#d13-ell', root);
+    const ellVal = $('#d13-ell-val', root);
+    const canvas = $('#d13-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d13-out', root);
+    let seed = 7;
+    function rand(){ seed = (seed*9301+49297) % 233280; return seed/233280; }
+    function randn(){
+      const u1=Math.max(rand(),1e-9), u2=rand();
+      return Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+    }
+    function draw(){
+      const ell = parseInt(ellSlider.value,10);
+      txt(ellVal, ell);
+      clearCanvas(canvas); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      const x0=40, y0=H-30;
+      // x 軸樣本數，y 軸估計值
+      const trueVal = 0.8;
+      // 多次試驗（不同 seed）算平均
+      const trials = [];
+      for (let t=0;t<5;t++) {
+        const lls=[1,3,10,30,100,300,1000,3000,10000];
+        const points = [];
+        lls.forEach(ll=>{
+          // 對數 x 軸映射
+          const logMin = Math.log(1), logMax = Math.log(10000);
+          const xLog = Math.log(Math.max(ll,1));
+          const xPix = x0 + (xLog-logMin)/(logMax-logMin) * (W-x0-30);
+          // 累積估計
+          let sum=0,sum2=0,n=0;
+          let s2=7+t*13; // 不同起始
+          for (let i=0;i<ll;i++) {
+            s2 = (s2*9301+49297) % 233280;
+            const r = s2/233280;
+            const u1=Math.max(r,1e-9), u2=(s2*7%233280)/233280;
+            const x = Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+            const v = trueVal + 0.3*x;
+            sum+=v; sum2+=v*v; n++;
+          }
+          const mean = sum/n;
+          const std = Math.sqrt((sum2/n - mean*mean)/n);
+          points.push({x:xPix, y:mean, std:std});
+        });
+        // 畫平均估計
+        ctx.strokeStyle = `hsl(${t*60}, 70%, 50%)`; ctx.lineWidth=1.2;
+        ctx.beginPath();
+        points.forEach((p,i)=>{ i?ctx.lineTo(p.x, p.y):ctx.moveTo(p.x, p.y); });
+        ctx.stroke();
+        // 誤差棒
+        ctx.strokeStyle = `hsl(${t*60}, 70%, 50%)`; ctx.lineWidth=1;
+        points.forEach(p=>{
+          ctx.beginPath(); ctx.moveTo(p.x, p.y-p.std*100); ctx.lineTo(p.x, p.y+p.std*100); ctx.stroke();
+        });
+      }
+      // 真值線
+      const yTrue = y0 - trueVal/2 * 100;
+      ctx.strokeStyle = '#dc2626'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+      ctx.beginPath(); ctx.moveTo(x0, yTrue); ctx.lineTo(W-20, yTrue); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#dc2626'; ctx.font='10px sans-serif';
+      ctx.fillText('真值 0.8', W-60, yTrue-4);
+      // x 軸標
+      ctx.fillStyle = '#000'; ctx.font='10px sans-serif';
+      ctx.fillText('1', x0+2, y0+12);
+      ctx.fillText('10', x0+70, y0+12);
+      ctx.fillText('100', x0+150, y0+12);
+      ctx.fillText('1000', x0+235, y0+12);
+      ctx.fillText('樣本數 ℓ (log scale)', W-100, y0+25);
+      txt(out, `用 ${ell} 個樣本估計 ELBO：誤差 ∝ 1/√ℓ（ℓ 越大越準）`);
+    }
+    ellSlider.addEventListener('input', draw);
+    draw();
+  };
+
+  // ============================================================
+  // kp 14 — ELBO Type 2：KL + Reconstruction
+  // ============================================================
+  window.initDemoKp14 = function(){
+    const root = $('#demo-kp14'); if (!root) return;
+    const betaSlider = $('#d14-beta', root);
+    const betaVal = $('#d14-beta-val', root);
+    const canvas = $('#d14-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d14-out', root);
+    function draw(){
+      const beta = parseFloat(betaSlider.value);
+      txt(betaVal, beta);
+      clearCanvas(canvas); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      const x0=40, y0=H-40;
+      // 兩條曲線 vs beta
+      const betas = []; for(let i=0;i<=50;i++) betas.push(0.1 + i*0.3);
+      // reconstruction loss（beta 大時 loss 大）
+      const recs = betas.map(b => 5 + 15*b);
+      // KL（固定）
+      const kls = betas.map(b => 12);
+      // ELBO = -rec - beta*KL
+      const elbos = betas.map((b,i) => -recs[i] - b*kls[i]);
+      // 繪製
+      ctx.strokeStyle = '#3b82f6'; ctx.lineWidth=2.2; ctx.beginPath();
+      recs.forEach((r,i)=>{ const x=x0+i*(W-x0-20)/50, y=y0-r*3; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      ctx.stroke();
+      ctx.strokeStyle = '#dc2626'; ctx.lineWidth=2.2; ctx.beginPath();
+      kls.forEach((r,i)=>{ const x=x0+i*(W-x0-20)/50, y=y0-r*3; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      ctx.stroke();
+      ctx.strokeStyle = '#0d9488'; ctx.lineWidth=2.6; ctx.setLineDash([4,3]); ctx.beginPath();
+      elbos.forEach((r,i)=>{ const x=x0+i*(W-x0-20)/50, y=y0-r*2; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // 當前點
+      const curX = x0 + ((beta-0.1)/0.3)*(W-x0-20)/50;
+      const curY = y0 - elbos[Math.round((beta-0.1)/0.3)]*2;
+      ctx.fillStyle = '#0d9488'; ctx.beginPath(); ctx.arc(curX, curY, 6, 0, Math.PI*2); ctx.fill();
+      // 標籤
+      ctx.fillStyle = '#3b82f6'; ctx.font='10px sans-serif'; ctx.fillText('recon loss', 50, 30);
+      ctx.fillStyle = '#dc2626'; ctx.font='10px sans-serif'; ctx.fillText('β·KL', 50, 50);
+      ctx.fillStyle = '#0d9488'; ctx.font='10px sans-serif'; ctx.fillText('-ELBO', 50, 70);
+      ctx.fillStyle = '#000'; ctx.font='10px sans-serif';
+      ctx.fillText('β', W-30, y0+12);
+      txt(out, `β=${beta}：loss = recon + ${beta}·KL = ${recs[Math.round((beta-0.1)/0.3)].toFixed(1)} + ${beta}·${kls[Math.round((beta-0.1)/0.3)].toFixed(1)} = ${(-elbos[Math.round((beta-0.1)/0.3)]).toFixed(1)}`);
+    }
+    betaSlider.addEventListener('input', draw);
+    draw();
+  };
+
+  // ============================================================
+  // kp 15 — Gaussian KL 解析式
+  // ============================================================
+  window.initDemoKp15 = function(){
+    const root = $('#demo-kp15'); if (!root) return;
+    const muSlider = $('#d15-mu', root);
+    const sigSlider = $('#d15-sig', root);
+    const muVal = $('#d15-mu-val', root);
+    const sigVal = $('#d15-sig-val', root);
+    const canvas = $('#d15-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d15-out', root);
+    function draw(){
+      const mu1 = parseFloat(muSlider.value);
+      const sig1 = parseFloat(sigSlider.value);
+      const mu2 = 0, sig2 = 1; // 固定 N(0,1)
+      txt(muVal, mu1.toFixed(2));
+      txt(sigVal, sig1.toFixed(2));
+      const kl = Math.log(sig2/sig1) + (sig1*sig1 + (mu1-mu2)**2)/(2*sig2*sig2) - 0.5;
+      clearCanvas(canvas); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      const x0=30, y0=H-30;
+      // 兩條高斯
+      const xs=[]; for(let i=0;i<200;i++) xs.push(mu1-3*Math.max(sig1,1)+i*6*Math.max(sig1,1)/200);
+      const p1 = xs.map(x => Math.exp(-1*((x-mu1)**2)/(2*sig1*sig1))/(sig1*Math.sqrt(2*Math.PI)));
+      const p2 = xs.map(x => Math.exp(-1*((x-mu2)**2)/(2*sig2*sig2))/(sig2*Math.sqrt(2*Math.PI)));
+      const maxP = Math.max(...p1, ...p2);
+      ctx.strokeStyle = '#3b82f6'; ctx.lineWidth=2.2; ctx.beginPath();
+      p1.forEach((p,i)=>{ const x=x0+i*(W-x0-20)/200, y=y0-p/maxP*180; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.stroke();
+      ctx.strokeStyle = '#16a34a'; ctx.lineWidth=2.2; ctx.beginPath();
+      p2.forEach((p,i)=>{ const x=x0+i*(W-x0-20)/200, y=y0-p/maxP*180; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.stroke();
+      // 標題
+      ctx.fillStyle = '#3b82f6'; ctx.font='10px sans-serif'; ctx.fillText(`p₁=N(${mu1.toFixed(1)}, ${sig1.toFixed(1)}²)`, 50, 30);
+      ctx.fillStyle = '#16a34a'; ctx.font='10px sans-serif'; ctx.fillText('p₂=N(0,1)', 50, 50);
+      txt(out, `D_KL(p₁||p₂) = log(${sig2}/${sig1.toFixed(2)}) + (${(sig1*sig1).toFixed(2)} + ${(mu1-mu2).toFixed(2)}²)/(2·${sig2}²) - 0.5 = ${kl.toFixed(4)}`);
+    }
+    [muSlider, sigSlider].forEach(s=>s.addEventListener('input', draw));
+    draw();
+  };
+
+  // ============================================================
+  // kp 18 — Reparameterization gradient flow
+  // ============================================================
+  window.initDemoKp18 = function(){
+    const root = $('#demo-kp18'); if (!root) return;
+    const muSlider = $('#d18-mu', root);
+    const sigSlider = $('#d18-sig', root);
+    const muVal = $('#d18-mu-val', root);
+    const sigVal = $('#d18-sig-val', root);
+    const canvas = $('#d18-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d18-out', root);
+    let seed = 17;
+    function rand(){ seed = (seed*9301+49297) % 233280; return seed/233280; }
+    function randn(){
+      const u1=Math.max(rand(),1e-9), u2=rand();
+      return Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+    }
+    function draw(){
+      const mu = parseFloat(muSlider.value);
+      const sig = parseFloat(sigSlider.value);
+      txt(muVal, mu.toFixed(2)); txt(sigVal, sig.toFixed(2));
+      // 採樣
+      const samples = []; for(let i=0;i<3000;i++) samples.push(mu + sig*randn());
+      clearCanvas(canvas); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      const x0=30, y0=H-30;
+      // x 軸範圍
+      const xMin = mu - 4*sig, xMax = mu + 4*sig;
+      // 理論曲線
+      const xs=[]; for(let i=0;i<200;i++) xs.push(xMin+i*(xMax-xMin)/200);
+      const pdf = xs.map(x => Math.exp(-1*((x-mu)**2)/(2*sig*sig))/(sig*Math.sqrt(2*Math.PI)));
+      const maxP = 1/(sig*Math.sqrt(2*Math.PI));
+      // 直方圖
+      const binCount = 50;
+      const binW = (xMax-xMin)/binCount;
+      const bins = new Array(binCount).fill(0);
+      samples.forEach(s=>{
+        const i = Math.floor((s-xMin)/binW);
+        if (i>=0 && i<binCount) bins[i]++;
+      });
+      const maxBin = Math.max(...bins)/(binW*samples.length);
+      ctx.fillStyle = 'rgba(13,148,136,0.5)';
+      bins.forEach((b,i)=>{
+        const x=x0+(i*(xMax-xMin)/binCount-xMin)/(xMax-xMin)*(W-x0-20);
+        const w=(W-x0-20)/binCount;
+        const h=b/(binW*samples.length) / maxBin * 180;
+        ctx.fillRect(x, y0-h, w-0.5, h);
+      });
+      // 理論曲線
+      ctx.strokeStyle = '#2563eb'; ctx.lineWidth=2.2;
+      ctx.beginPath();
+      pdf.forEach((p,i)=>{
+        const x=x0+i*(W-x0-20)/200, y=y0-p/maxP*180;
+        i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      });
+      ctx.stroke();
+      // 統計量標記
+      ctx.strokeStyle = '#dc2626'; ctx.lineWidth=1; ctx.setLineDash([3,2]);
+      [mu, mu-sig, mu+sig].forEach((v,i)=>{
+        const x = x0 + (v-xMin)/(xMax-xMin) * (W-x0-20);
+        ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0-180); ctx.stroke();
+        ctx.fillStyle = '#dc2626'; ctx.font='10px sans-serif';
+        ctx.fillText(['μ', 'μ-σ', 'μ+σ'][i], x-12, y0-185);
+      });
+      ctx.setLineDash([]);
+      txt(out, `採樣 3000 個 z = μ + σ·ε：直方圖（teal）vs 理論 N(${mu.toFixed(2)}, ${sig.toFixed(2)}²)（藍）`);
+    }
+    [muSlider, sigSlider].forEach(s=>s.addEventListener('input', draw));
+    draw();
+  };
+
+  // ============================================================
+  // 啟動所有 demo
+  // ============================================================
+  window.initDemos = function(){
+    [3,4,6,9,10,13,14,15,18].forEach(kp=>{
+      const fn = window['initDemoKp'+kp];
+      if (fn) try { fn(); } catch(e){ console.error('demo kp'+kp+' err', e); }
+    });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.initDemos);
+  else window.initDemos();
+})();
+
+</script>
+<!-- == Phase D guides block == -->
+<!-- == Phase D kp-1 guide == -->
+<div id="guide-content-kp-1" data-title="教授祕笈：全章地圖 — 潛在變數、變分推論、VAE" style="display:none">
+<h1>教授祕笈：全章地圖 — 潛在變數、變分推論、VAE</h1>
+<p>同學，深度學習多數章節在講「給 x 預測 y」，但本章換個鏡頭：我們承認「可見的 x」背後有「看不見的 z」在操控，而我們的目標是<strong>學出 z、並用它生成新的 x</strong>。這就是「變分模型」（variational models）這個大家族——VAE 是其中最有名的成員。</p>
+<p>我先打個比方。你觀察到「穿鞋睡覺的人早上頭痛」——直覺是「穿鞋造成頭痛」。但原文指出：穿鞋的人大多是醉的，<strong>酒醉才是真正的 latent variable</strong>，頭痛是它的副作用。穿鞋只是共現，不是因果。學會區分「共現 vs 因果」就是學 latent variable。</p>
+<p>整章三層架構：</p>
+<ol>
+<li>
+<p><strong>§2 變分推論</strong>：給定資料 $x$，後驗 $p(z\mid x)$ 通常 intractable（分母是積分）。變分推論的解法是「找簡單分佈 $q(z)$ 來近似後驗」，用 KL 衡量近似程度。</p>
+</li>
+<li>
+<p><strong>§3 VAE</strong>：用 encoder NN 把 $x$ 編碼成 $q(z\mid x)$ 的參數（常用高斯的 $\mu,\sigma$），用 decoder NN 從 $z$ 重建 $\hat x$。最大化 ELBO 訓練。</p>
+</li>
+<li>
+<p><strong>§3.x 訓練細節</strong>：reparameterization trick（讓 backprop 流過採樣）、prior regularization（給 latent 注入結構）、測試階段（重建 vs 生成）。</p>
+</li>
+</ol>
+<p>請你動筆算算看：</p>
+<ol>
+<li>一個 $d=2$ 的 latent 空間，$q(z\mid x)=\mathcal{N}((0.5, -0.3),\text{diag}(0.1, 0.2))$。這個 encoder 總共輸出多少個神經元？（對角 $\Sigma$ 要 $d$ 個 $\sigma$ + $d$ 個 $\mu$ = $2d=4$ 個。）
+（<strong>答案：</strong>4 個神經元，遠少於完整 $\Sigma$ 的 $d^2=4$ 個——這是對角假設省下的。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「VAE 是 autoencoder 的變種」——半對半錯。VAE 的 encoder 輸出「分佈參數」而非「編碼」是關鍵差異。</p>
+</li>
+<li>
+<p>誤解 2：「latent dimension 要越大越好」——錯。$d$ 大 → $\Sigma$ 參數多（對角 $d$ 個、完整 $d^2$ 個）→ 訓練難、容易 overfit。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>看見的 $x$ 背後藏 $z$；後驗算不出、用 $q$ 近似；VAE 把變分推論做成 NN。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 2（為何後驗不可解）、kp 3（ELBO 怎麼繞過後驗）；與 kp 22（VAE 優缺與現代地位）一前一後夾出全章視野。</p>
+</div>
+<!-- == Phase D kp-1 guide END == -->
+<!-- == Phase D kp-2 guide == -->
+<div id="guide-content-kp-2" data-title="教授祕笈：變分推論 — 為什麼需要近似後驗" style="display:none">
+<h1>教授祕笈：變分推論 — 為什麼需要近似後驗</h1>
+<p>同學，貝氏公式 $p(z\mid x) = p(x\mid z)p(z)/p(x)$ 寫起來很美，但實務上<strong>幾乎從來算不出來</strong>——分母 $p(x)=\int p(x\mid z)p(z)\,dz$ 是對所有 $z$ 的積分，$z$ 是高維時這個積分「不可解（intractable）」。</p>
+<p>我打個比方。你想算「全校有多少人是博士生」——直接數太累。改問「每個系所大概有多少博士比例」再加總，就是「近似」做法。變分推論就是對 $p(z\mid x)$ 做「近似」：選一個 tractable 的 $q(z)$（通常指數族如高斯）來逼近。</p>
+<p>三個關鍵詞要分清：</p>
+<ul>
+<li>
+<p><strong>真後驗</strong> $p(z\mid x,\theta)$：要算的目標，intractable。</p>
+</li>
+<li>
+<p><strong>變分近似</strong> $q(z)$：我們選的簡單分佈（高斯、Bernoulli），tractable。</p>
+</li>
+<li>
+<p><strong>KL 散度</strong> $D_{KL}(q\| p(z\mid x))$：$q$ 接近真後驗的程度。越小越好。</p>
+</li>
+</ul>
+<p>為什麼挑高斯？<strong>tractable + 計算便宜 + 仍能表達多維分佈</strong>。對角高斯只要 $d$ 個 $\sigma$、$d$ 個 $\mu$ 共 $2d$ 個參數；完整高斯要 $d^2$ 個。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>一個 $d=10$ 的高斯後驗，對角假設要幾個神經元？完整假設呢？
+（<strong>答案：</strong>對角 $2\times 10=20$ 個；完整 $10+10\times 10/2=60$ 個（$\Sigma$ 對稱只需上半部）。差距 3 倍。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「近似 = 不準」——錯。實務上 $q$ 接近真後驗時近似效果非常好，且可微可優化。</p>
+</li>
+<li>
+<p>誤解 2：「變分推論只用於 VAE」——錯。它是通用貝氏推論工具，VAE 是其中一個應用。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>真後驗算不出、用 $q$ 近似；KL 量近似程度；高斯 tractable、首選。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 3（KL 怎麼翻轉成 ELBO 來繞過後驗）；與 kp 5（EM 為何能解 missing data）共享「期望填補」思想。</p>
+</div>
+<!-- == Phase D kp-2 guide END == -->
+<!-- == Phase D kp-3 guide == -->
+<div id="guide-content-kp-3" data-title="教授祕笈：ELBO — log-likelihood 的下界" style="display:none">
+<h1>教授祕笈：ELBO — log-likelihood 的下界</h1>
+<p>同學，後驗 $p(z\mid x)$ 算不出來，但我們仍然想學。我們的解法是「<strong>繞過後驗</strong>，最大化另一個 tractable 量」——這個量就是 ELBO（Evidence Lower Bound）。</p>
+<p>我先打個比方。你想證明「你的月收入超過平均」，但你不知道平均值。改問：「我的收入是否超過平均的 80%？」——這個 80% 門檻是「下界」：如果你超過 80%，那超過平均就有可能（但不一定）。ELBO 就是 log-likelihood 的下界：超過 ELBO 不保證超過 log p，但<strong>最大化 ELBO 等價於最大化 log p</strong>（因為差距是固定的 $D_{KL}$）。</p>
+<p>核心數學（翻轉 KL 方向）：</p>
+<p>$$D_{KL}(q\| p(z\mid x)) = \log p(x) - \underbrace{(-D_{KL}(q\| p(x,z)))}_{ELBO}$$</p>
+<p>左邊 $\ge 0$，所以 $\log p(x) \ge ELBO$。<strong>差距 $= D_{KL}(q\| p(z\mid x))$</strong>——$q$ 越接近真後驗，ELBO 越接近 log p。</p>
+<p>等號成立條件：$q(z) = p(z\mid x)$（變分近似等於真後驗）。此時 ELBO = log p。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>設 $D_{KL}(q\| p(z\mid x)) = 0.7$、$\log p(x) = 0$。ELBO = ?
+（<strong>答案：</strong>$\text{ELBO} = \log p(x) - D_{KL} = 0 - 0.7 = -0.7$。差距 0.7 來自 $q$ 與真後驗的差。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「ELBO 是 log p 的近似」——錯。ELBO 是下界，不是近似。</p>
+</li>
+<li>
+<p>誤解 2：「ELBO 越大 log p 一定越大」——只對當 $D_{KL}$ 不變時才對。實務上兩者會一起動。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>ELBO ≤ log p；差距 = KL；最大化 ELBO = 最小化 KL。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 4（EM 演算法怎麼迭代提升 ELBO）；kp 14（VAE 訓練的 Type 2 把 ELBO 拆成兩項）。</p>
+</div>
+<!-- == Phase D kp-3 guide END == -->
+<!-- == Phase D kp-4 guide == -->
+<div id="guide-content-kp-4" data-title="教授祕笈：EM — missing data 的迭代解法" style="display:none">
+<h1>教授祕笈：EM — missing data 的迭代解法</h1>
+<p>同學，當資料不完整（missing），MLE 失效。EM（Expectation-Maximization）的天才想法是：<strong>用 missing 的期望填補</strong>，再做 MLE。兩步反覆。</p>
+<p>我打個比方。你看一份部分塗黑的問卷，問「平均分數」。直覺：把塗黑處用「已知的平均」填補，再算總平均。EM 就是這個思路：先估 missing、再算參數、再用新參數重估 missing、再算參數……</p>
+<p>兩個步驟：</p>
+<ul>
+<li>
+<p><strong>E-step</strong>：給當前 $\theta^{(t)}$，對 missing 算條件期望 $\mathbb{E}_{p(z\mid x,\theta^{(t)})}[\log p(x,z\mid\theta)]$，得到「期望 log-likelihood」$\mathcal{Q}$。</p>
+</li>
+<li>
+<p><strong>M-step</strong>：$\theta^{(t+1)} = \arg\max_\theta\mathcal{Q}(\theta\mid\theta^{(t)})$。</p>
+</li>
+</ul>
+<p><strong>收斂保證</strong>：每步 log-likelihood <strong>單調遞增</strong>（或持平），所以一定收斂到 local maximum。</p>
+<p>直覺：把 $\log p(x)$ 想成山頂。E-step 估你現在站在哪條等高線上；M-step 沿切線往上爬。兩步交替直到不再上升。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>E-step 給的 $\mathcal{Q}$ 是什麼函數的期望？
+（<strong>答案：</strong>$\log p(x,z\mid\theta)$ 對 $z$ 在 $p(z\mid x,\theta^{(t)})$ 下的期望。）</p>
+</li>
+<li>
+<p>為什麼 EM 一定收斂到 local max（不是 global）？
+（<strong>答案：</strong>每步只改善、不跳到低處；但「往上爬」可能爬到小山丘。實務上多次隨機初始化避開。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「EM 一定找到 global maximum」——錯。是 local maximum。</p>
+</li>
+<li>
+<p>誤解 2：「E-step 只是補 missing」——其實是算完整的「期望 log-likelihood」，missing 只是動機。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>E 補期望、M 求最大；單調上升、收斂到 local。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 5（EM 直覺）、kp 6（EM 在變分推論的形式）、kp 12（VAE 訓練借用 EM 框架）。</p>
+</div>
+<!-- == Phase D kp-4 guide END == -->
+<!-- == Phase D kp-5 guide == -->
+<div id="guide-content-kp-5" data-title="教授祕笈：EM 背景 — 把缺失值換成期望" style="display:none">
+<h1>教授祕笈：EM 背景 — 把缺失值換成期望</h1>
+<p>同學，EM 的核心想法看似簡單：<strong>missing 就用期望補</strong>。但為什麼「期望」是對的選擇？</p>
+<p>我打個比方。你看到 5 個學生的成績，但第 6 個的成績被墨水遮住。你可以用「6 個成績的平均」填補那個空缺——這是用「已有資料的期望」估 missing。但這聽起來很循環：算平均需要 6 個值，最後一個又是用平均估的。EM 把這個循環打開成迭代：先隨便猜一個值，補完算平均；用新平均重估 missing；再算新平均……直到收斂。</p>
+<p>關鍵洞察：missing 的「<strong>最佳填補</strong>」是在當前參數下的<strong>條件期望</strong>——不是任意猜測，是統計上最佳的點估計。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼用「條件期望」而不是「直接猜一個數」？
+（<strong>答案：</strong>條件期望在 L2 loss 下是最佳估計（= E[z|x]）。其他猜測平均而言有更高誤差。）</p>
+</li>
+<li>
+<p>E-step「算期望」與 M-step「最大化」可以分開做嗎？
+（<strong>答案：</strong>可以分開，但合在一起給的「期望 log-likelihood」是 M-step 可微分的。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「missing 就要丟掉」——錯。EM 利用了 missing 提供的部分資訊。</p>
+</li>
+<li>
+<p>誤解 2：「EM 只適用高斯混合」——錯。EM 對任何 latent variable 模型都適用。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>missing 用期望補；迭代收斂到 local max；不丟資訊。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 4（EM 形式）、kp 6（變分推論用 EM）、kp 7（VAE 是「用 NN 做 EM」）。</p>
+</div>
+<!-- == Phase D kp-5 guide END == -->
+<!-- == Phase D kp-6 guide == -->
+<div id="guide-content-kp-6" data-title="教授祕笈：變分推論的 EM" style="display:none">
+<h1>教授祕笈：變分推論的 EM</h1>
+<p>同學，§2 的變分推論公式推導完了，但怎麼實際找出 $q$ 和 $\theta$？答案就是 <strong>EM 演算法</strong>。</p>
+<p>把 ELBO 拆開（式 5）：$\mathcal{L} = \log p(x\mid\theta) - D_{KL}(q\| p(z\mid x,\theta))$</p>
+<p>EM for Variational Inference：</p>
+<ul>
+<li>
+<p><strong>E-step</strong>：固定 $\theta^{(t-1)}$，最大化 ELBO 等於最小化 $D_{KL}(q\| p(z\mid x,\theta^{(t-1)}))$，最佳 $q$ 是真後驗。
+  但若真後驗 intractable，就用 tractable $q$ family 內的最佳匹配。</p>
+</li>
+<li>
+<p><strong>M-step</strong>：固定 $q^{(t)}$，最大化 ELBO 等於最大化 $\mathbb{E}_{q^{(t)}(z)}[\log p(x,z\mid\theta)]$。</p>
+</li>
+</ul>
+<p>直覺：E-step 讓 $q$ 接近後驗（ELBO 拉向 log p）；M-step 抬高 log p。兩者反覆互相抬升。</p>
+<p>與經典 EM 的差異：變分版的 E-step 給不出「真後驗 = $q$」（intractable），所以用「在 $q$ family 內最佳匹配」近似——這就是「變分」（variational）一詞的由來。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>E-step 給的 $q^{(t)}$ 在 tractable family 中是什麼？
+（<strong>答案：</strong>最小化 $D_{KL}(q\| p(z\mid x,\theta^{(t-1)}))$ 的 $q$。對高斯 family 就是均值=真後驗均值、協方差=對角投影。）</p>
+</li>
+<li>
+<p>為什麼 M-step 簡化為「最大化期望 log-likelihood」？
+（<strong>答案：</strong>ELBO = $-D_{KL}(q\| p(x,z\mid\theta))$ + const 對 $\theta$。最大化 = 最小化 KL = 最大化 joint 期望 log-likelihood。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「變分推論的 E-step 就是找真後驗」——只在真後驗 tractable 時才對。多數情況只能近似。</p>
+</li>
+<li>
+<p>誤解 2：「VAE 的 encoder 學的就是 $q^{(t)}$」——對。VAE encoder 就是「在 NN 參數化 $q$ family 內最佳化 E-step」的實現。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>E 拉 $q$ 接近後驗、M 抬 log p；變分版 E 用近似、而非真後驗。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 3（ELBO 公式）、kp 4（一般 EM）；kp 7 開啟 VAE——VAE 是這個 EM 框架的 NN 實作。</p>
+</div>
+<!-- == Phase D kp-6 guide END == -->
+<!-- == Phase D kp-7 guide == -->
+<div id="guide-content-kp-7" data-title="教授祕笈：VAE — 用神經網路做變分推論" style="display:none">
+<h1>教授祕笈：VAE — 用神經網路做變分推論</h1>
+<p>同學，§2 的變分推論是「通用框架」，§3 的 VAE 是它的「神經網路實作」。VAE 把 encoder/decoder 兩個 NN 嵌進 EM 框架，讓整個系統<strong>可微、可 backprop 訓練</strong>。</p>
+<p>我打個比方。§2 的變分推論像「手動選擇 $q$ 形式然後最佳化」——每次換資料要重做。VAE 像「訓練一個通用助手」——NN 自動從資料學出最佳的 $q$。助理越訓練越熟練，越來越會「猜出 latent」。</p>
+<p>VAE 結構（見 Fig.3）：</p>
+<ul>
+<li>
+<p><strong>Encoder</strong>：$x \to (\mu_{z\mid x}, \Sigma_{z\mid x})$。常用對角多元高斯。</p>
+</li>
+<li>
+<p><strong>Latent 採樣</strong>：$z \sim \mathcal{N}(\mu, \Sigma)$。</p>
+</li>
+<li>
+<p><strong>Decoder</strong>：$z \to \hat x$。常用高斯（連續資料）或 Bernoulli（二元）。</p>
+</li>
+</ul>
+<p>訓練目標（ELBO）：
+$$\mathcal{L} = \underbrace{\mathbb{E}_{q(z\mid x)}[\log p(x\mid z)]}_{\text{reconstruction（要準）}} - \underbrace{D_{KL}(q(z\mid x)\| p(z))}_{\text{regularization（不要太偏）}}$$</p>
+<p>兩項的張力：reconstruction 想把 $z$ 編得「專屬」每筆 $\hat x$；regularization 想讓 $q(z\mid x)$ 不要偏離 prior $p(z)$。VAE 的解是「在兩者間取平衡」——latent space 連續、可採樣生成。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼 ELBO 拆成兩項比直接看 $\log p(x)$ 容易訓練？
+（<strong>答案：</strong>$\log p(x)$ 含 intractable 積分；ELBO 兩項都可計算（reconstruction 過 decoder、KL 有解析式）。）</p>
+</li>
+<li>
+<p>「重建準 vs latent 結構」如何取捨？
+（<strong>答案：</strong>$\beta$-VAE 透過 $\beta$ 加權 KL 項控制：$\beta$ 大 → latent 更「標準化」、重建較差；$\beta$ 小 → 重建強、latent 可能不規則。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「VAE encoder 直接輸出 $z$」——錯。Encoder 輸出 $q(z\mid x)$ 的參數，從中採樣得 $z$。</p>
+</li>
+<li>
+<p>誤解 2：「latent 越接近 prior 越好」——錯。latent 仍要「包含重建所需資訊」，太接近 prior 會喪失判別力。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>encoder 給分佈、decoder 重建；ELBO = 重建 + 規整；兩項平衡。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 8（三部件）、kp 9-10（encoder/採樣細節）、kp 22（VAE 優缺與後續）。</p>
+</div>
+<!-- == Phase D kp-7 guide END == -->
+<!-- == Phase D kp-8 guide == -->
+<div id="guide-content-kp-8" data-title="教授祕笈：VAE 的三部件 — encoder/sampling/decoder" style="display:none">
+<h1>教授祕笈：VAE 的三部件 — encoder/sampling/decoder</h1>
+<p>同學，VAE 看起來很神奇，但其實只有三個部件，每個職責單純。</p>
+<p>我打個比方。VAE 像一間<strong>壓縮照片工廠</strong>：客戶送原圖（$x$），工廠把它壓成密碼（$z$），客戶可拿密碼回工廠還原（$\hat x$）。工廠分三區：</p>
+<ul>
+<li>
+<p><strong>編碼區（encoder）</strong>：分析照片、寫出壓縮參數（$\mu, \sigma$）。</p>
+</li>
+<li>
+<p><strong>壓縮區（sampling）</strong>：根據參數抽一個具體密碼（$z \sim \mathcal{N}(\mu, \sigma)$）。</p>
+</li>
+<li>
+<p><strong>解碼區（decoder）</strong>：拿密碼、印出照片（$\hat x$）。</p>
+</li>
+</ul>
+<p>三個部件的關鍵設計選擇：</p>
+<ol>
+<li>
+<p><strong>Encoder 選什麼分佈</strong>：對角多元高斯最常見（$2d$ 個神經元）。也可選混合高斯、normalizing flow（更強但更貴）。</p>
+</li>
+<li>
+<p><strong>採樣隨機性</strong>：是 VAE 與一般 autoencoder 的關鍵差異——讓 latent space 連續、可採樣。</p>
+</li>
+<li>
+<p><strong>Decoder 選什麼分佈</strong>：連續資料用高斯、二元用 Bernoulli、複雜用 PixelCNN++。</p>
+</li>
+</ol>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼 encoder 常用對角 $\Sigma$ 而非完整 $\Sigma$？
+（<strong>答案：</strong>對角 $2d$ 個參數 vs 完整 $d^2$ 個；計算便宜且仍能表達多維分佈。對高 $d$ 影響大（$d=100$ 時 200 vs 5050）。）</p>
+</li>
+<li>
+<p>為什麼 decoder 選 Gaussian 容易模糊？
+（<strong>答案：</strong>Gaussian decoder 最大化 log-likelihood 等於最小化 MSE。MSE 在多個可能輸出時傾向「平均」——平均是模糊的。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「encoder 學的就是 latent 編碼」——半對。Encoder 學的是 $q(z\mid x)$ 的參數，不是直接給 $z$。</p>
+</li>
+<li>
+<p>誤解 2：「decoder 一定輸出 Gaussian」——可以選其他（如 Bernoulli、Mixture）。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>encoder 給分佈、sampling 給隨機、decoder 重建；三部件各司其職。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 9（encoder 設計）、kp 10（採樣設計）、kp 11（decoder 設計）、kp 7（整體架構）。</p>
+</div>
+<!-- == Phase D kp-8 guide END == -->
+<!-- == Phase D kp-9 guide == -->
+<div id="guide-content-kp-9" data-title="教授祕笈：Encoder — 輸出 $\mu$ 與 $\sigma$" style="display:none">
+<h1>教授祕笈：Encoder — 輸出 $\mu$ 與 $\sigma$</h1>
+<p>同學，VAE encoder 是個神經網路，輸入 $x\in\mathbb{R}^d$、輸出 latent $z$ 的條件分佈參數。常用多元高斯 $q(z\mid x) = \mathcal{N}(\mu_{z\mid x}, \Sigma_{z\mid x})$，需要 $m$ 組神經元。</p>
+<p>最常見的設計（$p$ 維 latent）：</p>
+<ul>
+<li>
+<p>1 組 $p$ 個神經元輸出 $\mu_{z\mid x}$</p>
+</li>
+<li>
+<p>1 組 $p$ 個神經元輸出 $\sigma_{z\mid x}$（或 $\log\sigma^2$）</p>
+</li>
+<li>
+<p>對角 $\Sigma = \text{diag}(\sigma_1^2, \ldots, \sigma_p^2)$</p>
+</li>
+</ul>
+<p>共 $2p$ 個神經元。如果要完整 $\Sigma$，要再加 $p(p+1)/2$ 個（$\Sigma$ 對稱）。</p>
+<p>為什麼對角 $\Sigma$ 最常見？</p>
+<ol>
+<li>
+<p><strong>計算便宜</strong>：$O(p)$ 算 determinant 與 inverse，完整 $\Sigma$ 要 $O(p^3)$。</p>
+</li>
+<li>
+<p><strong>參數少</strong>：$2p$ vs $p + p(p+1)/2$。</p>
+</li>
+<li>
+<p><strong>仍能表達多維分佈</strong>：對角只是限制變數間不相關，但每個維度有獨立 $\sigma$ 已足夠靈活。</p>
+</li>
+</ol>
+<p>實作細節：常讓 encoder 輸出 $\log\sigma^2$（log-variance）而非 $\sigma^2$：</p>
+<ul>
+<li>
+<p>避免 $\sigma^2 < 0$（高斯 variance 必非負）。</p>
+</li>
+<li>
+<p>數值更穩定（避免 $\sigma^2 \to 0$ 時梯度爆炸）。</p>
+</li>
+</ul>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>$d=20$ 的 latent 維度，encoder 神經元總數？（對角假設）
+（<strong>答案：</strong>$2d=40$ 個。）</p>
+</li>
+<li>
+<p>為什麼不用 softmax 之類的 bounded 函數輸出 $\sigma$？
+（<strong>答案：</strong>softmax 強制 $\sigma$ 很小 → 採樣退化（KL=0 強正則）。用 softplus 或 $\exp(\text{log-variance}/2)$ 給 $\sigma>0$ 但不限制上界。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「encoder 一定要高斯」——錯。可以是混合高斯、normalizing flow、甚至是離散分佈。</p>
+</li>
+<li>
+<p>誤解 2：「$\sigma$ 越小越好」——錯。$\sigma$ 太小 → $q$ 接近 Dirac delta → KL 項懲罰重 → 訓練不穩。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>encoder 給 $\mu$ 與 $\sigma$、對角 $2d$ 個；用 log-variance 保持穩定。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 8（三部件）、kp 10（採樣自 $\mu, \sigma$）、kp 18（reparameterization 怎麼讓 $\mu, \sigma$ 可微）。</p>
+</div>
+<!-- == Phase D kp-9 guide END == -->
+<!-- == Phase D kp-10 guide == -->
+<div id="guide-content-kp-10" data-title="教授祕笈：Latent 採樣" style="display:none">
+<h1>教授祕笈：Latent 採樣</h1>
+<p>同學，encoder 給出 $q(z\mid x)=\mathcal{N}(\mu, \sigma)$ 後，下一步是<strong>從中抽樣得 $z$</strong>。這個採樣在 backprop 中有個問題：$\frac{\partial z}{\partial \mu}$ 算不出來（$z$ 是隨機抽的，不是 $\mu$ 的確定性函數）。</p>
+<p>我打個比方。工廠接到訂單（$x$），決定要生產的規格（$\mu$）和允許的公差（$\sigma$）。但實際生產哪一件，<strong>取決於抽籤</strong>（隨機性）。你不能說「這個零件是第 5 號訂單的第 3 個零件，所以工廠要再調一下規格」——抽籤結果跟規格沒直接因果關係。</p>
+<p>採樣操作 $z\sim\mathcal{N}(\mu, \sigma)$ 在 backprop 中「切斷梯度流」——這是 VAE 訓練的關鍵障礙。<strong>reparameterization trick（kp 18）</strong> 解決了這個問題。</p>
+<p>直覺：採樣的隨機性應該<strong>來自外部 $\epsilon$</strong>，而不是 $\mu, \sigma$。所以 $z = \mu + \sigma\cdot\epsilon$ 對 $\mu, \sigma$ 可微。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼採樣操作切斷 backprop？
+（<strong>答案：</strong>採樣的 $\frac{\partial z}{\partial \mu}$ 沒有確定性——同一個 $\mu$ 可能對應多個 $z$。reparameterization 把隨機性外移到 $\epsilon$。）</p>
+</li>
+<li>
+<p>一個 $d=8$ 的 latent，採樣後需要 backprop 通過哪些路徑？
+（<strong>答案：</strong>encoder（$\theta_e$）→ $\mu, \sigma$ → 採樣（隨機性隔離）→ $z$ → decoder（$\theta_d$）→ $\hat x$ → loss。採樣前後的「連續路徑」是 backprop 流過的。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「採樣永遠不可微」——錯。reparameterization 後可微。</p>
+</li>
+<li>
+<p>誤解 2：「latent 維度越大越好」——$d$ 大 → $\mu, \sigma$ 神經元多 → 訓練難、需要更多資料。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>採樣 $z$ 切斷梯度；reparameterization 外移隨機性（kp 18）。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 18（reparameterization 詳解）；kp 9（encoder 給 $\mu, \sigma$）；kp 13/14（ELBO 簡化需對 $z$ 取期望）。</p>
+</div>
+<!-- == Phase D kp-10 guide END == -->
+<!-- == Phase D kp-11 guide == -->
+<div id="guide-content-kp-11" data-title="教授祕笈：Decoder — 從 $z$ 重建 $x$" style="display:none">
+<h1>教授祕笈：Decoder — 從 $z$ 重建 $x$</h1>
+<p>同學，decoder 是 VAE 的「<strong>生成器</strong>」：輸入 latent $z$，輸出 $\hat x$（重建）或 $\mathbb{P}(x\mid z)$ 的參數。</p>
+<p>兩種設計：</p>
+<ol>
+<li>
+<p><strong>直接重建</strong>：decoder 輸出 $\hat x$，loss = $\|\hat x - x\|^2$（MSE）。最常見於連續資料。</p>
+</li>
+<li>
+<p><strong>輸出分佈參數</strong>：decoder 輸出 $\mu_x, \sigma_x$（高斯）或 Bernoulli 機率 $p$。Loss = $-\log p(x\mid z)$。較靈活。</p>
+</li>
+</ol>
+<p>實務選擇：</p>
+<ul>
+<li>
+<p>連續影像（像素 0-1）：用 Bernoulli decoder（sigmoid + BCE）。</p>
+</li>
+<li>
+<p>連續實數資料：Gaussian decoder。</p>
+</li>
+<li>
+<p>文字：categorical / softmax。</p>
+</li>
+</ul>
+<p>Decoder 的角色：訓練完成後，<strong>從 prior $\mathcal{N}(0, I)$ 抽 $z$，過 decoder 就能生成新資料</strong>——這是 VAE 的「生成能力」。為什麼？因為訓練時 KL 項把 $q(z\mid x)$ 拉向 prior $p(z)$，所以從 prior 抽的 $z$「看起來像」encoder 抽的 $z$。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼 VAE 影像生成容易模糊？
+（<strong>答案：</strong>Gaussian decoder 等同 MSE loss，傾向輸出「平均」影像——多個可能輸出平均後模糊。）</p>
+</li>
+<li>
+<p>訓練完成後如何生成新影像？
+（<strong>答案：</strong>從 $p(z)=\mathcal{N}(0, I)$ 抽 $z$，過 decoder 輸出 $\hat x$。完全不用 encoder。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「decoder 一定輸出 Gaussian」——可選 Bernoulli、Mixture。</p>
+</li>
+<li>
+<p>誤解 2：「decoder 容量越大越好」——過大易 overfit，且生成「記住訓練資料」而非「生成新資料」。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>decoder 是生成器；Gaussian 易模糊；訓練後從 prior 抽 → 生成。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 8（三部件）、kp 20（測試階段：採樣 vs 重建）、kp 21（其他 VAE 變體針對模糊問題）。</p>
+</div>
+<!-- == Phase D kp-11 guide END == -->
+<!-- == Phase D kp-12 guide == -->
+<div id="guide-content-kp-12" data-title="教授祕笈：用 EM 訓練 VAE" style="display:none">
+<h1>教授祕笈：用 EM 訓練 VAE</h1>
+<p>同學，VAE 可以用 EM 框架理解：<strong>encoder 是「變分近似 $q$ 的角色」，decoder 是「生成分佈 $\mathbb{P}(x\mid z)$ 的角色」</strong>。EM 兩步對應到 encoder 與 decoder 的參數更新。</p>
+<p>EM for VAE（單筆資料）：</p>
+<ul>
+<li>
+<p><strong>E-step</strong>：$\theta_e^{(t)} := \arg\max_{\theta_e}\mathcal{L}(\theta_e, \theta_d^{(t-1)}, x_i)$（更新 encoder 參數）。</p>
+</li>
+<li>
+<p><strong>M-step</strong>：$\theta_d^{(t)} := \arg\max_{\theta_d}\mathcal{L}(\theta_e^{(t)}, \theta_d, x_i)$（更新 decoder 參數）。</p>
+</li>
+</ul>
+<p>實務上不用交替 E/M、而用小批次 SGD（§3.4）：每個 batch $b$ 筆資料，每步 gradient ascent on E-step、一次 on M-step。</p>
+<p>ELBO 簡化（式 20）：
+$$\mathcal{L} = -D_{KL}(\mathbb{P}(z\mid x,\theta_e)\| \mathbb{P}(x,z\mid\theta_d))$$</p>
+<p>這個式子仍含 intractable 的 $\mathbb{P}(x,z\mid\theta_d)$（要對 $z$ 積分）——接下來 §3.2.1/§3.2.2 給兩個 Monte Carlo 簡化方案。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼 ELBO 仍含 $\int dz$？
+（<strong>答案：</strong>$D_{KL}$ 定義含積分；對 $q(z)$ 取期望 = 對所有 $z$ 積分。直接算仍 intractable。）</p>
+</li>
+<li>
+<p>EM for VAE 與一般 EM 的差異？
+（<strong>答案：</strong>VAE 的 $q(z\mid x)$ 是神經網路，E-step 是 gradient ascent on encoder weights（而非 analytic update）。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「VAE 訓練 = EM」——半對。EM 給概念框架，實務用 SGD 聯合更新。</p>
+</li>
+<li>
+<p>誤解 2：「E-step 與 M-step 必須交替」——不必。實務上聯合更新更穩定。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>EM 概念、EM 啟示；encoder=E、decoder=M；實務 SGD 聯合更新。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 4-6（一般 EM）、kp 19（VAE backprop 訓練是 EM 的實務化）、kp 13/14（ELBO 簡化）。</p>
+</div>
+<!-- == Phase D kp-12 guide END == -->
+<!-- == Phase D kp-13 guide == -->
+<div id="guide-content-kp-13" data-title="教授祕笈：ELBO Type 1 — 直接 Monte Carlo 估計" style="display:none">
+<h1>教授祕笈：ELBO Type 1 — 直接 Monte Carlo 估計</h1>
+<p>同學，§3.2.1 給出 ELBO 的第一種簡化：<strong>不拆 KL，直接對期望用 Monte Carlo 估計</strong>。</p>
+<p>公式（式 24）：
+$$\mathcal{L}\approx\frac{1}{\ell}\sum_{j=1}^\ell[\log p(x, z_{i,j}\mid\theta_d) - \log p(z_{i,j}\mid x, \theta_e)]$$</p>
+<p>其中 $z_{i,j}\sim p(z_i\mid x, \theta_e)$ 抽 $\ell$ 個樣本。</p>
+<p>直覺：與其用解析式（intractable），直接採樣、用樣本平均估計期望。誤差 $\propto 1/\sqrt{\ell}$——樣本越多越準。</p>
+<p>特點：</p>
+<ul>
+<li>
+<p>簡單直接，不假設 $q$ 的形式（適用任何可採樣分佈）。</p>
+</li>
+<li>
+<p>但 KL 沒拆開，兩個對數比的梯度都要估計——有時數值不穩。</p>
+</li>
+</ul>
+<p>與 Type 2（kp 14）對比：Type 1 直接 MC 估計整個對數比；Type 2 把 KL 拆出來用解析式 + MC 估計 reconstruction。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>$\ell=1$、$\ell=100$、$\ell=10000$ 時，估計誤差大約比例？
+（<strong>答案：</strong>$1:\sqrt{100}:\sqrt{10000}=1:10:100$。換言之，樣本增 100 倍、誤差減 10 倍。）</p>
+</li>
+<li>
+<p>為什麼實務上常用 $\ell=1$？
+（<strong>答案：</strong>mini-batch 通常 $b=128$ 筆，每筆 $\ell=1$ 已經是 $b\ell=128$ 等效樣本。再增 $\ell$ 計算成本線性增，但 variance 下降只 $\sqrt{\ell}$。實務 $\ell=1$ 已經夠。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「$\ell$ 越大越好」——增到 10 之後邊際效益遞減，計算成本高。</p>
+</li>
+<li>
+<p>誤解 2：「Type 1 一定比 Type 2 差」——不一定，Type 1 在分佈複雜時仍可採樣。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>Type 1 直接 MC；$\ell$ 個樣本估期望；誤差 $\propto 1/\sqrt{\ell}$。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 14（Type 2 KL 拆解）、kp 18（採樣需 reparameterization 才能 backprop）。</p>
+</div>
+<!-- == Phase D kp-13 guide END == -->
+<!-- == Phase D kp-14 guide == -->
+<div id="guide-content-kp-14" data-title="教授祕笈：ELBO Type 2 — KL 拆解" style="display:none">
+<h1>教授祕笈：ELBO Type 2 — KL 拆解</h1>
+<p>同學，§3.2.2 給出更乾淨的簡化：<strong>把 ELBO 拆成兩項</strong>，第一項 tractable、第二項 Monte Carlo。</p>
+<p>拆解（式 26）：
+$$\mathcal{L}\approx -D_{KL}(q(z\mid x)\| p(z)) + \frac{1}{\ell}\sum_{j=1}^\ell\log p(x\mid z_{i,j}, \theta_d)$$</p>
+<p>兩項：</p>
+<ul>
+<li>
+<p><strong>KL 項</strong>：$D_{KL}(q\| p)$ 衡量 $q(z\mid x)$ 與 prior $p(z)$ 的距離。tractable（若 $q, p$ 是高斯等指數族）。</p>
+</li>
+<li>
+<p><strong>Reconstruction 項</strong>：$\mathbb{E}_{q(z\mid x)}[\log p(x\mid z)]$ 的 Monte Carlo 估計。</p>
+</li>
+</ul>
+<p>直覺：兩項形成張力——reconstruction 想讓 $z$ 包含重建 $x$ 所需資訊；KL 想讓 $q$ 不要偏離 prior。</p>
+<p>對高斯（$q$ 和 $p$ 皆 $\mathcal{N}$），KL 有<strong>解析式</strong>（kp 15）——這是「Type 2 + 高斯 = 標準 VAE」的原因。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼 Type 2 比 Type 1 訓練更穩定？
+（<strong>答案：</strong>Type 2 的 KL 項是解析式（無隨機性），只有 reconstruction 需 MC。整體梯度變異較小。）</p>
+</li>
+<li>
+<p>為什麼選擇 $\beta$ 調 KL 權重？
+（<strong>答案：</strong>$\beta$-VAE 概念。$\beta$ 大 → latent 更緊緻、disentangle 更好、reconstruction 變差；$\beta$ 小反之。Trade-off。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「Type 2 只適用高斯」——錯。任何可解析 KL 的分佈對都行（如 Beta、Bernoulli）。</p>
+</li>
+<li>
+<p>誤解 2：「$\beta$ 越大越好」——過大會過度正則，reconstruction 變差。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>Type 2 = KL（解析）+ recon（MC）；$\beta$ 權衡；高斯首選。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 13（Type 1 對比）、kp 15（高斯 KL 解析式）、kp 19（VAE loss = reconstruction + $\beta\cdot$ KL）。</p>
+</div>
+<!-- == Phase D kp-14 guide END == -->
+<!-- == Phase D kp-15 guide == -->
+<div id="guide-content-kp-15" data-title="教授祕笈：高斯特例的解析 KL — Lemma 1 & 2" style="display:none">
+<h1>教授祕笈：高斯特例的解析 KL — Lemma 1 &amp; 2</h1>
+<p>同學，當 $q$ 和 $p$ 都是高斯時，KL 有<strong>解析表達式</strong>——這讓 VAE 訓練更穩定、變異更小。</p>
+<p><strong>Lemma 1（單變數）</strong>：$p_1\sim\mathcal{N}(\mu_1, \sigma_1^2)$、$p_2\sim\mathcal{N}(\mu_2, \sigma_2^2)$：
+$$D_{KL}(p_1\| p_2) = \log\frac{\sigma_2}{\sigma_1} + \frac{\sigma_1^2 + (\mu_1-\mu_2)^2}{2\sigma_2^2} - \frac{1}{2}$$</p>
+<p><strong>Lemma 2（多變數）</strong>：$p_1\sim\mathcal{N}(\mu_1, \Sigma_1)$、$p_2\sim\mathcal{N}(\mu_2, \Sigma_2)$，維度 $p$：
+$$D_{KL}(p_1\| p_2) = \frac{1}{2}\left[\log\frac{|\Sigma_2|}{|\Sigma_1|} - p + \text{tr}(\Sigma_2^{-1}\Sigma_1) + (\mu_2-\mu_1)^\top\Sigma_2^{-1}(\mu_2-\mu_1)\right]$$</p>
+<p>VAE 標準設定：$p(z)=\mathcal{N}(0, I)$（$\mu_z=0, \Sigma_z=I$）代入 Lemma 2：
+$$D_{KL}(q(z\mid x)\| \mathcal{N}(0, I)) = \frac{1}{2}\left[-\log|\Sigma_{z\mid x}| - p + \text{tr}(\Sigma_{z\mid x}) + \|\mu_{z\mid x}\|^2\right]$$</p>
+<p>三項各有含義：</p>
+<ul>
+<li>
+<p>$-\log|\Sigma_{z\mid x}|$：鼓勵 $\Sigma$ 大（latent 多樣）。</p>
+</li>
+<li>
+<p>$\text{tr}(\Sigma_{z\mid x})$：鼓勵 $\Sigma$ 小（latent 集中）。</p>
+</li>
+<li>
+<p>$\|\mu_{z\mid x}\|^2$：鼓勵 $\mu$ 接近 0（latent 中心化）。</p>
+</li>
+</ul>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>設 $\mu_{z\mid x}=(0.5, -0.3)$, $\Sigma_{z\mid x}=\text{diag}(0.1, 0.2)$。KL 多少？
+（<strong>答案：</strong>$\frac{1}{2}[-\log(0.1\times 0.2) - 2 + (0.1+0.2) + (0.25+0.09)] = \frac{1}{2}[-\log 0.02 - 2 + 0.3 + 0.34] = \frac{1}{2}[3.912 - 2 + 0.64] \approx 1.276$。）</p>
+</li>
+<li>
+<p>為什麼高斯 + 高斯 KL 有解析式是「天作之合」？
+（<strong>答案：</strong>高斯的 KL 可寫成 closed form，VAE 用高斯 prior + 高斯 posterior = 訓練穩定、變異小、可解析最佳化。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「KL 對稱」——錯。$D_{KL}(p_1\| p_2) \neq D_{KL}(p_2\| p_1)$（非對稱）。ELBO 用 $D_{KL}(q\| p)$，方向固定。</p>
+</li>
+<li>
+<p>誤解 2：「$\sigma$ 越接近 1 越好」——錯。$q$ 與 $p$ 形狀差異決定 KL，不只是 $\sigma$。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>高斯 KL 有解析式；prior=$\mathcal{N}(0, I)$ 時簡潔；VAE 預設選擇。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 14（Type 2 中 KL 項需計算）、kp 19（VAE loss 包含此 KL）、kp 9（encoder 輸出 $\mu, \sigma$ 進入此公式）。</p>
+</div>
+<!-- == Phase D kp-15 guide END == -->
+<!-- == Phase D kp-16 guide == -->
+<div id="guide-content-kp-16" data-title="教授祕笈：用近似 ELBO 訓練" style="display:none">
+<h1>教授祕笈：用近似 ELBO 訓練</h1>
+<p>同學，§3.2.4 把 Type 1 或 Type 2 的近似 ELBO 帶回 EM 訓練：每步用 Monte Carlo 估計的 $\tilde{\mathcal{L}}$ 做 gradient ascent。</p>
+<p>VAE 訓練（per mini-batch）：</p>
+<ul>
+<li>
+<p><strong>E-step</strong>：$\theta_e^{(t)} := \theta_e^{(t-1)} + \eta_e\frac{\partial\sum_{i=1}^b\tilde{\mathcal{L}}(\theta_e, \theta_d^{(t-1)}, x_i)}{\partial\theta_e}$</p>
+</li>
+<li>
+<p><strong>M-step</strong>：$\theta_d^{(t)} := \theta_d^{(t-1)} + \eta_d\frac{\partial\sum_{i=1}^b\tilde{\mathcal{L}}(\theta_e^{(t)}, \theta_d, x_i)}{\partial\theta_d}$</p>
+</li>
+</ul>
+<p>實務上，<strong>VAE 不用交替 E/M</strong>，而是每步同時更新 encoder + decoder（§3.4）。原因：</p>
+<ol>
+<li>
+<p>現代框架能自動處理兩個 loss 的梯度。</p>
+</li>
+<li>
+<p>交替更新可能導致兩個網路「搶資源」。</p>
+</li>
+<li>
+<p>實驗上聯合更新效果等同或更優。</p>
+</li>
+</ol>
+<p>這就是「VAE 訓練 = 變分推論的 EM 框架 + 實務 backprop 簡化」。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼實務上聯合更新比交替 E/M 好？
+（<strong>答案：</strong>交替 E/M 中，E-step 給 $\theta_e$ 局部最佳但未與 $\theta_d$ 同步；聯合更新讓兩者梯度共同下降，較穩定。）</p>
+</li>
+<li>
+<p>mini-batch 大小 $b$ 對訓練有何影響？
+（<strong>答案：</strong>$b$ 大 → 梯度更穩定（variance $\propto 1/b$）、單次迭代慢、需要更多記憶體。常用 $b=32\sim 256$。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「VAE 訓練嚴格執行交替 E/M」——錯。實務用聯合 SGD。</p>
+</li>
+<li>
+<p>誤解 2：「$b$ 越大越好」——$b$ 過大會 overfit 到 batch 的特定特性，泛化下降。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>近似 ELBO 帶回 EM；實務聯合 SGD；$\beta$ 控制正則強度。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 12（EM 框架）、kp 19（backprop 訓練實務）、kp 13/14（ELBO 簡化）。</p>
+</div>
+<!-- == Phase D kp-16 guide END == -->
+<!-- == Phase D kp-17 guide == -->
+<div id="guide-content-kp-17" data-title="教授祕笈：Prior regularization — 注入領域知識" style="display:none">
+<h1>教授祕笈：Prior regularization — 注入領域知識</h1>
+<p>同學，VAE 預設用 $\mathcal{N}(0, I)$ 作 prior——簡單通用，但對有結構的資料可能不夠。<strong>Prior regularization</strong> 在 ELBO 加 penalty，鼓勵 $q(z\mid x)$ 匹配某個特定 prior。</p>
+<p>我打個比方。預設 prior 像「通用相框」——任何照片都裝得下。Custom prior 像「特定主題相框」（如風景相框、人物相框）——逼 latent 學到特定結構。</p>
+<p>常見 custom prior：</p>
+<ul>
+<li>
+<p><strong>Geodesic prior</strong>：在流形上定義，鼓勵 latent 沿資料的幾何流形。</p>
+</li>
+<li>
+<p><strong>Mixture of Gaussians</strong>：prior 本身是多模態，讓 latent 學到多群結構。</p>
+</li>
+<li>
+<p><strong>Optimal prior</strong>：根據資料特性動態學習的 prior 形式。</p>
+</li>
+</ul>
+<p>為什麼要自訂 prior？</p>
+<ol>
+<li>
+<p><strong>注入領域知識</strong>：醫療影像希望 latent 反映「正常 vs 異常」軸。</p>
+</li>
+<li>
+<p><strong>提升可解釋性</strong>：latent 軸有意義（如「性別」、「年齡」）。</p>
+</li>
+<li>
+<p><strong>改善生成品質</strong>：適合資料的 prior 讓採樣更合理。</p>
+</li>
+</ol>
+<p>但 trade-off：可能犧牲 ELBO tightness（KL 項不再精確對應 $D_{KL}(q\|\mathbb{P}(z\mid x,\theta))$）。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼自訂 prior 可能犧牲 ELBO tightness？
+（<strong>答案：</strong>ELBO 推導假設 prior 是真後驗的固定形式。自訂 prior 改變 KL 項的「目標」，可能使 ELBO 與 log p 的差距不再是純 $D_{KL}(q\|\mathbb{P}(z\mid x,\theta))$。）</p>
+</li>
+<li>
+<p>怎麼決定要不要自訂 prior？
+（<strong>答案：</strong>看 latent 結構需求。若 latent 軸需可解釋或符合領域（如「健康指數」），自訂。若通用特徵足夠，用 $\mathcal{N}(0, I)$。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「自訂 prior 一定更好」——錯。視任務而定。</p>
+</li>
+<li>
+<p>誤解 2：「prior regularization 違反 ELBO 推導」——不違反，只是改 KL 項的形式。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>預設 $\mathcal{N}(0, I)$ 通用；自訂 prior 注入領域；trade-off 可解釋 vs tightness。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 3（ELBO 推導）、kp 14（Type 2 中的 KL 項）、kp 21（其他 VAE 變體常用自訂 prior）。</p>
+</div>
+<!-- == Phase D kp-17 guide END == -->
+<!-- == Phase D kp-18 guide == -->
+<div id="guide-content-kp-18" data-title="教授祕笈：Reparameterization trick — 讓採樣可微" style="display:none">
+<h1>教授祕笈：Reparameterization trick — 讓採樣可微</h1>
+<p>同學，採樣操作 $z\sim\mathcal{N}(\mu, \sigma)$ 在 backprop 中「切斷梯度」——這是 VAE 端到端訓練的關鍵障礙。<strong>Reparameterization trick</strong>（Kingma &amp; Welling 2014）解決了它。</p>
+<p>解法：把採樣的隨機性「<strong>外移</strong>」到外部 $\epsilon$：
+$$z = \mu + \sigma \cdot \epsilon, \quad \epsilon\sim\mathcal{N}(0, 1)$$</p>
+<p>現在 $z$ 是 $(\mu, \sigma, \epsilon)$ 的確定性函數，且 $\epsilon$ 與 $(\mu, \sigma)$ 獨立——所以 $\frac{\partial z}{\partial \mu}=1$、$\frac{\partial z}{\partial \sigma}=\epsilon$ 都有確定值。</p>
+<p>我打個比方。工廠接到訂單，要決定產品規格（$\mu, \sigma$）。原本規格是用「內部員工抽籤」（依賴員工這個變數）決定的——很難回頭追溯責任。改用「外部第三方抽籤」（$\epsilon$ 獨立來源）——工廠只負責給定 $(\mu, \sigma)$，具體哪個產品由第三方決定，<strong>工廠的角色清晰、可審核</strong>。</p>
+<p>實作：採樣時從 $\mathcal{N}(0, 1)$ 抽 $\epsilon$，算 $z = \mu + \sigma\cdot\epsilon$。backprop 時梯度流過 $\mu, \sigma$，$\epsilon$ 視為常數（隨機性不需梯度）。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>設 $\mu=0.5, \sigma=0.8$，抽 $\epsilon=-0.3$。$z$ = ?
+（<strong>答案：</strong>$z = 0.5 + 0.8\times(-0.3) = 0.5 - 0.24 = 0.26$。）</p>
+</li>
+<li>
+<p>為什麼離散 latent（如 Bernoulli）不能用 reparameterization？
+（<strong>答案：</strong>離散採樣不可微（$z\in\{0, 1\}$，$z = 0$ 與 $z=1$ 之間沒有 smooth 路徑）。需用 Gumbel-Softmax（軟化近似）或 REINFORCE（policy gradient）。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「reparameterization 是新發明」——其實是變數替換的高斯求和技巧。</p>
+</li>
+<li>
+<p>誤解 2：「只能用在高斯」——錯。任何可重參數化的分佈（Logistic、Gamma via location-scale）都行。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>採樣切斷梯度；$z=\mu+\sigma\epsilon$ 外移隨機性；離散需 Gumbel-Softmax。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 10（採樣問題）、kp 19（backprop 訓練的基礎）、kp 14（Type 2 簡化中需對 $z$ 取期望）。</p>
+</div>
+<!-- == Phase D kp-18 guide END == -->
+<!-- == Phase D kp-19 guide == -->
+<div id="guide-content-kp-19" data-title="教授祕笈：用 backpropagation 訓練 VAE" style="display:none">
+<h1>教授祕笈：用 backpropagation 訓練 VAE</h1>
+<p>同學，§3.4 給出 VAE 的實務訓練方法：<strong>整個計算圖端到端可微、用標準 backprop 訓練</strong>。不需要交替 E/M。</p>
+<p>Loss 函數（最小化 = 最大化 ELBO）：
+$$\text{loss} = \text{MSE}(\hat x, x) + \beta \cdot D_{KL}(q(z\mid x)\| p(z))$$</p>
+<p>兩項：</p>
+<ul>
+<li>
+<p><strong>Reconstruction</strong>：$\hat x$ 接近 $x$（高斯 decoder = MSE；Bernoulli decoder = BCE）。</p>
+</li>
+<li>
+<p><strong>KL regularizer</strong>：$q(z\mid x)$ 不要偏離 $p(z)$。</p>
+</li>
+</ul>
+<p>訓練流程（每個 batch）：</p>
+<ol>
+<li>
+<p>取 $b$ 筆 $x_i$。</p>
+</li>
+<li>
+<p>Encoder 算 $\mu_{z\mid x}^{(i)}, \sigma_{z\mid x}^{(i)}$。</p>
+</li>
+<li>
+<p>Reparameterization：$z_i = \mu^{(i)} + \sigma^{(i)}\cdot\epsilon$，$\epsilon\sim\mathcal{N}(0, 1)$。</p>
+</li>
+<li>
+<p>Decoder 算 $\hat x_i$。</p>
+</li>
+<li>
+<p>算 loss = $\sum_i \text{MSE}(\hat x_i, x_i) + \beta\sum_i D_{KL}(q^{(i)}\| p)$。</p>
+</li>
+<li>
+<p>Backprop 算 $\partial \text{loss}/\partial\theta$，更新 $\theta = \{\theta_e, \theta_d\}$。</p>
+</li>
+</ol>
+<p>整個計算圖可微（reparameterization 讓採樣也微），所以 backprop 一氣呵成。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼不用交替 E/M 而用聯合 backprop？
+（<strong>答案：</strong>交替 E/M 中，E-step 只看 encoder、M-step 只看 decoder，兩個網路「搶資源」。聯合 backprop 兩者梯度共同下降，較穩定。）</p>
+</li>
+<li>
+<p>為什麼 KL 項是必需的，不能只用 reconstruction？
+（<strong>答案：</strong>只重建 → encoder 學「記住每筆資料的 $z$」→ $q$ 接近 Dirac delta → 失去 latent space 結構 → 無法生成新資料。KL 迫使 $q$ 接近 prior = 讓 latent space 有連續結構。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「reconstruction 越小越好」——過小 = overfit。KL 防止 overfit。</p>
+</li>
+<li>
+<p>誤解 2：「VAE 訓練很容易」——容易收斂但難以生成高品質（影像模糊問題）。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>loss = recon + $\beta\cdot$ KL；端到端可微；reparameterization 是關鍵。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 12（EM 框架）、kp 18（reparameterization 細節）、kp 14（Type 2 對應此 loss 形式）、kp 20（訓練完如何測試）。</p>
+</div>
+<!-- == Phase D kp-19 guide END == -->
+<!-- == Phase D kp-20 guide == -->
+<div id="guide-content-kp-20" data-title="教授祕笈：測試階段 — 採樣 vs 重建" style="display:none">
+<h1>教授祕笈：測試階段 — 採樣 vs 重建</h1>
+<p>同學，VAE 訓練完成後，測試階段有兩種用法：<strong>重建</strong>與<strong>生成</strong>。兩者用途不同。</p>
+<p>我打個比方。工廠訓練完成（VAE 訓練好）後，客戶有兩種需求：</p>
+<ul>
+<li>
+<p><strong>重建</strong>：「我有一張照片（$x$），幫我存成壓縮版（$z$）再還原（$\hat x$）。」——走 encoder + decoder。</p>
+</li>
+<li>
+<p><strong>生成</strong>：「我沒照片，幫我憑空做一張。」——從 prior 抽 $z$，過 decoder。</p>
+</li>
+</ul>
+<p>兩種流程：</p>
+<ol>
+<li>
+<p><strong>重建</strong>：$x \to \text{encoder} \to z \sim q(z\mid x) \to \text{decoder} \to \hat x$。比較 $\hat x$ 與 $x$。</p>
+</li>
+<li>
+<p><strong>生成</strong>：$z\sim\mathcal{N}(0, I) \to \text{decoder} \to \hat x_{new}$。完全不用 encoder。</p>
+</li>
+</ol>
+<p>用途：</p>
+<ul>
+<li>
+<p>重建：去噪、壓縮、異常偵測（reconstruction error 大的視為異常）。</p>
+</li>
+<li>
+<p>生成：資料合成、創意輔助、隱私保護（生成 vs 還原原始資料）。</p>
+</li>
+</ul>
+<p><strong>為什麼從 prior 抽 $z$ 也能生成合理資料？</strong> 因為訓練時 KL 項把 $q(z\mid x)$ 拉向 prior $p(z)$，所以 prior 抽的 $z$「看起來像」encoder 抽的——decoder 能處理。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>異常偵測為什麼用「reconstruction error」？
+（<strong>答案：</strong>異常資料的 $z$ 偏離 prior，decoder 難以重建，$\|\hat x - x\|$ 大。設 threshold 即可偵測。）</p>
+</li>
+<li>
+<p>為什麼 VAE 生成「影像」品質不如 GAN？
+（<strong>答案：</strong>Gaussian decoder 等同 MSE loss，傾向平均輸出。GAN 的 adversarial loss 鼓勵「看起來真」而非「平均」——可更銳利。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「測試 = 重建」——只對重建任務對。生成任務直接從 prior 抽。</p>
+</li>
+<li>
+<p>誤解 2：「從 prior 抽 vs 從 $q(z\mid x)$ 抽一樣」——對「看起來像資料」目的，prior 抽夠用；對「重建特定 $x$」，必須用 $q(z\mid x)$。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>重建 $x \to z \to \hat x$；生成 prior 抽 $z \to \hat x$；用於不同場景。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 11（decoder 設計）、kp 7（VAE 整體架構）、kp 22（VAE 優缺）。</p>
+</div>
+<!-- == Phase D kp-20 guide END == -->
+<!-- == Phase D kp-21 guide == -->
+<div id="guide-content-kp-21" data-title="教授祕笈：其他 VAE 變體" style="display:none">
+<h1>教授祕笈：其他 VAE 變體</h1>
+<p>同學，標準 VAE 有<strong>影像模糊</strong>的問題——這是 Gaussian decoder + ELBO 下界 + 隨機性三件事疊加。為了解決，衍生出多個變體。</p>
+<p>我打個比方。標準相機（標準 VAE）拍的照片略糊——光圈太大（Gaussian decoder 變異）、曝光時間不足（KL 壓縮太狠）、手持晃動（採樣隨機性）。改用更好的相機（變體）可改善。</p>
+<p>常見變體：</p>
+<ol>
+<li>
+<p><strong>β-VAE</strong>：loss 加權 KL 項（$\beta > 1$ 強正則）。產生「disentangled」latent 軸。</p>
+</li>
+<li>
+<p><strong>Hierarchical VAE</strong>：多層 latent（$z_1 \to z_2 \to z_3$），捕捉不同尺度特徵。</p>
+</li>
+<li>
+<p><strong>Adversarial VAE / VAE-GAN</strong>：用 GAN 的 discriminator 取代 MSE loss。生成更銳利。</p>
+</li>
+<li>
+<p><strong>VQ-VAE</strong>：latent 是離散的（從 codebook 選），用於音訊、影像 tokenization。</p>
+</li>
+<li>
+<p><strong>Conditional VAE</strong>：latent 條件化於 label。支援 conditional generation。</p>
+</li>
+</ol>
+<p>但注意：現代影像生成主流是 <strong>diffusion models</strong>（Chap. 15）和 <strong>autoregressive transformers</strong>（Chap. 9）——VAE 在圖像生成上已被超越。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼 β-VAE 產生 disentangled latent？
+（<strong>答案：</strong>$\beta$ 大 → KL 強迫 $q$ 接近 prior（簡單結構）→ encoder 學到「最小足夠表示」→ 各維度學不同因子 → disentangled。）</p>
+</li>
+<li>
+<p>VQ-VAE 為何適合音訊？
+（<strong>答案：</strong>音訊本質上是離散 token（語音 phoneme、音樂音符）。VQ-VAE latent 離散 → 自然匹配音訊結構 → 可用 autoregressive Transformer 學習。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「VAE 已過時」——圖像生成已過時，但異常偵測、語音、科學建模仍活躍。</p>
+</li>
+<li>
+<p>誤解 2：「β 越大越 disentangle」——過大會 collapse（所有 $q$ 都接近 prior mean）。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>標準 VAE 易模糊；β-VAE disentangle；VQ-VAE 離散；GAN+VAE 銳利；現代用 diffusion。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 11（decoder 設計影響）、kp 22（VAE 優缺與後續）、kp 17（prior regularization 是 β-VAE 雛形）。</p>
+</div>
+<!-- == Phase D kp-21 guide END == -->
+<!-- == Phase D kp-22 guide == -->
+<div id="guide-content-kp-22" data-title="教授祕笈：結論 — VAE 的優缺與後續" style="display:none">
+<h1>教授祕笈：結論 — VAE 的優缺與後續</h1>
+<p>同學，VAE 是「<strong>機率深度學習</strong>」的代表作——把貝氏推論、神經網路、資訊壓縮三件事織在一起。但它不是萬靈丹——清楚它的優缺與適用場景才能正確使用。</p>
+<p>我打個比方。VAE 像<strong>瑞士刀</strong>：多種工具合一、原則清晰、應用廣——但若你需要的是「最銳利的刀」或「最遠的射程」，該用別的工具。</p>
+<p><strong>VAE 的核心優點</strong>：</p>
+<ol>
+<li>
+<p><strong>原則性貝氏基礎</strong>：ELBO 是 log-likelihood 的下界，有清楚的機率詮釋。</p>
+</li>
+<li>
+<p><strong>可解釋的 latent space</strong>：KL 項把 $q$ 拉向 prior，latent 軸有結構。</p>
+</li>
+<li>
+<p><strong>端到端可微</strong>：reparameterization + backprop，整個模型可聯合訓練。</p>
+</li>
+<li>
+<p><strong>靈活應用</strong>：異常偵測、半監督、生成、壓縮、科學建模。</p>
+</li>
+</ol>
+<p><strong>VAE 的限制</strong>：</p>
+<ol>
+<li>
+<p><strong>影像模糊</strong>：Gaussian decoder 傾向平均。</p>
+</li>
+<li>
+<p><strong>ELBO 是下界</strong>，不是 log-likelihood 本身。</p>
+</li>
+<li>
+<p><strong>維度需預設</strong>：$d$ 難動態調整。</p>
+</li>
+<li>
+<p><strong>生成品質不如 diffusion / AR</strong>：在影像/文字被超越。</p>
+</li>
+</ol>
+<p><strong>後續發展</strong>：diffusion models（Chap. 15）成為影像生成主流、autoregressive Transformers（Chap. 9）成為文字主流。但 VAE 思想仍影響：latent diffusion 就是「用 VAE 編解碼影像、再在 latent 上做 diffusion」。</p>
+<p>請你動筆算想想：</p>
+<ol>
+<li>
+<p>為什麼 diffusion 超越 VAE 在影像生成？
+（<strong>答案：</strong>Diffusion 透過多步去噪（而非單步 decode），可以學習更銳利的分佈。VAE 單步 Gaussian decode 容易模糊。）</p>
+</li>
+<li>
+<p>VAE 仍在哪些場景活躍？
+（<strong>答案：</strong>異常偵測（reconstruction error 訊號）、半監督（CVAE）、語音（VQ-VAE）、科學資料（latent 表徵物理/化學結構）。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「VAE 已死」——圖像生成了，語音/異常偵測仍活躍。</p>
+</li>
+<li>
+<p>誤解 2：「VAE 簡單所以容易」——容易理解原理，難以生成高品質。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>VAE 是機率深度學習的代表；圖像被超越，語音/科學仍活躍；ELBO + reparameterization 是現代生成模型的基石之一。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 1（全章地圖）、kp 7（VAE 架構）、kp 21（其他變體是 VAE 思想的延伸）。</p>
+</div>
+<!-- == Phase D kp-22 guide END == -->
+<!-- == Phase D guides block END == -->
+</body>
+</html>

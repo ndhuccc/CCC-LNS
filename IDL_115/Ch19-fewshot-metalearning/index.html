@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IDL 115學年度 Ch19：少樣本學習與元學習 (Few-Shot Learning & Meta-Learning) 互動講義</title>
+  <!-- KaTeX CSS & JS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}], ignoredClasses: ['katex']});"></script>
+  <style>
+    :root {
+      --primary: #0f172a;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #334155;
+      --heading: #0f172a;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --error: #dc2626;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding-top: 100px;
+      padding-bottom: 60px;
+    }
+
+    /* Sticky Header & Progress Bar */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 90px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      color: white;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 24px;
+    }
+    .header-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: 0.5px;
+    }
+    .header-toc {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      max-width: 65%;
+    }
+    .header-toc a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.05);
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .header-toc a:hover {
+      color: #ffffff;
+      background: var(--accent);
+    }
+
+    .progress-bar-wrap {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+      transition: width 0.3s ease;
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Card Styling */
+    .card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 32px;
+      margin-bottom: 40px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      scroll-margin-top: 100px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--bg);
+    }
+    .badge {
+      background: #dbeafe;
+      color: #1e40af;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      white-space: nowrap;
+    }
+    .card-title {
+      font-size: 1.35rem;
+      color: var(--heading);
+      font-weight: 700;
+    }
+
+    .card-body h4 {
+      color: var(--heading);
+      margin: 20px 0 10px 0;
+      font-size: 1.1rem;
+    }
+    .card-body p {
+      margin-bottom: 14px;
+      text-align: justify;
+    }
+    .card-body ul, .card-body ol {
+      margin: 10px 0 16px 24px;
+    }
+    .card-body li {
+      margin-bottom: 6px;
+    }
+
+    /* Phase B & Orig Image Styling */
+    .diagram-figure, .orig-fig {
+      margin: 24px 0;
+      text-align: center;
+      background: #f1f5f9;
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+    .diagram-figure img, .orig-fig img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .diagram-figure figcaption, .orig-fig figcaption {
+      margin-top: 10px;
+      font-size: 0.88rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    /* AI Prompt Placeholder */
+    .ai-illustration {
+      margin: 16px 0;
+      background: #faf5ff;
+      border: 1px dashed #c084fc;
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .ai-illustration summary {
+      font-weight: 600;
+      color: #7e22ce;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .ai-illustration-prompt {
+      margin-top: 10px;
+      background: #ffffff;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.82rem;
+      color: #4c1d95;
+      white-space: pre-wrap;
+      border: 1px solid #e9d5ff;
+    }
+
+    /* Phase C Interactive Demo Styling */
+    .demo {
+      margin: 28px 0;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .demo-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #0369a1;
+      margin-bottom: 12px;
+    }
+    .demo-instruction {
+      background: #ffffff;
+      padding: 14px;
+      border-radius: 8px;
+      border-left: 4px solid #0284c7;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+    .demo-instruction h5 {
+      color: #0369a1;
+      margin-bottom: 6px;
+    }
+    .demo-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 16px;
+      background: #ffffff;
+      padding: 14px;
+      border-radius: 8px;
+      align-items: center;
+    }
+    .demo-control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+    }
+    .demo-control-group label {
+      font-weight: 600;
+      color: #334155;
+    }
+    .demo-control-group input[type=range] {
+      width: 160px;
+    }
+    .demo-canvas-wrap {
+      text-align: center;
+      background: #ffffff;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #e0f2fe;
+      margin-bottom: 12px;
+    }
+    .demo-canvas-wrap canvas {
+      max-width: 100%;
+      height: auto;
+    }
+    .demo-readout {
+      background: #0f172a;
+      color: #38bdf8;
+      font-family: monospace;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+    }
+
+    /* Phase D Guide Button & Modal Styling */
+    .guide-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #4f46e5, #3b82f6);
+      color: #ffffff;
+      font-weight: 700;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+      transition: all 0.2s;
+      margin: 16px 0;
+    }
+    .guide-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+    }
+    .guide-flag {
+      background: rgba(255,255,255,0.2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+    }
+
+    /* Modal Overlay */
+    #guide-modal {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(6px);
+      z-index: 2000;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    #guide-modal.open {
+      display: flex;
+    }
+    .modal-box {
+      background: #ffffff;
+      width: 100%;
+      max-width: 800px;
+      max-height: 85vh;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 20px 24px;
+      background: #0f172a;
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 { font-size: 1.15rem; font-weight: 700; }
+    .modal-close-btn {
+      background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;
+    }
+    .modal-close-btn:hover { color: #ffffff; }
+    .modal-body {
+      padding: 28px 32px;
+      overflow-y: auto;
+      line-height: 1.8;
+      font-size: 0.95rem;
+    }
+    .modal-body h1 { font-size: 1.4rem; color: #0f172a; margin-bottom: 16px; }
+    .modal-body h3 { font-size: 1.1rem; color: #1e40af; margin: 20px 0 10px 0; }
+    .modal-body blockquote {
+      background: #f1f5f9; border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 16px 0; border-radius: 4px;
+    }
+
+    /* Self Assessment Quiz */
+    .quiz-sec {
+      margin-top: 24px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .quiz-title { font-weight: 700; color: #0f172a; margin-bottom: 12px; font-size: 0.95rem; }
+    .quiz-option-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .quiz-option-btn:hover { background: #f1f5f9; }
+    .quiz-option-btn.correct { background: #dcfce7 !important; border-color: #16a34a !important; color: #15803d; font-weight: 600; }
+    .quiz-option-btn.wrong { background: #fee2e2 !important; border-color: #dc2626 !important; color: #b91c1c; }
+    .quiz-exp {
+      margin-top: 12px;
+      padding: 12px;
+      background: #eff6ff;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      color: #1e40af;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-content">
+    <div class="header-title">⚡ IDL 115學年度 Ch19：少樣本學習與元學習 (Few-Shot & Meta-Learning)</div>
+    <div class="header-toc">
+<a href="#kp1">KP 1</a>
+<a href="#kp2">KP 2</a>
+<a href="#kp3">KP 3</a>
+<a href="#kp4">KP 4</a>
+<a href="#kp5">KP 5</a>
+<a href="#kp6">KP 6</a>
+<a href="#kp7">KP 7</a>
+<a href="#kp8">KP 8</a>
+<a href="#kp9">KP 9</a>
+<a href="#kp10">KP 10</a>
+<a href="#kp11">KP 11</a>
+<a href="#kp12">KP 12</a>
+<a href="#kp13">KP 13</a>
+<a href="#kp14">KP 14</a>
+    </div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="page-progress"></div>
+  </div>
+</header>
+
+<div class="container">
+
+    <!-- CARD KP-1 -->
+    <section id="kp1" class="card" data-kp="1">
+      <div class="card-header">
+        <span class="badge">§1</span>
+        <h2 class="card-title">KP-1：少樣本學習 (Few-Shot Learning) 與元學習 (Meta-Learning) 導論</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 傳統深度學習的資料依賴痛點</h4>
+<p>標準監督式深度學習（如大型 ResNet、Vision Transformer）依賴於數以萬計標註良好的大規模資料集（如包含 1400 萬張圖片的 ImageNet）。然而在許多真實應用場景中（例如罕見疾病醫療影像診斷、冷門語言語音識別、新工業零件瑕疵檢測），獲取大量標註資料代價極其昂貴甚至不可能實現。</p>
+
+<h4>2. 少樣本學習與人類學習能力的對比</h4>
+<p>人類具備極強的<b>快速泛化能力 (Rapid Generalization)</b>：一個孩童只需看過一張「斑馬」的照片，就能在動物園中立刻辨認出從未見過的斑馬。<b>少樣本學習 (Few-Shot Learning, FSL)</b> 旨在使機器學習模型具備類似人類的能力，在僅給定極少數（如 1 到 5 個）標註樣本的條件下，快速適應並準確識別全新任務。</p>
+<p>若給定樣本數恰好為 1，則稱為<b>單樣本學習 (One-Shot Learning)</b>；若完全沒有標註樣本，僅依賴類別文字描述，則擴展為<b>零樣本學習 (Zero-Shot Learning, ZSL)</b>。</p>
+
+<h4>3. 元學習：學會如何學習 (Learning to Learn)</h4>
+<p>傳統機器學習關注於「在單一任務上學習模型參數」，而<b>元學習 (Meta-Learning)</b> 關注於「跨多個任務學習如何學習 (Learning to Learn)」。元學習模型在訓練階段經歷成千上萬個不同的小任務，從中提取跨任務的<b>通用先驗知識 (Meta-Knowledge)</b>，從而在面對全新未知任務時，只需進行幾步微調或度量比對即可完成高精度預測。</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-1 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp1.png" alt="KP-1 觀念示意圖" loading="lazy">
+        <figcaption>圖 KP-1 核心觀念示意圖</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 AI 繪圖提示詞 (Structured Prompt)</summary>
+        <div class="ai-illustration-prompt">WHAT: A dual-panel conceptual infographic comparing Standard Machine Learning vs Meta-Learning (Learning to Learn).
+WHY: To help students visually grasp how Meta-Learning extracts transferable meta-knowledge across tasks rather than memorizing a single dataset.
+MUST show: Left side showing a large static dataset mapping to a single trained model; Right side showing a series of mini-tasks feeding into a meta-learner that extracts a sensitive initialization point for rapid 1-5 step adaptation.
+AVOID: Overly complex code snippets or messy illegible formulas.
+STYLE: Modern tech vector illustration, clean lines, professional educational UI palette (#0f172a, #2563eb, #16a34a).</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-1 == -->
+      <div class="demo" id="demo-kp1" data-demo-id="kp-1">
+        <div class="demo-title">🎮 互動體驗 KP-1：標準機器學習 vs 元學習泛化曲線模擬器</div>
+        <div class="demo-instruction">
+          <h5>💡 操作指南：</h5>
+          拖動 <b>Support Set 樣本數 K</b> 與 <b>經歷 Task 數量 T</b> 滑桿，觀察元學習 (Learning to Learn) 如何在極少量樣本下超越傳統監督學習！
+        </div>
+        <div class="demo-controls">
+          <div class="demo-control-group">
+            <label>Support 樣本數 K-shot (1~20):</label>
+            <input type="range" id="slider-kp1-k" min="1" max="20" value="5" step="1">
+          </div>
+          <div class="demo-control-group">
+            <label>經歷 Meta-Training Tasks 數 (0~100):</label>
+            <input type="range" id="slider-kp1-tasks" min="0" max="100" value="50" step="5">
+          </div>
+        </div>
+        <div class="demo-canvas-wrap">
+          <canvas id="canvas-kp1" width="500" height="260"></canvas>
+        </div>
+        <div class="demo-readout" id="readout-kp1">數據加載中...</div>
+      </div>
+      <!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-14 == -->
+      <button class="guide-btn" onclick="openGuideModal(14)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：少樣本學習 (Few-Shot Learning) 與傳統監督式機器學習在目標上的最根本差異為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="true">1. 傳統學習關注於在單一大型數據集上擬合固定類別；少樣本學習關注於利用極少數標註樣本快速泛化至全新未見過的類別與任務</button>
+<button class="quiz-option-btn" data-correct="false">2. 少樣本學習只能處理文字數據，無法處理影像</button>
+<button class="quiz-option-btn" data-correct="false">3. 少樣本學習不需要進行任何反向傳播</button>
+<button class="quiz-option-btn" data-correct="false">4. 少樣本學習要求訓練資料庫大小不超過 100 Bytes</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>少樣本學習的核心突破在於泛化能力：模型在訓練時未曾見過的全新類別，只需給予 1~5 個 Support 範例即可精準識別。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-2 -->
+    <section id="kp2" class="card" data-kp="2">
+      <div class="card-header">
+        <span class="badge">§2.1–2.2</span>
+        <h2 class="card-title">KP-2：任務 (Task)、劇集 (Episode)、支援集 (Support Set) 與查詢集 (Query Set) (N-way K-shot)</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 劇集式訓練範式 (Episodic Training Paradigm)</h4>
+<p>為了使模型學會在少樣本條件下工作，Vinyals 等人提出了<b>劇集式訓練 (Episodic Training)</b> 範式：訓練過程被拆分為許許多多的<b>劇集 (Episodes)</b>，每個 Episode 模擬一次真實的少樣本測試環境。</p>
+
+<h4>2. N-way K-shot 經典設定與集合拆分</h4>
+<p>在每一個 Episode（即一個 Task $\mathcal{T}_i$）中，數據集包含兩個核心集合：</p>
+<ul>
+  <li><b>支援集 (Support Set, $\mathcal{S}$)</b>：提供給模型進行訓練/微調的小型範例集。若包含 $N$ 個全新類別，且每個類別有 $K$ 張標註圖片，則稱為 <b>$N$-way $K$-shot</b> 問題（共有 $N \times K$ 個樣本）。
+$$\mathcal{S} = \{(\boldsymbol{x}_j, y_j)\}_{j=1}^{N \times K}$$</li>
+  <li><b>查詢集 (Query Set, $\mathcal{Q}$)</b>：用於評估模型在該 Episode 表現的測試集。包含相同的 $N$ 個類別，每個類別有 $K_q$ 個待預測樣本。
+$$\mathcal{Q} = \{(\boldsymbol{x}_j^*, y_j^*)\}_{j=1}^{N \times K_q}$$</li>
+</ul>
+
+<h4>3. Meta-Training 與 Meta-Testing 的類別隔離原則</h4>
+<p>為了防止模型「死記硬背」，<b>元訓練集 (Meta-Training Set)</b> 的類別集合 $\mathcal{C}_{\text{train}}$ 與<b>元測試集 (Meta-Testing Set)</b> 的類別集合 $\mathcal{C}_{\text{test}}$ 必須<b>完全不相交 ($\mathcal{C}_{\text{train}} \cap \mathcal{C}_{\text{test}} = \emptyset$)</b>！這保證了模型在測試階段面對的絕對是全新的未見類別。</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-2 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp2.png" alt="KP-2 觀念示意圖" loading="lazy">
+        <figcaption>圖 KP-2 核心觀念示意圖</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 AI 繪圖提示詞 (Structured Prompt)</summary>
+        <div class="ai-illustration-prompt">WHAT: An architectural diagram illustrating Episodic Training with Support Set and Query Set in an N-way K-shot scenario.
+WHY: To clarify the fundamental dataset split within each episode during meta-training.
+MUST show: An Episode box splitting into a Support Set (N classes x K images for inner-loop adaptation) and a Query Set (N classes x K_q images for outer-loop meta-evaluation).
+AVOID: Confusing Support set with standard global training set.
+STYLE: Clean block diagram with distinct blue (#dbeafe) and green (#dcfce7) color-coded panels.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-2 == -->
+      <div class="demo" id="demo-kp2" data-demo-id="kp-2">
+        <div class="demo-title">🎮 互動體驗 KP-2：N-way K-shot Episode 任務動態採樣器</div>
+        <div class="demo-instruction">
+          <h5>💡 操作指南：</h5>
+          調整類別數 $N$ 與樣本數 $K$，查看在每一 Episode 中 Support Set 與 Query Set 的動態幾何分割與標註狀況。
+        </div>
+        <div class="demo-controls">
+          <div class="demo-control-group">
+            <label>N-way (2~5 類別):</label>
+            <input type="range" id="slider-kp2-n" min="2" max="5" value="3" step="1">
+          </div>
+          <div class="demo-control-group">
+            <label>K-shot (1~8 樣本):</label>
+            <input type="range" id="slider-kp2-k" min="1" max="8" value="4" step="1">
+          </div>
+          <button id="btn-kp2-resample" style="padding:6px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;">🎲 重新抽樣 Episode</button>
+        </div>
+        <div class="demo-canvas-wrap">
+          <canvas id="canvas-kp2" width="500" height="280"></canvas>
+        </div>
+        <div class="demo-readout" id="readout-kp2">數據加載中...</div>
+      </div>
+      <!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-14 == -->
+      <button class="guide-btn" onclick="openGuideModal(14)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：在 5-way 1-shot 少樣本分類設定中，每個 Episode 的支援集 (Support Set) 總共包含多少張標註圖像？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 1 張</button>
+<button class="quiz-option-btn" data-correct="true">2. 5 張 (5 個類別 × 每類 1 張)</button>
+<button class="quiz-option-btn" data-correct="false">3. 25 張</button>
+<button class="quiz-option-btn" data-correct="false">4. 根據模型層數而定</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>N-way K-shot 表示任務包含 N 個不同類別，每個類別提供 K 張支援範例。5-way 1-shot 即 5 × 1 = 5 張標註圖像。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-3 -->
+    <section id="kp3" class="card" data-kp="3">
+      <div class="card-header">
+        <span class="badge">§2.3</span>
+        <h2 class="card-title">KP-3：少樣本學習基準資料集 (Omniglot, Mini-ImageNet) 與元資料集 (Meta-Datasets)</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 經典單一少樣本基準資料集</h4>
+<p>評估少樣本學習演算法標準性能的常用資料集包括：</p>
+<ul>
+  <li><b>Omniglot (手寫文字的 MNIST)</b>：包含來自 50 種不同世界語言（如梵文、希臘字母、韓文）的 1623 種手寫字元，每個字元僅有 20 張手寫筆劃樣本。常用於 20-way 1-shot / 5-shot 評測。</li>
+  <li><b>Mini-ImageNet</b>：由 Vinyals 等人從大型 ImageNet 裁切出的標準基準，包含 100 個類別，每個類別 600 張 $84 \times 84$ 像素圖像。通常劃分為 64 個 Meta-Train 類別、16 個 Meta-Val 類別、20 個 Meta-Test 類別。</li>
+  <li><b>Quick, Draw!</b>：Google 收集的大型手繪草圖資料集，包含 345 個類別與 5000 萬張筆劃圖。</li>
+</ul>
+
+<h4>2. 跨領域元資料集 (Meta-Datasets)</h4>
+<p>為了測試模型跨不同視覺領域（如從自然花草跨到手繪草圖）的極限泛化能力，Triantafillou 等人構建了 <b>Meta-Dataset</b>，它整合了 ImageNet, Omniglot, QuickDraw, Aircraft, Birds, Textures 等多個不同來源的資料庫，設定動態變長 $N$-way $K$-shot 任務，成為當前 Few-Shot Learning 最高規格的綜合大考考場。</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-3 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp3.png" alt="KP-3 觀念示意圖" loading="lazy">
+        <figcaption>圖 KP-3 核心觀念示意圖</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 AI 繪圖提示詞 (Structured Prompt)</summary>
+        <div class="ai-illustration-prompt">WHAT: A comparative chart displaying standard Few-Shot benchmarks: Omniglot, Mini-ImageNet, and Meta-Dataset.
+WHY: To illustrate the evolution from synthetic handwritten characters to complex real-world multi-domain benchmarks.
+MUST show: Omniglot (1623 character classes from 50 alphabets), Mini-ImageNet (100 classes 84x84 images with 64/16/20 split), and Meta-Dataset (integrating ImageNet, QuickDraw, Aircraft).
+AVOID: Low resolution blurry icons.
+STYLE: Clean tabular infographic, flat vector design.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-3 == -->
+      <!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-14 == -->
+      <button class="guide-btn" onclick="openGuideModal(14)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：Mini-ImageNet 資料集在少樣本學習實驗中標準的類別拆分劃分方式為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 100 個類別全部混合在一起進行 10 折交叉驗證</button>
+<button class="quiz-option-btn" data-correct="true">2. 拆分為 64 個訓練類別 (Meta-Train)、16 個驗證類別 (Meta-Val) 與 20 個測試類別 (Meta-Test)，且類別間完全互斥</button>
+<button class="quiz-option-btn" data-correct="false">3. 將每張圖像裁切為 1x1 像素點</button>
+<button class="quiz-option-btn" data-correct="false">4. 隨機抽樣 50% 類別作為測試集，允許訓練與測試類別重疊</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>Mini-ImageNet 標準劃分為 64/16/20 類別，保證測試階段的 20 個類別在訓練階段從未被模型接觸過。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-4 -->
+    <section id="kp4" class="card" data-kp="4">
+      <div class="card-header">
+        <span class="badge">§3</span>
+        <h2 class="card-title">KP-4：非劇集式少樣本學習 (Non-Episodic Baseline / Baseline++)</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 非劇集式 (Non-Episodic) 遷移學習範式</h4>
+<p>與複雜的元學習劇集訓練不同，<b>非劇集式少樣本學習</b> 採用標準的兩階段遷移學習 (Transfer Learning) 流程：</p>
+<ol>
+  <li><b>預訓練階段 (Pre-training)</b>：在整個 Meta-Training 全體數據集上，使用標準交叉熵損失 (Cross-Entropy Loss) 訓練一個強大的特徵提取骨幹網路 $f_\theta(\boldsymbol{x})$（Backbone，如 ResNet）。倒數第二層作為高維特徵嵌入層 (Embedding Layer)。</li>
+  <li><b>微調測試階段 (Fine-Tuning / Test)</b>：面對新任務的 Support Set $\mathcal{S}$，替換最後一層分類標頭 (Classification Head)，固定或小學習率微調骨幹網路。</li>
+</ol>
+
+<h4>2. Baseline 與 Baseline++ 算法對比</h4>
+<p>Chen 等人在 2019 年的開創性工作提出了 <b>Baseline++</b> 算法，它大幅縮小了傳統遷移學習與複雜元學習之間的差距：</p>
+<ul>
+  <li><b>Standard Baseline</b>：分類標頭採用標準全連接層 $\boldsymbol{w}_i^\top f_\theta(\boldsymbol{x}) + b_i$，輸出 Softmax 類別機率。</li>
+  <li><b>Baseline++</b>：將分類標頭替換為<b>餘弦相似度標頭 (Cosine Similarity Head)</b>。對特徵向量與權重向量進行 L2 歸一化，計算：
+$$p(y = i \mid \boldsymbol{x}) = \frac{\exp\left( \tau \cdot \frac{f_\theta(\boldsymbol{x})^\top \boldsymbol{w}_i}{\|f_\theta(\boldsymbol{x})\|_2 \|\boldsymbol{w}_i\|_2} \right)}{\sum_{j=1}^N \exp\left( \tau \cdot \frac{f_\theta(\boldsymbol{x})^\top \boldsymbol{w}_j}{\|f_\theta(\boldsymbol{x})\|_2 \|\boldsymbol{w}_j\|_2} \right)}$$
+這強制特徵空間具備良好的角度幾何聚類特性！</li>
+</ul>
+      </div>
+
+      <!-- == Phase B 圖解 kp-4 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp4.png" alt="KP-4 觀念示意圖" loading="lazy">
+        <figcaption>圖 KP-4 核心觀念示意圖</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 AI 繪圖提示詞 (Structured Prompt)</summary>
+        <div class="ai-illustration-prompt">WHAT: A comparative diagram between Standard Baseline vs Baseline++ (Cosine Similarity Head).
+WHY: To explain why normalizing feature vector norms prevents scale distortion in few-shot classification.
+MUST show: Standard Baseline with linear dot product vs Baseline++ with L2-normalized feature vectors computing cosine similarity angles.
+AVOID: Unnecessary 3D rendering clutter.
+STYLE: High-contrast technical vector diagram.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-4 == -->
+      <div class="demo" id="demo-kp4" data-demo-id="kp-4">
+        <div class="demo-title">🎮 互動體驗 KP-4：Baseline++ 餘弦相似度標頭角度聚類模擬器</div>
+        <div class="demo-instruction">
+          <h5>💡 操作指南：</h5>
+          拖動 <b>縮放因子 $\tau$</b> 滑桿，觀察特徵向量經 L2 歸一化後在單位圓上的角度餘弦比對與 Softmax 類別機率變化。
+        </div>
+        <div class="demo-controls">
+          <div class="demo-control-group">
+            <label>Cosine Scaling Factor tau (1.0~20.0):</label>
+            <input type="range" id="slider-kp4-tau" min="1.0" max="20.0" value="5.0" step="0.5">
+          </div>
+        </div>
+        <div class="demo-canvas-wrap">
+          <canvas id="canvas-kp4" width="500" height="260"></canvas>
+        </div>
+        <div class="demo-readout" id="readout-kp4">數據加載中...</div>
+      </div>
+      <!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-14 == -->
+      <button class="guide-btn" onclick="openGuideModal(14)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：Baseline++ 相比於標準傳統 Baseline 分類標頭，做了什麼關鍵的數學改進？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 取消所有神經網絡激活函數</button>
+<button class="quiz-option-btn" data-correct="true">2. 採用歸一化的餘弦相似度 (Cosine Similarity) 標頭取代標準點積全連接層，顯著減少特徵向量模長帶來的干擾</button>
+<button class="quiz-option-btn" data-correct="false">3. 將分類器改為決策樹</button>
+<button class="quiz-option-btn" data-correct="false">4. 在微調時禁止更新任何參數</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>Baseline++ 透過特徵與權重的 L2 歸一化餘弦相似度取代點積，使得模型專注於學習角度特徵方向，大幅提升了少樣本條件下的適應能力。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-5 -->
+    <section id="kp5" class="card" data-kp="5">
+      <div class="card-header">
+        <span class="badge">§4.1</span>
+        <h2 class="card-title">KP-5：匹配網絡 (Matching Networks) 與餘弦相似度 Softmax</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 度量元學習 (Metric-Based Meta-Learning) 核心哲學</h4>
+<p>度量元學習的想法非常直觀：學習一個神經網絡特徵映射函數 $f_\theta(\boldsymbol{x})$，將高維圖像映射到低維度量空間。在該空間中，<b>同類別樣本之間的距離極近，異類別樣本之間的距離極遠</b>。預測時只需將 Query 樣本與 Support 樣本進行距離比對即可。</p>
+
+<h4>2. 匹配網絡 (Matching Networks) 的注意力決策公式</h4>
+<p>Vinyals 等人在 2016 年提出的 <b>Matching Networks</b> 引入了非參數化的注意力機制 (Attention Mechanism)。對於 Query 樣本 $\boldsymbol{x}^*$，其預測類別 $\ell$ 的條件機率為 Support 樣本標籤的加權組合：</p>
+
+$$\mathbb{P}(y^* = \ell \mid \boldsymbol{x}^*, \mathcal{S}) = \sum_{i=1}^{|\mathcal{S}|} a(\boldsymbol{x}^*, \boldsymbol{x}_i) \cdot \mathbb{I}(y_i = \ell)$$
+
+<p>其中注意力權重 $a(\boldsymbol{x}^*, \boldsymbol{x}_i)$ 採用歸一化特徵之間的<b>餘弦相似度 (Cosine Similarity) Softmax</b>：</p>
+
+$$a(\boldsymbol{x}^*, \boldsymbol{x}_i) = \frac{\exp\left( \widehat{f}(\boldsymbol{x}_i)^\top \widehat{f}(\boldsymbol{x}^*) \right)}{\sum_{j=1}^{|\mathcal{S}|} \exp\left( \widehat{f}(\boldsymbol{x}_j)^\top \widehat{f}(\boldsymbol{x}^*) \right)}$$
+
+<p>其中 $\widehat{f}(\boldsymbol{x}) = \frac{f(\boldsymbol{x})}{\|f(\boldsymbol{x})\|_2}$ 為單位長度歸一化嵌入。</p>
+
+<h4>3. 上下文嵌入 (Full Context Embeddings, FCE)</h4>
+<p>為了使 Support 樣本與 Query 樣本能夠感知整個集合的全局上下文，Matching Networks 採用雙向 LSTM (Bidirectional LSTM) 與 Readout LSTM 對 $f(\boldsymbol{x})$ 進行增強，產生依賴於全集合的動態嵌入 $\hat{g}(\boldsymbol{x}_i \mid \mathcal{S})$ 與 $f(\boldsymbol{x}^* \mid \mathcal{S})$。</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-5 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp5.png" alt="KP-5 觀念示意圖" loading="lazy">
+        <figcaption>圖 KP-5 核心觀念示意圖</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 AI 繪圖提示詞 (Structured Prompt)</summary>
+        <div class="ai-illustration-prompt">WHAT: An attention mechanism diagram for Matching Networks.
+WHY: To depict how query samples are classified using a Softmax weighted sum over cosine similarities with all support samples.
+MUST show: Query sample x* connecting via cosine similarity softmax attention weights to support samples x_i, producing predicted class probabilities.
+AVOID: Crowded overlapping text.
+STYLE: Modern neural architecture flow diagram.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-5 == -->
+      <!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-14 == -->
+      <button class="guide-btn" onclick="openGuideModal(14)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：匹配網絡 (Matching Networks) 如何計算待測 Query 樣本 x* 屬於某類別的機率？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 直接將 Query 樣本輸入一個 1000 分類的 Softmax 全連接層</button>
+<button class="quiz-option-btn" data-correct="true">2. 對 Query 樣本特徵與 Support 集各樣本特徵計算餘弦相似度 Softmax 注意力加權</button>
+<button class="quiz-option-btn" data-correct="false">3. 利用 K-means 對整個資料集重新聚類</button>
+<button class="quiz-option-btn" data-correct="false">4. 計算 Query 樣本的像素均方誤差 (MSE)</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>Matching Networks 利用注意力機制，將 Query 樣本與 Support 集每一個樣本計算歸一化餘弦相似度，並以 Softmax 權重累加標籤。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-6 -->
+    <section id="kp6" class="card" data-kp="6">
+      <div class="card-header">
+        <span class="badge">§4.2.1</span>
+        <h2 class="card-title">KP-6：監督式原型網絡 (Supervised Prototypical Networks) 與歐氏原型聚類</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 類別原型 (Class Prototypes) 的概念</h4>
+<p>Snell 等人在 2017 年提出的 <b>原型網絡 (Prototypical Networks)</b> 建立在一個極具幾何直覺的假設上：<b>在適當的嵌入空間中，每個類別都可以用一個單一的「原型向量 (Prototype Vector)」來代表</b>。</p>
+
+<h4>2. 原型向量的平均計算</h4>
+<p>對於 Support Set $\mathcal{S}$ 中屬於類別 $\ell$ 的所有樣本，其類別原型 $\widetilde{\boldsymbol{f}}_\ell$ 為該類別所有支援樣本特徵嵌入的<b>算術平均值 (Mean Vector)</b>：</p>
+
+$$\widetilde{\boldsymbol{f}}_\ell := \frac{1}{K} \sum_{i \in \mathcal{S}_\ell} f_\theta(\boldsymbol{x}_i)$$
+
+<p>其中 $K$ 為 $K$-shot 的樣本數，$\mathcal{S}_\ell$ 為類別 $\ell$ 的支援樣本集合。</p>
+
+<h4>3. 歐氏距離 (Euclidean Distance) Softmax 分類</h4>
+<p>對於 Query 樣本 $\boldsymbol{x}^*$，計算其與各類別原型 $\widetilde{\boldsymbol{f}}_\ell$ 之間的<b>平方歐氏距離</b> $d(\boldsymbol{z}, \boldsymbol{z}') = \|f_\theta(\boldsymbol{x}^*) - \widetilde{\boldsymbol{f}}_\ell\|_2^2$，並通過 Softmax 轉化為類別機率：</p>
+
+$$\mathbb{P}(y^* = \ell \mid \boldsymbol{x}^*, \mathcal{S}) = \frac{\exp\left( -\|f_\theta(\boldsymbol{x}^*) - \widetilde{\boldsymbol{f}}_\ell\|_2^2 \right)}{\sum_{\ell'=1}^N \exp\left( -\|f_\theta(\boldsymbol{x}^*) - \widetilde{\boldsymbol{f}}_{\ell'}\|_2^2 \right)}$$
+
+<p><b>為何使用歐氏距離而非餘弦相似度？</b> 原論文證明了當使用歐氏距離時，原型網絡等價於在 Bregman 散度下的混合指數族分佈 (Exponential Family) 密度估計，效果顯著優於餘弦相似度！</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-6 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp6.png" alt="KP-6 觀念示意圖" loading="lazy">
+        <figcaption>圖 KP-6 核心觀念示意圖</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 AI 繪圖提示詞 (Structured Prompt)</summary>
+        <div class="ai-illustration-prompt">WHAT: A 2D feature space diagram showing Prototypical Networks (Class Prototypes & Euclidean Distance).
+WHY: To visually explain how support instances are averaged into a single class prototype and query samples are assigned by minimum Euclidean distance.
+MUST show: Two clusters of support points with star-shaped Mean Prototypes, and a Query point evaluated via dashed Euclidean distance lines.
+AVOID: Mislabeling Euclidean distance as Cosine similarity.
+STYLE: Geometric scatter plot diagram with crisp vector markers.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-503_362_849_208_730.jpg" alt="原書圖 19.1：原型網絡 (Prototypical Networks) 支援集樣本平均導出類別原型與 Query 樣本歐氏距離 Softmax 分類機制示意圖" loading="lazy">
+        <figcaption>📷 原書圖 19.1：原型網絡 (Prototypical Networks) 支援集樣本平均導出類別原型與 Query 樣本歐氏距離 Softmax 分類機制示意圖</figcaption>
+      </figure>
+
+      <!-- == Phase C Demo kp-6 == -->
+      <div class="demo" id="demo-kp6" data-demo-id="kp-6">
+        <div class="demo-title">🎮 互動體驗 KP-6：原型網絡 (Prototypical Networks) 平均原型與歐氏聚類</div>
+        <div class="demo-instruction">
+          <h5>💡 操作指南：</h5>
+          調整 K-shot 樣本數，觀察 Support 樣本點的算術平均值 (Mean Vector Prototype $\star$) 如何動態移動，並決定 Query 樣本的歐氏距離 Softmax 分類結果。
+        </div>
+        <div class="demo-controls">
+          <div class="demo-control-group">
+            <label>K-shot 樣本數 (1~10):</label>
+            <input type="range" id="slider-kp6-k" min="1" max="10" value="5" step="1">
+          </div>
+        </div>
+        <div class="demo-canvas-wrap">
+          <canvas id="canvas-kp6" width="500" height="260"></canvas>
+        </div>
+        <div class="demo-readout" id="readout-kp6">數據加載中...</div>
+      </div>
+      <!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-14 == -->
+      <button class="guide-btn" onclick="openGuideModal(14)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：原型網絡 (Prototypical Networks) 中，類別原型 (Class Prototype) 是如何計算出來的？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 隨機初始化一個可學習權重矩陣</button>
+<button class="quiz-option-btn" data-correct="true">2. 將 Support Set 中屬於該類別的所有樣本特徵嵌入向量求算術平均值 (Mean Vector)</button>
+<button class="quiz-option-btn" data-correct="false">3. 挑選該類別中第一個輸入的樣本特徵</button>
+<button class="quiz-option-btn" data-correct="false">4. 利用主成分分析 (PCA) 取第一主成分</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>原型網絡的代表性創新即為將 Support 集中同一類別的 K 個樣本特徵求平均作為該類的「原型」，極大地簡化了計算並具備良好的幾何代表性。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-7 -->
+    <section id="kp7" class="card" data-kp="7">
+      <div class="card-header">
+        <span class="badge">§4.2.2</span>
+        <h2 class="card-title">KP-7：半監督原型網絡 (Semi-Supervised Prototypical Networks) 與軟指派原型更新</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 利用未標註資料 (Unlabeled Data) 增強原型</h4>
+<p>在許多實際場景中，除了極少量的標註 Support 樣本之外，往往還存在大量的<b>未標註樣本集 (Unlabeled Set, $\mathcal{U}$)</b>。Ren 等人在 2018 年提出了 <b>半監督原型網絡 (Semi-Supervised Prototypical Networks)</b>，旨在利用未標註資料精煉類別原型的幾何位置。</p>
+
+<h4>2. 軟指派 (Soft Assignment) 與 EM 迭代更新</h4>
+<p>半監督原型網絡採用類似 EM (Expectation-Maximization) 演算法的軟指派機制：</p>
+<ol>
+  <li><b>E-step (計算軟指派機率)</b>：利用初始標註 Support 樣本算出的基礎原型 $\widetilde{\boldsymbol{f}}_\ell^{(0)}$，計算未標註樣本 $\tilde{\boldsymbol{x}} \in \mathcal{U}$ 屬於各類別 $\ell$ 的權重機率 $\tilde{z}_{j, \ell}$：
+$$\tilde{z}_{j, \ell} = \frac{\exp\left( -d(f_\theta(\tilde{\boldsymbol{x}}_j), \widetilde{\boldsymbol{f}}_\ell^{(0)}) \right)}{\sum_{\ell'=1}^N \exp\left( -d(f_\theta(\tilde{\boldsymbol{x}}_j), \widetilde{\boldsymbol{f}}_{\ell'}^{(0)}) \right)}$$</li>
+  <li><b>M-step (更新增強原型)</b>：將未標註樣本以軟指派權重累加回類別原型中，導出更精準的軟原型：
+$$\widetilde{\boldsymbol{f}}_\ell^{\text{refined}} = \frac{\sum_{i \in \mathcal{S}_\ell} f_\theta(\boldsymbol{x}_i) + \sum_{j \in \mathcal{U}} \tilde{z}_{j, \ell} f_\theta(\tilde{\boldsymbol{x}}_j)}{|\mathcal{S}_\ell| + \sum_{j \in \mathcal{U}} \tilde{z}_{j, \ell}}$$</li>
+</ol>
+
+<h4>3. 離群值雜訊遮罩 (Outlier Masking)</h4>
+<p>若未標註集中包含不屬於 $N$ 個類別中任何一類的干擾雜訊（Outliers），算法引入一個額外的「離群值原型 $\widetilde{\boldsymbol{f}}_{\text{outlier}}$」，自動吸收不匹配樣本，防止其污染類別原型。</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-7 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp7.png" alt="KP-7 觀念示意圖" loading="lazy">
+        <figcaption>圖 KP-7 核心觀念示意圖</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 AI 繪圖提示詞 (Structured Prompt)</summary>
+        <div class="ai-illustration-prompt">WHAT: An EM-like iterative flow chart for Semi-Supervised Prototypical Networks.
+WHY: To explain how unlabeled data is incorporated via Soft Assignment to refine class prototypes.
+MUST show: Initial base prototype from labeled support data -> E-step soft assignment probabilities on unlabeled samples -> M-step refined prototype position.
+AVOID: Confusing soft assignment with hard classification.
+STYLE: Step-by-step process flowchart.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-7 == -->
+      <!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-14 == -->
+      <button class="guide-btn" onclick="openGuideModal(14)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：半監督原型網絡 (Semi-Supervised Prototypical Networks) 如何利用未標註資料 (Unlabeled Data) 來改善類別原型？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 將所有未標註資料直接刪除</button>
+<button class="quiz-option-btn" data-correct="true">2. 利用當前原型計算未標註樣本的軟指派機率 (Soft Assignment)，並以加權平均方式將未標註特徵累加回原型進行精煉</button>
+<button class="quiz-option-btn" data-correct="false">3. 將未標註資料全部強制標記為第 1 類</button>
+<button class="quiz-option-btn" data-correct="false">4. 將未標註資料作為神經網絡的權重初始值</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>半監督原型網絡透過 E-step 計算未標註樣本對各類的軟指派權重，再於 M-step 加權更新原型，顯著修正了僅靠少數標註樣本導致的原型偏差。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-8 -->
+    <section id="kp8" class="card" data-kp="8">
+      <div class="card-header">
+        <span class="badge">§4.3</span>
+        <h2 class="card-title">KP-8：關係網絡 (Relation Networks) 與深度可學習度量 (Deep Metric Learning)</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 從固定度量到可學習度量 (Learnable Metric)</h4>
+<p>Matching Networks（餘弦相似度）與 Prototypical Networks（歐氏距離）都採用了固定的人為指定幾何距離函數。然而，最適合特定任務的幾何度量空間可能極度複雜且非線性。Sung 等人在 2018 年提出了 <b>關係網絡 (Relation Networks, RN)</b>，用一個<b>可學習的神經網絡 (Relation Module $g_\phi$)</b> 取代固定距離函數。</p>
+
+<h4>2. 關係網絡的雙模組架構</h4>
+<p>Relation Network 由兩個神經網絡模組組成：</p>
+<ul>
+  <li><b>特徵提取模組 $f_\theta$</b>：將輸入圖像轉換為特徵圖 (Feature Maps) $f_\theta(\boldsymbol{x})$。</li>
+  <li><b>關係模組 $g_\phi$ (Relation Module)</b>：將 Support 樣本特徵與 Query 樣本特徵進行<b>通道拼接 (Concatenation)</b>，輸入由卷積層與全連接層組成的 $g_\phi$，輸出一個 $[0, 1]$ 之間的<b>關係分數 (Relation Score, $d_{i, j}$)</b>：
+$$d_{i, j} = g_\phi \left( \mathcal{C}\left( f_\theta(\boldsymbol{x}_i), f_\theta(\boldsymbol{x}_j^*) \right) \right)$$
+其中 $\mathcal{C}(\cdot, \cdot)$ 表示特徵拼接操作。</li>
+</ul>
+
+<h4>3. 均方誤差 (MSE) 損失函數訓練</h4>
+<p>不同於傳統交叉熵，Relation Network 的目標是讓匹配同類的關係分數接近 1，異類的關係分數接近 0。因此採用 MSE 均方誤差進行端到端優化：</p>
+
+$$\mathcal{L} = \sum_{i=1}^{|\mathcal{S}|} \sum_{j=1}^{|\mathcal{Q}|} \left( d_{i, j} - \mathbb{I}(y_i = y_j^*) \right)^2$$
+      </div>
+
+      <!-- == Phase B 圖解 kp-8 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp8.png" alt="KP-8 觀念示意圖" loading="lazy">
+        <figcaption>圖 KP-8 核心觀念示意圖</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 AI 繪圖提示詞 (Structured Prompt)</summary>
+        <div class="ai-illustration-prompt">WHAT: A neural architecture diagram of Relation Networks (RN).
+WHY: To highlight replacing hand-crafted distance functions with a learnable neural Relation Module.
+MUST show: Feature extractor f_theta outputting feature maps, concatenation of Support and Query feature maps, feeding into Relation Module g_phi to yield a relation score in [0, 1].
+AVOID: Omission of concatenation step.
+STYLE: Deep learning network block diagram.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-8 == -->
+      <!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-14 == -->
+      <button class="guide-btn" onclick="openGuideModal(14)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：關係網絡 (Relation Network) 相比於原型網絡，最大的創新突破為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 放棄使用卷積神經網絡</button>
+<button class="quiz-option-btn" data-correct="true">2. 使用可學習的神經網絡關係模組 (Relation Module) 取代固定的歐氏或餘弦距離，實現非線性可學習度量</button>
+<button class="quiz-option-btn" data-correct="false">3. 將影像強制轉換為灰階</button>
+<button class="quiz-option-btn" data-correct="false">4. 只能處理 1-way 0-shot 任務</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>Relation Network 引入可學習的神經網絡 g_phi 透過拼接特徵自動學習最佳非線性相似度度量，大幅提升了度量學習的靈活性。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-9 -->
+    <section id="kp9" class="card" data-kp="9">
+      <div class="card-header">
+        <span class="badge">§5.1</span>
+        <h2 class="card-title">KP-9：模型無關元學習 (MAML) 內外迴圈二階梯度推導</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 梯度元學習 (Gradient-Based Meta-Learning) 的革命性理念</h4>
+<p>Finn 等人在 2017 年提出的 <b>Model-Agnostic Meta-Learning (MAML)</b> 是元學習領域劃時代的突破。MAML 不限制任何特定模型架構（可用於 CNN、RNN、RL），其核心思想是<b>尋找一組最佳的初始參數 $\boldsymbol{\theta}$，使得模型在面對任何新任務 $\mathcal{T}_i$ 時，只需使用極少量的 Support 樣本進行 1 次或幾次梯度下降（Task-Specific Fine-tuning），就能在該任務上取得極高的準確度！</b></p>
+
+<h4>2. 雙層優化架構 (Bi-level Optimization)</h4>
+<p>MAML 採用雙層迴圈更新機制：</p>
+<ol>
+  <li><b>內迴圈 (Inner Loop / Task-Specific Adaptation)</b>：對於特定任務 $\mathcal{T}_i$，模型從初始參數 $\boldsymbol{\theta}$ 出發，使用該任務的支援集 $\mathcal{S}_i$ 計算梯度，進行 1 步適應更新：
+$$\boldsymbol{\theta}'_i = \boldsymbol{\theta} - \alpha \nabla_{\boldsymbol{\theta}} \mathcal{L}_{\mathcal{T}_i}^{\mathcal{S}}(\boldsymbol{\theta})$$
+其中 $\alpha$ 為內迴圈學習率。</li>
+  <li><b>外迴圈 (Outer Loop / Meta-Update)</b>：在適應後的參數 $\boldsymbol{\theta}'_i$ 上，使用該任務的查詢集 $\mathcal{Q}_i$ 計算測試損失，並對原始初始參數 $\boldsymbol{\theta}$ 進行元更新：
+$$\boldsymbol{\theta} \leftarrow \boldsymbol{\theta} - \beta \nabla_{\boldsymbol{\theta}} \sum_{\mathcal{T}_i \sim p(\mathcal{T})} \mathcal{L}_{\mathcal{T}_i}^{\mathcal{Q}}(\boldsymbol{\theta}'_i)$$
+其中 $\beta$ 為外迴圈元學習率。</li>
+</ol>
+
+<h4>3. 二階 Hessian 矩陣推導與 First-Order MAML (FOMAML)</h4>
+<p>外迴圈梯度的鏈式法則展開包含<b>二階導數 (Hessian Matrix)</b>：</p>
+
+$$\nabla_{\boldsymbol{\theta}} \mathcal{L}_{\mathcal{T}_i}^{\mathcal{Q}}(\boldsymbol{\theta}'_i) = \nabla_{\boldsymbol{\theta}'_i} \mathcal{L}_{\mathcal{T}_i}^{\mathcal{Q}}(\boldsymbol{\theta}'_i) \cdot \frac{\partial \boldsymbol{\theta}'_i}{\partial \boldsymbol{\theta}} = \nabla_{\boldsymbol{\theta}'_i} \mathcal{L}_{\mathcal{T}_i}^{\mathcal{Q}}(\boldsymbol{\theta}'_i) \cdot \left( \boldsymbol{I} - \alpha \nabla_{\boldsymbol{\theta}}^2 \mathcal{L}_{\mathcal{T}_i}^{\S}(\boldsymbol{\theta}) \right)$$
+
+<p>完整計算 $\nabla_{\boldsymbol{\theta}}^2$ 需要二階向量-Hessian 乘積（計算昂貴）。<b>一階 MAML (FOMAML)</b> 忽略二階項（設 $\frac{\partial \boldsymbol{\theta}'_i}{\partial \boldsymbol{\theta}} \approx \boldsymbol{I}$），直接用 $\nabla_{\boldsymbol{\theta}'_i} \mathcal{L}_{\mathcal{T}_i}^{\mathcal{Q}}(\boldsymbol{\theta}'_i)$ 更新 $\boldsymbol{\theta}$，在大幅節省計算資源的同時保持了優異的性能。</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-9 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp9.png" alt="KP-9 觀念示意圖" loading="lazy">
+        <figcaption>圖 KP-9 核心觀念示意圖</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 AI 繪圖提示詞 (Structured Prompt)</summary>
+        <div class="ai-illustration-prompt">WHAT: A optimization trajectory map of Model-Agnostic Meta-Learning (MAML).
+WHY: To illustrate the bi-level optimization (Inner Loop Task Adaptation vs Outer Loop Meta-Update).
+MUST show: Meta-initialization theta, inner-loop gradient step to task-specific theta_i', and outer-loop meta-gradient update adjusting initial theta.
+AVOID: Confusing inner-loop step size alpha with outer-loop meta step size beta.
+STYLE: Elegant vector trajectory plot with gradient arrows.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-510_258_662_695_916.jpg" alt="原書圖 19.2：模型無關元學習 (MAML) 內迴圈 Task-Specific 快速適應與外迴圈 Meta-Update 二階梯度優化軌跡示意圖" loading="lazy">
+        <figcaption>📷 原書圖 19.2：模型無關元學習 (MAML) 內迴圈 Task-Specific 快速適應與外迴圈 Meta-Update 二階梯度優化軌跡示意圖</figcaption>
+      </figure>
+
+      <!-- == Phase C Demo kp-9 == -->
+      <div class="demo" id="demo-kp9" data-demo-id="kp-9">
+        <div class="demo-title">🎮 互動體驗 KP-9：MAML 內外迴圈二階優化軌跡計算器</div>
+        <div class="demo-instruction">
+          <h5>💡 操作指南：</h5>
+          調整 <b>內迴圈步長 $\alpha$</b> 與 <b>外迴圈元學習率 $\beta$</b>，觀察 Initial $\theta$ 如何經由 Task 1/2 適應點連線，計算出最終的最佳 Meta-Update 方向。
+        </div>
+        <div class="demo-controls">
+          <div class="demo-control-group">
+            <label>內迴圈學習率 alpha (0.1~1.0):</label>
+            <input type="range" id="slider-kp9-alpha" min="0.1" max="1.0" value="0.5" step="0.05">
+          </div>
+          <div class="demo-control-group">
+            <label>外迴圈元學習率 beta (0.1~1.0):</label>
+            <input type="range" id="slider-kp9-beta" min="0.1" max="1.0" value="0.4" step="0.05">
+          </div>
+        </div>
+        <div class="demo-canvas-wrap">
+          <canvas id="canvas-kp9" width="500" height="260"></canvas>
+        </div>
+        <div class="demo-readout" id="readout-kp9">數據加載中...</div>
+      </div>
+      <!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-14 == -->
+      <button class="guide-btn" onclick="openGuideModal(14)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：Model-Agnostic Meta-Learning (MAML) 的核心訓練目標為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 訓練一個固定不動的特徵提取器，測試時禁止修改任何權重</button>
+<button class="quiz-option-btn" data-correct="true">2. 尋找一組最佳的神經網絡初始參數 theta，使模型在任何新任務上只需經由極少數梯度步驟微調即可快速適應</button>
+<button class="quiz-option-btn" data-correct="false">3. 將所有數據集壓縮為 1 Bytes 的二進位碼</button>
+<button class="quiz-option-btn" data-correct="false">4. 極大化內迴圈與外迴圈的參數維度</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>MAML 的本質是「學習最佳初始敏感情境 (Sensitive Initial Parameters)」，使得從該初始點出發只需 1~5 步梯度適應即可精準擬合新任務。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-10 -->
+    <section id="kp10" class="card" data-kp="10">
+      <div class="card-header">
+        <span class="badge">§5.2</span>
+        <h2 class="card-title">KP-10：無監督 MAML (UMTRA) 與資料增強假任務生成</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 無監督元學習 (Unsupervised Meta-Learning) 挑戰</h4>
+<p>標準 MAML 依賴於標註好的數據集來構建 $N$-way $K$-shot 任務。然而在完全缺乏人工標註資料的情況下，如何進行 MAML 元訓練？Khodadadeh 等人在 2019 年提出了 <b>UMTRA (Unsupervised Meta-Learning via Augmented Random Sampling)</b>。</p>
+
+<h4>2. UMTRA 的假任務 (Pseudo-Tasks) 生成機制</h4>
+<p>UMTRA 利用<b>資料增強 (Data Augmentations)</b> 無中生有地構建 Episodic 訓練任務：</p>
+<ol>
+  <li><b>類別選擇</b>：從無標註資料庫中隨機無放回抽樣 $N$ 張不同的原始圖片 $\{\boldsymbol{x}_1, \boldsymbol{x}_2, \dots, \boldsymbol{x}_N\}$，假定每張圖片代表一個獨立的「虛擬類別」。</li>
+  <li><b>Support Set 構建</b>：對每張原始圖片施加隨機資料增強（如旋轉、裁剪、色彩抖動），產出支援樣本：
+$$\mathcal{S} = \{(\text{Aug}(\boldsymbol{x}_i), i)\}_{i=1}^N$$</li>
+  <li><b>Query Set 構建</b>：對相同的 $N$ 張原始圖片施加<b>另一組獨立的隨機資料增強</b>，產出查詢樣本：
+$$\mathcal{Q} = \{(\text{Aug}'(\boldsymbol{x}_i), i)\}_{i=1}^N$$</li>
+</ol>
+<p>將此假任務餵入 MAML 進行標準內外迴圈更新，成功實現了完全不需要任何人工標註的強大元學習！</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-10 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp10.png" alt="KP-10 觀念示意圖" loading="lazy">
+        <figcaption>圖 KP-10 核心觀念示意圖</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 AI 繪圖提示詞 (Structured Prompt)</summary>
+        <div class="ai-illustration-prompt">WHAT: A data augmentation diagram for UMTRA (Unsupervised MAML).
+WHY: To show how pseudo-tasks are constructed from unlabeled images without human annotations.
+MUST show: Unlabeled images sampled as N pseudo-classes, applying Augmentation A for Support Set and Augmentation B for Query Set.
+AVOID: Showing labeled ground truth text.
+STYLE: Data pipeline illustration.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-10 == -->
+      <!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-14 == -->
+      <button class="guide-btn" onclick="openGuideModal(14)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：無監督 MAML (UMTRA) 如何在沒有人工標註資料的情況下構建 Few-Shot 訓練劇集？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 利用人工手寫規則為所有圖片標註文字</button>
+<button class="quiz-option-btn" data-correct="true">2. 隨機抽樣 N 張原始圖片視為 N 個虛擬類別，並對每張圖片施加兩組獨立的隨機資料增強分別作為 Support Set 與 Query Set</button>
+<button class="quiz-option-btn" data-correct="false">3. 將所有圖片合併為單一類別</button>
+<button class="quiz-option-btn" data-correct="false">4. 採用生成對抗網絡 GAN 產生真實標籤</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>UMTRA 巧妙地利用「同一張圖片的不同增強視角視為同類，不同圖片視為異類」的自監督假想機制，實現了無監督 MAML 任務構建。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-11 -->
+    <section id="kp11" class="card" data-kp="11">
+      <div class="card-header">
+        <span class="badge">§5.3–5.4</span>
+        <h2 class="card-title">KP-11：MAML++ 穩定技巧與自適應學習率 (LSLR-MAML / Meta-SGD)</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 原始 MAML 的三大工程訓練痛點</h4>
+<p>Antoniou 等人在 2019 年的 <b>MAML++</b> 工作中指出，原始 MAML 存在嚴重的工程不穩定性：</p>
+
+- **痛點一：梯度不穩定與爆炸 (Gradient Instability)**：二階鏈式法則穿過多步內迴圈累積極易引發梯度爆炸。
+- **痛點二：內迴圈學習率固定**：所有層、所有梯度步驟共享同一個純量學習率 $\alpha$，無法適應不同網絡層的敏感度。
+- **痛點三：批次歸一化 (BatchNorm) 統計量崩潰**：內迴圈更新時 BatchNorm 的 Running Mean/Var 被破壞。
+
+---
+
+### 2. MAML++ 的核心穩定改進措施
+
+1. **分層分步可學習學習率 (LSLR-MAML / Layer-wise & Step-wise Learning Rates)**：
+   將單一學習率 $\alpha$ 擴展為與參數維度相同、且隨內迴圈步驟 $k$ 與網絡層 $l$ 獨立的可學習向量 $\boldsymbol{\alpha}_{l, k}$（即 Meta-SGD 思想）：
+
+$$\boldsymbol{\theta}_{l, k+1}' = \boldsymbol{\theta}_{l, k}' - \boldsymbol{\alpha}_{l, k} \odot \nabla_{\boldsymbol{\theta}_{l, k}'} \mathcal{L}_{\mathcal{T}_i}^{\mathcal{S}}$$
+
+2. **多步外迴圈損失累加 (Multi-Step Loss Optimization, MSL)**：
+   外迴圈損失不只計算最後一步，而是對內迴圈每一步適應後的 Loss 進行加權累加：
+
+$$\mathcal{L}_{\text{meta}} = \sum_{k=1}^K v_k \mathcal{L}_{\mathcal{T}_i}^{\mathcal{Q}}(\boldsymbol{\theta}_k')$$
+
+3. **Per-Step Batch Normalization**：為內迴圈的每一步適應維護獨立的 BatchNorm 統計量。
+
+      </div>
+
+      <!-- == Phase B 圖解 kp-11 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp11.png" alt="KP-11 觀念示意圖" loading="lazy">
+        <figcaption>圖 KP-11 核心觀念示意圖</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 AI 繪圖提示詞 (Structured Prompt)</summary>
+        <div class="ai-illustration-prompt">WHAT: A structural infographic of MAML++ improvements and LSLR-MAML (Meta-SGD).
+WHY: To demonstrate solving MAML gradient instability with layer-wise step-wise learnable learning rates and multi-step loss.
+MUST show: Learnable vector alpha_{l,k} for each network layer and inner step, multi-step loss accumulation, and per-step BatchNorm.
+AVOID: Overly dense clutter.
+STYLE: Modern tech summary chart.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-11 == -->
+      <!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-14 == -->
+      <button class="guide-btn" onclick="openGuideModal(14)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：LSLR-MAML (Meta-SGD) 在內迴圈適應中做了什麼關鍵改進？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 將內迴圈學習率設為 0</button>
+<button class="quiz-option-btn" data-correct="true">2. 將內迴圈學習率擴展為隨網絡層 (Layer-wise) 與適應步驟 (Step-wise) 獨立的自適應可學習參數向量</button>
+<button class="quiz-option-btn" data-correct="false">3. 禁止在外迴圈進行梯度更新</button>
+<button class="quiz-option-btn" data-correct="false">4. 強制所有網絡層使用相同的超參數</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>LSLR-MAML 將學習率提升為可學習向量，使得模型能自動為不同層、不同步驟學出最適切的更新步長，大幅提升了 MAML 的訓練穩定度與收斂速度。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-12 -->
+    <section id="kp12" class="card" data-kp="12">
+      <div class="card-header">
+        <span class="badge">§5.5–5.6</span>
+        <h2 class="card-title">KP-12：多模態 MAML (MM-MAML) 與變分 MAML (PLATIPUS / V-MAML)</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 單一初始點的限制與多模態 MAML (MM-MAML)</h4>
+<p>標準 MAML 假設存在<b>單一全局最佳初始點 $\boldsymbol{\theta}$</b>。然而，如果任務分佈非常廣泛且呈現多模態（例如包含圖像分類、語音識別、機器人控制等多種截然不同的任務家族），單一初始點可能位於各任務族的折衷中間，離任何一個族群的真實極小值都非常遠。</p>
+<p>Vuorio 等人提出了 <b>Multi-Modal MAML (MM-MAML)</b>，引入一個任務調諧器 (Task Modulator)，根據 Support 集動態預測微調權重，使初始點能「跳躍」至對應任務族的特異初始區域。</p>
+
+<h4>2. 變分 MAML (Variational MAML / PLATIPUS)</h4>
+<p>Finn, Finn, & Levine 等人提出的 <b>PLATIPUS (Probabilistic MAML)</b> 與 <b>Variational MAML</b> 將元學習擴展為貝氏機率框架。將初始參數與適應後參數看作機率分佈 $p(\boldsymbol{\theta} \mid \mathcal{S})$，透過變分推斷 (Variational Inference) 採樣多元初始化，使得模型在少樣本模糊任務下能夠輸出具備<b>不確定性估算 (Uncertainty Estimation)</b> 的多元預測解！</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-12 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp12.png" alt="KP-12 觀念示意圖" loading="lazy">
+        <figcaption>圖 KP-12 核心觀念示意圖</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 AI 繪圖提示詞 (Structured Prompt)</summary>
+        <div class="ai-illustration-prompt">WHAT: A conceptual diagram contrasting Single-point MAML vs Multi-Modal MAML & Variational MAML.
+WHY: To explain handling diverse multi-modal task distributions and probabilistic initializations.
+MUST show: Task Modulator predicting initial parameter jump in MM-MAML, and Gaussian distribution initialization in PLATIPUS.
+AVOID: Complex multi-variable calculus noise.
+STYLE: Multi-panel vector concept map.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-12 == -->
+      <!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-14 == -->
+      <button class="guide-btn" onclick="openGuideModal(14)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：Multi-Modal MAML (MM-MAML) 旨在解決標準 MAML 的什麼內在限制？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="true">1. 解決標準 MAML 假設單一全局初始點無法兼顧多樣化多模態任務家族的問題，實現依任務動態調整初始化</button>
+<button class="quiz-option-btn" data-correct="false">2. 解決影像解析度過大的問題</button>
+<button class="quiz-option-btn" data-correct="false">3. 取消神經網絡的反向傳播</button>
+<button class="quiz-option-btn" data-correct="false">4. 將數據儲存格式轉換為文字檔</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>MM-MAML 透過任務調試網絡，根據任務特性動態調整初始參數位置，突破了標準 MAML 單一初始點在多模態任務分佈下的適應瓶頸。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-13 -->
+    <section id="kp13" class="card" data-kp="13">
+      <div class="card-header">
+        <span class="badge">§6.1–6.2</span>
+        <h2 class="card-title">KP-13：領域泛化 (Domain Generalization) 與 MASF 特徵語意分佈對齊</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 領域偏移 (Domain Shift) 與領域泛化 (Domain Generalization, DG)</h4>
+<p>在真實應用中，測試集數據的機率分佈常與訓練集存在<b>領域偏移 (Domain Shift)</b>（例如訓練集全為卡通圖片 $\mathcal{D}_{\text{cartoon}}$，而測試集為真實照片 $\mathcal{D}_{\text{real}}$）。</p>
+<ul>
+  <li><b>Domain Adaptation (DA)</b>：訓練時可以接觸到目標領域 (Target Domain) 的未標註資料。</li>
+  <li><b>Domain Generalization (DG)</b>：訓練時完全無法接觸目標領域，要求模型僅從多個源領域 (Source Domains) 中學出能泛化至<b>完全未知領域 (Unseen Domain)</b> 的超強表徵。</li>
+</ul>
+
+<h4>2. MASF 算法與元學習跨領域演練</h4>
+<p>Dou 等人在 2019 年提出的 <b>MASF (Model-Agnostic Learning of Semantic Features)</b> 將 MAML 的元學習對抗思想引入領域泛化。在訓練時將多個 Source Domains 拆分為 <b>Meta-Train Domains</b> 與 <b>Meta-Test Domains</b>，模擬跨領域適應過渡。</p>
+
+<h4>3. 特徵語意分佈對齊損失 (Semantic Alignment Loss)</h4>
+<p>MASF 引入了<b>全局語意對齊損失</b>，利用 KL 散度強迫不同領域中相同類別特徵的後驗機率分佈保持對齊：</p>
+
+$$\mathcal{L}_{\text{global}} = \sum_{\ell=1}^N KLD\left( p_a(y = \ell \mid \boldsymbol{x}^{(a)}) \Big\| p_b(y = \ell \mid \boldsymbol{x}^{(b)}) \right)$$
+
+<p>這保證了特徵提取器學到的表徵具備<b>領域不變性 (Domain-Invariant Representations)</b>！</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-13 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp13.png" alt="KP-13 觀念示意圖" loading="lazy">
+        <figcaption>圖 KP-13 核心觀念示意圖</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 AI 繪圖提示詞 (Structured Prompt)</summary>
+        <div class="ai-illustration-prompt">WHAT: A domain adaptation vs domain generalization (MASF) concept diagram.
+WHY: To explain how MASF enforces semantic alignment across source domains to generalize to unseen target domains.
+MUST show: Source domains (Cartoon, Sketch) performing Meta-Train / Meta-Test split, minimizing KL divergence L_global to extract domain-invariant features for Unseen Target Domain (Real Photos).
+AVOID: Showing target domain data during meta-training.
+STYLE: Domain generalization conceptual vector infographic.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-13 == -->
+      <!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-14 == -->
+      <button class="guide-btn" onclick="openGuideModal(14)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：領域泛化 (Domain Generalization, DG) 與領域適應 (Domain Adaptation, DA) 的最大差異為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="true">1. DG 在訓練階段完全無法接觸任何目標領域 (Target Domain) 的數據，要求直接泛化至未知領域；而 DA 在訓練時可存取目標領域的數據</button>
+<button class="quiz-option-btn" data-correct="false">2. DG 只能處理一維數據，DA 可以處理三維數據</button>
+<button class="quiz-option-btn" data-correct="false">3. DG 不需要任何損失函數</button>
+<button class="quiz-option-btn" data-correct="false">4. 兩者概念完全相同，沒有任何區別</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>Domain Generalization 挑戰更大，因為目標領域在訓練時完全隱藏 (Unseen)，要求模型學出本質的領域不變特徵 (Domain-Invariant Features)。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-14 -->
+    <section id="kp14" class="card" data-kp="14">
+      <div class="card-header">
+        <span class="badge">§6.3–6.4</span>
+        <h2 class="card-title">KP-14：MASF 度量學習損失與元表徵參數更新機制</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. MASF 的雙重約束損失架構</h4>
+<p>為了確保學到的特徵既具備領域不變性，又具備強大的類別區分力，MASF 結合了兩大核心損失：</p>
+<ol>
+  <li><b>語意分佈對齊損失 ($\mathcal{L}_{\text{global}}$)</b>：如前所述，極小化不同領域間同類別機率分佈的 KL 散度。</li>
+  <li><b>度量學習損失 ($\mathcal{L}_{\text{metric}}$)</b>：採用<b>三元組損失 (Triplet Loss)</b> 或<b>對比損失 (Contrastive Loss)</b>，拉近同類別樣本間的距離，拉遠異類別樣本間的距離：
+$$\mathcal{L}_{\text{metric}} = \max\left( 0, d(f(\boldsymbol{x}_a), f(\boldsymbol{x}_p)) - d(f(\boldsymbol{x}_a), f(\boldsymbol{x}_n)) + m \right)$$
+其中 $\boldsymbol{x}_a$ 為錨點，$\boldsymbol{x}_p$ 為同類正樣本，$\boldsymbol{x}_n$ 為異類負樣本，$m$ 為安全邊界。</li>
+</ol>
+
+#### 2. MASF 的元參數更新三步演算法
+MASF 的更新流程展現了元學習在領域泛化上的精妙應用：
+
+1. **Meta-Train Step**：在 Source Domains $\mathcal{D}_{\text{meta-train}}$ 上計算分類與度量損失，更新獲得臨時參數 $\boldsymbol{\theta}'$。
+2. **Meta-Test Step**：在保留的 Source Domain $\mathcal{D}_{\text{meta-test}}$ 上評估 $\boldsymbol{\theta}'$ 的領域泛化損失 $\mathcal{L}_{\text{meta-test}}$。
+3. **Meta-Update Step**：結合 Meta-Train 與 Meta-Test 損失，反向傳播更新原始模型參數 $\boldsymbol{\theta}$！
+
+      </div>
+
+      <!-- == Phase B 圖解 kp-14 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp14.png" alt="KP-14 觀念示意圖" loading="lazy">
+        <figcaption>圖 KP-14 核心觀念示意圖</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 AI 繪圖提示詞 (Structured Prompt)</summary>
+        <div class="ai-illustration-prompt">WHAT: A dual-constraint loss diagram for MASF (Semantic Alignment + Triplet Metric Loss).
+WHY: To show how combining domain invariance with category discriminability achieves robust generalization.
+MUST show: L_global aligning class probability distributions across domains, and L_metric pulling same-class samples closer while pushing different-class samples apart.
+AVOID: Misrepresenting Triplet loss anchor, positive, and negative terms.
+STYLE: Optimization loss architecture chart.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-14 == -->
+      <!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-14 == -->
+      <button class="guide-btn" onclick="openGuideModal(14)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：MASF 演算法中引入三元組度量損失 (Triplet Metric Loss) 的主要目的為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 強制將所有特徵壓縮為 0</button>
+<button class="quiz-option-btn" data-correct="true">2. 在保持領域不變性的同時，拉近同類別樣本特徵距離並拉遠異類別樣本特徵距離，確保表徵具備強大的類別判別力</button>
+<button class="quiz-option-btn" data-correct="false">3. 取代所有的卷積神經網絡層</button>
+<button class="quiz-option-btn" data-correct="false">4. 將模型參數數量縮減 90%</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>MASF 結合對齊損失 (領域不變性) 與三元組度量損失 (類別區分力)，使特徵空間在面對未知全新領域時依然能保持高度可分的幾何結構。
+        </div>
+      </div>
+    </section>
+
+</div>
+
+<script>
+// Progress Bar & Scroll Listener
+window.addEventListener('scroll', function() {
+  var winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+  var height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+  var scrolled = (winScroll / height) * 100;
+  document.getElementById('page-progress').style.width = scrolled + '%';
+});
+
+// Quiz Option Click Handler
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('quiz-option-btn')) {
+    var btn = e.target;
+    var quizSec = btn.closest('.quiz-sec');
+    var isCorrect = btn.getAttribute('data-correct') === 'true';
+    var allBtns = quizSec.querySelectorAll('.quiz-option-btn');
+    var exp = quizSec.querySelector('.quiz-exp');
+
+    allBtns.forEach(function(b) {
+      b.classList.remove('correct', 'wrong');
+    });
+
+    if (isCorrect) {
+      btn.classList.add('correct');
+    } else {
+      btn.classList.add('wrong');
+      allBtns.forEach(function(b) {
+        if (b.getAttribute('data-correct') === 'true') {
+          b.classList.add('correct');
+        }
+      });
+    }
+    exp.style.display = 'block';
+  }
+});
+</script>
+
+<!-- == Phase C Demos JavaScript == -->
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+
+  function renderKaTeXFor(el) {
+    if (window.renderMathInElement && el) {
+      window.renderMathInElement(el, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ],
+        ignoredClasses: ['katex']
+      });
+    }
+  }
+
+  // --- Demo KP-1: Standard ML vs Meta-Learning Generalization ---
+  function initDemoKP1() {
+    var canvas = document.getElementById('canvas-kp1');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var sliderK = document.getElementById('slider-kp1-k');
+    var sliderTasks = document.getElementById('slider-kp1-tasks');
+    var readout = document.getElementById('readout-kp1');
+
+    function draw() {
+      var K = parseInt(sliderK.value);
+      var T = parseInt(sliderTasks.value);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Background grid
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      for (var x = 0; x < canvas.width; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+
+      // Draw standard ML curve (high data needed, fails at small K)
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (var px = 20; px <= 480; px += 5) {
+        var kVal = (px - 20) / 460 * 20 + 1; // 1 to 21
+        var accStandard = 100 / (1 + Math.exp(-(kVal - 10) * 0.5));
+        var py = canvas.height - 30 - (accStandard / 100) * 220;
+        if (px === 20) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      // Draw Meta-Learning curve (rapid adaptation even at K=1..5, scales with Tasks T)
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (var px = 20; px <= 480; px += 5) {
+        var kVal = (px - 20) / 460 * 20 + 1;
+        var metaBoost = Math.min(30, T * 0.3);
+        var accMeta = Math.min(98, 50 + metaBoost + Math.log(kVal) * 12);
+        var py = canvas.height - 30 - (accMeta / 100) * 220;
+        if (px === 20) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      // Current operating point
+      var curPx = 20 + ((K - 1) / 20) * 460;
+      var curStdAcc = (100 / (1 + Math.exp(-(K - 10) * 0.5))).toFixed(1);
+      var curMetaAcc = Math.min(98, 50 + Math.min(30, T * 0.3) + Math.log(K) * 12).toFixed(1);
+
+      ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(curPx, canvas.height - 30 - (curStdAcc/100)*220, 6, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#10b981'; ctx.beginPath(); ctx.arc(curPx, canvas.height - 30 - (curMetaAcc/100)*220, 6, 0, Math.PI*2); ctx.fill();
+
+      // Labels
+      ctx.fillStyle = '#ef4444'; ctx.font = '12px sans-serif'; ctx.fillText('Standard ML', 380, 200);
+      ctx.fillStyle = '#10b981'; ctx.font = '12px sans-serif'; ctx.fillText('Meta-Learning (Learning to Learn)', 280, 60);
+
+      readout.innerHTML = '當前設定: K = <b>' + K + '</b> shot, 經歷 Task 數 = <b>' + T + '</b><br>' +
+        'Standard ML 新類別準確率: <span style="color:#ef4444">' + curStdAcc + '%</span> | ' +
+        'Meta-Learning 新類別準確率: <span style="color:#10b981;font-weight:bold">' + curMetaAcc + '%</span> (差距: +' + (curMetaAcc - curStdAcc).toFixed(1) + '%)';
+      renderKaTeXFor(readout);
+    }
+
+    sliderK.addEventListener('input', draw);
+    sliderTasks.addEventListener('input', draw);
+    draw();
+  }
+
+  // --- Demo KP-2: N-way K-shot Episode Sampler ---
+  function initDemoKP2() {
+    var canvas = document.getElementById('canvas-kp2');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var sliderN = document.getElementById('slider-kp2-n');
+    var sliderK = document.getElementById('slider-kp2-k');
+    var btnResample = document.getElementById('btn-kp2-resample');
+    var readout = document.getElementById('readout-kp2');
+
+    function draw() {
+      var N = parseInt(sliderN.value);
+      var K = parseInt(sliderK.value);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      var colors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+
+      // Draw Support Set box
+      ctx.fillStyle = '#eff6ff'; ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
+      ctx.fillRect(20, 20, 220, 240); ctx.strokeRect(20, 20, 220, 240);
+      ctx.fillStyle = '#1e40af'; ctx.font = 'bold 14px sans-serif'; ctx.fillText('Support Set S (' + (N*K) + ' 張)', 35, 45);
+
+      for (var i = 0; i < N; i++) {
+        ctx.fillStyle = colors[i % colors.length];
+        for (var k = 0; k < K; k++) {
+          var cx = 40 + (k % 4) * 22;
+          var cy = 70 + i * 40 + Math.floor(k / 4) * 22;
+          ctx.beginPath(); ctx.arc(cx, cy, 7, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.fillStyle = '#334155'; ctx.font = '11px sans-serif';
+        ctx.fillText('Class ' + (i+1), 140, 74 + i * 40);
+      }
+
+      // Draw Query Set box
+      ctx.fillStyle = '#f0fdf4'; ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2;
+      ctx.fillRect(260, 20, 220, 240); ctx.strokeRect(260, 20, 220, 240);
+      ctx.fillStyle = '#166534'; ctx.font = 'bold 14px sans-serif'; ctx.fillText('Query Set Q (' + (N*2) + ' 張)', 275, 45);
+
+      for (var i = 0; i < N; i++) {
+        ctx.fillStyle = colors[i % colors.length];
+        for (var q = 0; q < 2; q++) {
+          var cx = 285 + q * 25;
+          var cy = 70 + i * 40;
+          ctx.fillRect(cx - 6, cy - 6, 12, 12);
+        }
+        ctx.fillStyle = '#334155'; ctx.font = '11px sans-serif';
+        ctx.fillText('Query Class ' + (i+1), 350, 74 + i * 40);
+      }
+
+      readout.innerHTML = '當前 Episode 規格: <b>' + N + '-way ' + K + '-shot</b><br>' +
+        'Support Set 樣本數 $|\\mathcal{S}| = ' + N + ' \\times ' + K + ' = ' + (N*K) + '$ 張<br>' +
+        'Query Set 樣本數 $|\\mathcal{Q}| = ' + N + ' \\times 2 = ' + (N*2) + '$ 張 (用於微調評估)';
+      renderKaTeXFor(readout);
+    }
+
+    sliderN.addEventListener('input', draw);
+    sliderK.addEventListener('input', draw);
+    if (btnResample) btnResample.addEventListener('click', draw);
+    draw();
+  }
+
+  // --- Demo KP-4: Baseline vs Baseline++ Angular Boundary ---
+  function initDemoKP4() {
+    var canvas = document.getElementById('canvas-kp4');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var sliderTau = document.getElementById('slider-kp4-tau');
+    var readout = document.getElementById('readout-kp4');
+
+    function draw() {
+      var tau = parseFloat(sliderTau.value);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      var cx = canvas.width / 2;
+      var cy = canvas.height / 2;
+      var r = 100;
+
+      // Draw L2 Unit Circle for Baseline++
+      ctx.strokeStyle = '#94a3b8'; ctx.setLineDash([4, 4]); ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+
+      // Weight vectors (Angles: 30 deg, 150 deg)
+      var w1Angle = Math.PI / 6;
+      var w2Angle = 5 * Math.PI / 6;
+
+      var w1x = cx + r * Math.cos(w1Angle); var w1y = cy - r * Math.sin(w1Angle);
+      var w2x = cx + r * Math.cos(w2Angle); var w2y = cy - r * Math.sin(w2Angle);
+
+      // Draw vectors
+      ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(w1x, w1y); ctx.stroke();
+      ctx.fillStyle = '#3b82f6'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('w1 (Class 1)', w1x + 10, w1y);
+
+      ctx.strokeStyle = '#10b981'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(w2x, w2y); ctx.stroke();
+      ctx.fillStyle = '#10b981'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('w2 (Class 2)', w2x - 80, w2y);
+
+      // Sample vector x (Angle: 45 deg)
+      var xAngle = Math.PI / 4;
+      var xx = cx + r * Math.cos(xAngle); var xy = cy - r * Math.sin(xAngle);
+      ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(xx, xy); ctx.stroke();
+      ctx.fillStyle = '#ef4444'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('f(x)', xx + 10, xy - 5);
+
+      // Compute Cosine similarities
+      var cos1 = Math.cos(xAngle - w1Angle);
+      var cos2 = Math.cos(xAngle - w2Angle);
+
+      var p1 = Math.exp(tau * cos1) / (Math.exp(tau * cos1) + Math.exp(tau * cos2));
+      var p2 = 1 - p1;
+
+      readout.innerHTML = '縮放因子 $\\tau$ = <b>' + tau.toFixed(1) + '</b><br>' +
+        '與 $w_1$ 夾角餘弦 $\\cos \\theta_1 = ' + cos1.toFixed(3) + '$ $\\to$ 概率 $P(y=1) = \\mathbf{' + (p1*100).toFixed(1) + '\\%}$<br>' +
+        '與 $w_2$ 夾角餘弦 $\\cos \\theta_2 = ' + cos2.toFixed(3) + '$ $\\to$ 概率 $P(y=2) = ' + (p2*100).toFixed(1) + '\\%';
+      renderKaTeXFor(readout);
+    }
+
+    sliderTau.addEventListener('input', draw);
+    draw();
+  }
+
+  // --- Demo KP-6: Prototypical Networks Mean Vector & Euclidean Distance ---
+  function initDemoKP6() {
+    var canvas = document.getElementById('canvas-kp6');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var sliderK = document.getElementById('slider-kp6-k');
+    var readout = document.getElementById('readout-kp6');
+
+    function draw() {
+      var K = parseInt(sliderK.value);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Class 1 Support Points (around 120, 150)
+      var c1Points = [];
+      var sum1x = 0, sum1y = 0;
+      for (var i = 0; i < K; i++) {
+        var px = 120 + Math.sin(i * 1.5) * 40;
+        var py = 150 + Math.cos(i * 1.5) * 40;
+        c1Points.push({x: px, y: py});
+        sum1x += px; sum1y += py;
+      }
+      var p1x = sum1x / K; var p1y = sum1y / K;
+
+      // Class 2 Support Points (around 360, 100)
+      var c2Points = [];
+      var sum2x = 0, sum2y = 0;
+      for (var i = 0; i < K; i++) {
+        var px = 360 + Math.cos(i * 2.1) * 35;
+        var py = 100 + Math.sin(i * 2.1) * 35;
+        c2Points.push({x: px, y: py});
+        sum2x += px; sum2y += py;
+      }
+      var p2x = sum2x / K; var p2y = sum2y / K;
+
+      // Draw Support Points
+      ctx.fillStyle = '#3b82f6';
+      c1Points.forEach(function(pt) { ctx.beginPath(); ctx.arc(pt.x, pt.y, 5, 0, Math.PI*2); ctx.fill(); });
+
+      ctx.fillStyle = '#10b981';
+      c2Points.forEach(function(pt) { ctx.beginPath(); ctx.arc(pt.x, pt.y, 5, 0, Math.PI*2); ctx.fill(); });
+
+      // Draw Mean Prototypes (Star)
+      ctx.fillStyle = '#1e40af'; ctx.font = 'bold 20px sans-serif';
+      ctx.fillText('★ c1', p1x - 15, p1y + 6);
+
+      ctx.fillStyle = '#166534'; ctx.font = 'bold 20px sans-serif';
+      ctx.fillText('★ c2', p2x - 15, p2y + 6);
+
+      // Query Sample q at (180, 120)
+      var qx = 180, qy = 120;
+      ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(qx, qy, 8, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#b91c1c'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('Query q', qx + 10, qy - 5);
+
+      // Distance lines
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(qx, qy); ctx.lineTo(p1x, p1y); ctx.stroke();
+      ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(qx, qy); ctx.lineTo(p2x, p2y); ctx.stroke();
+      ctx.setLineDash([]);
+
+      var d1 = Math.sqrt((qx-p1x)*(qx-p1x) + (qy-p1y)*(qy-p1y));
+      var d2 = Math.sqrt((qx-p2x)*(qx-p2x) + (qy-p2y)*(qy-p2y));
+
+      var pCat1 = Math.exp(-d1*0.02) / (Math.exp(-d1*0.02) + Math.exp(-d2*0.02));
+
+      readout.innerHTML = 'K-shot 範例數 = <b>' + K + '</b><br>' +
+        '到原型 c1 歐氏距離 $d_1 = ' + d1.toFixed(1) + '$ | 到原型 c2 歐氏距離 $d_2 = ' + d2.toFixed(1) + '$<br>' +
+        '預測類別 1 概率: <span style="color:#1e40af;font-weight:bold">' + (pCat1*100).toFixed(1) + '%</span> (距離近者勝出)';
+      renderKaTeXFor(readout);
+    }
+
+    sliderK.addEventListener('input', draw);
+    draw();
+  }
+
+  // --- Demo KP-9: MAML Bi-Level Optimization Simulator ---
+  function initDemoKP9() {
+    var canvas = document.getElementById('canvas-kp9');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var sliderAlpha = document.getElementById('slider-kp9-alpha');
+    var sliderBeta = document.getElementById('slider-kp9-beta');
+    var readout = document.getElementById('readout-kp9');
+
+    function draw() {
+      var alpha = parseFloat(sliderAlpha.value);
+      var beta = parseFloat(sliderBeta.value);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      var cx = canvas.width / 2; var cy = canvas.height / 2;
+
+      // Draw Loss Contours
+      ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+      for (var r = 30; r <= 180; r += 30) {
+        ctx.beginPath(); ctx.ellipse(cx - 60, cy - 20, r, r * 0.7, 0.2, 0, Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(cx + 80, cy + 40, r*0.8, r * 0.6, -0.3, 0, Math.PI*2); ctx.stroke();
+      }
+
+      // Initial theta (red point)
+      var thX = cx - 20; var thY = cy + 60;
+      ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(thX, thY, 7, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#b91c1c'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('theta (Meta Init)', thX - 45, thY + 20);
+
+      // Inner loop step to Task 1 (Blue)
+      var t1X = thX - alpha * 80; var t1Y = thY - alpha * 60;
+      ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(thX, thY); ctx.lineTo(t1X, t1Y); ctx.stroke();
+      ctx.fillStyle = '#2563eb'; ctx.beginPath(); ctx.arc(t1X, t1Y, 5, 0, Math.PI*2); ctx.fill();
+      ctx.fillText("theta'_1", t1X - 30, t1Y);
+
+      // Inner loop step to Task 2 (Green)
+      var t2X = thX + alpha * 90; var t2Y = thY - alpha * 40;
+      ctx.strokeStyle = '#10b981'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(thX, thY); ctx.lineTo(t2X, t2Y); ctx.stroke();
+      ctx.fillStyle = '#10b981'; ctx.beginPath(); ctx.arc(t2X, t2Y, 5, 0, Math.PI*2); ctx.fill();
+      ctx.fillText("theta'_2", t2X + 10, t2Y);
+
+      // Outer loop update arrow (Purple)
+      var metaGradX = (t1X + t2X)/2 - thX; var metaGradY = (t1Y + t2Y)/2 - thY;
+      var newThX = thX + beta * metaGradX; var newThY = thY + beta * metaGradY;
+
+      ctx.strokeStyle = '#8b5cf6'; ctx.lineWidth = 3; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(thX, thY); ctx.lineTo(newThX, newThY); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#6b21a8'; ctx.beginPath(); ctx.arc(newThX, newThY, 6, 0, Math.PI*2); ctx.fill();
+      ctx.fillText("theta_new", newThX - 25, newThY - 10);
+
+      readout.innerHTML = '內迴圈學習率 $\\alpha$ = <b>' + alpha.toFixed(2) + '</b> | 外迴圈元學習率 $\\beta$ = <b>' + beta.toFixed(2) + '</b><br>' +
+        'Task 1 適應偏量 $\\Delta \\theta_1 = (' + (-alpha*80).toFixed(1) + ', ' + (-alpha*60).toFixed(1) + ')$<br>' +
+        '外迴圈元更新方向 $\\mathbf{\\theta}_{\\text{new}} - \\mathbf{\\theta}_0 = (' + (newThX-thX).toFixed(1) + ', ' + (newThY-thY).toFixed(1) + ')$';
+      renderKaTeXFor(readout);
+    }
+
+    sliderAlpha.addEventListener('input', draw);
+    sliderBeta.addEventListener('input', draw);
+    draw();
+  }
+
+  // Initialize all demos
+  initDemoKP1();
+  initDemoKP2();
+  initDemoKP4();
+  initDemoKP6();
+  initDemoKP9();
+});
+</script>
+<!-- END Phase C Demos JavaScript -->
+
+<!-- == Phase D Modal & Script == -->
+<div id="guide-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">🎓 教授祕笈</h3>
+      <button class="modal-close-btn" onclick="closeGuideModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <!-- Guide Content Will Be Dynamic Injected -->
+    </div>
+  </div>
+</div>
+
+<script>
+var GUIDES_DATA = {"1": "<h1>教授祕笈 KP-1：少樣本學習 (Few-Shot Learning) 與元學習 (Meta-Learning) 導論</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元引領學生理解深度學習從「海量資料訓練」轉向「少樣本快速泛化」的範式轉移，建立元學習 (Meta-Learning) 的「學會如何學習 (Learning to Learn)」核心哲學。</blockquote>  <hr /> <h3>1. 觀念導覽 (Overview)</h3> <p>傳統深度學習極度依賴大數據（如 ImageNet 1400 萬張標註），然而在許多真實應用（如罕見疾病診斷、罕見物種識別）中標註資料極其匱乏。人類具備強大的少樣本學習能力（孩童看一張斑馬照片就能在動物園辨認斑馬）。少樣本學習 (Few-Shot Learning, FSL) 與元學習 (Meta-Learning) 旨在賦予神經網絡這種跨任務的極速適應能力。</p> <hr /> <h3>2. 核心公式與符號拆解 (Mathematical Framework)</h3> <p>在傳統學習中，模型尋找單一任務上的最佳參數 $\\\\boldsymbol{\\\\theta}^*$：</p> <p>$$\\\\boldsymbol{\\\\theta}^* = \\\\arg\\\\min_{\\\\boldsymbol{\\\\theta}} \\\\mathcal{L}_{\\\\text{train}}(\\\\boldsymbol{\\\\theta})$$</p> <p>在元學習中，模型在任務分佈 $p(\\\\mathcal{T})$ 上尋找能夠快速適應任何新任務的元參數 $\\\\boldsymbol{\\\\theta}_{\\\\text{meta}}$：</p> <p>$$\\\\boldsymbol{\\\\theta}<em>{\\\\text{meta}} = \\\\arg\\\\min</em>{\\\\boldsymbol{\\\\theta}} \\\\mathbb{E}<em>{\\\\mathcal{T} \\\\sim p(\\\\mathcal{T})} \\\\left[ \\\\mathcal{L}</em>{\\\\mathcal{T}}^{\\\\text{query}}\\\\left( \\\\text{Adapt}(\\\\boldsymbol{\\\\theta}, \\\\mathcal{S}_{\\\\mathcal{T}}) \\\\right) \\\\right]$$</p> <ul> <li>$\\\\mathcal{S}_{\\\\mathcal{T}}$：任務 $\\\\mathcal{T}$ 的支援集 (Support Set)。</li> <li>$\\\\text{Adapt}(\\\\cdot)$：利用少量 Support 樣本進行適應更新的算法（如 1~5 步梯度下降或度量比對）。</li> </ul> <hr /> <h3>3. 幾何 / 直覺圖解 (Intuitive Diagram)</h3> <pre><code>[傳統監督學習]  巨量 Data  ──&gt; 訓練固定神經網絡  ──&gt; 只能預測訓練過的那 N 個類別  [元學習 Meta-Learning]  多個小 Task 演練 ──&gt; 提取通用元先驗 (Meta-Knowledge) ──&gt; 遇到全新類別 (1~5 樣本) ──&gt; 極速精準分類！ </code></pre> <hr /> <h3>4. 教授私房比喻 (Analogy)</h3> <ul> <li><strong>傳統學習</strong>：就像「死記硬背型選手」，把幾千道考古題背得滾瓜爛熟，但碰到沒見過的新題型就徹底崩潰。</li> <li><strong>元學習</strong>：就像「掌握解題思維的資優生」，在平時做各種不同科目的小測驗中學會了「如何思考與解題」，考試時即使遇到全新題型，看 1~2 個範例就能舉一反三！</li> </ul> <hr /> <h3>5. 實務踩坑與常見誤區 (Pitfalls)</h3> <ul> <li><strong>誤區一：認為少樣本學習不需要任何訓練資料</strong>。錯！少樣本學習需要大量的元訓練資料（Meta-Training Set），只是在元測試階段（Meta-Testing）面對全新類別時只需要極少樣本。</li> <li><strong>誤區二：混淆少樣本學習與 Overfitting</strong>。在少量數據上直接訓練大型 ResNet 會嚴重過擬合；少樣本學習透過 Episodic 或 Meta-Learning 架構從根本上杜絕了過擬合。</li> </ul> <hr /> <h3>6. 逐步計算範例 (Step-by-Step Example)</h3> <p>假設要在新工廠進行瑕疵檢測：<br /> 1. 舊工廠有 100 種不同零件的瑕疵資料（Meta-Training Data）。<br /> 2. 新工廠引進全新零件「螺帽」，現場只有 1 張良品與 1 張不良品照片（1-shot）。<br /> 3. 採用元學習模型，直接比對新照片與元特徵空間中的距離，無需重新訓練整座工廠模型，即可達成 95% 以上識別率。</p> <hr /> <h3>7. 程式實作關鍵 (PyTorch / Code Snippet)</h3> <pre><code class=\"language-python\"># 示範：元學習任務迭代骨架 (Meta-Task Loop) for episode in range(num_episodes):     # 1. 隨機採樣一個 Task T ~ p(T)     task = sample_task(meta_train_dataset, n_way=5, k_shot=1)      # 2. 在 Support 集上進行輕量適應     adapted_model = adapt_on_support(model, task.support_set)      # 3. 在 Query 集上評估元損失     meta_loss = compute_loss(adapted_model, task.query_set)      # 4. 外迴圈更新元參數     meta_optimizer.zero_grad()     meta_loss.backward()     meta_optimizer.step() </code></pre> <hr /> <h3>8. 板書建議與教學提問 (Classroom Q&amp;A)</h3> <ul> <li><strong>板書設計</strong>：左側畫傳統機器學習資料需求曲線；右側劃分 Episodic 訓練流程。</li> <li><strong>提問設計</strong>：「同學思考一下，為什麼人類幼童不需要看 10 萬張貓的照片就能認識貓？這給我們設計 AI 架構什麼啟發？」</li> </ul> <hr /> <h3>9. 前沿擴展與進階思考</h3> <ul> <li><strong>Large Language Models (LLMs) 中的 In-Context Learning</strong>：GPT-4 展現的 Few-Shot Prompting（在 Prompt 中給 1~3 個 Example）本質上也是一種隱式少樣本泛化。</li> </ul> <hr /> <h3>10. 本單元小結與複習卡片</h3> <ul> <li><strong>核心重點</strong>：少樣本學習解決資料匱乏；元學習關注「學會如何學習」；測試階段面對完全未見過的全新類別。</li> </ul>", "2": "<h1>教授祕笈 KP-2：任務 (Task)、劇集 (Episode)、支援集與查詢集 ($N$-way $K$-shot)</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元詳解 Episodic Training 的標準訓練資料拆分規範，重點在於 $N$-way $K$-shot 的定義與 Meta-Train / Meta-Test 類別互斥原則。</blockquote>  <hr /> <h3>1. 觀念導覽 (Overview)</h3> <p>為了使模型在測試時適應 $N$-way $K$-shot 環境，訓練過程必須採用<strong>劇集式訓練 (Episodic Training)</strong>。每一個 Episode（即一個 Task）都包含 Support Set $\\\\mathcal{S}$（供適應）與 Query Set $\\\\mathcal{Q}$（供評估）。</p> <hr /> <h3>2. 核心公式與符號拆解 (Mathematical Framework)</h3> <p>在 $N$-way $K$-shot 分類任務中：</p> <p>$$\\\\mathcal{S} = {(\\\\boldsymbol{x}<em>j, y_j)}</em>{j=1}^{N \\\\times K}, \\\\quad y_j \\\\in {1, \\\\dots, N}$$</p> <p>$$\\\\mathcal{Q} = {(\\\\boldsymbol{x}<em>j^<em>, y_j^</em>)}</em>{j=1}^{N \\\\times K_q}, \\\\quad y_j^* \\\\in {1, \\\\dots, N}$$</p> <p>類別隔離嚴格約束：</p> <p>$$\\\\mathcal{C}<em>{\\\\text{meta-train}} \\\\cap \\\\mathcal{C}</em>{\\\\text{meta-test}} = \\\\emptyset$$</p> <hr /> <h3>3. 幾何 / 直覺圖解 (Intuitive Diagram)</h3> <pre><code>[ Episode / Task T_i ] ├── Support Set S : N 個類別 × K 張標註樣本 ──&gt; 用於內迴圈適應 (Inner Adaptation) └── Query Set Q   : N 個類別 × K_q 張測試樣本 ──&gt; 用於外迴圈損失 (Outer Loss) </code></pre> <hr /> <h3>4. 教授私房比喻 (Analogy)</h3> <ul> <li><strong>Support Set</strong>：好比「課堂上的例題」，老師講了 5 種題型，每種題型解 1 道例題 ($N=5, K=1$)。</li> <li><strong>Query Set</strong>：好比「隨堂小測驗」，考相同的 5 種題型，測試學生是否真的掌握了解法。</li> </ul> <hr /> <h3>5. 實務踩坑與常見誤區 (Pitfalls)</h3> <ul> <li><strong>誤區一：把 Support Set 當作常規 Validation Set</strong>。在 Episodic 設定中，Support Set 是給模型作極速訓練/適應的，Query Set 才是評估該 Episode 表現的測驗集。</li> <li><strong>誤區二：Meta-Train 與 Meta-Test 類別重疊</strong>。若類別重疊，模型只需記憶類別特徵，失去了對「全新未知類別」的少樣本泛化評測意義。</li> </ul> <hr /> <h3>6. 逐步計算範例 (Step-by-Step Example)</h3> <p>以 5-way 3-shot, 15-query 任務為例：<br /> 1. 支援集總樣本數：$N \\\\times K = 5 \\\\times 3 = 15$ 張圖片。<br /> 2. 查詢集總樣本數：$N \\\\times K_q = 5 \\\\times 15 = 75$ 張圖片。<br /> 3. 單一 Episode 共處理 $15 + 75 = 90$ 張圖片。</p> <hr /> <h3>7. 程式實作關鍵 (PyTorch / Code Snippet)</h3> <pre><code class=\"language-python\"># 示範：5-way 1-shot Task Dataloader 邏輯 def sample_episode(dataset, num_ways=5, num_shots=1, num_queries=15):     # 隨機選取 5 個類別     selected_classes = random.sample(list(dataset.classes), num_ways)     support_set, query_set = [], []     for cls_idx, cls in enumerate(selected_classes):         imgs = dataset.get_images_by_class(cls)         sampled = random.sample(imgs, num_shots + num_queries)         for img in sampled[:num_shots]:             support_set.append((img, cls_idx))         for img in sampled[num_shots:]:             query_set.append((img, cls_idx))     return support_set, query_set </code></pre> <hr /> <h3>8. 板書建議與教學提問 (Classroom Q&amp;A)</h3> <ul> <li><strong>板書設計</strong>：畫出 Episode 矩陣，標註 $N$-way 為縱軸，$K$-shot 為橫軸。</li> <li><strong>提問設計</strong>：「若改為 20-way 1-shot，任務難度相比 5-way 1-shot 是變大還是變小？為什麼？」</li> </ul> <hr /> <h3>9. 前沿擴展與進階思考</h3> <ul> <li><strong>Variable-Way Variable-Shot Learning</strong>：近年 Meta-Dataset 引入動態不固定 $N$ 與 $K$ 的訓練範式，更符合現實不均勻資料分佈。</li> </ul> <hr /> <h3>10. 本單元小結與複習卡片</h3> <ul> <li><strong>核心重點</strong>：$N$-way 為類別數，$K$-shot 為每類範例數；Support 集適應，Query 集計分；訓練/測試類別絕對互斥。</li> </ul>", "3": "<h1>教授祕笈 KP-3：少樣本學習基準資料集 (Omniglot, Mini-ImageNet) 與元資料集 (Meta-Datasets)</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元引領學生深度掌握 KP-3（少樣本學習基準資料集 (Omniglot, Mini-ImageNet) 與元資料集 (Meta-Datasets)）的核心理論機制、數學公式推導與實務應用。</blockquote>  <hr /> <h3>1. 觀念導覽 (Overview)</h3> <p>本單元探討 少樣本學習基準資料集 (Omniglot, Mini-ImageNet) 與元資料集 (Meta-Datasets) 在少樣本學習與元學習中的核心地位與理論建構。</p> <hr /> <h3>2. 核心公式與符號拆解 (Mathematical Framework)</h3> <p>數學表達式與符號解析：</p> <p>$$\\\\mathcal{L}<em>{\\\\text{meta}} = \\\\sum</em>{\\\\mathcal{T}<em>i \\\\sim p(\\\\mathcal{T})} \\\\mathcal{L}</em>{\\\\mathcal{T}_i}^{\\\\mathcal{Q}}(\\\\boldsymbol{\\\\theta}'_i)$$</p> <ul> <li>$\\\\boldsymbol{\\\\theta}$：元學習初始參數。</li> <li>$\\\\boldsymbol{\\\\theta}'_i$：經過任務 $\\\\mathcal{T}_i$ 適應後的特定參數。</li> </ul> <hr /> <h3>3. 幾何 / 直覺圖解 (Intuitive Diagram)</h3> <pre><code>[輸入數據 / 任務 Task] ──&gt; [幾何特徵映射 / 適應] ──&gt; [元損失評估與泛化] </code></pre> <hr /> <h3>4. 教授私房比喻 (Analogy)</h3> <ul> <li><strong>教學比喻</strong>：將本概念比喻為靈活的經驗累積過程，模型能夠迅速從過往類似經驗中找到解題突破口。</li> </ul> <hr /> <h3>5. 實務踩坑與常見誤區 (Pitfalls)</h3> <ul> <li><strong>常見誤區</strong>：注意區分內迴圈適應與外迴圈元更新的梯度方向與學習率差異。</li> </ul> <hr /> <h3>6. 逐步計算範例 (Step-by-Step Example)</h3> <ol> <li>步驟一：輸入樣本並計算特徵嵌入。</li> <li>步驟二：執行度量比對或梯度微調。</li> <li>步驟三：計算損失並執行反向傳播。</li> </ol> <hr /> <h3>7. 程式實作關鍵 (PyTorch / Code Snippet)</h3> <pre><code class=\"language-python\"># 核心邏輯展示 import torch  def process_kp3(inputs):     # 特徵映射與損失計算     outputs = model(inputs)     return outputs </code></pre> <hr /> <h3>8. 板書建議與教學提問 (Classroom Q&amp;A)</h3> <ul> <li><strong>板書設計</strong>：清晰劃分理論公式、架構方塊圖與關鍵結論。</li> <li><strong>提問設計</strong>：「此機制如何有效防止少量數據導致的嚴重過擬合？」</li> </ul> <hr /> <h3>9. 前沿擴展與進階思考</h3> <ul> <li>探索該方法在跨領域泛化 (Domain Generalization) 中的最新擴展應用。</li> </ul> <hr /> <h3>10. 本單元小結與複習卡片</h3> <ul> <li><strong>核心重點</strong>：掌握 少樣本學習基準資料集 (Omniglot, Mini-ImageNet) 與元資料集 (Meta-Datasets) 的理論精髓與實作要點。</li> </ul>", "4": "<h1>教授祕笈 KP-4：非劇集式少樣本學習 (Non-Episodic Baseline / Baseline++)</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元引領學生深度掌握 KP-4（非劇集式少樣本學習 (Non-Episodic Baseline / Baseline++)）的核心理論機制、數學公式推導與實務應用。</blockquote>  <hr /> <h3>1. 觀念導覽 (Overview)</h3> <p>本單元探討 非劇集式少樣本學習 (Non-Episodic Baseline / Baseline++) 在少樣本學習與元學習中的核心地位與理論建構。</p> <hr /> <h3>2. 核心公式與符號拆解 (Mathematical Framework)</h3> <p>數學表達式與符號解析：</p> <p>$$\\\\mathcal{L}<em>{\\\\text{meta}} = \\\\sum</em>{\\\\mathcal{T}<em>i \\\\sim p(\\\\mathcal{T})} \\\\mathcal{L}</em>{\\\\mathcal{T}_i}^{\\\\mathcal{Q}}(\\\\boldsymbol{\\\\theta}'_i)$$</p> <ul> <li>$\\\\boldsymbol{\\\\theta}$：元學習初始參數。</li> <li>$\\\\boldsymbol{\\\\theta}'_i$：經過任務 $\\\\mathcal{T}_i$ 適應後的特定參數。</li> </ul> <hr /> <h3>3. 幾何 / 直覺圖解 (Intuitive Diagram)</h3> <pre><code>[輸入數據 / 任務 Task] ──&gt; [幾何特徵映射 / 適應] ──&gt; [元損失評估與泛化] </code></pre> <hr /> <h3>4. 教授私房比喻 (Analogy)</h3> <ul> <li><strong>教學比喻</strong>：將本概念比喻為靈活的經驗累積過程，模型能夠迅速從過往類似經驗中找到解題突破口。</li> </ul> <hr /> <h3>5. 實務踩坑與常見誤區 (Pitfalls)</h3> <ul> <li><strong>常見誤區</strong>：注意區分內迴圈適應與外迴圈元更新的梯度方向與學習率差異。</li> </ul> <hr /> <h3>6. 逐步計算範例 (Step-by-Step Example)</h3> <ol> <li>步驟一：輸入樣本並計算特徵嵌入。</li> <li>步驟二：執行度量比對或梯度微調。</li> <li>步驟三：計算損失並執行反向傳播。</li> </ol> <hr /> <h3>7. 程式實作關鍵 (PyTorch / Code Snippet)</h3> <pre><code class=\"language-python\"># 核心邏輯展示 import torch  def process_kp4(inputs):     # 特徵映射與損失計算     outputs = model(inputs)     return outputs </code></pre> <hr /> <h3>8. 板書建議與教學提問 (Classroom Q&amp;A)</h3> <ul> <li><strong>板書設計</strong>：清晰劃分理論公式、架構方塊圖與關鍵結論。</li> <li><strong>提問設計</strong>：「此機制如何有效防止少量數據導致的嚴重過擬合？」</li> </ul> <hr /> <h3>9. 前沿擴展與進階思考</h3> <ul> <li>探索該方法在跨領域泛化 (Domain Generalization) 中的最新擴展應用。</li> </ul> <hr /> <h3>10. 本單元小結與複習卡片</h3> <ul> <li><strong>核心重點</strong>：掌握 非劇集式少樣本學習 (Non-Episodic Baseline / Baseline++) 的理論精髓與實作要點。</li> </ul>", "5": "<h1>教授祕笈 KP-5：匹配網絡 (Matching Networks) 與餘弦相似度 Softmax</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元引領學生深度掌握 KP-5（匹配網絡 (Matching Networks) 與餘弦相似度 Softmax）的核心理論機制、數學公式推導與實務應用。</blockquote>  <hr /> <h3>1. 觀念導覽 (Overview)</h3> <p>本單元探討 匹配網絡 (Matching Networks) 與餘弦相似度 Softmax 在少樣本學習與元學習中的核心地位與理論建構。</p> <hr /> <h3>2. 核心公式與符號拆解 (Mathematical Framework)</h3> <p>數學表達式與符號解析：</p> <p>$$\\\\mathcal{L}<em>{\\\\text{meta}} = \\\\sum</em>{\\\\mathcal{T}<em>i \\\\sim p(\\\\mathcal{T})} \\\\mathcal{L}</em>{\\\\mathcal{T}_i}^{\\\\mathcal{Q}}(\\\\boldsymbol{\\\\theta}'_i)$$</p> <ul> <li>$\\\\boldsymbol{\\\\theta}$：元學習初始參數。</li> <li>$\\\\boldsymbol{\\\\theta}'_i$：經過任務 $\\\\mathcal{T}_i$ 適應後的特定參數。</li> </ul> <hr /> <h3>3. 幾何 / 直覺圖解 (Intuitive Diagram)</h3> <pre><code>[輸入數據 / 任務 Task] ──&gt; [幾何特徵映射 / 適應] ──&gt; [元損失評估與泛化] </code></pre> <hr /> <h3>4. 教授私房比喻 (Analogy)</h3> <ul> <li><strong>教學比喻</strong>：將本概念比喻為靈活的經驗累積過程，模型能夠迅速從過往類似經驗中找到解題突破口。</li> </ul> <hr /> <h3>5. 實務踩坑與常見誤區 (Pitfalls)</h3> <ul> <li><strong>常見誤區</strong>：注意區分內迴圈適應與外迴圈元更新的梯度方向與學習率差異。</li> </ul> <hr /> <h3>6. 逐步計算範例 (Step-by-Step Example)</h3> <ol> <li>步驟一：輸入樣本並計算特徵嵌入。</li> <li>步驟二：執行度量比對或梯度微調。</li> <li>步驟三：計算損失並執行反向傳播。</li> </ol> <hr /> <h3>7. 程式實作關鍵 (PyTorch / Code Snippet)</h3> <pre><code class=\"language-python\"># 核心邏輯展示 import torch  def process_kp5(inputs):     # 特徵映射與損失計算     outputs = model(inputs)     return outputs </code></pre> <hr /> <h3>8. 板書建議與教學提問 (Classroom Q&amp;A)</h3> <ul> <li><strong>板書設計</strong>：清晰劃分理論公式、架構方塊圖與關鍵結論。</li> <li><strong>提問設計</strong>：「此機制如何有效防止少量數據導致的嚴重過擬合？」</li> </ul> <hr /> <h3>9. 前沿擴展與進階思考</h3> <ul> <li>探索該方法在跨領域泛化 (Domain Generalization) 中的最新擴展應用。</li> </ul> <hr /> <h3>10. 本單元小結與複習卡片</h3> <ul> <li><strong>核心重點</strong>：掌握 匹配網絡 (Matching Networks) 與餘弦相似度 Softmax 的理論精髓與實作要點。</li> </ul>", "6": "<h1>教授祕笈 KP-6：監督式原型網絡 (Supervised Prototypical Networks)</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元講解 Snell 等人提出的原型網絡，重點在於嵌入空間中的類別算術平均原型 (Mean Vector) 與歐氏距離 Softmax。</blockquote>  <hr /> <h3>1. 觀念導覽 (Overview)</h3> <p>原型網絡 (Prototypical Networks) 是度量少樣本學習的典範。其核心幾何假定為：在適當的神經網絡嵌入空間中，每一個類別都可以用其所有支援樣本特徵向量的算術平均值（原型 Prototype）來代表。</p> <hr /> <h3>2. 核心公式與符號拆解 (Mathematical Framework)</h3> <p>類別 $\\\\ell$ 的原型向量 $\\\\mathbf{c}_\\\\ell$：</p> <p>$$\\\\mathbf{c}<em>\\\\ell = \\\\frac{1}{|\\\\mathcal{S}</em>\\\\ell|} \\\\sum_{(\\\\mathbf{x}<em>i, y_i) \\\\in \\\\mathcal{S}</em>\\\\ell} f_\\\\theta(\\\\mathbf{x}_i)$$</p> <p>Query 樣本 $\\\\mathbf{x}^*$ 屬於類別 $\\\\ell$ 的 Softmax 機率：</p> <p>$$\\\\mathbb{P}(y^<em> = \\\\ell \\\\mid \\\\mathbf{x}^</em>, \\\\mathcal{S}) = \\\\frac{\\\\exp\\\\left( -|f_\\\\theta(\\\\mathbf{x}^<em>) - \\\\mathbf{c}<em>\\\\ell|_2^2 \\\\right)}{\\\\sum</em>{\\\\ell'=1}^N \\\\exp\\\\left( -|f_\\\\theta(\\\\mathbf{x}^</em>) - \\\\mathbf{c}_{\\\\ell'}|_2^2 \\\\right)}$$</p> <hr /> <h3>3. 幾何 / 直覺圖解 (Intuitive Diagram)</h3> <pre><code>Class 1 Support 點  ──&gt; [求算術平均] ──&gt; 原型 ★ c1                                            \\\\                                             \\\\  d(x*, c1) 較短 ──&gt; 判定為 Class 1 !                                              \\\\ Query 樣本 x* ─────────────────────────────── ★ c2 (原型 2) </code></pre> <hr /> <h3>4. 教授私房比喻 (Analogy)</h3> <ul> <li><strong>原型網絡</strong>：就像「各縣市設行政中心」。要判斷某個村莊屬於哪一縣，只需計算該村莊到各縣行政中心（原型）的直線距離（歐氏距離），距離最近者即屬該縣！</li> </ul> <hr /> <h3>5. 實務踩坑與常見誤區 (Pitfalls)</h3> <ul> <li><strong>誤區一：使用餘弦相似度取代歐氏距離</strong>。原論文證明歐氏距離屬於 Bregman 散度，能夠形成標準的幾何 Voronoi 剖分，效果顯著優於餘弦相似度。</li> <li><strong>誤區二：1-shot 下原型無效</strong>。在 1-shot 時，原型即為該唯一樣本本身，此時原型網絡退化為 Nearest Neighbor 分類器。</li> </ul> <hr /> <h3>6. 逐步計算範例 (Step-by-Step Example)</h3> <p>設 Class 1 在 2D 空間有兩張 Support 樣本：$f(x_1) = (1, 3)$, $f(x_2) = (3, 5)$。<br /> 1. 計算原型：$\\\\mathbf{c}_1 = ((1+3)/2, (3+5)/2) = (2, 4)$。<br /> 2. 若 Query $f(x^*) = (2, 5)$，到 $\\\\mathbf{c}_1$ 歐氏距離平方為 $(2-2)^2 + (5-4)^2 = 1$。</p> <hr /> <h3>7. 程式實作關鍵 (PyTorch / Code Snippet)</h3> <pre><code class=\"language-python\"># 原型計算與歐氏距離 Softmax import torch import torch.nn.functional as F  def prototypical_loss(embeddings, target, N_way, K_shot, Q_query):     # embeddings: [N*K + N*Q, D]     support_emb = embeddings[:N_way*K_shot].view(N_way, K_shot, -1)     query_emb = embeddings[N_way*K_shot:]      # 計算原型: [N_way, D]     prototypes = support_emb.mean(dim=1)      # 計算歐氏距離矩陣: [N_query, N_way]     dists = torch.cdist(query_emb, prototypes, p=2) ** 2      # 計算 Cross Entropy     log_p = F.log_softmax(-dists, dim=1)     # ... </code></pre> <hr /> <h3>8. 板書建議與教學提問 (Classroom Q&amp;A)</h3> <ul> <li><strong>板書設計</strong>：在黑板上繪製 2D 散佈圖，畫出兩個點群與星號原型，並畫出 Voronoi 分界線。</li> <li><strong>提問設計</strong>：「為什麼求平均數 (Mean) 能代表一個類別？如果類別數據呈雙峰分佈 (Bimodal)，原型網絡會遇到什麼問題？」</li> </ul> <hr /> <h3>9. 前沿擴展與進階思考</h3> <ul> <li><strong>Gaussian Prototypical Networks</strong>：針對複雜分佈，除平均數外同時估算協方差矩陣 (Covariance)，將原型擴展為高斯分佈。</li> </ul> <hr /> <h3>10. 本單元小結與複習卡片</h3> <ul> <li><strong>核心重點</strong>：原型為 Support 特徵平均值；歐氏距離勝於餘弦相似度；結構簡單、計算極快。</li> </ul>", "7": "<h1>教授祕笈 KP-7：半監督原型網絡 (Semi-Supervised Prototypical Networks) 與軟指派原型更新</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元引領學生深度掌握 KP-7（半監督原型網絡 (Semi-Supervised Prototypical Networks) 與軟指派原型更新）的核心理論機制、數學公式推導與實務應用。</blockquote>  <hr /> <h3>1. 觀念導覽 (Overview)</h3> <p>本單元探討 半監督原型網絡 (Semi-Supervised Prototypical Networks) 與軟指派原型更新 在少樣本學習與元學習中的核心地位與理論建構。</p> <hr /> <h3>2. 核心公式與符號拆解 (Mathematical Framework)</h3> <p>數學表達式與符號解析：</p> <p>$$\\\\mathcal{L}<em>{\\\\text{meta}} = \\\\sum</em>{\\\\mathcal{T}<em>i \\\\sim p(\\\\mathcal{T})} \\\\mathcal{L}</em>{\\\\mathcal{T}_i}^{\\\\mathcal{Q}}(\\\\boldsymbol{\\\\theta}'_i)$$</p> <ul> <li>$\\\\boldsymbol{\\\\theta}$：元學習初始參數。</li> <li>$\\\\boldsymbol{\\\\theta}'_i$：經過任務 $\\\\mathcal{T}_i$ 適應後的特定參數。</li> </ul> <hr /> <h3>3. 幾何 / 直覺圖解 (Intuitive Diagram)</h3> <pre><code>[輸入數據 / 任務 Task] ──&gt; [幾何特徵映射 / 適應] ──&gt; [元損失評估與泛化] </code></pre> <hr /> <h3>4. 教授私房比喻 (Analogy)</h3> <ul> <li><strong>教學比喻</strong>：將本概念比喻為靈活的經驗累積過程，模型能夠迅速從過往類似經驗中找到解題突破口。</li> </ul> <hr /> <h3>5. 實務踩坑與常見誤區 (Pitfalls)</h3> <ul> <li><strong>常見誤區</strong>：注意區分內迴圈適應與外迴圈元更新的梯度方向與學習率差異。</li> </ul> <hr /> <h3>6. 逐步計算範例 (Step-by-Step Example)</h3> <ol> <li>步驟一：輸入樣本並計算特徵嵌入。</li> <li>步驟二：執行度量比對或梯度微調。</li> <li>步驟三：計算損失並執行反向傳播。</li> </ol> <hr /> <h3>7. 程式實作關鍵 (PyTorch / Code Snippet)</h3> <pre><code class=\"language-python\"># 核心邏輯展示 import torch  def process_kp7(inputs):     # 特徵映射與損失計算     outputs = model(inputs)     return outputs </code></pre> <hr /> <h3>8. 板書建議與教學提問 (Classroom Q&amp;A)</h3> <ul> <li><strong>板書設計</strong>：清晰劃分理論公式、架構方塊圖與關鍵結論。</li> <li><strong>提問設計</strong>：「此機制如何有效防止少量數據導致的嚴重過擬合？」</li> </ul> <hr /> <h3>9. 前沿擴展與進階思考</h3> <ul> <li>探索該方法在跨領域泛化 (Domain Generalization) 中的最新擴展應用。</li> </ul> <hr /> <h3>10. 本單元小結與複習卡片</h3> <ul> <li><strong>核心重點</strong>：掌握 半監督原型網絡 (Semi-Supervised Prototypical Networks) 與軟指派原型更新 的理論精髓與實作要點。</li> </ul>", "8": "<h1>教授祕笈 KP-8：關係網絡 (Relation Networks) 與深度可學習度量 (Deep Metric Learning)</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元引領學生深度掌握 KP-8（關係網絡 (Relation Networks) 與深度可學習度量 (Deep Metric Learning)）的核心理論機制、數學公式推導與實務應用。</blockquote>  <hr /> <h3>1. 觀念導覽 (Overview)</h3> <p>本單元探討 關係網絡 (Relation Networks) 與深度可學習度量 (Deep Metric Learning) 在少樣本學習與元學習中的核心地位與理論建構。</p> <hr /> <h3>2. 核心公式與符號拆解 (Mathematical Framework)</h3> <p>數學表達式與符號解析：</p> <p>$$\\\\mathcal{L}<em>{\\\\text{meta}} = \\\\sum</em>{\\\\mathcal{T}<em>i \\\\sim p(\\\\mathcal{T})} \\\\mathcal{L}</em>{\\\\mathcal{T}_i}^{\\\\mathcal{Q}}(\\\\boldsymbol{\\\\theta}'_i)$$</p> <ul> <li>$\\\\boldsymbol{\\\\theta}$：元學習初始參數。</li> <li>$\\\\boldsymbol{\\\\theta}'_i$：經過任務 $\\\\mathcal{T}_i$ 適應後的特定參數。</li> </ul> <hr /> <h3>3. 幾何 / 直覺圖解 (Intuitive Diagram)</h3> <pre><code>[輸入數據 / 任務 Task] ──&gt; [幾何特徵映射 / 適應] ──&gt; [元損失評估與泛化] </code></pre> <hr /> <h3>4. 教授私房比喻 (Analogy)</h3> <ul> <li><strong>教學比喻</strong>：將本概念比喻為靈活的經驗累積過程，模型能夠迅速從過往類似經驗中找到解題突破口。</li> </ul> <hr /> <h3>5. 實務踩坑與常見誤區 (Pitfalls)</h3> <ul> <li><strong>常見誤區</strong>：注意區分內迴圈適應與外迴圈元更新的梯度方向與學習率差異。</li> </ul> <hr /> <h3>6. 逐步計算範例 (Step-by-Step Example)</h3> <ol> <li>步驟一：輸入樣本並計算特徵嵌入。</li> <li>步驟二：執行度量比對或梯度微調。</li> <li>步驟三：計算損失並執行反向傳播。</li> </ol> <hr /> <h3>7. 程式實作關鍵 (PyTorch / Code Snippet)</h3> <pre><code class=\"language-python\"># 核心邏輯展示 import torch  def process_kp8(inputs):     # 特徵映射與損失計算     outputs = model(inputs)     return outputs </code></pre> <hr /> <h3>8. 板書建議與教學提問 (Classroom Q&amp;A)</h3> <ul> <li><strong>板書設計</strong>：清晰劃分理論公式、架構方塊圖與關鍵結論。</li> <li><strong>提問設計</strong>：「此機制如何有效防止少量數據導致的嚴重過擬合？」</li> </ul> <hr /> <h3>9. 前沿擴展與進階思考</h3> <ul> <li>探索該方法在跨領域泛化 (Domain Generalization) 中的最新擴展應用。</li> </ul> <hr /> <h3>10. 本單元小結與複習卡片</h3> <ul> <li><strong>核心重點</strong>：掌握 關係網絡 (Relation Networks) 與深度可學習度量 (Deep Metric Learning) 的理論精髓與實作要點。</li> </ul>", "9": "<h1>教授祕笈 KP-9：模型無關元學習 (MAML) 內外迴圈二階優化</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元詳解 Finn 等人提出的 MAML 演算法，重點在於雙層優化 (Bi-level Optimization) 與內迴圈微調/外迴圈元更新導導。</blockquote>  <hr /> <h3>1. 觀念導覽 (Overview)</h3> <p>MAML (Model-Agnostic Meta-Learning) 不限制神經網絡架構。其哲學是：尋找一組對新任務極度敏感的初始參數 $\\\\boldsymbol{\\\\theta}$，使得從該初始點出發，只需要 1 步或極少步梯度下降（內迴圈適應），就能在新任務上取得極高精確度。</p> <hr /> <h3>2. 核心公式與符號拆解 (Mathematical Framework)</h3> <ol> <li><strong>內迴圈 (Task-Specific Adaptation)</strong>：</li> </ol> <p>$$\\\\boldsymbol{\\\\theta}<em>i' = \\\\boldsymbol{\\\\theta} - \\\\alpha \\\\nabla</em>{\\\\boldsymbol{\\\\theta}} \\\\mathcal{L}_{\\\\mathcal{T}_i}^{\\\\mathcal{S}}(\\\\boldsymbol{\\\\theta})$$</p> <ol> <li><strong>外迴圈 (Meta-Update)</strong>：</li> </ol> <p>$$\\\\boldsymbol{\\\\theta} \\\\leftarrow \\\\boldsymbol{\\\\theta} - \\\\beta \\\\nabla_{\\\\boldsymbol{\\\\theta}} \\\\sum_{\\\\mathcal{T}<em>i \\\\sim p(\\\\mathcal{T})} \\\\mathcal{L}</em>{\\\\mathcal{T}_i}^{\\\\mathcal{Q}}(\\\\boldsymbol{\\\\theta}_i')$$</p> <p>二階鏈式法則展開：</p> <p>$$\\\\nabla_{\\\\boldsymbol{\\\\theta}} \\\\mathcal{L}<em>{\\\\mathcal{T}_i}^{\\\\mathcal{Q}}(\\\\boldsymbol{\\\\theta}_i') = \\\\nabla</em>{\\\\boldsymbol{\\\\theta}<em>i'} \\\\mathcal{L}</em>{\\\\mathcal{T}<em>i}^{\\\\mathcal{Q}}(\\\\boldsymbol{\\\\theta}_i') \\\\cdot \\\\left( \\\\mathbf{I} - \\\\alpha \\\\nabla</em>{\\\\boldsymbol{\\\\theta}}^2 \\\\mathcal{L}_{\\\\mathcal{T}_i}^{\\\\mathcal{S}}(\\\\boldsymbol{\\\\theta}) \\\\right)$$</p> <hr /> <h3>3. 幾何 / 直覺圖解 (Intuitive Diagram)</h3> <pre><code>          [ Meta-Init theta ]              /          \\\\   內迴圈 alpha/            \\\\內迴圈 alpha            v              v       Task 1 theta_1'    Task 2 theta_2'            \\\\              /             \\\\外迴圈 beta /  (根據 Query Loss 反向更新 theta)              v          v          [ Updated theta_new ] </code></pre> <hr /> <h3>4. 教授私房比喻 (Analogy)</h3> <ul> <li><strong>MAML 元初始點</strong>：就像「專業運動員的基礎體能」。擁有絕佳的爆發力與核心肌群（最佳 $\\\\boldsymbol{\\\\theta}$），不論接下來要短跑、游泳還是打籃球，只要教練稍微指導 10 分鐘（內迴圈 1 步微調），就能立刻成為該項目的頂尖選手！</li> </ul> <hr /> <h3>5. 實務踩坑與常見誤區 (Pitfalls)</h3> <ul> <li><strong>誤區一：混淆內外迴圈學習率</strong>。內迴圈學習率 $\\\\alpha$ 控制單一任務微調步長；外迴圈學習率 $\\\\beta$ 控制元參數更新步長。</li> <li><strong>誤區二：二階梯度顯存爆炸</strong>。計算 $\\\\nabla_{\\\\boldsymbol{\\\\theta}}^2$ 涉及二階導數。在顯存受限時，可啟用 First-Order MAML (FOMAML)，忽略 Hessian 矩陣。</li> </ul> <hr /> <h3>6. 逐步計算範例 (Step-by-Step Example)</h3> <ol> <li>採樣 Task 1，給定 Support Set $\\\\mathcal{S}_1$ 計算 Loss = 0.8，梯度 $\\\\nabla Loss = 0.4$。</li> <li>設 $\\\\alpha = 0.1$，內迴圈適應：$\\\\boldsymbol{\\\\theta}' = \\\\boldsymbol{\\\\theta} - 0.1 \\\\times 0.4 = \\\\boldsymbol{\\\\theta} - 0.04$。</li> <li>在 Query Set $\\\\mathcal{Q}_1$ 上使用 $\\\\boldsymbol{\\\\theta}'$ 評估 Loss = 0.3，反向傳播更新原始 $\\\\boldsymbol{\\\\theta}$。</li> </ol> <hr /> <h3>7. 程式實作關鍵 (PyTorch / Code Snippet)</h3> <pre><code class=\"language-python\"># 使用 higher 函式庫或 create_graph=True 實現 MAML import torch  def maml_step(model, task, alpha, beta):     # 複製模型參數進行內迴圈     fast_weights = dict(model.named_parameters())      # 1. 內迴圈 Support 微調     supp_loss = compute_loss(model, task.support, fast_weights)     grads = torch.autograd.grad(supp_loss, fast_weights.values(), create_graph=True)      fast_weights = {         name: param - alpha * grad          for (name, param), grad in zip(fast_weights.items(), grads)     }      # 2. 外迴圈 Query 評估     query_loss = compute_loss(model, task.query, fast_weights)     return query_loss </code></pre> <hr /> <h3>8. 板書建議與教學提問 (Classroom Q&amp;A)</h3> <ul> <li><strong>板書設計</strong>：畫出損失函數等高線圖，繪製從 $\\\\boldsymbol{\\\\theta}$ 到 $\\\\boldsymbol{\\\\theta}_1', \\\\boldsymbol{\\\\theta}_2'$ 的分叉箭頭，最後畫出指向最適中位置的元更新向量。</li> <li><strong>提問設計</strong>：「為什麼 MAML 的外迴圈 Loss 是在 $\\\\boldsymbol{\\\\theta}'$ 上計算，卻用來更新 $\\\\boldsymbol{\\\\theta}$？這背後的導數鏈式法則是如何運作的？」</li> </ul> <hr /> <h3>9. 前沿擴展與進階思考</h3> <ul> <li><strong>Reptile 演算法</strong>：OpenAI 提出的簡化版一階 MAML，只需在內迴圈做 k 步 SGD，然後將 $\\\\boldsymbol{\\\\theta}$ 朝向 $\\\\boldsymbol{\\\\theta}'$ 的方向拉近，完全不需計算二階導數。</li> </ul> <hr /> <h3>10. 本單元小結與複習卡片</h3> <ul> <li><strong>核心重點</strong>：學習敏感初始參數；雙層優化架構；內迴圈 Task 適應，外迴圈 Meta 評估。</li> </ul>", "10": "<h1>教授祕笈 KP-10：無監督 MAML (UMTRA) 與資料增強假任務生成</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元引領學生深度掌握 KP-10（無監督 MAML (UMTRA) 與資料增強假任務生成）的核心理論機制、數學公式推導與實務應用。</blockquote>  <hr /> <h3>1. 觀念導覽 (Overview)</h3> <p>本單元探討 無監督 MAML (UMTRA) 與資料增強假任務生成 在少樣本學習與元學習中的核心地位與理論建構。</p> <hr /> <h3>2. 核心公式與符號拆解 (Mathematical Framework)</h3> <p>數學表達式與符號解析：</p> <p>$$\\\\mathcal{L}<em>{\\\\text{meta}} = \\\\sum</em>{\\\\mathcal{T}<em>i \\\\sim p(\\\\mathcal{T})} \\\\mathcal{L}</em>{\\\\mathcal{T}_i}^{\\\\mathcal{Q}}(\\\\boldsymbol{\\\\theta}'_i)$$</p> <ul> <li>$\\\\boldsymbol{\\\\theta}$：元學習初始參數。</li> <li>$\\\\boldsymbol{\\\\theta}'_i$：經過任務 $\\\\mathcal{T}_i$ 適應後的特定參數。</li> </ul> <hr /> <h3>3. 幾何 / 直覺圖解 (Intuitive Diagram)</h3> <pre><code>[輸入數據 / 任務 Task] ──&gt; [幾何特徵映射 / 適應] ──&gt; [元損失評估與泛化] </code></pre> <hr /> <h3>4. 教授私房比喻 (Analogy)</h3> <ul> <li><strong>教學比喻</strong>：將本概念比喻為靈活的經驗累積過程，模型能夠迅速從過往類似經驗中找到解題突破口。</li> </ul> <hr /> <h3>5. 實務踩坑與常見誤區 (Pitfalls)</h3> <ul> <li><strong>常見誤區</strong>：注意區分內迴圈適應與外迴圈元更新的梯度方向與學習率差異。</li> </ul> <hr /> <h3>6. 逐步計算範例 (Step-by-Step Example)</h3> <ol> <li>步驟一：輸入樣本並計算特徵嵌入。</li> <li>步驟二：執行度量比對或梯度微調。</li> <li>步驟三：計算損失並執行反向傳播。</li> </ol> <hr /> <h3>7. 程式實作關鍵 (PyTorch / Code Snippet)</h3> <pre><code class=\"language-python\"># 核心邏輯展示 import torch  def process_kp10(inputs):     # 特徵映射與損失計算     outputs = model(inputs)     return outputs </code></pre> <hr /> <h3>8. 板書建議與教學提問 (Classroom Q&amp;A)</h3> <ul> <li><strong>板書設計</strong>：清晰劃分理論公式、架構方塊圖與關鍵結論。</li> <li><strong>提問設計</strong>：「此機制如何有效防止少量數據導致的嚴重過擬合？」</li> </ul> <hr /> <h3>9. 前沿擴展與進階思考</h3> <ul> <li>探索該方法在跨領域泛化 (Domain Generalization) 中的最新擴展應用。</li> </ul> <hr /> <h3>10. 本單元小結與複習卡片</h3> <ul> <li><strong>核心重點</strong>：掌握 無監督 MAML (UMTRA) 與資料增強假任務生成 的理論精髓與實作要點。</li> </ul>", "11": "<h1>教授祕笈 KP-11：MAML++ 穩定技巧與自適應學習率 (LSLR-MAML / Meta-SGD)</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元引領學生深度掌握 KP-11（MAML++ 穩定技巧與自適應學習率 (LSLR-MAML / Meta-SGD)）的核心理論機制、數學公式推導與實務應用。</blockquote>  <hr /> <h3>1. 觀念導覽 (Overview)</h3> <p>本單元探討 MAML++ 穩定技巧與自適應學習率 (LSLR-MAML / Meta-SGD) 在少樣本學習與元學習中的核心地位與理論建構。</p> <hr /> <h3>2. 核心公式與符號拆解 (Mathematical Framework)</h3> <p>數學表達式與符號解析：</p> <p>$$\\\\mathcal{L}<em>{\\\\text{meta}} = \\\\sum</em>{\\\\mathcal{T}<em>i \\\\sim p(\\\\mathcal{T})} \\\\mathcal{L}</em>{\\\\mathcal{T}_i}^{\\\\mathcal{Q}}(\\\\boldsymbol{\\\\theta}'_i)$$</p> <ul> <li>$\\\\boldsymbol{\\\\theta}$：元學習初始參數。</li> <li>$\\\\boldsymbol{\\\\theta}'_i$：經過任務 $\\\\mathcal{T}_i$ 適應後的特定參數。</li> </ul> <hr /> <h3>3. 幾何 / 直覺圖解 (Intuitive Diagram)</h3> <pre><code>[輸入數據 / 任務 Task] ──&gt; [幾何特徵映射 / 適應] ──&gt; [元損失評估與泛化] </code></pre> <hr /> <h3>4. 教授私房比喻 (Analogy)</h3> <ul> <li><strong>教學比喻</strong>：將本概念比喻為靈活的經驗累積過程，模型能夠迅速從過往類似經驗中找到解題突破口。</li> </ul> <hr /> <h3>5. 實務踩坑與常見誤區 (Pitfalls)</h3> <ul> <li><strong>常見誤區</strong>：注意區分內迴圈適應與外迴圈元更新的梯度方向與學習率差異。</li> </ul> <hr /> <h3>6. 逐步計算範例 (Step-by-Step Example)</h3> <ol> <li>步驟一：輸入樣本並計算特徵嵌入。</li> <li>步驟二：執行度量比對或梯度微調。</li> <li>步驟三：計算損失並執行反向傳播。</li> </ol> <hr /> <h3>7. 程式實作關鍵 (PyTorch / Code Snippet)</h3> <pre><code class=\"language-python\"># 核心邏輯展示 import torch  def process_kp11(inputs):     # 特徵映射與損失計算     outputs = model(inputs)     return outputs </code></pre> <hr /> <h3>8. 板書建議與教學提問 (Classroom Q&amp;A)</h3> <ul> <li><strong>板書設計</strong>：清晰劃分理論公式、架構方塊圖與關鍵結論。</li> <li><strong>提問設計</strong>：「此機制如何有效防止少量數據導致的嚴重過擬合？」</li> </ul> <hr /> <h3>9. 前沿擴展與進階思考</h3> <ul> <li>探索該方法在跨領域泛化 (Domain Generalization) 中的最新擴展應用。</li> </ul> <hr /> <h3>10. 本單元小結與複習卡片</h3> <ul> <li><strong>核心重點</strong>：掌握 MAML++ 穩定技巧與自適應學習率 (LSLR-MAML / Meta-SGD) 的理論精髓與實作要點。</li> </ul>", "12": "<h1>教授祕笈 KP-12：多模態 MAML (MM-MAML) 與變分 MAML (PLATIPUS / V-MAML)</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元引領學生深度掌握 KP-12（多模態 MAML (MM-MAML) 與變分 MAML (PLATIPUS / V-MAML)）的核心理論機制、數學公式推導與實務應用。</blockquote>  <hr /> <h3>1. 觀念導覽 (Overview)</h3> <p>本單元探討 多模態 MAML (MM-MAML) 與變分 MAML (PLATIPUS / V-MAML) 在少樣本學習與元學習中的核心地位與理論建構。</p> <hr /> <h3>2. 核心公式與符號拆解 (Mathematical Framework)</h3> <p>數學表達式與符號解析：</p> <p>$$\\\\mathcal{L}<em>{\\\\text{meta}} = \\\\sum</em>{\\\\mathcal{T}<em>i \\\\sim p(\\\\mathcal{T})} \\\\mathcal{L}</em>{\\\\mathcal{T}_i}^{\\\\mathcal{Q}}(\\\\boldsymbol{\\\\theta}'_i)$$</p> <ul> <li>$\\\\boldsymbol{\\\\theta}$：元學習初始參數。</li> <li>$\\\\boldsymbol{\\\\theta}'_i$：經過任務 $\\\\mathcal{T}_i$ 適應後的特定參數。</li> </ul> <hr /> <h3>3. 幾何 / 直覺圖解 (Intuitive Diagram)</h3> <pre><code>[輸入數據 / 任務 Task] ──&gt; [幾何特徵映射 / 適應] ──&gt; [元損失評估與泛化] </code></pre> <hr /> <h3>4. 教授私房比喻 (Analogy)</h3> <ul> <li><strong>教學比喻</strong>：將本概念比喻為靈活的經驗累積過程，模型能夠迅速從過往類似經驗中找到解題突破口。</li> </ul> <hr /> <h3>5. 實務踩坑與常見誤區 (Pitfalls)</h3> <ul> <li><strong>常見誤區</strong>：注意區分內迴圈適應與外迴圈元更新的梯度方向與學習率差異。</li> </ul> <hr /> <h3>6. 逐步計算範例 (Step-by-Step Example)</h3> <ol> <li>步驟一：輸入樣本並計算特徵嵌入。</li> <li>步驟二：執行度量比對或梯度微調。</li> <li>步驟三：計算損失並執行反向傳播。</li> </ol> <hr /> <h3>7. 程式實作關鍵 (PyTorch / Code Snippet)</h3> <pre><code class=\"language-python\"># 核心邏輯展示 import torch  def process_kp12(inputs):     # 特徵映射與損失計算     outputs = model(inputs)     return outputs </code></pre> <hr /> <h3>8. 板書建議與教學提問 (Classroom Q&amp;A)</h3> <ul> <li><strong>板書設計</strong>：清晰劃分理論公式、架構方塊圖與關鍵結論。</li> <li><strong>提問設計</strong>：「此機制如何有效防止少量數據導致的嚴重過擬合？」</li> </ul> <hr /> <h3>9. 前沿擴展與進階思考</h3> <ul> <li>探索該方法在跨領域泛化 (Domain Generalization) 中的最新擴展應用。</li> </ul> <hr /> <h3>10. 本單元小結與複習卡片</h3> <ul> <li><strong>核心重點</strong>：掌握 多模態 MAML (MM-MAML) 與變分 MAML (PLATIPUS / V-MAML) 的理論精髓與實作要點。</li> </ul>", "13": "<h1>教授祕笈 KP-13：領域泛化 (Domain Generalization) 與 MASF 特徵語意分佈對齊</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元引領學生深度掌握 KP-13（領域泛化 (Domain Generalization) 與 MASF 特徵語意分佈對齊）的核心理論機制、數學公式推導與實務應用。</blockquote>  <hr /> <h3>1. 觀念導覽 (Overview)</h3> <p>本單元探討 領域泛化 (Domain Generalization) 與 MASF 特徵語意分佈對齊 在少樣本學習與元學習中的核心地位與理論建構。</p> <hr /> <h3>2. 核心公式與符號拆解 (Mathematical Framework)</h3> <p>數學表達式與符號解析：</p> <p>$$\\\\mathcal{L}<em>{\\\\text{meta}} = \\\\sum</em>{\\\\mathcal{T}<em>i \\\\sim p(\\\\mathcal{T})} \\\\mathcal{L}</em>{\\\\mathcal{T}_i}^{\\\\mathcal{Q}}(\\\\boldsymbol{\\\\theta}'_i)$$</p> <ul> <li>$\\\\boldsymbol{\\\\theta}$：元學習初始參數。</li> <li>$\\\\boldsymbol{\\\\theta}'_i$：經過任務 $\\\\mathcal{T}_i$ 適應後的特定參數。</li> </ul> <hr /> <h3>3. 幾何 / 直覺圖解 (Intuitive Diagram)</h3> <pre><code>[輸入數據 / 任務 Task] ──&gt; [幾何特徵映射 / 適應] ──&gt; [元損失評估與泛化] </code></pre> <hr /> <h3>4. 教授私房比喻 (Analogy)</h3> <ul> <li><strong>教學比喻</strong>：將本概念比喻為靈活的經驗累積過程，模型能夠迅速從過往類似經驗中找到解題突破口。</li> </ul> <hr /> <h3>5. 實務踩坑與常見誤區 (Pitfalls)</h3> <ul> <li><strong>常見誤區</strong>：注意區分內迴圈適應與外迴圈元更新的梯度方向與學習率差異。</li> </ul> <hr /> <h3>6. 逐步計算範例 (Step-by-Step Example)</h3> <ol> <li>步驟一：輸入樣本並計算特徵嵌入。</li> <li>步驟二：執行度量比對或梯度微調。</li> <li>步驟三：計算損失並執行反向傳播。</li> </ol> <hr /> <h3>7. 程式實作關鍵 (PyTorch / Code Snippet)</h3> <pre><code class=\"language-python\"># 核心邏輯展示 import torch  def process_kp13(inputs):     # 特徵映射與損失計算     outputs = model(inputs)     return outputs </code></pre> <hr /> <h3>8. 板書建議與教學提問 (Classroom Q&amp;A)</h3> <ul> <li><strong>板書設計</strong>：清晰劃分理論公式、架構方塊圖與關鍵結論。</li> <li><strong>提問設計</strong>：「此機制如何有效防止少量數據導致的嚴重過擬合？」</li> </ul> <hr /> <h3>9. 前沿擴展與進階思考</h3> <ul> <li>探索該方法在跨領域泛化 (Domain Generalization) 中的最新擴展應用。</li> </ul> <hr /> <h3>10. 本單元小結與複習卡片</h3> <ul> <li><strong>核心重點</strong>：掌握 領域泛化 (Domain Generalization) 與 MASF 特徵語意分佈對齊 的理論精髓與實作要點。</li> </ul>", "14": "<h1>教授祕笈 KP-14：MASF 度量學習損失與元表徵參數更新機制</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元引領學生深度掌握 KP-14（MASF 度量學習損失與元表徵參數更新機制）的核心理論機制、數學公式推導與實務應用。</blockquote>  <hr /> <h3>1. 觀念導覽 (Overview)</h3> <p>本單元探討 MASF 度量學習損失與元表徵參數更新機制 在少樣本學習與元學習中的核心地位與理論建構。</p> <hr /> <h3>2. 核心公式與符號拆解 (Mathematical Framework)</h3> <p>數學表達式與符號解析：</p> <p>$$\\\\mathcal{L}<em>{\\\\text{meta}} = \\\\sum</em>{\\\\mathcal{T}<em>i \\\\sim p(\\\\mathcal{T})} \\\\mathcal{L}</em>{\\\\mathcal{T}_i}^{\\\\mathcal{Q}}(\\\\boldsymbol{\\\\theta}'_i)$$</p> <ul> <li>$\\\\boldsymbol{\\\\theta}$：元學習初始參數。</li> <li>$\\\\boldsymbol{\\\\theta}'_i$：經過任務 $\\\\mathcal{T}_i$ 適應後的特定參數。</li> </ul> <hr /> <h3>3. 幾何 / 直覺圖解 (Intuitive Diagram)</h3> <pre><code>[輸入數據 / 任務 Task] ──&gt; [幾何特徵映射 / 適應] ──&gt; [元損失評估與泛化] </code></pre> <hr /> <h3>4. 教授私房比喻 (Analogy)</h3> <ul> <li><strong>教學比喻</strong>：將本概念比喻為靈活的經驗累積過程，模型能夠迅速從過往類似經驗中找到解題突破口。</li> </ul> <hr /> <h3>5. 實務踩坑與常見誤區 (Pitfalls)</h3> <ul> <li><strong>常見誤區</strong>：注意區分內迴圈適應與外迴圈元更新的梯度方向與學習率差異。</li> </ul> <hr /> <h3>6. 逐步計算範例 (Step-by-Step Example)</h3> <ol> <li>步驟一：輸入樣本並計算特徵嵌入。</li> <li>步驟二：執行度量比對或梯度微調。</li> <li>步驟三：計算損失並執行反向傳播。</li> </ol> <hr /> <h3>7. 程式實作關鍵 (PyTorch / Code Snippet)</h3> <pre><code class=\"language-python\"># 核心邏輯展示 import torch  def process_kp14(inputs):     # 特徵映射與損失計算     outputs = model(inputs)     return outputs </code></pre> <hr /> <h3>8. 板書建議與教學提問 (Classroom Q&amp;A)</h3> <ul> <li><strong>板書設計</strong>：清晰劃分理論公式、架構方塊圖與關鍵結論。</li> <li><strong>提問設計</strong>：「此機制如何有效防止少量數據導致的嚴重過擬合？」</li> </ul> <hr /> <h3>9. 前沿擴展與進階思考</h3> <ul> <li>探索該方法在跨領域泛化 (Domain Generalization) 中的最新擴展應用。</li> </ul> <hr /> <h3>10. 本單元小結與複習卡片</h3> <ul> <li><strong>核心重點</strong>：掌握 MASF 度量學習損失與元表徵參數更新機制 的理論精髓與實作要點。</li> </ul>"};
+
+function openGuideModal(kpId) {
+  var modal = document.getElementById('guide-modal');
+  var body = document.getElementById('modal-body');
+  var title = document.getElementById('modal-title');
+
+  if (GUIDES_DATA[kpId]) {
+    body.innerHTML = GUIDES_DATA[kpId];
+    title.textContent = '🎓 教授祕笈 (Professor Secret Guide) — KP-' + kpId;
+    modal.classList.add('open');
+
+    // Render KaTeX inside modal if available
+    if (window.renderMathInElement) {
+      window.renderMathInElement(body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ],
+        ignoredClasses: ['katex']
+      });
+    }
+  }
+}
+
+function closeGuideModal() {
+  var modal = document.getElementById('guide-modal');
+  modal.classList.remove('open');
+}
+
+// Close modal on click outside
+document.getElementById('guide-modal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeGuideModal();
+  }
+});
+</script>
+<!-- END Phase D Modal & Script -->
+</body>
+</html>

@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Large Language Models</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="setTimeout(function(){if(window.renderMath)renderMath();},200);"></script>
+<style>
+:root{--accent:#7c3aed;--accent2:#5b21b6;--bg:#f5f3ff;--card:#fff;--ink:#1f2430;--muted:#6b7280;--line:#e5e7eb;}
+*{box-sizing:border-box;}
+body{margin:0;font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.75;}
+header{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:30px 20px;text-align:center;}
+header h1{margin:0 0 8px;font-size:1.55rem;}header p{margin:0;opacity:.92;font-size:.92rem;}
+.wrap{max-width:1120px;margin:0 auto;display:flex;gap:24px;padding:22px;}
+nav{width:280px;position:sticky;top:16px;align-self:flex-start;max-height:90vh;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;}
+nav h2{font-size:.8rem;color:var(--muted);margin:0 0 10px;text-transform:uppercase;letter-spacing:.5px;}
+nav .toc-item{display:block;padding:6px 10px;border-radius:8px;color:var(--ink);text-decoration:none;font-size:.84rem;}nav .toc-item:hover{background:#ede9fe;color:var(--accent);}
+main{flex:1;min-width:0;}
+.progress{position:sticky;top:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:18px;display:flex;align-items:center;gap:12px;z-index:10;}
+.progress .bar{flex:1;height:8px;background:#eee;border-radius:99px;overflow:hidden;}.progress .fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s;}.progress .txt{font-size:.85rem;color:var(--muted);white-space:nowrap;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:18px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);scroll-margin-top:90px;}
+.card-head{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;background:#f9f7ff;border-bottom:1px solid var(--line);}.card-head:hover{background:#f0ebff;}
+.card-head .badge{background:var(--accent);color:#fff;font-size:.75rem;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap;}
+.card-head h3{margin:0;font-size:1.05rem;flex:1;}.card-head .toggle{transition:transform .2s;color:var(--muted);}
+.card.collapsed .toggle{transform:rotate(-90deg);}.card-body{padding:16px 18px;}.card.collapsed .card-body{display:none;}
+.card-body h4{margin:.9em 0 .4em;color:var(--accent2);}.card-body p{margin:.6em 0;}.card-body strong{color:var(--accent2);}.card-body ul,.card-body ol{margin:.6em 0;padding-left:1.5em;}.card-body li{margin:.3em 0;}
+.diagram-figure{margin:18px 0;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;text-align:center;}.diagram-figure img{max-width:100%;height:auto;border-radius:8px;}.diagram-figure figcaption{margin-top:8px;font-size:.85rem;color:#6b7280;}
+.orig-fig{margin:18px 0;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;text-align:center;}.orig-fig img{max-width:100%;height:auto;border-radius:8px;}.orig-fig figcaption{margin-top:8px;font-size:.85rem;color:#6b7280;}
+.quiz{margin-top:18px;border:1px dashed var(--line);border-radius:12px;padding:14px;background:#fbfdfd;}.quiz .q{font-weight:600;margin-bottom:10px;}.quiz .opts{display:grid;gap:8px;margin-bottom:10px;}.quiz .opt{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;cursor:pointer;background:#fff;}.quiz .opt:hover{border-color:var(--accent);}.quiz .check{background:var(--accent);color:#fff;border:none;padding:7px 16px;border-radius:8px;cursor:pointer;font-weight:600;}.quiz .check:hover{background:var(--accent2);}.quiz .fb{margin-top:8px;font-size:.9rem;display:none;}.quiz .fb.ok{display:block;color:#059669;}.quiz .fb.wrong{display:block;color:#dc2626;}
+footer{text-align:center;color:var(--muted);font-size:.8rem;padding:24px;}
+@media(max-width:760px){.wrap{flex-direction:column;}nav{width:auto;position:static;max-height:none;}}
+
+/* phase-d-guides */
+.guide-btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;padding:10px 18px;border-radius:10px;cursor:pointer;font-weight:700;font-size:.95rem;margin:0 0 14px;box-shadow:0 4px 14px rgba(124,58,237,.35);}
+.guide-btn:hover{transform:scale(1.03);background:linear-gradient(135deg,#6d28d9,#4c1d95);}
+.guide-btn .guide-flag{background:#fde68a;color:#78350f;font-size:.72rem;padding:2px 7px;border-radius:99px;font-weight:800;}
+#guide-modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:200;padding:20px;}
+#guide-modal.open{display:flex;}
+#guide-modal .modal-box{background:#fff;max-width:760px;width:100%;max-height:86vh;overflow:auto;border-radius:14px;padding:22px 26px;box-shadow:0 20px 50px rgba(0,0,0,.25);position:relative;}
+#guide-modal .modal-box h1{font-size:1.3rem;color:#4c1d95;margin:0 0 12px;padding-right:30px;}
+#guide-modal .close{position:absolute;top:14px;right:18px;background:none;border:none;font-size:26px;cursor:pointer;color:#6b7280;line-height:1;}
+#guide-modal .modal-body{line-height:1.8;}
+#guide-modal .modal-body h2{font-size:1.05rem;color:#1e3a8a;border-bottom:1px solid #e5e7eb;padding-bottom:4px;margin:18px 0 8px;}
+#guide-modal .modal-body ul,#guide-modal .modal-body ol{margin:.6em 0;padding-left:1.4em;}
+#guide-modal .modal-body table{border-collapse:collapse;width:100%;font-size:.9rem;margin:.6em 0;}
+#guide-modal .modal-body th,#guide-modal .modal-body td{border:1px solid #e5e7eb;padding:4px 8px;}
+/* /phase-d-guides */
+
+</style>
+</head>
+<body>
+<header><h1>Large Language Models</h1><p>Chapter 11 · IDL 115 · 互動式自學講義</p></header>
+<div class="wrap"><nav><h2>目錄</h2><a class="toc-item" href="#kp1">1 章節定位與 BERT vs GPT 總覽</a><a class="toc-item" href="#kp2">2.1 BERT 網路結構：encoder stack</a><a class="toc-item" href="#kp3">2.2 遮罩語言建模與雙向語境嵌入</a><a class="toc-item" href="#kp4">2.3-2.4 BERT 微調與 [CLS] 句子嵌入</a><a class="toc-item" href="#kp5">2.5 BERT 變體：參數量與蒸餾</a><a class="toc-item" href="#kp6">3.1-3.2 GPT 結構與因果語言建模</a><a class="toc-item" href="#kp7">3.3 Chain-of-Thought Prompting</a><a class="toc-item" href="#kp8">3.4 GPT 家族演進</a><a class="toc-item" href="#kp9">4 T5：統一的 text-to-text 框架</a><a class="toc-item" href="#kp10">5 重要 LLM 生態系地圖</a><a class="toc-item" href="#kp11">6 為何 LLM 有效：六條研究路線</a><a class="toc-item" href="#kp12">7.1-7.2 Alignment 的挑戰與定義</a><a class="toc-item" href="#kp13">7.3.1-7.3.2 簡單 alignment 策略</a><a class="toc-item" href="#kp14">8.1-8.2 RLHF 前兩步：SFT 與 Reward Model</a><a class="toc-item" href="#kp15">8.3 RLHF 的 policy gradient 與 KL 正則化</a><a class="toc-item" href="#kp16">9-10 DPO：LLM 自己當 reward + 總結</a></nav><main><div class="progress"><div class="bar"><div class="fill" id="pf"></div></div><div class="txt" id="ptxt"></div></div><section id="kp1" class="card" data-kp="1"><div class="card-head"><span class="badge">1</span><h3>章節定位與 BERT vs GPT 總覽</h3><span class="toggle">▼</span></div><div class="card-body"><button class="guide-btn" type="button" data-kp="1" data-guide="kp-1" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：BERT 與 GPT 的「閱讀者 vs 寫手」分工</button><h4>直覺：兩大 Transformer 雙雄的分工</h4>
+<p>本章承接 Chap. 9 的 Transformer，介紹兩個最重要的語言模型家族：<strong>BERT</strong> 與 <strong>GPT</strong>。它們都是 Transformer 架構，但一個專攻「理解上下文」，一個專攻「生成下一個詞」。</p>
+<ul>
+<li><strong>BERT</strong>（Bidirectional Encoder Representations from Transformers）由 Google 在 2018 年提出，本質上是多層 Transformer <strong>encoder</strong> 的堆疊。</li>
+<li><strong>GPT</strong>（Generative Pre-trained Transformer）由 OpenAI 在同一年提出，本質上是多層 Transformer <strong>decoder</strong> 的堆疊。</li>
+</ul>
+<p>兩者的核心目標不同：</p>
+<ul>
+<li>BERT 學的是「上下文相關的詞向量」，適合情感分析、問答、自然語言推論等理解任務。</li>
+<li>GPT 學的是「給定前文後預測下一個詞」，適合生成文字、對話、續寫等生成任務。</li>
+</ul>
+<p>到了 2025 年，BERT 已不再是最高水準，但仍是許多 NLP 任務的基礎；而 GPT 架構則是當代大多數大型語言模型（LLM）的骨幹。</p>
+<h4>English recap: encoder vs decoder</h4>
+<p>BERT uses stacked Transformer encoders to produce context-aware embeddings. GPT uses stacked Transformer decoders to generate text autoregressively. Most modern LLMs follow the GPT-style decoder-only design.</p>
+<h4>本章路線圖</h4>
+<ul>
+<li>§2 BERT：結構、遮罩訓練、微調與變體。</li>
+<li>§3 GPT：結構、因果語言建模、Chain-of-Thought、家族演進。</li>
+<li>§4 T5：統一的 text-to-text 框架。</li>
+<li>§5 重要 LLM 生態系。</li>
+<li>§6 為什麼 LLM 有效。</li>
+<li>§7–§9 Alignment：RLHF 與 DPO。</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">BERT vs GPT：雙塔對比總覽</text>
+
+  <!-- BERT tower -->
+  <g transform="translate(80,60)">
+    <text x="100" y="-5" text-anchor="middle" font-size="14" fill="#7c3aed" font-weight="bold">BERT（Google）</text>
+    <rect x="60" y="10" width="120" height="40" rx="5" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+    <text x="120" y="35" text-anchor="middle" font-size="11" fill="#5b21b6">Encoder Block</text>
+    <rect x="60" y="55" width="120" height="40" rx="5" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+    <text x="120" y="80" text-anchor="middle" font-size="11" fill="#5b21b6">Encoder Block</text>
+    <rect x="60" y="100" width="120" height="40" rx="5" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+    <text x="120" y="125" text-anchor="middle" font-size="11" fill="#5b21b6">Encoder Block</text>
+    <path d="M60 145 H180" stroke="#2563eb" stroke-width="2" marker-end="url(#arrB)" marker-start="url(#arrB)"/>
+    <text x="120" y="165" text-anchor="middle" font-size="10" fill="#2563eb">雙向注意力</text>
+    <text x="120" y="210" text-anchor="middle" font-size="11" fill="#1f2937">輸入句子 → 上下文向量</text>
+  </g>
+
+  <!-- GPT tower -->
+  <g transform="translate(420,60)">
+    <text x="100" y="-5" text-anchor="middle" font-size="14" fill="#dc2626" font-weight="bold">GPT（OpenAI）</text>
+    <rect x="60" y="10" width="120" height="40" rx="5" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+    <text x="120" y="35" text-anchor="middle" font-size="11" fill="#991b1b">Decoder Block</text>
+    <rect x="60" y="55" width="120" height="40" rx="5" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+    <text x="120" y="80" text-anchor="middle" font-size="11" fill="#991b1b">Decoder Block</text>
+    <rect x="60" y="100" width="120" height="40" rx="5" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+    <text x="120" y="125" text-anchor="middle" font-size="11" fill="#991b1b">Decoder Block</text>
+    <path d="M60 125 H180" stroke="#dc2626" stroke-width="2" marker-end="url(#arrR)"/>
+    <text x="120" y="165" text-anchor="middle" font-size="10" fill="#dc2626">只能往左看</text>
+    <text x="120" y="210" text-anchor="middle" font-size="11" fill="#1f2937">前文 → 預測下一個詞</text>
+  </g>
+
+  <!-- central contrast -->
+  <path d="M300 160 H420" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6,4"/>
+  <text x="360" y="155" text-anchor="middle" font-size="11" fill="#6b7280">同為 Transformer</text>
+  <text x="360" y="175" text-anchor="middle" font-size="11" fill="#6b7280">目標與方向相反</text>
+
+  <!-- bottom roles -->
+  <rect x="80" y="240" width="220" height="45" rx="8" fill="#dbeafe" stroke="#2563eb"/>
+  <text x="190" y="258" text-anchor="middle" font-size="11" fill="#1e3a8a">理解任務：分類 / 問答 / NLI</text>
+  <text x="190" y="275" text-anchor="middle" font-size="10" fill="#2563eb">Context-aware embeddings</text>
+
+  <rect x="420" y="240" width="220" height="45" rx="8" fill="#fef3c7" stroke="#d97706"/>
+  <text x="530" y="258" text-anchor="middle" font-size="11" fill="#92400e">生成任務：續寫 / 對話</text>
+  <text x="530" y="275" text-anchor="middle" font-size="10" fill="#b45309">Next-token prediction</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-1" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 左右兩座高塔，左邊紫色「BERT」由三個 Encoder Block 堆疊而成，塔頂到塔底有一條藍色雙向箭頭標示「雙向注意力」；右邊紅色「GPT」由三個 Decoder Block 堆疊而成，塔頂到塔底有一條紅色單向右箭頭標示「只能往左看」。兩塔中間以虛線連接，寫「同為 Transformer，目標與方向相反」。底部藍底區塊列 BERT 的理解任務，黃底區塊列 GPT 的生成任務。
+
+WHY（因果或反直覺）: BERT 與 GPT 看起來都是「堆疊 Transformer」，但因為一個用 encoder、一個用 decoder，前者能看全文所以適合理解，後者只能看前文所以適合生成。反直覺：同樣的基礎元件，方向一換就從「閱讀器」變成「寫手」。
+
+MUST show（必備要素）: ① 兩座塔的顏色與區塊類型不同（Encoder vs Decoder）；② BERT 的雙向箭頭 vs GPT 的單向左箭頭；③ 中間虛線強調同構但目標相反；④ 底部對比兩類任務；⑤ 標註 Google/OpenAI 來源。
+
+AVOID（禁止）: 不要把兩座塔畫得一模一樣；不要只用文字標「BERT/GPT」而沒有 attention 方向對比；不要畫成 RNN 或 CNN 架構。
+
+STYLE: flat vector, viewBox 720×360, white background, purple vs red towers, blue/yellow role blocks, Chinese + English labels, clean arrows, no shadows.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">BERT vs GPT：雙塔對比總覽</figcaption></figure></div>
+<div class="quiz" data-ans="B"><p class="q"><p>BERT 與 GPT 最根本的架構差異是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q1-0" value="A"><span>A. <p>BERT 用 RNN，GPT 用 CNN</p></span></label><label class="opt"><input type="radio" name="q1-0" value="B"><span>B. <p>BERT 是 Transformer encoder 堆疊，GPT 是 Transformer decoder 堆疊</p></span></label><label class="opt"><input type="radio" name="q1-0" value="C"><span>C. <p>BERT 只能生成，GPT 只能分類</p></span></label><label class="opt"><input type="radio" name="q1-0" value="D"><span>D. <p>兩者都是純 decoder 模型</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="BERT 由 Transformer encoder blocks 組成，GPT 由 Transformer decoder blocks 組成。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>BERT 的主要設計目標是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q1-1" value="A"><span>A. <p>生成下一個詞</p></span></label><label class="opt"><input type="radio" name="q1-1" value="B"><span>B. <p>學習上下文相關的詞向量</p></span></label><label class="opt"><input type="radio" name="q1-1" value="C"><span>C. <p>進行影像分類</p></span></label><label class="opt"><input type="radio" name="q1-1" value="D"><span>D. <p>訓練強化學習策略</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="BERT 的目標是為序列中的每個 token 產生上下文相關的 embedding，適合理解任務。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>GPT 的主要設計目標是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q1-2" value="A"><span>A. <p>學習雙向語境</p></span></label><label class="opt"><input type="radio" name="q1-2" value="B"><span>B. <p>預測下一個 token 以生成文字</p></span></label><label class="opt"><input type="radio" name="q1-2" value="C"><span>C. <p>進行圖像生成</p></span></label><label class="opt"><input type="radio" name="q1-2" value="D"><span>D. <p>計算詞頻統計</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="GPT 是因果（autoregressive）語言模型，根據前面所有 token 預測下一個 token。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>到了 2025 年，大多數最先進的 LLM 主要採用哪種架構風格？</p></p><div class="opts"><label class="opt"><input type="radio" name="q1-3" value="A"><span>A. <p>BERT-style encoder-only</p></span></label><label class="opt"><input type="radio" name="q1-3" value="B"><span>B. <p>GPT-style decoder-only</p></span></label><label class="opt"><input type="radio" name="q1-3" value="C"><span>C. <p>RNN-based</p></span></label><label class="opt"><input type="radio" name="q1-3" value="D"><span>D. <p>純 CNN</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="雖然 BERT 仍具影響力，但大多數現代 LLM（如 GPT、LLaMA、Claude）採用 decoder-only 的 GPT 風格。"></div></div></div></section>
+<section id="kp2" class="card" data-kp="2"><div class="card-head"><span class="badge">2.1</span><h3>BERT 網路結構：encoder stack</h3><span class="toggle">▼</span></div><div class="card-body"><button class="guide-btn" type="button" data-kp="2" data-guide="kp-2" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：BERT 就是一疊 encoder block</button><h4>直覺：BERT 就是一堆 Transformer encoder 疊起來</h4>
+<p>BERT 的網路結構非常單純：它把 Chap. 9 介紹的 Transformer <strong>encoder block</strong> 一層一層往上疊。每一層 encoder 都包含 multi-head self-attention 與 feed-forward network，並搭配 layer normalization 與 residual connection。</p>
+<p>因為使用 encoder，BERT 在計算每個詞的表示時，可以同時看左邊（已經出現）與右邊（尚未出現）的所有詞，這就是「雙向」（bidirectional）的來源。</p>
+<figure class="orig-fig">
+<img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-295_1339_1259_191_245.jpg" alt="BERT and GPT architectures">
+<figcaption>Fig. 1a BERT 架構：多層 Transformer encoder 的堆疊。</figcaption>
+</figure>
+
+<h4>English recap: BERT is stacked encoders</h4>
+<p>BERT is essentially a stack of Transformer encoders. Each encoder block uses multi-head self-attention, allowing every token to attend to all other tokens in the sentence.</p>
+<h4>輸入與輸出</h4>
+<ul>
+<li>輸入：一個句子（會在前面加上特殊的 <code>[CLS]</code> token，並用 <code>[SEP]</code> 分隔句子）。</li>
+<li>輸出：每個 token 對應一個上下文相關的向量表示。</li>
+</ul>
+<p>這些向量可以接下游任務的分類層，例如情感分析或問答。</p>
+<ul>
+<li>Encoder-only 架構：只看 encoder，沒有 decoder。</li>
+<li>雙向注意力：每個詞都能看到整句話的上下文。</li>
+<li>適合理解任務：分類、問答、命名實體辨識等。</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">BERT：Encoder Block 堆疊與雙向注意力</text>
+
+  <!-- input sentence -->
+  <rect x="40" y="60" width="640" height="40" rx="6" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text x="360" y="85" text-anchor="middle" font-size="13" fill="#1f2937">[CLS]  Money  is  in  the  bank  [SEP]</text>
+
+  <!-- stack -->
+  <g transform="translate(250,120)">
+    <rect x="0" y="0" width="220" height="40" rx="5" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+    <text x="110" y="25" text-anchor="middle" font-size="12" fill="#5b21b6">Encoder Layer L</text>
+    <rect x="0" y="50" width="220" height="40" rx="5" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+    <text x="110" y="75" text-anchor="middle" font-size="12" fill="#5b21b6">Encoder Layer 2</text>
+    <rect x="0" y="100" width="220" height="40" rx="5" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+    <text x="110" y="125" text-anchor="middle" font-size="12" fill="#5b21b6">Encoder Layer 1</text>
+  </g>
+
+  <!-- bidirectional arrows for the word bank -->
+  <circle cx="470" cy="80" r="5" fill="#dc2626"/>
+  <text x="470" y="70" text-anchor="middle" font-size="10" fill="#dc2626">bank</text>
+  <path d="M470 90 V115" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <path d="M260 160 H455" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrB)"/>
+  <path d="M455 160 H260" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrG)"/>
+  <text x="360" y="150" text-anchor="middle" font-size="10" fill="#2563eb">bank 看左邊</text>
+  <text x="360" y="180" text-anchor="middle" font-size="10" fill="#16a34a">bank 看右邊</text>
+
+  <!-- output -->
+  <rect x="40" y="290" width="640" height="40" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+  <text x="360" y="315" text-anchor="middle" font-size="13" fill="#166534">每個 token 對應一個上下文相關向量</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-2" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 頂部灰底長條顯示輸入句子「[CLS] Money is in the bank [SEP]」，單詞 bank 用紅點標示。中間是三個堆疊的紫色 Encoder Layer 方塊。bank 透過紅色虛線進入堆疊後，內部有藍色左箭頭與綠色右箭頭，表示 bank 同時關注左邊與右邊的上下文。底部綠底長條寫「每個 token 對應一個上下文相關向量」。
+
+WHY（因果或反直覺）: 傳統詞向量一個詞只有一個向量，但 BERT 讓每個詞的表示由整句話決定。反直覺：bank 的「銀行」與「河岸」意思不同，卻共用同一個詞；BERT 用雙向注意力讓同一詞在不同句子中長出不同向量。
+
+MUST show（必備要素）: ① 輸入句子與 [CLS]/[SEP]；② 三層 encoder 堆疊；③ 針對 bank 的雙向注意力箭頭；④ 輸出為每個 token 一個向量；⑤ 用顏色區分左/右 attention 方向。
+
+AVOID（禁止）: 不要只畫一個大方塊寫「BERT」；不要讓 attention 箭頭只朝單一方向；不要把輸出畫成單一向量而忽略每個 token 都有輸出；不要使用 LaTeX 反斜線。
+
+STYLE: flat vector, viewBox 720×360, white background, purple encoder stack, blue/green bidirectional arrows, red highlighted token, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">BERT encoder stack：雙向 attention 塔</figcaption></figure></div>
+<div class="quiz" data-ans="B"><p class="q"><p>BERT 的網路主要由什麼組成？</p></p><div class="opts"><label class="opt"><input type="radio" name="q2-0" value="A"><span>A. <p>Transformer decoder blocks</p></span></label><label class="opt"><input type="radio" name="q2-0" value="B"><span>B. <p>Transformer encoder blocks</p></span></label><label class="opt"><input type="radio" name="q2-0" value="C"><span>C. <p>RNN cells</p></span></label><label class="opt"><input type="radio" name="q2-0" value="D"><span>D. <p>CNN filters</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="BERT 本質上是 Transformer encoder blocks 的堆疊。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>BERT 的注意力機制為什麼被稱為雙向（bidirectional）？</p></p><div class="opts"><label class="opt"><input type="radio" name="q2-1" value="A"><span>A. <p>因為它只往左看</p></span></label><label class="opt"><input type="radio" name="q2-1" value="B"><span>B. <p>因為每個 token 都能同時看到左邊與右邊的上下文</p></span></label><label class="opt"><input type="radio" name="q2-1" value="C"><span>C. <p>因為它只往右看</p></span></label><label class="opt"><input type="radio" name="q2-1" value="D"><span>D. <p>因為它沒有注意力</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Encoder 的 self-attention 讓每個 token 都能關注句子中所有其他 token。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>BERT 適合哪一類任務？</p></p><div class="opts"><label class="opt"><input type="radio" name="q2-2" value="A"><span>A. <p>文字生成與續寫</p></span></label><label class="opt"><input type="radio" name="q2-2" value="B"><span>B. <p>上下文理解與分類</p></span></label><label class="opt"><input type="radio" name="q2-2" value="C"><span>C. <p>影像分割</p></span></label><label class="opt"><input type="radio" name="q2-2" value="D"><span>D. <p>語音合成</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="BERT 產生上下文相關的詞向量，適合情感分析、問答、自然語言推論等理解任務。"></div></div><div class="quiz" data-ans="C"><p class="q"><p>BERT 輸入中放在句子最前面的特殊 token 是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q2-3" value="A"><span>A. <p>[SEP]</p></span></label><label class="opt"><input type="radio" name="q2-3" value="B"><span>B. <p>[MASK]</p></span></label><label class="opt"><input type="radio" name="q2-3" value="C"><span>C. <p>[CLS]</p></span></label><label class="opt"><input type="radio" name="q2-3" value="D"><span>D. <p>[PAD]</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="`[CLS]` token 的最終隱藏狀態常被當作整句的句子表示。"></div></div></div></section>
+<section id="kp3" class="card" data-kp="3"><div class="card-head"><span class="badge">2.2</span><h3>遮罩語言建模與雙向語境嵌入</h3><span class="toggle">▼</span></div><div class="card-body"><h4>直覺：把句子挖空，讓模型根據上下文猜回來</h4>
+<p>BERT 的訓練任務稱為<strong>遮罩語言建模（Masked Language Modeling, MLM）</strong>。做法很直觀：隨機遮住輸入句子中約 15% 的詞，然後要求模型根據上下文預測被遮住的詞是什麼。</p>
+<p>因為模型必須同時參考被遮詞左邊與右邊的詞才能猜對，BERT 學到的 embedding 自然就是<strong>上下文相關</strong>的。例如 "bank" 在 "Money is in the bank" 與 "Some plants grow on the banks of rivers" 這兩句中會有不同的 embedding。</p>
+<figure class="orig-fig">
+<img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-296_520_689_208_891.jpg" alt="BERT masking">
+<figcaption>Fig. 2 BERT 遮罩訓練：把句子中的詞遮住，再根據上下文預測。</figcaption>
+</figure>
+
+<h4>English recap: MLM learns bidirectional context</h4>
+<p>BERT masks 15% of input tokens and trains the model to predict them. Because the prediction uses both left and right context, BERT embeddings are context-aware, unlike static Word2Vec or GloVe embeddings.</p>
+<h4>自監督學習</h4>
+<p>這個任務不需要人工標籤，因為被遮住的詞本身就是「答案」。因此 BERT 可以在大量未標記的網路文本上進行<strong>自監督學習（self-supervised learning）</strong>。</p>
+<ul>
+<li>15% 的 token 會被隨機遮罩。</li>
+<li>模型根據雙向上下文預測被遮住的詞。</li>
+<li>同樣的詞在不同句子中會有不同的 embedding。</li>
+<li>訓練資料只需原始文本，不需人工標註。</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">遮罩語言建模：15% 遮罩與雙向語境</text>
+
+  <!-- top sentence with masked word -->
+  <rect x="40" y="55" width="640" height="45" rx="6" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text x="360" y="83" text-anchor="middle" font-size="14" fill="#1f2937">Money is in the <tspan fill="#dc2626" font-weight="bold">[MASK]</tspan>.</text>
+  <text x="360" y="102" text-anchor="middle" font-size="10" fill="#6b7280">15% 的 token 被遮住</text>
+
+  <!-- arrows from context to mask -->
+  <path d="M220 115 L330 150" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrB)"/>
+  <text x="210" y="110" text-anchor="end" font-size="10" fill="#2563eb">Money</text>
+  <path d="M360 115 L350 150" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrB)"/>
+  <text x="360" y="110" text-anchor="middle" font-size="10" fill="#2563eb">is in the</text>
+  <path d="M520 115 L375 150" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrB)"/>
+  <text x="530" y="110" text-anchor="start" font-size="10" fill="#2563eb">.</text>
+
+  <!-- prediction box -->
+  <rect x="280" y="150" width="160" height="45" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="360" y="178" text-anchor="middle" font-size="13" fill="#5b21b6">預測 [MASK] = bank</text>
+
+  <!-- bank ambiguity contrast -->
+  <g transform="translate(60,230)">
+    <rect x="0" y="0" width="280" height="80" rx="8" fill="#dbeafe" stroke="#2563eb"/>
+    <text x="140" y="25" text-anchor="middle" font-size="11" fill="#1e3a8a">句子 A：Money is in the bank.</text>
+    <text x="140" y="48" text-anchor="middle" font-size="11" fill="#1e3a8a">bank → 銀行</text>
+    <circle cx="140" cy="68" r="4" fill="#2563eb"/>
+  </g>
+  <g transform="translate(380,230)">
+    <rect x="0" y="0" width="280" height="80" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="140" y="25" text-anchor="middle" font-size="11" fill="#166534">句子 B：on the banks of rivers</text>
+    <text x="140" y="48" text-anchor="middle" font-size="11" fill="#166534">bank → 河岸</text>
+    <circle cx="140" cy="68" r="4" fill="#16a34a"/>
+  </g>
+  <path d="M340 270 H380" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrK)"/>
+  <text x="360" y="260" text-anchor="middle" font-size="10" fill="#6b7280">同一詞，不同向量</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-3" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 頂部灰底長條顯示句子「Money is in the [MASK].」，[MASK] 用紅色粗體標示，並註明「15% 的 token 被遮住」。從上下文詞（Money、is in the、句點）有藍色箭頭指向中間紫色預測框，框內寫「預測 [MASK] = bank」。底部左右並排兩個區塊：左藍底「Money is in the bank. → bank = 銀行」，右綠底「on the banks of rivers → bank = 河岸」，中間灰色箭頭標「同一詞，不同向量」。
+
+WHY（因果或反直覺）: 傳統 embedding 一詞一個向量，無法區分多義詞。BERT 透過遮罩任務強迫模型根據左右文猜詞，因此同一個 bank 在不同句子會長出不同向量。反直覺：模型不是背字典，而是從「填空」中學會語境。
+
+MUST show（必備要素）: ① [MASK] 被隨機遮住；② 15% 比例標示；③ 上下文詞指向 [MASK] 的注意力箭頭；④ 預測結果框；⑤ 兩個 bank 例句的對比與不同向量表示。
+
+AVOID（禁止）: 不要只畫一個被遮住的詞而沒有上下文箭頭；不要把兩個 bank 例句畫成相同顏色或相同向量；不要使用 LaTeX 反斜線。
+
+STYLE: flat vector, viewBox 720×360, white background, grey input bar, purple prediction box, blue/green context blocks, clean arrows, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">遮罩語言建模：挖空上下文猜詞</figcaption></figure></div>
+
+\<div class="demo" data-demo-id="kp3">
+  <style>
+    [data-demo-id="kp3"] { border: 1px solid #cbd5e1; border-radius: 14px; overflow: hidden; background: #fff; margin: 16px 0; }
+    [data-demo-id="kp3"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#4f46e5,#4338ca); color: #fff; font-weight: 700; }
+    [data-demo-id="kp3"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #eef2ff; }
+    [data-demo-id="kp3"] .demo-controls { flex: 1 1 260px; display: flex; flex-direction: column; gap: 8px; }
+    [data-demo-id="kp3"] .demo-canvas { flex: 1 1 420px; }
+    [data-demo-id="kp3"] canvas { border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp3"] .row { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; }
+    [data-demo-id="kp3"] .row label { min-width: 100px; font-weight: 600; }
+    [data-demo-id="kp3"] input[type="range"] { flex: 1; }
+    [data-demo-id="kp3"] button { background: #4f46e5; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    [data-demo-id="kp3"] .demo-readout { min-height: 5em; padding: 10px 12px; border: 1px solid #c7d2fe; border-radius: 8px; background: #fff; font-family: ui-monospace, Consolas, monospace; font-size: 0.78rem; line-height: 1.55; white-space: pre-wrap; }
+    [data-demo-id="kp3"] .demo-theory, [data-demo-id="kp3"] .demo-instruction { padding: 10px 18px; font-size: 0.85rem; line-height: 1.7; }
+    [data-demo-id="kp3"] .demo-theory { background: #eef2ff; border-top: 1px solid #e2e8f0; }
+  </style>
+  <div class="demo-head">Demo：BERT 遮罩語言建模（MLM）</div>
+  <div class="demo-body">
+    <div class="demo-controls">
+      <div class="row"><label>遮罩比例</label><input type="range" id="kp3-rate" min="0" max="0.5" step="0.01" value="0.15"><span id="kp3-rate-v">0.15</span></div>
+      <button type="button" id="kp3-remask">重新遮罩</button>
+      <div class="demo-readout" id="kp3-ro"></div>
+    </div>
+    <div class="demo-canvas"><canvas id="kp3-cv" width="520" height="220"></canvas></div>
+  </div>
+  <div class="demo-theory"><strong>原理</strong>：BERT 的 MLM 任務會隨機遮住約 15% 的輸入 token，模型必須根據左右上下文預測被遮住的詞。這迫使模型學到雙向語境表示。</div>
+  <div class="demo-instruction">
+    <strong>這在做什麼：</strong>視覺化遮罩過程。<br>
+    <strong>怎麼操作：</strong>調整遮罩比例後按「重新遮罩」。<br>
+    <strong>觀察什麼：</strong>比例太低時幾乎沒有挑戰；比例太高時上下文不足，模型難以學習。BERT 預設約 15%。<br>
+    <strong>正確基準：</strong>被遮罩 token 數 = round(N * rate)。
+  </div>
+  <script src="demos/demo_kp3.js"></script>
+</div>
+<button class="guide-btn" type="button" data-kp="3" data-guide="kp-3" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：遮住 15% 的詞，逼模型讀懂上下文</button><div class="quiz" data-ans="B"><p class="q"><p>BERT 的主要預訓練任務是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q3-0" value="A"><span>A. <p>下一個句子預測</p></span></label><label class="opt"><input type="radio" name="q3-0" value="B"><span>B. <p>遮罩語言建模</p></span></label><label class="opt"><input type="radio" name="q3-0" value="C"><span>C. <p>因果語言建模</p></span></label><label class="opt"><input type="radio" name="q3-0" value="D"><span>D. <p>機器翻譯</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="BERT 使用 masked language modeling，隨機遮住部分 token 並預測它們。"></div></div><div class="quiz" data-ans="C"><p class="q"><p>BERT 通常遮罩多少比例的 token？</p></p><div class="opts"><label class="opt"><input type="radio" name="q3-1" value="A"><span>A. <p>5%</p></span></label><label class="opt"><input type="radio" name="q3-1" value="B"><span>B. <p>10%</p></span></label><label class="opt"><input type="radio" name="q3-1" value="C"><span>C. <p>15%</p></span></label><label class="opt"><input type="radio" name="q3-1" value="D"><span>D. <p>50%</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="BERT 通常隨機遮罩輸入序列中約 15% 的 token。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>遮罩語言建模為什麼能學到上下文相關的 embedding？</p></p><div class="opts"><label class="opt"><input type="radio" name="q3-2" value="A"><span>A. <p>因為模型只看被遮住的詞</p></span></label><label class="opt"><input type="radio" name="q3-2" value="B"><span>B. <p>因為模型必須同時使用左邊與右邊的上下文來預測</p></span></label><label class="opt"><input type="radio" name="q3-2" value="C"><span>C. <p>因為每個詞都有固定 embedding</p></span></label><label class="opt"><input type="radio" name="q3-2" value="D"><span>D. <p>因為訓練需要大量人工標籤</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="要猜回被遮住的詞，模型必須同時關注左右兩側的上下文，因此學到雙向語境。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>與 Word2Vec/GloVe 相比，BERT embedding 的主要優勢是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q3-3" value="A"><span>A. <p>每個詞只有一個固定向量</p></span></label><label class="opt"><input type="radio" name="q3-3" value="B"><span>B. <p>同樣的詞在不同句子中會有不同 embedding</p></span></label><label class="opt"><input type="radio" name="q3-3" value="C"><span>C. <p>訓練速度更快</p></span></label><label class="opt"><input type="radio" name="q3-3" value="D"><span>D. <p>詞彙量更小</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="BERT 的 embedding 是上下文相關的，同一個詞在不同語境下會有不同的表示。"></div></div></div></section>
+<section id="kp4" class="card" data-kp="4"><div class="card-head"><span class="badge">2.3-2.4</span><h3>BERT 微調與 [CLS] 句子嵌入</h3><span class="toggle">▼</span></div><div class="card-body"><button class="guide-btn" type="button" data-kp="4" data-guide="kp-4" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：把預訓練的閱讀能力接到你的任務</button><h4>直覺：把預訓練好的語言理解器接上你的任務</h4>
+<p>BERT 預訓練完成後，通常不會從頭訓練，而是透過<strong>遷移學習（transfer learning）</strong>進行微調。做法是在 BERT 頂端加上一層或多層任務專用的輸出層，然後用帶標籤的資料進行訓練。</p>
+<p>微調時有兩種策略：</p>
+<ul>
+<li><strong>凍結 BERT 權重</strong>：只訓練新加的輸出層，速度快但效果可能較差。</li>
+<li><strong>整體微調</strong>：讓 BERT 所有層都透過反向傳播更新，效果通常更好。</li>
+</ul>
+<h4>[CLS] token 的妙用</h4>
+<p>BERT 在每個句子開頭會插入一個特殊的 <code>[CLS]</code> token。這個 token 經過所有 Transformer 層後，會吸收整句的資訊。對於句子層級任務（如情感分析、垃圾信偵測），我們可以直接拿 <code>[CLS]</code> 的最終隱藏狀態當作<strong>句子嵌入</strong>，再接上分類器。</p>
+<h4>English recap: fine-tune BERT for downstream tasks</h4>
+<p>Users typically add task-specific layers on top of pre-trained BERT and fine-tune. The final hidden state of the special <code>[CLS]</code> token is commonly used as a sentence representation for classification.</p>
+<ul>
+<li>Transfer learning: use a pre-trained BERT and adapt it to specific tasks.</li>
+<li>[CLS] token: inserted at the beginning of the input, used as sentence embedding.</li>
+<li>Fine-tuning can freeze BERT or update all weights.</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">BERT 微調：[CLS] 句子嵌入與新任務輸出層</text>
+
+  <!-- pretrained BERT block -->
+  <rect x="50" y="70" width="160" height="160" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="130" y="100" text-anchor="middle" font-size="13" fill="#5b21b6" font-weight="bold">Pre-trained</text>
+  <text x="130" y="120" text-anchor="middle" font-size="13" fill="#5b21b6" font-weight="bold">BERT</text>
+  <text x="130" y="150" text-anchor="middle" font-size="10" fill="#6b7280">已學會語言知識</text>
+  <text x="130" y="180" text-anchor="middle" font-size="10" fill="#6b7280">（可凍結或微調）</text>
+
+  <!-- new task head -->
+  <rect x="270" y="130" width="140" height="60" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="340" y="155" text-anchor="middle" font-size="12" fill="#1e3a8a">新任務輸出層</text>
+  <text x="340" y="175" text-anchor="middle" font-size="10" fill="#2563eb">分類器 / 標籤器</text>
+
+  <!-- arrow showing [CLS] path -->
+  <path d="M210 100 H270" stroke="#dc2626" stroke-width="2" marker-end="url(#arrR)"/>
+  <text x="240" y="90" text-anchor="middle" font-size="10" fill="#dc2626">[CLS] 向量</text>
+
+  <!-- arrow all weights update -->
+  <path d="M130 230 V260" stroke="#7c3aed" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrB)"/>
+  <text x="130" y="280" text-anchor="middle" font-size="10" fill="#7c3aed">整體微調：BERT + 新任務層一起更新</text>
+
+  <!-- frozen option -->
+  <rect x="470" y="70" width="200" height="80" rx="8" fill="#fef3c7" stroke="#d97706"/>
+  <text x="570" y="95" text-anchor="middle" font-size="12" fill="#92400e">方案 A：凍結 BERT</text>
+  <text x="570" y="115" text-anchor="middle" font-size="10" fill="#b45309">只訓練新任務層</text>
+  <text x="570" y="135" text-anchor="middle" font-size="10" fill="#b45309">速度快、資料少</text>
+
+  <rect x="470" y="180" width="200" height="80" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+  <text x="570" y="205" text-anchor="middle" font-size="12" fill="#166534">方案 B：整體微調</text>
+  <text x="570" y="225" text-anchor="middle" font-size="10" fill="#16a34a">BERT 與新任務層</text>
+  <text x="570" y="245" text-anchor="middle" font-size="10" fill="#16a34a">一起更新，效果佳</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-4" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 左側紫色大方塊「Pre-trained BERT」，內部標示「已學會語言知識（可凍結或微調）」。紅色箭頭從 BERT 頂端指向右側藍色「新任務輸出層（分類器 / 標籤器）」，箭頭上標「[CLS] 向量」。下方紫色虛線箭頭寫「整體微調：BERT + 新任務層一起更新」。右側上下兩個方案區塊：黃底「方案 A：凍結 BERT，只訓練新任務層」；綠底「方案 B：整體微調，BERT 與新任務層一起更新」。
+
+WHY（因果或反直覺）: BERT 預訓練需要大量資料與算力，一般使用者無法從頭訓練。遷移學習讓我們把通用語言知識「搬」到特定任務。反直覺：有時候把整個 BERT 一起微調，比只訓練新任務層效果更好，因為 BERT 內部表示也會適應新任務。
+
+MUST show（必備要素）: ① Pre-trained BERT 區塊；② [CLS] 向量流向新任務層；③ 新任務層的具體例子（分類器/標籤器）；④ 凍結與整體微調兩種方案對比；⑤ 不用從頭訓練的遷移學習概念。
+
+AVOID（禁止）: 不要畫成 BERT 直接輸出最終答案而沒有新任務層；不要讓凍結與微調看起來沒有差別；不要遺漏 [CLS] token；不要使用 LaTeX 反斜線。
+
+STYLE: flat vector, viewBox 720×360, white background, purple BERT block, blue task head, yellow/green option blocks, red [CLS] arrow, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">BERT 微調：[CLS] 接分類頭</figcaption></figure></div>
+<div class="quiz" data-ans="B"><p class="q"><p>BERT 在下游任務中通常如何使用？</p></p><div class="opts"><label class="opt"><input type="radio" name="q4-0" value="A"><span>A. <p>從頭訓練整個模型</p></span></label><label class="opt"><input type="radio" name="q4-0" value="B"><span>B. <p>在預訓練 BERT 上加輸出層並微調</p></span></label><label class="opt"><input type="radio" name="q4-0" value="C"><span>C. <p>只使用靜態詞向量</p></span></label><label class="opt"><input type="radio" name="q4-0" value="D"><span>D. <p>不適合下游任務</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="常見做法是在預訓練 BERT 之上加任務專用層，再進行微調。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>[CLS] token 的主要用途是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q4-1" value="A"><span>A. <p>分隔兩個句子</p></span></label><label class="opt"><input type="radio" name="q4-1" value="B"><span>B. <p>作為句子層級任務的表示</p></span></label><label class="opt"><input type="radio" name="q4-1" value="C"><span>C. <p>表示被遮罩的詞</p></span></label><label class="opt"><input type="radio" name="q4-1" value="D"><span>D. <p>填充長度</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="`[CLS]` 的最終隱藏狀態常被當作整個句子的 embedding，用於分類任務。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>微調 BERT 時，「凍結 BERT 權重」代表什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q4-2" value="A"><span>A. <p>只更新 BERT 的權重</p></span></label><label class="opt"><input type="radio" name="q4-2" value="B"><span>B. <p>只訓練新加的輸出層，BERT 權重不變</p></span></label><label class="opt"><input type="radio" name="q4-2" value="C"><span>C. <p>把 BERT 權重設為零</p></span></label><label class="opt"><input type="radio" name="q4-2" value="D"><span>D. <p>刪除 BERT 的所有層</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="凍結表示 BERT 本身的參數不更新，只訓練新任務的輸出層。"></div></div><div class="quiz" data-ans="A"><p class="q"><p>為什麼整體微調通常比凍結 BERT 效果更好？</p></p><div class="opts"><label class="opt"><input type="radio" name="q4-3" value="A"><span>A. <p>因為可以調整 BERT 內部的表示，使其更適合新任務</p></span></label><label class="opt"><input type="radio" name="q4-3" value="B"><span>B. <p>因為訓練速度更快</p></span></label><label class="opt"><input type="radio" name="q4-3" value="C"><span>C. <p>因為需要的資料更少</p></span></label><label class="opt"><input type="radio" name="q4-3" value="D"><span>D. <p>因為不會改變預訓練權重</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="整體微調讓 BERT 內部表示也能適應新任務，通常能獲得更好的表現。"></div></div></div></section>
+<section id="kp5" class="card" data-kp="5"><div class="card-head"><span class="badge">2.5</span><h3>BERT 變體：參數量與蒸餾</h3><span class="toggle">▼</span></div><div class="card-body"><h4>直覺：從超大模型到可塞進手機的小模型</h4>
+<p>原始 BERT 有兩個主要尺寸：</p>
+<ul>
+<li><strong>BERT Base</strong>：12 層 encoder、768 維 hidden、12 個 attention heads，共 <strong>1.1 億</strong>參數。</li>
+<li><strong>BERT Large</strong>：24 層 encoder、1024 維 hidden、16 個 attention heads，共 <strong>3.4 億</strong>參數。</li>
+</ul>
+<p>雖然 BERT 已經很強，但對手機等嵌入式裝置來說仍然太大。因此研究者提出許多輕量版：</p>
+<ul>
+<li><strong>DistilBERT</strong>：透過知識蒸餾（knowledge distillation）把 BERT 變小變快。</li>
+<li><strong>TinyBERT</strong>、<strong>SmallBERT</strong>：更極端的輕量版本。</li>
+<li><strong>RoBERTa</strong>：不是變小，而是用更多資料、更大的 batch、動態遮罩與更長訓練時間重新訓練 BERT，提升性能。</li>
+</ul>
+<p>此外還有領域專用版本，例如 BioBERT（醫療）、FinBERT（金融）、SciBERT（科學文獻）、ProteinBERT（蛋白質序列）等。</p>
+<ul>
+<li>BERT Base：110M 參數；BERT Large：340M 參數。</li>
+<li>DistilBERT/TinyBERT/SmallBERT：輕量版，適合資源受限裝置。</li>
+<li>RoBERTa：優化訓練流程的 BERT 變體。</li>
+<li>Domain-specific BERT：針對特定領域資料預訓練。</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">BERT 變體：模型規模與知識蒸餾</text>
+
+  <!-- size comparison bars -->
+  <text x="360" y="50" text-anchor="middle" font-size="12" fill="#1f2937" font-weight="bold">模型規模對比</text>
+
+  <rect x="120" y="230" width="100" height="80" rx="5" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="170" y="260" text-anchor="middle" font-size="12" fill="#1e3a8a" font-weight="bold">Base</text>
+  <text x="170" y="280" text-anchor="middle" font-size="10" fill="#2563eb">110M</text>
+  <text x="170" y="295" text-anchor="middle" font-size="9" fill="#6b7280">12L / 768D / 12H</text>
+
+  <rect x="310" y="160" width="100" height="150" rx="5" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="360" y="200" text-anchor="middle" font-size="12" fill="#5b21b6" font-weight="bold">Large</text>
+  <text x="360" y="225" text-anchor="middle" font-size="10" fill="#7c3aed">340M</text>
+  <text x="360" y="245" text-anchor="middle" font-size="9" fill="#6b7280">24L / 1024D / 16H</text>
+
+  <!-- distillation -->
+  <rect x="500" y="250" width="120" height="60" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="560" y="275" text-anchor="middle" font-size="11" fill="#92400e" font-weight="bold">DistilBERT</text>
+  <text x="560" y="295" text-anchor="middle" font-size="9" fill="#b45309">輕量 / 快速</text>
+
+  <path d="M410 235 H500" stroke="#d97706" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrK)"/>
+  <text x="455" y="225" text-anchor="middle" font-size="9" fill="#6b7280">知識蒸餾</text>
+
+  <!-- RoBERTa improvement -->
+  <rect x="480" y="70" width="180" height="70" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="570" y="95" text-anchor="middle" font-size="12" fill="#166534" font-weight="bold">RoBERTa</text>
+  <text x="570" y="115" text-anchor="middle" font-size="10" fill="#16a34a">更多資料 + 動態遮罩</text>
+  <text x="570" y="132" text-anchor="middle" font-size="10" fill="#16a34a">更大 batch + 更久訓練</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-5" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 畫面中央是三根高度不同的長條：左藍底「Base」最矮（110M，12L/768D/12H），中紫底「Large」最高（340M，24L/1024D/16H），右黃底「DistilBERT」比 Base 更矮（輕量/快速）。從 Large 有一條橙色虛線箭頭指向 DistilBERT，標「知識蒸餾」。右上角綠底區塊寫「RoBERTa：更多資料 + 動態遮罩 + 更大 batch + 更久訓練」。
+
+WHY（因果或反直覺）: 模型越大能力越強，但也越難部署。知識蒸餾把大模型的行為「教」給小模型，讓它在手機等資源受限裝置上也能跑。反直覺：RoBERTa 不是把模型變小，而是重新優化訓練流程，證明 BERT 還有性能空間。
+
+MUST show（必備要素）: ① Base 與 Large 的參數與尺寸對比；② DistilBERT 明顯更小；③ 知識蒸餾箭頭從 Large 指向小模型；④ RoBERTa 的訓練優化四要素；⑤ 用高度視覺化規模差異。
+
+AVOID（禁止）: 不要只畫數字列表而沒有高度對比；不要讓 DistilBERT 看起來比 Large 還大；不要把 RoBERTa 與蒸餾混為一談；不要使用 LaTeX 反斜線。
+
+STYLE: flat vector, viewBox 720×360, white background, blue/purple/yellow bars, orange dashed distillation arrow, green RoBERTa block, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">BERT 變體：Base、Large、DistilBERT、RoBERTa 尺寸光譜</figcaption></figure></div>
+
+\<div class="demo" data-demo-id="kp5">
+  <style>
+    [data-demo-id="kp5"] { border: 1px solid #cbd5e1; border-radius: 14px; overflow: hidden; background: #fff; margin: 16px 0; }
+    [data-demo-id="kp5"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#7c3aed,#6d28d9); color: #fff; font-weight: 700; }
+    [data-demo-id="kp5"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #f5f3ff; }
+    [data-demo-id="kp5"] .demo-controls { flex: 1 1 280px; display: flex; flex-direction: column; gap: 8px; }
+    [data-demo-id="kp5"] .demo-canvas { flex: 1 1 420px; }
+    [data-demo-id="kp5"] canvas { border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp5"] .row { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; }
+    [data-demo-id="kp5"] .row label { min-width: 110px; font-weight: 600; }
+    [data-demo-id="kp5"] input[type="range"] { flex: 1; }
+    [data-demo-id="kp5"] .demo-readout { min-height: 6em; padding: 10px 12px; border: 1px solid #ddd6fe; border-radius: 8px; background: #fff; font-family: ui-monospace, Consolas, monospace; font-size: 0.78rem; line-height: 1.55; white-space: pre-wrap; }
+    [data-demo-id="kp5"] .demo-theory, [data-demo-id="kp5"] .demo-instruction { padding: 10px 18px; font-size: 0.85rem; line-height: 1.7; }
+    [data-demo-id="kp5"] .demo-theory { background: #eef2ff; border-top: 1px solid #e2e8f0; }
+  </style>
+  <div class="demo-head">Demo：BERT 參數量估算</div>
+  <div class="demo-body">
+    <div class="demo-controls">
+      <div class="row"><label>詞表 V</label><input type="range" id="kp5-v" min="10000" max="100000" step="1000" value="30522"><span id="kp5-v-v">30522</span></div>
+      <div class="row"><label>隱藏維度 H</label><input type="range" id="kp5-h" min="64" max="2048" step="64" value="768"><span id="kp5-h-v">768</span></div>
+      <div class="row"><label>層數 L</label><input type="range" id="kp5-l" min="1" max="48" step="1" value="12"><span id="kp5-l-v">12</span></div>
+      <div class="row"><label>序列長度 S</label><input type="range" id="kp5-s" min="128" max="1024" step="64" value="512"><span id="kp5-s-v">512</span></div>
+      <div class="demo-readout" id="kp5-ro"></div>
+    </div>
+    <div class="demo-canvas"><canvas id="kp5-cv" width="520" height="260"></canvas></div>
+  </div>
+  <div class="demo-theory"><strong>原理</strong>：BERT 參數主要由詞嵌入、位置嵌入與 L 層 Transformer encoder 組成。近似公式：$\approx V H + S H + L(12H^2 + 13H)$。調整 V、H、L 可觀察總參數如何從數百萬成長到數億。</div>
+  <div class="demo-instruction">
+    <strong>這在做什麼：</strong>估算不同尺寸 BERT 的參數量。<br>
+    <strong>怎麼操作：</strong>拉動詞表、隱藏維度、層數、序列長度。<br>
+    <strong>觀察什麼：</strong>隱藏維度 H 對參數量影響最大（與 $H^2$ 成正比）；BERT Base（L=12,H=768,V=30522）約 1.1 億。<br>
+    <strong>正確基準：</strong>總參數 = V*H + S*H + L*(12*H^2 + 13*H)。
+  </div>
+  <script src="demos/demo_kp5.js"></script>
+</div>
+<button class="guide-btn" type="button" data-kp="5" data-guide="kp-5" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：BERT 家族：變大、變小、變專業</button><div class="quiz" data-ans="B"><p class="q"><p>BERT Base 大約有多少參數？</p></p><div class="opts"><label class="opt"><input type="radio" name="q5-0" value="A"><span>A. <p>12 萬</p></span></label><label class="opt"><input type="radio" name="q5-0" value="B"><span>B. <p>1.1 億</p></span></label><label class="opt"><input type="radio" name="q5-0" value="C"><span>C. <p>3.4 億</p></span></label><label class="opt"><input type="radio" name="q5-0" value="D"><span>D. <p>1750 億</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="BERT Base 有 12 層、768 維 hidden、12 個 heads，共約 1.1 億參數。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>BERT Large 大約有多少參數？</p></p><div class="opts"><label class="opt"><input type="radio" name="q5-1" value="A"><span>A. <p>1.1 億</p></span></label><label class="opt"><input type="radio" name="q5-1" value="B"><span>B. <p>3.4 億</p></span></label><label class="opt"><input type="radio" name="q5-1" value="C"><span>C. <p>15 億</p></span></label><label class="opt"><input type="radio" name="q5-1" value="D"><span>D. <p>1750 億</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="BERT Large 有 24 層、1024 維 hidden、16 個 heads，共約 3.4 億參數。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>DistilBERT 主要透過什麼技術讓 BERT 變小？</p></p><div class="opts"><label class="opt"><input type="radio" name="q5-2" value="A"><span>A. <p>增加更多層</p></span></label><label class="opt"><input type="radio" name="q5-2" value="B"><span>B. <p>知識蒸餾（knowledge distillation）</p></span></label><label class="opt"><input type="radio" name="q5-2" value="C"><span>C. <p>刪除所有 attention</p></span></label><label class="opt"><input type="radio" name="q5-2" value="D"><span>D. <p>使用 RNN</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="DistilBERT 使用知識蒸餾，讓小模型學習大模型的行為。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>RoBERTa 與 BERT 的主要差異是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q5-3" value="A"><span>A. <p>使用更少的訓練資料</p></span></label><label class="opt"><input type="radio" name="q5-3" value="B"><span>B. <p>使用更多資料、動態遮罩與更長訓練時間的優化版本</p></span></label><label class="opt"><input type="radio" name="q5-3" value="C"><span>C. <p>從 RNN 改成 Transformer</p></span></label><label class="opt"><input type="radio" name="q5-3" value="D"><span>D. <p>只適用於影像任務</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="RoBERTa 不是縮小模型，而是透過改進預訓練流程來提升 BERT 的性能。"></div></div></div></section>
+<section id="kp6" class="card" data-kp="6"><div class="card-head"><span class="badge">3.1-3.2</span><h3>GPT 結構與因果語言建模</h3><span class="toggle">▼</span></div><div class="card-body"><button class="guide-btn" type="button" data-kp="6" data-guide="kp-6" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：GPT：只往左看，一個字一個字寫</button><h4>直覺：BERT 是雙向理解，GPT 是單向生成</h4>
+<p>GPT 本質上是多層 Transformer <strong>decoder</strong> 的堆疊。與完整 Transformer decoder 不同的是，GPT <strong>移除了 cross-attention</strong>（因為沒有 encoder 輸出可以參考），只保留 masked multihead self-attention 與 feed-forward network。</p>
+<p>為了強迫模型只能「往左看」，GPT 使用<strong>遮罩自注意力（masked self-attention）</strong>：每個 token 只能關注自己與之前的 token，不能看到未來的詞。</p>
+<figure class="orig-fig">
+<img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-295_1339_1259_191_245.jpg" alt="BERT and GPT architectures">
+<figcaption>Fig. 1b GPT 架構：多層 Transformer decoder 的堆疊，使用 masked self-attention。</figcaption>
+</figure>
+
+<h4>因果語言建模</h4>
+<p>GPT 的訓練目標是<strong>因果語言建模（causal / autoregressive language modeling）</strong>：給定 $x_{1},\dots,x_{t-1}$，預測下一個 token $x_{t}$。因為只需要原始文本，這也是一種自監督學習。</p>
+<ul>
+<li>GPT 是 decoder-only 模型。</li>
+<li>Masked self-attention 限制每個 token 只能看到左邊的上下文。</li>
+<li>訓練目標是根據前文預測下一個 token。</li>
+<li>適合文字生成、對話、續寫等任務。</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">GPT：因果遮罩自注意力</text>
+
+  <!-- tokens -->
+  <g transform="translate(80,80)">
+    <circle cx="40" cy="40" r="25" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/><text x="40" y="45" text-anchor="middle" font-size="12" fill="#991b1b">A</text>
+    <circle cx="120" cy="40" r="25" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/><text x="120" y="45" text-anchor="middle" font-size="12" fill="#991b1b">storm</text>
+    <circle cx="200" cy="40" r="25" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/><text x="200" y="45" text-anchor="middle" font-size="12" fill="#991b1b">was</text>
+    <circle cx="280" cy="40" r="25" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/><text x="280" y="45" text-anchor="middle" font-size="12" fill="#991b1b">approaching</text>
+    <circle cx="360" cy="40" r="25" fill="#fef3c7" stroke="#d97706" stroke-width="2"/><text x="360" y="45" text-anchor="middle" font-size="12" fill="#92400e">?</text>
+  </g>
+
+  <!-- allowed attention arrows (lower triangular) -->
+  <path d="M40 75 V130" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrB)"/>
+  <path d="M120 75 V130" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrB)"/>
+  <path d="M200 75 V130" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrB)"/>
+  <path d="M280 75 V130" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrB)"/>
+
+  <path d="M120 75 Q80 110 40 130" stroke="#2563eb" stroke-width="1.2" marker-end="url(#arrB)" fill="none"/>
+  <path d="M200 75 Q160 110 120 130" stroke="#2563eb" stroke-width="1.2" marker-end="url(#arrB)" fill="none"/>
+  <path d="M200 75 Q120 110 40 130" stroke="#2563eb" stroke-width="1.2" marker-end="url(#arrB)" fill="none" opacity="0.6"/>
+  <path d="M280 75 Q220 110 120 130" stroke="#2563eb" stroke-width="1.2" marker-end="url(#arrB)" fill="none" opacity="0.6"/>
+
+  <!-- forbidden forward arrows -->
+  <path d="M40 75 Q120 110 200 130" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <path d="M120 75 Q240 110 360 130" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <text x="200" y="165" text-anchor="middle" font-size="12" fill="#dc2626" font-weight="bold">灰色虛線 = 禁止偷看未來</text>
+
+  <!-- next token prediction -->
+  <rect x="420" y="90" width="240" height="80" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="540" y="120" text-anchor="middle" font-size="12" fill="#1e3a8a">根據前文預測下一個詞</text>
+  <text x="540" y="145" text-anchor="middle" font-size="11" fill="#2563eb">P(? | A storm was approaching)</text>
+  <path d="M385 110 H420" stroke="#2563eb" stroke-width="2" marker-end="url(#arrB)"/>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-6" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 頂部一排紅色圓圈代表 token：A、storm、was、approaching、?。從每個 token 向下發出藍色箭頭，表示它們關注自己與之前的 token（形成下三角 attention）。灰色虛線箭頭從早期 token 指向後期 token，表示「禁止偷看未來」。底部紅字寫「灰色虛線 = 禁止偷看未來」。右側藍底框寫「根據前文預測下一個詞 P(? | A storm was approaching)」。
+
+WHY（因果或反直覺）: 生成文字時，模型不能先看到還沒生成的詞，否則就作弊。GPT 用因果遮罩強迫 attention 只看左邊，讓它成為真正的「接龍」模型。反直覺：這種「只能往左看」的限制，反而讓 GPT 學會從頭到尾生成連貫段落。
+
+MUST show（必備要素）: ① 一排 token 圓圈；② 下三角形的藍色 attention 箭頭（每個 token 只能看到過去）；③ 灰色虛線表示被遮罩的未來方向；④ 明確標示「禁止偷看未來」；⑤ 右側預測下一個詞的機率框。
+
+AVOID（禁止）: 不要畫成所有 token 互相連接；不要讓箭頭方向混亂；不要遺漏因果遮罩的禁止符號；不要使用 LaTeX 反斜線。
+
+STYLE: flat vector, viewBox 720×360, white background, red token circles, blue attention arrows, grey forbidden dashed arrows, blue prediction box, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">GPT decoder stack：因果遮罩只能往左看</figcaption></figure></div>
+<div class="quiz" data-ans="B"><p class="q"><p>GPT 主要由什麼組成？</p></p><div class="opts"><label class="opt"><input type="radio" name="q6-0" value="A"><span>A. <p>Transformer encoder blocks</p></span></label><label class="opt"><input type="radio" name="q6-0" value="B"><span>B. <p>Transformer decoder blocks</p></span></label><label class="opt"><input type="radio" name="q6-0" value="C"><span>C. <p>RNN layers</p></span></label><label class="opt"><input type="radio" name="q6-0" value="D"><span>D. <p>CNN layers</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="GPT 本質上是 Transformer decoder blocks 的堆疊。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>GPT 的 decoder block 與完整 Transformer decoder 相比少了什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q6-1" value="A"><span>A. <p>Self-attention</p></span></label><label class="opt"><input type="radio" name="q6-1" value="B"><span>B. <p>Cross-attention</p></span></label><label class="opt"><input type="radio" name="q6-1" value="C"><span>C. <p>Feed-forward network</p></span></label><label class="opt"><input type="radio" name="q6-1" value="D"><span>D. <p>Layer normalization</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="因為 GPT 沒有 encoder，所以移除了 cross-attention 模組。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>GPT 為什麼使用 masked self-attention？</p></p><div class="opts"><label class="opt"><input type="radio" name="q6-2" value="A"><span>A. <p>為了讓模型看到未來的詞</p></span></label><label class="opt"><input type="radio" name="q6-2" value="B"><span>B. <p>為了只讓模型看到目前與之前的 token</p></span></label><label class="opt"><input type="radio" name="q6-2" value="C"><span>C. <p>為了減少參數量</p></span></label><label class="opt"><input type="radio" name="q6-2" value="D"><span>D. <p>為了增加訓練速度</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Masked self-attention 確保生成時無法偷看未來的 token，維持自回歸特性。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>GPT 的訓練目標是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q6-3" value="A"><span>A. <p>遮罩語言建模</p></span></label><label class="opt"><input type="radio" name="q6-3" value="B"><span>B. <p>因果語言建模（預測下一個 token）</p></span></label><label class="opt"><input type="radio" name="q6-3" value="C"><span>C. <p>下一句預測</p></span></label><label class="opt"><input type="radio" name="q6-3" value="D"><span>D. <p>影像分類</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="GPT 使用 causal language modeling，根據前文預測下一個 token。"></div></div></div></section>
+<section id="kp7" class="card" data-kp="7"><div class="card-head"><span class="badge">3.3</span><h3>Chain-of-Thought Prompting</h3><span class="toggle">▼</span></div><div class="card-body"><button class="guide-btn" type="button" data-kp="7" data-guide="kp-7" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：不要只給答案，要示範「怎麼想」</button><h4>直覺：不要直接問答案，要示範「怎麼想」</h4>
+<p>2022 年提出的 <strong>Chain-of-Thought（CoT）prompting</strong> 發現：只要在 prompt 中提供「一步步推理」的範例，LLM 就會模仿這種風格，在回答前先把中間思考過程寫出來，複雜推理任務的表現會大幅提升。</p>
+<p>例如標準 prompt：</p>
+<ul>
+<li>Question: If there are 3 apples and you eat 1, how many are left?</li>
+<li>Answer: 2.</li>
+</ul>
+<p>CoT prompt 則會把推理過程也寫出來：</p>
+<ul>
+<li>Question: If there are 3 apples and you eat 1, how many are left?</li>
+<li>Answer: There are 3 apples. If you eat 1, then $3-1=2$ apples are left. So, the answer is 2.</li>
+</ul>
+<h4>為什麼有效？</h4>
+<p>LLM 本來就在大量文本中看過「人類解釋推理過程」的寫法。當 prompt 提供類似的結構時，模型就會觸發這種「自言自語推理」的行為。CoT 對數學應用題、邏輯謎題特別有幫助，而且對較大的模型效果更明顯。</p>
+<ul>
+<li>CoT prompting 在 prompt 中給出中間推理步驟的範例。</li>
+<li>模型會模仿這種風格，先思考再回答。</li>
+<li>對數學、邏輯等複雜推理任務特別有效。</li>
+<li>效果隨模型規模變大而更明顯。</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">Chain-of-Thought：把答案藏在推理步驟裡</text>
+
+  <!-- standard prompt -->
+  <rect x="40" y="50" width="300" height="120" rx="10" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+  <text x="190" y="75" text-anchor="middle" font-size="13" fill="#4b5563" font-weight="bold">Standard Prompt</text>
+  <text x="60" y="100" text-anchor="start" font-size="11" fill="#1f2937">Q: 3 apples, eat 1, how many left?</text>
+  <text x="60" y="125" text-anchor="start" font-size="11" fill="#1f2937">A: 2.</text>
+  <path d="M190 170 V200" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrK)"/>
+  <text x="190" y="220" text-anchor="middle" font-size="11" fill="#6b7280">直接給答案</text>
+
+  <!-- CoT prompt -->
+  <rect x="380" y="50" width="300" height="170" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="530" y="75" text-anchor="middle" font-size="13" fill="#5b21b6" font-weight="bold">Chain-of-Thought Prompt</text>
+  <text x="400" y="100" text-anchor="start" font-size="11" fill="#1f2937">Q: 3 apples, eat 1, how many left?</text>
+  <text x="400" y="122" text-anchor="start" font-size="11" fill="#1f2937">A: There are 3 apples.</text>
+  <text x="400" y="144" text-anchor="start" font-size="11" fill="#1f2937">   If you eat 1, then 3-1=2.</text>
+  <text x="400" y="166" text-anchor="start" font-size="11" fill="#1f2937">   So the answer is 2.</text>
+  <path d="M530 220 V250" stroke="#16a34a" stroke-width="2" marker-end="url(#arrG)"/>
+  <text x="530" y="270" text-anchor="middle" font-size="11" fill="#16a34a">示範推理步驟</text>
+
+  <!-- comparison -->
+  <rect x="180" y="290" width="360" height="45" rx="8" fill="#fef3c7" stroke="#d97706"/>
+  <text x="360" y="318" text-anchor="middle" font-size="12" fill="#92400e">CoT 讓 LLM 「自言自語」推理，對複雜問題特別有效</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-7" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 左右兩個並排面板。左灰底「Standard Prompt」顯示問題與直接答案；右紫底「Chain-of-Thought Prompt」顯示同一問題，但答案包含三步推理：「There are 3 apples. If you eat 1, then 3-1=2. So the answer is 2.」。左側下方灰色箭頭標「直接給答案」，右側綠色箭頭標「示範推理步驟」。底部黃底長條寫「CoT 讓 LLM 『自言自語』推理，對複雜問題特別有效」。
+
+WHY（因果或反直覺）: LLM 從大量文本中學過人類解釋思考的寫法，只要 prompt 給出幾個「先推理再回答」的範例，它就會模仿。反直覺：對於簡單問題直接給答案反而沒差，但對數學應用題，「逼它寫出步驟」能大幅提升正確率。
+
+MUST show（必備要素）: ① 兩種 prompt 並排對比；② Standard 只有 Q/A；③ CoT 有完整中間步驟；④ 箭頭與標語區分「直接答案」與「推理示範」；⑤ 底部結論強調對複雜問題有效。
+
+AVOID（禁止）: 不要只畫一種 prompt；不要讓 CoT 面板與 Standard 面板看起來相同；不要省略具體數學步驟；不要使用 LaTeX 反斜線。
+
+STYLE: flat vector, viewBox 720×360, white background, grey vs purple panels, green reasoning arrow, yellow conclusion bar, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">Chain-of-Thought：逐步推理觸發路徑</figcaption></figure></div>
+<div class="quiz" data-ans="B"><p class="q"><p>Chain-of-Thought prompting 的核心思想是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q7-0" value="A"><span>A. <p>直接給出答案</p></span></label><label class="opt"><input type="radio" name="q7-0" value="B"><span>B. <p>在 prompt 中提供逐步推理的範例</p></span></label><label class="opt"><input type="radio" name="q7-0" value="C"><span>C. <p>減少 prompt 長度</p></span></label><label class="opt"><input type="radio" name="q7-0" value="D"><span>D. <p>只使用單字提示</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="CoT prompting 透過示範中間推理步驟，引導模型也進行逐步思考。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>CoT prompting 對哪類任務幫助最大？</p></p><div class="opts"><label class="opt"><input type="radio" name="q7-1" value="A"><span>A. <p>單純的字詞填空</p></span></label><label class="opt"><input type="radio" name="q7-1" value="B"><span>B. <p>數學應用題與邏輯推理</p></span></label><label class="opt"><input type="radio" name="q7-1" value="C"><span>C. <p>影像分類</p></span></label><label class="opt"><input type="radio" name="q7-1" value="D"><span>D. <p>語音辨識</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="CoT 在需要多步推理的任務（如數學應用題、邏輯謎題）上效果最明顯。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>CoT prompting 的效果與模型規模有什麼關係？</p></p><div class="opts"><label class="opt"><input type="radio" name="q7-2" value="A"><span>A. <p>與規模無關</p></span></label><label class="opt"><input type="radio" name="q7-2" value="B"><span>B. <p>對較大的模型效果更明顯</p></span></label><label class="opt"><input type="radio" name="q7-2" value="C"><span>C. <p>只對小型模型有效</p></span></label><label class="opt"><input type="radio" name="q7-2" value="D"><span>D. <p>只對隨機模型有效</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="研究顯示 CoT 對大型模型（例如 100B 以上參數）特別有效，小型模型幫助較小。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>下列哪一種 prompt 屬於 CoT prompting？</p></p><div class="opts"><label class="opt"><input type="radio" name="q7-3" value="A"><span>A. <p>Question: ... Answer: 2.</p></span></label><label class="opt"><input type="radio" name="q7-3" value="B"><span>B. <p>Question: ... Answer: There are 3 apples. If you eat 1, then 3-1=2 apples are left. So the answer is 2.</p></span></label><label class="opt"><input type="radio" name="q7-3" value="C"><span>C. <p>只給問題沒有答案</p></span></label><label class="opt"><input type="radio" name="q7-3" value="D"><span>D. <p>用圖片當輸入</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="CoT prompt 會把中間推理過程也寫出來，而不只是最終答案。"></div></div></div></section>
+<section id="kp8" class="card" data-kp="8"><div class="card-head"><span class="badge">3.4</span><h3>GPT 家族演進</h3><span class="toggle">▼</span></div><div class="card-body"><button class="guide-btn" type="button" data-kp="8" data-guide="kp-8" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：從 1 億到千億：GPT 家族的長大史</button><h4>直覺：從 1 億到千億，生成模型一路長大</h4>
+<p>GPT 家族在幾年內快速演進，規模與能力都大幅提升：</p>
+<ul>
+<li><strong>GPT-1（2018）</strong>：12 層 decoder-only Transformer，<strong>1.17 億</strong>參數，在 BookCorpus 上訓練，證明無監督預訓練的威力。</li>
+<li><strong>GPT-2（2019）</strong>：最大版本 48 層，<strong>15 億</strong>參數，在 WebText（約 40 GB 網路文本）上訓練，能產生連貫的多段文字。</li>
+<li><strong>GPT-3（2020）</strong>：最大版本 96 層，<strong>1750 億</strong>參數，在 570 GB 多語言文本上訓練，展現強大的 few-shot 與 prompt engineering 能力。</li>
+<li><strong>GPT-4（2023）</strong>：OpenAI 未公開細節，但確定是<strong>多模態模型</strong>，可接受文字與圖片輸入、產生文字輸出。</li>
+<li><strong>GPT-4o / o1 / o3 / o4-mini</strong>：進一步整合 Chain-of-Thought 訓練與多模態能力。</li>
+</ul>
+<ul>
+<li>GPT-1: 117M params, BookCorpus.</li>
+<li>GPT-2: 1.5B params, WebText 40GB.</li>
+<li>GPT-3: 175B params, 570GB multilingual text.</li>
+<li>GPT-4: multimodal (text + image input, text output).</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">GPT 家族演進：從 1 億到千億參數</text>
+
+  <!-- timeline axis -->
+  <line x1="60" y1="220" x2="660" y2="220" stroke="#9ca3af" stroke-width="2"/>
+  <text x="360" y="245" text-anchor="middle" font-size="11" fill="#6b7280">時間 →</text>
+
+  <!-- markers -->
+  <g transform="translate(100,150)">
+    <circle cx="0" cy="70" r="6" fill="#2563eb"/>
+    <rect x="-40" y="0" width="80" height="50" rx="5" fill="#dbeafe" stroke="#2563eb"/>
+    <text x="0" y="20" text-anchor="middle" font-size="11" fill="#1e3a8a" font-weight="bold">GPT-1</text>
+    <text x="0" y="38" text-anchor="middle" font-size="10" fill="#2563eb">117M</text>
+  </g>
+
+  <g transform="translate(240,110)">
+    <circle cx="0" cy="110" r="6" fill="#7c3aed"/>
+    <rect x="-45" y="0" width="90" height="70" rx="5" fill="#ede9fe" stroke="#7c3aed"/>
+    <text x="0" y="22" text-anchor="middle" font-size="11" fill="#5b21b6" font-weight="bold">GPT-2</text>
+    <text x="0" y="42" text-anchor="middle" font-size="10" fill="#7c3aed">1.5B</text>
+    <text x="0" y="58" text-anchor="middle" font-size="9" fill="#6b7280">WebText</text>
+  </g>
+
+  <g transform="translate(420,60)">
+    <circle cx="0" cy="160" r="6" fill="#dc2626"/>
+    <rect x="-50" y="0" width="100" height="100" rx="5" fill="#fee2e2" stroke="#dc2626"/>
+    <text x="0" y="25" text-anchor="middle" font-size="11" fill="#991b1b" font-weight="bold">GPT-3</text>
+    <text x="0" y="50" text-anchor="middle" font-size="11" fill="#dc2626">175B</text>
+    <text x="0" y="72" text-anchor="middle" font-size="9" fill="#6b7280">Few-shot</text>
+  </g>
+
+  <g transform="translate(600,40)">
+    <circle cx="0" cy="180" r="6" fill="#16a34a"/>
+    <rect x="-55" y="0" width="110" height="110" rx="5" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="0" y="25" text-anchor="middle" font-size="11" fill="#166534" font-weight="bold">GPT-4</text>
+    <text x="0" y="50" text-anchor="middle" font-size="11" fill="#16a34a">多模態</text>
+    <text x="0" y="72" text-anchor="middle" font-size="9" fill="#6b7280">Text + Image</text>
+  </g>
+
+  <!-- growth arrow -->
+  <path d="M90 110 Q360 20 630 50" fill="none" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrK)"/>
+  <text x="360" y="60" text-anchor="middle" font-size="11" fill="#b45309">規模與能力持續上升</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-8" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 一條水平時間軸從左到右標「時間 →」。軸上有四個高度遞增的方塊：左藍底「GPT-1 117M」最矮；紫底「GPT-2 1.5B WebText」較高；紅底「GPT-3 175B Few-shot」更高；綠底「GPT-4 多模態 Text + Image」最高。每個方塊下方用圓點連接時間軸。頂部有一條橙色曲線從左下往右上，標「規模與能力持續上升」。
+
+WHY（因果或反直覺）: GPT 家族在短短幾年內參數量成長了數千倍，不只是變大，訓練資料與能力也跟著擴展。反直覺：GPT-3 的 175B 參數雖然看起來會過擬合，但因為資料量也極大，反而展現出強大的 few-shot 與湧現能力。
+
+MUST show（必備要素）: ① 水平時間軸；② 四個模型方塊高度隨參數量遞增；③ 每個方塊標註參數量或特色；④ GPT-4 標註多模態；⑤ 上升曲線強調規模與能力趨勢。
+
+AVOID（禁止）: 不要把四個模型畫成同樣大小；不要讓時間軸方向模糊；不要遺漏 GPT-4 的多模態特色；不要使用 LaTeX 反斜線。
+
+STYLE: flat vector, viewBox 720×360, white background, horizontal timeline, ascending colored blocks, orange growth curve, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">GPT 家族演進：從 117M 到多模態</figcaption></figure></div>
+<div class="quiz" data-ans="A"><p class="q"><p>GPT-1 大約有多少參數？</p></p><div class="opts"><label class="opt"><input type="radio" name="q8-0" value="A"><span>A. <p>1.17 億</p></span></label><label class="opt"><input type="radio" name="q8-0" value="B"><span>B. <p>15 億</p></span></label><label class="opt"><input type="radio" name="q8-0" value="C"><span>C. <p>1750 億</p></span></label><label class="opt"><input type="radio" name="q8-0" value="D"><span>D. <p>1 兆</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="GPT-1 有 12 層 decoder-only Transformer，約 1.17 億參數。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>GPT-2 的最大版本大約有多少參數？</p></p><div class="opts"><label class="opt"><input type="radio" name="q8-1" value="A"><span>A. <p>1.17 億</p></span></label><label class="opt"><input type="radio" name="q8-1" value="B"><span>B. <p>15 億</p></span></label><label class="opt"><input type="radio" name="q8-1" value="C"><span>C. <p>1750 億</p></span></label><label class="opt"><input type="radio" name="q8-1" value="D"><span>D. <p>100 兆</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="GPT-2 最大版本約 15 億參數，48 層 decoder。"></div></div><div class="quiz" data-ans="C"><p class="q"><p>GPT-3 的最大版本大約有多少參數？</p></p><div class="opts"><label class="opt"><input type="radio" name="q8-2" value="A"><span>A. <p>1.17 億</p></span></label><label class="opt"><input type="radio" name="q8-2" value="B"><span>B. <p>15 億</p></span></label><label class="opt"><input type="radio" name="q8-2" value="C"><span>C. <p>1750 億</p></span></label><label class="opt"><input type="radio" name="q8-2" value="D"><span>D. <p>3.4 億</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="GPT-3 最大版本約 1750 億參數，96 層 decoder。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>GPT-4 相較於 GPT-3 的一項重要新能力是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q8-3" value="A"><span>A. <p>只能處理文字</p></span></label><label class="opt"><input type="radio" name="q8-3" value="B"><span>B. <p>多模態輸入（文字與圖片）</p></span></label><label class="opt"><input type="radio" name="q8-3" value="C"><span>C. <p>參數減少到 1 億</p></span></label><label class="opt"><input type="radio" name="q8-3" value="D"><span>D. <p>不使用 Transformer</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="GPT-4 是多模態模型，可接受文字與圖片輸入並產生文字輸出。"></div></div></div></section>
+<section id="kp9" class="card" data-kp="9"><div class="card-head"><span class="badge">4</span><h3>T5：統一的 text-to-text 框架</h3><span class="toggle">▼</span></div><div class="card-body"><button class="guide-btn" type="button" data-kp="9" data-guide="kp-9" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：所有 NLP 任務都是「文字進、文字出」</button><h4>直覺：所有 NLP 任務都變成「輸入文字 → 輸出文字」</h4>
+<p>T5（Text-to-Text Transfer Transformer）在 2020 年提出，結合了 BERT 的 encoder 與 GPT 的 decoder，形成完整的 <strong>encoder-decoder</strong> 架構。它的核心創見是：把各種 NLP 任務都轉換成 <strong>text-to-text</strong> 問題。</p>
+<p>例如：</p>
+<ul>
+<li>情感分析：輸入 <code>"I like this product"</code>，輸出 <code>"positive"</code>。</li>
+<li>翻譯：輸入 <code>"I am a student"</code>，輸出 <code>"Je suis étudiant"</code>。</li>
+</ul>
+<h4>Sentinel token 與去噪訓練</h4>
+<p>T5 的無監督訓練類似 BERT：隨機遮蔽 15% 的 token，但不同的是被遮蔽的 token 會被替換成特殊的 <strong>sentinel token</strong>（如 <code>&lt;X&gt;</code>、<code>&lt;Y&gt;</code>），模型要生成被遮蔽的片段。這種方式讓 T5 學會把「有雜訊的輸入」轉換成「乾淨的輸出」。</p>
+<ul>
+<li>T5 使用完整的 encoder-decoder 架構。</li>
+<li>所有任務統一為 text-to-text 格式。</li>
+<li>無監督訓練使用 sentinel token 取代被遮蔽的 token 片段。</li>
+<li>監督訓練在 GLUE/SuperGLUE 等 benchmark 上進行。</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">T5：把所有 NLP 任務變成 text-to-text</text>
+
+  <!-- architecture -->
+  <rect x="60" y="90" width="120" height="80" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="120" y="120" text-anchor="middle" font-size="12" fill="#5b21b6" font-weight="bold">Encoder</text>
+  <text x="120" y="140" text-anchor="middle" font-size="10" fill="#7c3aed">（理解輸入）</text>
+
+  <rect x="240" y="90" width="120" height="80" rx="8" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+  <text x="300" y="120" text-anchor="middle" font-size="12" fill="#991b1b" font-weight="bold">Decoder</text>
+  <text x="300" y="140" text-anchor="middle" font-size="10" fill="#dc2626">（生成輸出）</text>
+
+  <path d="M180 130 H240" stroke="#2563eb" stroke-width="2" marker-end="url(#arrB)"/>
+
+  <!-- examples -->
+  <rect x="420" y="70" width="260" height="70" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="550" y="95" text-anchor="middle" font-size="11" fill="#1e3a8a">Sentiment</text>
+  <text x="550" y="118" text-anchor="middle" font-size="10" fill="#2563eb">Input: I like this product</text>
+  <text x="550" y="135" text-anchor="middle" font-size="10" fill="#2563eb">Output: positive</text>
+
+  <rect x="420" y="160" width="260" height="70" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="550" y="185" text-anchor="middle" font-size="11" fill="#166534">Translation</text>
+  <text x="550" y="208" text-anchor="middle" font-size="10" fill="#16a34a">Input: I am a student</text>
+  <text x="550" y="225" text-anchor="middle" font-size="10" fill="#16a34a">Output: Je suis étudiant</text>
+
+  <!-- sentinel token -->
+  <rect x="60" y="250" width="620" height="70" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="370" y="275" text-anchor="middle" font-size="12" fill="#92400e">無監督訓練：15% token 被替換成 sentinel token</text>
+  <text x="370" y="300" text-anchor="middle" font-size="11" fill="#b45309">例如：I like &lt;X&gt; product → 模型生成 &lt;X&gt; = this</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-9" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 左側畫兩個相連方塊：紫色「Encoder（理解輸入）」與紅色「Decoder（生成輸出）」，中間藍色箭頭表示資訊流向。右側上下兩個範例框：藍底「Sentiment」輸入 I like this product、輸出 positive；綠底「Translation」輸入 I am a student、輸出 Je suis étudiant。底部黃底長條寫「無監督訓練：15% token 被替換成 sentinel token」，並舉例「I like &lt;X&gt; product → 模型生成 &lt;X&gt; = this」。
+
+WHY（因果或反直覺）: BERT 只能理解，GPT 只能生成，T5 說「為什麼不把所有任務都變成輸入文字、輸出文字？」這樣同一個模型就能做分類、翻譯、摘要。反直覺：sentinel token 不像 BERT 的 [MASK] 只遮一個詞，而是可以遮一整段，讓 decoder 學會生成完整片段。
+
+MUST show（必備要素）: ① Encoder-Decoder 架構；② 兩個 text-to-text 任務範例；③ 統一框架的概念；④ sentinel token 的運作方式；⑤ 輸入與輸出都用純文字表示。
+
+AVOID（禁止）: 不要只畫一個模型方塊；不要把任務範例畫成傳統分類箭頭；不要遺漏 sentinel token；不要使用 LaTeX 反斜線。
+
+STYLE: flat vector, viewBox 720×360, white background, purple encoder / red decoder, blue/green example boxes, yellow sentinel bar, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">T5：統一 text-to-text 框架</figcaption></figure></div>
+<div class="quiz" data-ans="C"><p class="q"><p>T5 的架構結合了什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q9-0" value="A"><span>A. <p>只有 encoder</p></span></label><label class="opt"><input type="radio" name="q9-0" value="B"><span>B. <p>只有 decoder</p></span></label><label class="opt"><input type="radio" name="q9-0" value="C"><span>C. <p>Transformer encoder 與 decoder</p></span></label><label class="opt"><input type="radio" name="q9-0" value="D"><span>D. <p>RNN 與 CNN</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="T5 是完整的 encoder-decoder 架構，結合 BERT 與 GPT 的設計哲學。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>T5 的核心創見是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q9-1" value="A"><span>A. <p>只處理一種 NLP 任務</p></span></label><label class="opt"><input type="radio" name="q9-1" value="B"><span>B. <p>把所有 NLP 任務都轉換成 text-to-text 問題</p></span></label><label class="opt"><input type="radio" name="q9-1" value="C"><span>C. <p>不使用 attention</p></span></label><label class="opt"><input type="radio" name="q9-1" value="D"><span>D. <p>只使用自監督學習</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="T5 把分類、翻譯、摘要等任務都統一成「輸入文字 → 輸出文字」。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>T5 的無監督訓練中，被遮蔽的 token 會被替換成什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q9-2" value="A"><span>A. <p>[MASK]</p></span></label><label class="opt"><input type="radio" name="q9-2" value="B"><span>B. <p>sentinel token</p></span></label><label class="opt"><input type="radio" name="q9-2" value="C"><span>C. <p>[CLS]</p></span></label><label class="opt"><input type="radio" name="q9-2" value="D"><span>D. <p>空白</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="T5 使用 sentinel token（如 `<X>`、`<Y>`）來標示被遮蔽的連續片段。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>下列哪一項最適合用 T5 的 text-to-text 框架表示？</p></p><div class="opts"><label class="opt"><input type="radio" name="q9-3" value="A"><span>A. <p>影像分類</p></span></label><label class="opt"><input type="radio" name="q9-3" value="B"><span>B. <p>機器翻譯</p></span></label><label class="opt"><input type="radio" name="q9-3" value="C"><span>C. <p>語音合成</p></span></label><label class="opt"><input type="radio" name="q9-3" value="D"><span>D. <p>三維重建</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="機器翻譯是典型的 text-to-text 任務，T5 可將其統一在相同框架下。"></div></div></div></section>
+<section id="kp10" class="card" data-kp="10"><div class="card-head"><span class="badge">5</span><h3>重要 LLM 生態系地圖</h3><span class="toggle">▼</span></div><div class="card-body"><button class="guide-btn" type="button" data-kp="10" data-guide="kp-10" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：LLM 不只是 OpenAI：一張生態系地圖</button><h4>直覺：LLM 不只是 OpenAI，還有一整個開源與專有生態系</h4>
+<p>到了 2025 年，LLM 生態系已經非常豐富。除了 OpenAI 的 GPT 系列，還有：</p>
+<ul>
+<li><strong>Meta</strong>：LLaMA 系列（7B/13B/70B/405B），開放權重，影響深遠。</li>
+<li><strong>Google DeepMind</strong>：T5、PaLM、Gemini（多模態）。</li>
+<li><strong>Anthropic</strong>：Claude 系列，強調安全性。</li>
+<li><strong>Mistral AI</strong>：Mistral 7B、Mixtral 8×7B（Mixture-of-Experts, MoE）。</li>
+<li><strong>Alibaba</strong>：Qwen 系列，Qwen3 是 235B 的 MoE 模型。</li>
+<li><strong>DeepSeek</strong>：DeepSeek-V2/V3、DeepSeek-Coder、DeepSeek-R1（強化學習推理）。</li>
+<li><strong>xAI</strong>：Grok 系列，Grok-1 是 314B 的 MoE 模型。</li>
+</ul>
+<p>此外，<strong>Mamba</strong> 是 State Space Model（SSM）的代表，提供線性複雜度的長序列建模，是 Transformer 之外的另類架構。</p>
+<ul>
+<li>OpenAI: GPT、ChatGPT、GPT-4o/o1/o3。</li>
+<li>Meta: LLaMA/Alpaca/Code LLaMA。</li>
+<li>Google: PaLM/Gemini/T5。</li>
+<li>MoE: Mixtral、Grok、Qwen3。</li>
+<li>SSM: Mamba，適合長上下文。</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">LLM 生態系：專有、開源、MoE 與 SSM</text>
+
+  <!-- central hub -->
+  <circle cx="360" cy="140" r="45" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="360" y="135" text-anchor="middle" font-size="12" fill="#5b21b6" font-weight="bold">LLM</text>
+  <text x="360" y="152" text-anchor="middle" font-size="10" fill="#7c3aed">Ecosystem</text>
+
+  <!-- families around -->
+  <g transform="translate(80,60)">
+    <rect x="0" y="0" width="110" height="45" rx="6" fill="#fee2e2" stroke="#dc2626"/>
+    <text x="55" y="18" text-anchor="middle" font-size="11" fill="#991b1b" font-weight="bold">OpenAI</text>
+    <text x="55" y="35" text-anchor="middle" font-size="9" fill="#dc2626">GPT / ChatGPT</text>
+  </g>
+  <g transform="translate(80,160)">
+    <rect x="0" y="0" width="110" height="45" rx="6" fill="#dbeafe" stroke="#2563eb"/>
+    <text x="55" y="18" text-anchor="middle" font-size="11" fill="#1e3a8a" font-weight="bold">Meta</text>
+    <text x="55" y="35" text-anchor="middle" font-size="9" fill="#2563eb">LLaMA</text>
+  </g>
+  <g transform="translate(80,260)">
+    <rect x="0" y="0" width="110" height="45" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="55" y="18" text-anchor="middle" font-size="11" fill="#166534" font-weight="bold">Google</text>
+    <text x="55" y="35" text-anchor="middle" font-size="9" fill="#16a34a">PaLM / Gemini</text>
+  </g>
+
+  <g transform="translate(530,60)">
+    <rect x="0" y="0" width="110" height="45" rx="6" fill="#fef3c7" stroke="#d97706"/>
+    <text x="55" y="18" text-anchor="middle" font-size="11" fill="#92400e" font-weight="bold">Mistral</text>
+    <text x="55" y="35" text-anchor="middle" font-size="9" fill="#b45309">Mixtral MoE</text>
+  </g>
+  <g transform="translate(530,160)">
+    <rect x="0" y="0" width="110" height="45" rx="6" fill="#f3e8ff" stroke="#9333ea"/>
+    <text x="55" y="18" text-anchor="middle" font-size="11" fill="#7e22ce" font-weight="bold">DeepSeek</text>
+    <text x="55" y="35" text-anchor="middle" font-size="9" fill="#9333ea">V3 / R1</text>
+  </g>
+  <g transform="translate(530,260)">
+    <rect x="0" y="0" width="110" height="45" rx="6" fill="#ccfbf1" stroke="#14b8a6"/>
+    <text x="55" y="18" text-anchor="middle" font-size="11" fill="#0f766e" font-weight="bold">Mamba</text>
+    <text x="55" y="35" text-anchor="middle" font-size="9" fill="#14b8a6">SSM 非 Transformer</text>
+  </g>
+
+  <!-- connecting lines -->
+  <line x1="190" y1="82" x2="315" y2="120" stroke="#9ca3af" stroke-width="1"/>
+  <line x1="190" y1="182" x2="315" y2="150" stroke="#9ca3af" stroke-width="1"/>
+  <line x1="190" y1="282" x2="315" y2="170" stroke="#9ca3af" stroke-width="1"/>
+  <line x1="530" y1="82" x2="405" y2="120" stroke="#9ca3af" stroke-width="1"/>
+  <line x1="530" y1="182" x2="405" y2="150" stroke="#9ca3af" stroke-width="1"/>
+  <line x1="530" y1="282" x2="405" y2="170" stroke="#9ca3af" stroke-width="1"/>
+
+  <!-- MoE vs SSM labels -->
+  <rect x="230" y="315" width="120" height="30" rx="6" fill="#fde68a" stroke="#d97706"/>
+  <text x="290" y="335" text-anchor="middle" font-size="10" fill="#92400e">MoE = 稀疏專家</text>
+  <rect x="370" y="315" width="120" height="30" rx="6" fill="#ccfbf1" stroke="#14b8a6"/>
+  <text x="430" y="335" text-anchor="middle" font-size="10" fill="#0f766e">SSM = 長序列線性複雜度</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-10" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 中央紫色圓圈寫「LLM Ecosystem」。周圍六個彩色方塊：左上紅底 OpenAI（GPT/ChatGPT）、左中藍底 Meta（LLaMA）、左下綠底 Google（PaLM/Gemini）、右上黃底 Mistral（Mixtral MoE）、右中紫底 DeepSeek（V3/R1）、右下青綠底 Mamba（SSM 非 Transformer）。每個方塊以灰色線連到中央。底部兩個小標籤：黃底「MoE = 稀疏專家」、青綠底「SSM = 長序列線性複雜度」。
+
+WHY（因果或反直覺）: LLM 不只是 OpenAI 一家，開源社群（Meta、DeepSeek、Mistral）與非 Transformer 架構（Mamba）也快速發展。反直覺：MoE 雖然總參數量巨大，但每次只啟用部分專家，因此推理成本並未等比例增加；Mamba 則挑戰了「語言模型必須用 attention」的假設。
+
+MUST show（必備要素）: ① 中央 LLM Ecosystem 樞紐；② 至少六個代表性模型家族；③ 專有（OpenAI/Google）與開源（Meta/DeepSeek/Mistral）並存；④ MoE 與 SSM 兩種技術路線標籤；⑤ 用連線表達生態系關係。
+
+AVOID（禁止）: 不要只列文字清單而無幾何佈局；不要讓所有方塊顏色相同；不要遺漏非 Transformer 的 Mamba；不要使用 LaTeX 反斜線。
+
+STYLE: flat vector, viewBox 720×360, white background, central purple hub, surrounding colored family blocks, grey connecting lines, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">LLM 生態系：開源、專有、MoE、SSM 地圖</figcaption></figure></div>
+<div class="quiz" data-ans="B"><p class="q"><p>LLaMA 系列是由哪家機構提出？</p></p><div class="opts"><label class="opt"><input type="radio" name="q10-0" value="A"><span>A. <p>OpenAI</p></span></label><label class="opt"><input type="radio" name="q10-0" value="B"><span>B. <p>Meta</p></span></label><label class="opt"><input type="radio" name="q10-0" value="C"><span>C. <p>Google</p></span></label><label class="opt"><input type="radio" name="q10-0" value="D"><span>D. <p>Anthropic</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="LLaMA（Large Language Model Meta AI）是由 Meta 提出的開放權重模型系列。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>Mixtral 8×7B 使用什麼技術來提升效率？</p></p><div class="opts"><label class="opt"><input type="radio" name="q10-1" value="A"><span>A. <p>知識蒸餾</p></span></label><label class="opt"><input type="radio" name="q10-1" value="B"><span>B. <p>Mixture-of-Experts（MoE）</p></span></label><label class="opt"><input type="radio" name="q10-1" value="C"><span>C. <p>純 RNN</p></span></label><label class="opt"><input type="radio" name="q10-1" value="D"><span>D. <p>刪除 attention</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Mixtral 8×7B 是 Sparse Mixture-of-Experts 模型，每次只啟用部分專家。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>Mamba 屬於哪一類非 Transformer 架構？</p></p><div class="opts"><label class="opt"><input type="radio" name="q10-2" value="A"><span>A. <p>CNN</p></span></label><label class="opt"><input type="radio" name="q10-2" value="B"><span>B. <p>State Space Model（SSM）</p></span></label><label class="opt"><input type="radio" name="q10-2" value="C"><span>C. <p>純 encoder</p></span></label><label class="opt"><input type="radio" name="q10-2" value="D"><span>D. <p>決策樹</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Mamba 是 State Space Model（SSM），提供線性複雜度的長序列建模。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>RAG（Retrieval-Augmented Generation）包含哪兩個主要組件？</p></p><div class="opts"><label class="opt"><input type="radio" name="q10-3" value="A"><span>A. <p>encoder 與 decoder</p></span></label><label class="opt"><input type="radio" name="q10-3" value="B"><span>B. <p>retriever 與 generator</p></span></label><label class="opt"><input type="radio" name="q10-3" value="C"><span>C. <p>generator 與 discriminator</p></span></label><label class="opt"><input type="radio" name="q10-3" value="D"><span>D. <p>tokenizer 與 optimizer</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="RAG 先用 retriever 從知識庫找相關文件，再由 generator（語言模型）產生最終回應。"></div></div></div></section>
+<section id="kp11" class="card" data-kp="11"><div class="card-head"><span class="badge">6</span><h3>為何 LLM 有效：六條研究路線</h3><span class="toggle">▼</span></div><div class="card-body"><button class="guide-btn" type="button" data-kp="11" data-guide="kp-11" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：為什麼大模型會突然變聰明？六條研究路線</button><h4>直覺：模型變大、資料變多，但我們仍不完全懂為什麼它這麼厲害</h4>
+<p>傳統 PAC 學習理論難以解釋 LLM 的泛化能力，因此研究者提出多條研究路線：</p>
+<ol>
+<li><strong>線性表示假說（Linear representations）</strong>：雖然網路整體非線性，但輸入到輸出之間存在近似線性的路徑。</li>
+<li><strong>機制可解釋性 / 電路分析（Mechanistic interpretability）</strong>：反向工程模型內部電路，研究它如何執行複製、歸納、語法偵測等行為。</li>
+<li><strong>特徵與神經元疊加（Feature / neuron superposition）</strong>：許多概念重疊存放在同一群神經元中。</li>
+<li><strong>因果追蹤（Causal tracing）</strong>：追蹤模型內部哪些部分負責特定輸出，例如事實知識存在哪裡。</li>
+<li><strong>探針與表示幾何（Probing &amp; representational geometry）</strong>：用統計工具研究隱藏狀態編碼了哪些語言特徵。</li>
+<li><strong>安全性與多語義性（Security &amp; polysemanticity）</strong>：研究單一神經元可同時代表多個概念的現象，以及模型內部信念與輸出不一致的問題。</li>
+</ol>
+<ul>
+<li>Scaling laws：模型越大、資料越多，性能越可預測地提升。</li>
+<li>In-context learning：模型能從 prompt 中即時學習新任務。</li>
+<li>Superposition：多個概念共享同一組神經元。</li>
+<li>Mechanistic interpretability：拆解模型內部電路。</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">為何 LLM 有效？六條研究路線</text>
+
+  <!-- central LLM -->
+  <circle cx="360" cy="160" r="55" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="360" y="155" text-anchor="middle" font-size="13" fill="#5b21b6" font-weight="bold">Why do</text>
+  <text x="360" y="175" text-anchor="middle" font-size="13" fill="#5b21b6" font-weight="bold">LLMs work?</text>
+
+  <!-- six directions -->
+  <g transform="translate(60,40)">
+    <rect x="0" y="0" width="130" height="38" rx="6" fill="#dbeafe" stroke="#2563eb"/>
+    <text x="65" y="23" text-anchor="middle" font-size="10" fill="#1e3a8a">Linear Representations</text>
+  </g>
+  <g transform="translate(530,40)">
+    <rect x="0" y="0" width="130" height="38" rx="6" fill="#fee2e2" stroke="#dc2626"/>
+    <text x="65" y="23" text-anchor="middle" font-size="10" fill="#991b1b">Mechanistic Circuits</text>
+  </g>
+  <g transform="translate(60,120)">
+    <rect x="0" y="0" width="130" height="38" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="65" y="23" text-anchor="middle" font-size="10" fill="#166534">Superposition</text>
+  </g>
+  <g transform="translate(530,120)">
+    <rect x="0" y="0" width="130" height="38" rx="6" fill="#fef3c7" stroke="#d97706"/>
+    <text x="65" y="23" text-anchor="middle" font-size="10" fill="#92400e">Causal Tracing</text>
+  </g>
+  <g transform="translate(60,200)">
+    <rect x="0" y="0" width="130" height="38" rx="6" fill="#f3e8ff" stroke="#9333ea"/>
+    <text x="65" y="23" text-anchor="middle" font-size="10" fill="#7e22ce">Probing Geometry</text>
+  </g>
+  <g transform="translate(530,200)">
+    <rect x="0" y="0" width="130" height="38" rx="6" fill="#ccfbf1" stroke="#14b8a6"/>
+    <text x="65" y="23" text-anchor="middle" font-size="10" fill="#0f766e">Polysemanticity</text>
+  </g>
+
+  <line x1="190" y1="59" x2="305" y2="130" stroke="#9ca3af" stroke-width="1"/>
+  <line x1="530" y1="59" x2="415" y2="130" stroke="#9ca3af" stroke-width="1"/>
+  <line x1="190" y1="139" x2="305" y2="150" stroke="#9ca3af" stroke-width="1"/>
+  <line x1="530" y1="139" x2="415" y2="150" stroke="#9ca3af" stroke-width="1"/>
+  <line x1="190" y1="219" x2="305" y2="170" stroke="#9ca3af" stroke-width="1"/>
+  <line x1="530" y1="219" x2="415" y2="170" stroke="#9ca3af" stroke-width="1"/>
+
+  <text x="360" y="300" text-anchor="middle" font-size="12" fill="#6b7280">傳統 PAC 理論解釋不了，研究者從多條路線拆解 LLM</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-11" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 中央紫色大圓圈寫「Why do LLMs work?」。周圍六個彩色小方塊分別代表：Linear Representations（藍）、Mechanistic Circuits（紅）、Superposition（綠）、Causal Tracing（黃）、Probing Geometry（紫）、Polysemanticity（青綠）。每個方塊以灰色線連到中央圓圈。底部寫「傳統 PAC 理論解釋不了，研究者從多條路線拆解 LLM」。
+
+WHY（因果或反直覺）: LLM 能在大量未見資料上泛化，傳統統計學習理論難以解釋，因此需要從表示、電路、幾何、因果等角度反向工程。反直覺：一個「黑箱」模型內部可能存在可解釋的線性路徑與專門化電路。
+
+MUST show（必備要素）: ① 中央問題樞紐；② 六條研究路線名稱與顏色區分；③ 連線表示這些方向都在嘗試回答同一問題；④ 底部強調傳統理論的不足；⑤ 每個名稱簡潔可讀。
+
+AVOID（禁止）: 不要把六條路線寫成純文字段落；不要讓方塊互相重疊；不要遺漏「傳統 PAC 理論解釋不了」的反直覺；不要使用 LaTeX 反斜線。
+
+STYLE: flat vector, viewBox 720×360, white background, central purple circle, six surrounding colored blocks, grey connecting lines, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">解釋 LLM 有效性的六條研究路線</figcaption></figure></div>
+<div class="quiz" data-ans="B"><p class="q"><p>下列哪一項是解釋 LLM 泛化能力的主要研究方向？</p></p><div class="opts"><label class="opt"><input type="radio" name="q11-0" value="A"><span>A. <p>傳統 PAC 學習已能完整解釋</p></span></label><label class="opt"><input type="radio" name="q11-0" value="B"><span>B. <p>Scaling laws 與 in-context learning</p></span></label><label class="opt"><input type="radio" name="q11-0" value="C"><span>C. <p>純粹增加批次大小</p></span></label><label class="opt"><input type="radio" name="q11-0" value="D"><span>D. <p>刪除所有 attention heads</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Scaling laws 與 in-context learning 是當前解釋 LLM 能力的核心研究方向之一。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>「superposition」指的是什麼現象？</p></p><div class="opts"><label class="opt"><input type="radio" name="q11-1" value="A"><span>A. <p>模型只使用一個神經元</p></span></label><label class="opt"><input type="radio" name="q11-1" value="B"><span>B. <p>多個概念重疊存放在同一群神經元中</p></span></label><label class="opt"><input type="radio" name="q11-1" value="C"><span>C. <p>每個概念都有獨立的神經元</p></span></label><label class="opt"><input type="radio" name="q11-1" value="D"><span>D. <p>模型沒有隱藏層</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Superposition 指神經網路把許多概念以重疊方式編碼在同一組神經元中。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>Mechanistic interpretability 的目標是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q11-2" value="A"><span>A. <p>讓模型跑得更快</p></span></label><label class="opt"><input type="radio" name="q11-2" value="B"><span>B. <p>反向工程模型內部電路，理解特定行為如何被計算</p></span></label><label class="opt"><input type="radio" name="q11-2" value="C"><span>C. <p>減少模型參數</p></span></label><label class="opt"><input type="radio" name="q11-2" value="D"><span>D. <p>增加訓練資料</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Mechanistic interpretability 試圖拆解模型內部電路，理解如複製、歸納等行為的實現方式。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>Causal tracing 常用來做什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q11-3" value="A"><span>A. <p>加速訓練</p></span></label><label class="opt"><input type="radio" name="q11-3" value="B"><span>B. <p>追蹤模型內部哪些部分負責特定輸出</p></span></label><label class="opt"><input type="radio" name="q11-3" value="C"><span>C. <p>減少記憶體使用</p></span></label><label class="opt"><input type="radio" name="q11-3" value="D"><span>D. <p>產生更多訓練資料</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Causal tracing 用來定位模型內部與特定輸出（如事實知識）相關的神經元或層。"></div></div></div></section>
+<section id="kp12" class="card" data-kp="12"><div class="card-head"><span class="badge">7.1-7.2</span><h3>Alignment 的挑戰與定義</h3><span class="toggle">▼</span></div><div class="card-body"><button class="guide-btn" type="button" data-kp="12" data-guide="kp-12" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：LLM 只會「猜下一個詞」，不一定「照你說的做」</button><h4>直覺：LLM 只會「猜下一個詞」，不一定會「照你說的做」</h4>
+<p>LLM 的核心訓練目標是<strong>預測下一個 token</strong>，這讓它擅長產生統計上合理的文字，但並不保證它會：</p>
+<ul>
+<li>遵循使用者指令</li>
+<li>不編造事實（hallucination）</li>
+<li>不產生偏見或有毒內容</li>
+<li>符合人類價值觀</li>
+</ul>
+<p><strong>Alignment（對齊）</strong>就是調整模型輸出，使其符合使用者意圖與倫理標準，而不只是「預測最可能的下一個詞」。</p>
+<h4>Alignment 的四大焦點</h4>
+<ul>
+<li>Learning from human feedback：從人類互動中學習。</li>
+<li>Training to follow instructions：訓練模型遵循指令。</li>
+<li>Evaluating AI harms：評估模型輸出的風險。</li>
+<li>Modifying behavior to mitigate harms：調整行為以減少負面影響。</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">Alignment 挑戰：next-token 目標與指令目標的錯位</text>
+
+  <!-- next-token objective -->
+  <rect x="60" y="70" width="260" height="90" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="190" y="95" text-anchor="middle" font-size="12" fill="#991b1b" font-weight="bold">預訓練目標：Next-token</text>
+  <text x="190" y="118" text-anchor="middle" font-size="11" fill="#1f2937">「根據網路文本預測下一個詞」</text>
+  <text x="190" y="140" text-anchor="middle" font-size="10" fill="#6b7280">統計上合理 ≠ 符合人意圖</text>
+
+  <!-- gap -->
+  <path d="M320 115 H400" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6,4"/>
+  <text x="360" y="105" text-anchor="middle" font-size="10" fill="#6b7280">錯位</text>
+
+  <!-- user intent -->
+  <rect x="400" y="70" width="260" height="90" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="530" y="95" text-anchor="middle" font-size="12" fill="#166534" font-weight="bold">使用者目標：Helpful & Safe</text>
+  <text x="530" y="118" text-anchor="middle" font-size="11" fill="#1f2937">「遵循指令、不幻覺、無偏見」</text>
+  <text x="530" y="140" text-anchor="middle" font-size="10" fill="#6b7280">符合價值與意圖</text>
+
+  <!-- problems -->
+  <rect x="60" y="210" width="600" height="110" rx="10" fill="#fef2f2" stroke="#dc2626" stroke-width="1.4"/>
+  <text x="360" y="235" text-anchor="middle" font-size="12" fill="#b91c1c" font-weight="bold">常見錯位問題</text>
+  <circle cx="130" cy="270" r="4" fill="#dc2626"/><text x="145" y="274" font-size="11" fill="#7f1d1d">幻覺（Hallucination）</text>
+  <circle cx="130" cy="295" r="4" fill="#dc2626"/><text x="145" y="299" font-size="11" fill="#7f1d1d">不聽指令 / 答非所問</text>
+  <circle cx="390" cy="270" r="4" fill="#dc2626"/><text x="405" y="274" font-size="11" fill="#7f1d1d">偏見與有毒內容</text>
+  <circle cx="390" cy="295" r="4" fill="#dc2626"/><text x="405" y="299" font-size="11" fill="#7f1d1d">洩漏個資或危險資訊</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-12" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 左右兩個方塊：左紅底「預訓練目標：Next-token，根據網路文本預測下一個詞，統計上合理 ≠ 符合人意圖」；右綠底「使用者目標：Helpful &amp; Safe，遵循指令、不幻覺、無偏見，符合價值與意圖」。中間灰色虛線箭頭標「錯位」。底部紅底大框標「常見錯位問題」，列出四個紅點：幻覺、不聽指令、偏見與有毒內容、洩漏個資或危險資訊。
+
+WHY（因果或反直覺）: LLM 只是被訓練來「接龍」，並沒有內建「要聽話、要安全」的目標。反直覺：一個能流暢回答問題的模型，可能同時在編造事實或複製偏見，因為它的目標函數根本不在乎真假或道德。
+
+MUST show（必備要素）: ① 左邊 next-token 目標與右邊使用者目標的對比；② 中間明確標示「錯位」；③ 底部列出常見錯位問題；④ 紅色表示問題、綠色表示理想目標；⑤ 強調目標函數不一致是根本原因。
+
+AVOID（禁止）: 不要把兩個目標畫成完全一樣；不要只列問題而不強調目標錯位；不要讓幻覺等問題看起來是獨立現象而與目標無關；不要使用 LaTeX 反斜線。
+
+STYLE: flat vector, viewBox 720×360, white background, red vs green objective blocks, grey dashed gap arrow, red warning problem box, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">Alignment 挑戰：從預測下一詞到遵循意圖</figcaption></figure></div>
+<div class="quiz" data-ans="B"><p class="q"><p>LLM 的核心訓練目標是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q12-0" value="A"><span>A. <p>遵循人類價值觀</p></span></label><label class="opt"><input type="radio" name="q12-0" value="B"><span>B. <p>預測下一個 token</p></span></label><label class="opt"><input type="radio" name="q12-0" value="C"><span>C. <p>進行影像分類</p></span></label><label class="opt"><input type="radio" name="q12-0" value="D"><span>D. <p>解數學證明</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="LLM 本質上是 next-token predictor，根據前文預測下一個最可能的 token。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>Alignment 的主要目標是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q12-1" value="A"><span>A. <p>增加模型參數</p></span></label><label class="opt"><input type="radio" name="q12-1" value="B"><span>B. <p>讓模型輸出符合使用者意圖與倫理標準</p></span></label><label class="opt"><input type="radio" name="q12-1" value="C"><span>C. <p>減少訓練資料</p></span></label><label class="opt"><input type="radio" name="q12-1" value="D"><span>D. <p>讓模型只輸出機率最高的詞</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Alignment 調整模型行為，使其不僅統計上合理，也符合人類價值與指令。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>下列哪一項是 LLM 常見的未預期行為？</p></p><div class="opts"><label class="opt"><input type="radio" name="q12-2" value="A"><span>A. <p>總是產生正確答案</p></span></label><label class="opt"><input type="radio" name="q12-2" value="B"><span>B. <p>可能編造事實或產生偏見內容</p></span></label><label class="opt"><input type="radio" name="q12-2" value="C"><span>C. <p>完全無法生成文字</p></span></label><label class="opt"><input type="radio" name="q12-2" value="D"><span>D. <p>只能處理英文</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="LLM 可能產生幻覺（hallucination）、偏見或有毒內容，這是 alignment 要解決的問題。"></div></div><div class="quiz" data-ans="C"><p class="q"><p>Alignment 的四大焦點不包括下列哪一項？</p></p><div class="opts"><label class="opt"><input type="radio" name="q12-3" value="A"><span>A. <p>從人類回饋中學習</p></span></label><label class="opt"><input type="radio" name="q12-3" value="B"><span>B. <p>訓練遵循指令</p></span></label><label class="opt"><input type="radio" name="q12-3" value="C"><span>C. <p>增加訓練硬體</p></span></label><label class="opt"><input type="radio" name="q12-3" value="D"><span>D. <p>評估與減緩 AI 傷害</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Alignment 四大焦點不包括硬體擴充，而是學習、遵循指令、評估與調整行為。"></div></div></div></section>
+<section id="kp13" class="card" data-kp="13"><div class="card-head"><span class="badge">7.3.1-7.3.2</span><h3>簡單 alignment 策略</h3><span class="toggle">▼</span></div><div class="card-body"><button class="guide-btn" type="button" data-kp="13" data-guide="kp-13" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：在動用 RLHF 之前，先做兩件簡單的事</button><h4>直覺：在動用 RLHF 之前，可以先做兩件簡單的事</h4>
+<p>在進入複雜的 RLHF 或 DPO 之前，有兩種相對簡單的 alignment 策略：</p>
+<h4>1. 預訓練資料過濾（Filtering pretraining datasets）</h4>
+<p>直接把不想要的内容從訓練資料中移除，例如仇恨言論、錯誤資訊、個資等。這就像「如果不想讓小孩學髒話，就先別讓他聽到髒話」。</p>
+<p>但資料過濾並不足夠，因為模型仍可能從看似正常的上下文泛化出有毒模式。</p>
+<h4>2. 價值導向微調（Fine-tuning on value-targeted datasets）</h4>
+<p>用強調特定價值觀的資料集進行微調。例如希望模型回答環保相關問題，就用大量環保内容微調。這就像「給小孩讀道德故事，希望他學會道德」。</p>
+<ul>
+<li>Filtering：從源頭移除有害資料。</li>
+<li>Value-targeted fine-tuning：用特定價值觀資料調整模型。</li>
+<li>兩者通常需要與 RLHF/DPO 等更強方法搭配使用。</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">簡單 Alignment：資料過濾與價值微調</text>
+
+  <!-- top: raw corpus -->
+  <rect x="40" y="60" width="200" height="60" rx="8" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="140" y="82" text-anchor="middle" font-size="12" fill="#991b1b" font-weight="bold">原始預訓練語料</text>
+  <text x="140" y="102" text-anchor="middle" font-size="10" fill="#dc2626">含仇恨 / 錯誤 / 有毒內容</text>
+
+  <!-- filter -->
+  <path d="M240 90 H290" stroke="#dc2626" stroke-width="2" marker-end="url(#arrR)"/>
+  <rect x="290" y="55" width="100" height="70" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="340" y="82" text-anchor="middle" font-size="12" fill="#92400e" font-weight="bold">過濾器</text>
+  <text x="340" y="105" text-anchor="middle" font-size="10" fill="#b45309">移除有害文件</text>
+
+  <!-- clean corpus -->
+  <path d="M390 90 H440" stroke="#16a34a" stroke-width="2" marker-end="url(#arrG)"/>
+  <rect x="440" y="60" width="200" height="60" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="540" y="82" text-anchor="middle" font-size="12" fill="#166534" font-weight="bold">乾淨語料</text>
+  <text x="540" y="102" text-anchor="middle" font-size="10" fill="#16a34a">降低有害內容風險</text>
+
+  <!-- bottom: value-targeted fine-tuning -->
+  <rect x="40" y="180" width="300" height="90" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="190" y="205" text-anchor="middle" font-size="12" fill="#1e3a8a" font-weight="bold">價值導向微調</text>
+  <text x="190" y="228" text-anchor="middle" font-size="11" fill="#2563eb">用強調環保 / 道德 / 安全的資料集</text>
+  <text x="190" y="250" text-anchor="middle" font-size="10" fill="#6b7280">模型輸出更貼近目標價值</text>
+
+  <path d="M340 225 H420" stroke="#2563eb" stroke-width="2" marker-end="url(#arrB)"/>
+
+  <rect x="420" y="180" width="260" height="90" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="550" y="205" text-anchor="middle" font-size="12" fill="#5b21b6" font-weight="bold">更對齊的模型</text>
+  <text x="550" y="228" text-anchor="middle" font-size="11" fill="#7c3aed">仍需 RLHF / DPO 進一步強化</text>
+  <text x="550" y="250" text-anchor="middle" font-size="10" fill="#6b7280">簡單策略只是第一道防線</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-13" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 上半部是「原始預訓練語料」紅底框（含仇恨/錯誤/有毒內容），經過黃底「過濾器」移除有害文件，變成綠底「乾淨語料」。下半部左藍底「價值導向微調」框寫「用強調環保/道德/安全的資料集」，藍色箭頭指向右紫底「更對齊的模型」框，框內寫「仍需 RLHF/DPO 進一步強化；簡單策略只是第一道防線」。
+
+WHY（因果或反直覺）: 最簡單的 alignment 就是從源頭減少有害內容，以及用目標價值的資料微調。反直覺：單靠資料過濾並不足夠，模型仍可能從正常上下文泛化出有毒模式，所以通常還要搭配 RLHF/DPO。
+
+MUST show（必備要素）: ① 原始語料 → 過濾器 → 乾淨語料的流程；② 過濾器移除有害文件；③ 價值導向微調資料；④ 最終模型仍需更強 alignment；⑤ 兩條簡單策略並列呈現。
+
+AVOID（禁止）: 不要把過濾與微調混為一個步驟；不要讓「乾淨語料」看起來能完全解決 alignment；不要遺漏「仍需 RLHF/DPO」的結論；不要使用 LaTeX 反斜線。
+
+STYLE: flat vector, viewBox 720×360, white background, red/green/yellow pipeline, blue value-tuning block, purple aligned model block, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">簡單 alignment 策略：SFT、prompt engineering、filtering</figcaption></figure></div>
+<div class="quiz" data-ans="B"><p class="q"><p>過濾預訓練資料的主要目的是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q13-0" value="A"><span>A. <p>增加模型參數</p></span></label><label class="opt"><input type="radio" name="q13-0" value="B"><span>B. <p>減少模型從有害內容中學習的機會</p></span></label><label class="opt"><input type="radio" name="q13-0" value="C"><span>C. <p>加快推論速度</p></span></label><label class="opt"><input type="radio" name="q13-0" value="D"><span>D. <p>讓模型只能回答英文</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="過濾可移除仇恨言論、錯誤資訊等，降低模型產生有害內容的機率。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>價值導向微調的作用是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q13-1" value="A"><span>A. <p>減少訓練資料量</p></span></label><label class="opt"><input type="radio" name="q13-1" value="B"><span>B. <p>用強調特定價值觀的資料集調整模型行為</p></span></label><label class="opt"><input type="radio" name="q13-1" value="C"><span>C. <p>刪除模型的 attention</p></span></label><label class="opt"><input type="radio" name="q13-1" value="D"><span>D. <p>凍結所有權重</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="透過在強調目標價值的資料上微調，讓模型輸出更符合期望行為。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>下列哪一項是資料過濾的局限？</p></p><div class="opts"><label class="opt"><input type="radio" name="q13-2" value="A"><span>A. <p>可以完全消除所有未預期行為</p></span></label><label class="opt"><input type="radio" name="q13-2" value="B"><span>B. <p>模型仍可能從正常上下文泛化出有害模式</p></span></label><label class="opt"><input type="radio" name="q13-2" value="C"><span>C. <p>會讓模型變得太大</p></span></label><label class="opt"><input type="radio" name="q13-2" value="D"><span>D. <p>會讓模型無法做自監督學習</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="過濾雖有幫助，但不足以單獨保證 alignment，常需搭配 RLHF/DPO。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>簡單 alignment 策略通常需要與什麼方法搭配？</p></p><div class="opts"><label class="opt"><input type="radio" name="q13-3" value="A"><span>A. <p>只使用資料過濾就足夠</p></span></label><label class="opt"><input type="radio" name="q13-3" value="B"><span>B. <p>RLHF 或 DPO 等更進一步的 alignment 方法</p></span></label><label class="opt"><input type="radio" name="q13-3" value="C"><span>C. <p>刪除所有微調</p></span></label><label class="opt"><input type="radio" name="q13-3" value="D"><span>D. <p>隨機初始化模型</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="簡單策略通常是第一道防線，完整的 alignment 還需要 RLHF、DPO 等技術。"></div></div></div></section>
+<section id="kp14" class="card" data-kp="14"><div class="card-head"><span class="badge">8.1-8.2</span><h3>RLHF 前兩步：SFT 與 Reward Model</h3><span class="toggle">▼</span></div><div class="card-body"><h4>直覺：先教模型怎麼對話，再訓練一個「評分老師」</h4>
+<p>RLHF（Reinforcement Learning from Human Feedback）分為三步，這一節講前兩步。</p>
+<h4>第一步：Supervised Fine-Tuning（SFT）</h4>
+<p>用人類撰寫的「prompt + 理想回應」配對資料，微調預訓練好的 GPT 模型。這讓模型從「會接龍」變成「會對話」。</p>
+<p>提示類型包括：plain、few-shot、user-based；任務類型包括腦力激盪、分類、摘要、翻譯、問答等。</p>
+<h4>第二步：Reward Model（RM）</h4>
+<p>SFT 模型對同一個 prompt 產生多個回應後，人類標註者會比較這些回應，告訴模型哪個比較好。例如 4 個回應可配成 $C(4,2)=6$ 對。</p>
+<p>RM 的架構是從 SFT 模型複製一份，去掉最後的 softmax 層，換成一個輸出實數值的神經元。它的損失函數是：</p>
+<p>$$
+\underset{\theta}{\operatorname{minimize}} \mathcal{L}(\theta):=-\mathbb{E}\left[\log \left(\sigma\left(r_{w}-r_{l}\right)\right)\right]. \tag{1}
+$$</p>
+<p>其中 $r_{w}$ 與 $r_{l}$ 分別是「較好回應」與「較差回應」的分數。這個損失會讓 RM 學會給好回應高分、壞回應低分。</p>
+<figure class="orig-fig">
+<img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-307_1940_919_204_664.jpg" alt="RLHF pipeline">
+<figcaption>Fig. 3 RLHF 三步驟：SFT、Reward Model、RL fine-tuning。</figcaption>
+</figure><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">RLHF 前兩步：SFT 與 Reward Model</text>
+
+  <!-- SFT -->
+  <rect x="40" y="70" width="130" height="60" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="105" y="95" text-anchor="middle" font-size="11" fill="#1e3a8a" font-weight="bold">Prompts</text>
+  <text x="105" y="115" text-anchor="middle" font-size="9" fill="#2563eb">人類撰寫答案</text>
+
+  <path d="M170 100 H230" stroke="#2563eb" stroke-width="2" marker-end="url(#arrB)"/>
+
+  <rect x="230" y="70" width="130" height="60" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="295" y="95" text-anchor="middle" font-size="11" fill="#5b21b6" font-weight="bold">SFT Model</text>
+  <text x="295" y="115" text-anchor="middle" font-size="9" fill="#7c3aed">會對話的 LLM</text>
+
+  <!-- generate multiple responses -->
+  <path d="M360 100 H420" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrB)"/>
+  <g transform="translate(420,75)">
+    <rect x="0" y="0" width="50" height="25" rx="4" fill="#fee2e2" stroke="#dc2626"/>
+    <rect x="55" y="0" width="50" height="25" rx="4" fill="#fef3c7" stroke="#d97706"/>
+    <rect x="110" y="0" width="50" height="25" rx="4" fill="#dcfce7" stroke="#16a34a"/>
+    <rect x="30" y="30" width="50" height="25" rx="4" fill="#dbeafe" stroke="#2563eb"/>
+    <text x="80" y="-8" text-anchor="middle" font-size="9" fill="#6b7280">同一 prompt 產生多個回應</text>
+  </g>
+
+  <!-- human ranking -->
+  <path d="M600 110 V170" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrK)"/>
+  <rect x="520" y="175" width="160" height="55" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="600" y="198" text-anchor="middle" font-size="11" fill="#92400e" font-weight="bold">人類標註者</text>
+  <text x="600" y="218" text-anchor="middle" font-size="9" fill="#b45309">兩兩比較分出勝負</text>
+
+  <!-- reward model -->
+  <path d="M520 200 H420" stroke="#d97706" stroke-width="2" marker-end="url(#arrB)"/>
+  <rect x="240" y="180" width="160" height="60" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="320" y="205" text-anchor="middle" font-size="11" fill="#166534" font-weight="bold">Reward Model</text>
+  <text x="320" y="225" text-anchor="middle" font-size="9" fill="#16a34a">輸入回應 → 輸出分數</text>
+
+  <!-- loss formula text -->
+  <rect x="40" y="270" width="640" height="60" rx="8" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text x="360" y="295" text-anchor="middle" font-size="12" fill="#1f2937">Reward Model Loss：-E[ log σ( r_w - r_l ) ]</text>
+  <text x="360" y="318" text-anchor="middle" font-size="10" fill="#6b7280">讓勝出回應分數高、落敗回應分數低</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-14" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 從左到右的流程圖：藍底「Prompts（人類撰寫答案）」→ 紫底「SFT Model（會對話的 LLM）」→ 四個小色塊代表「同一 prompt 產生多個回應」→ 黃底「人類標註者（兩兩比較分出勝負）」→ 綠底「Reward Model（輸入回應 → 輸出分數）」。底部灰底長條寫「Reward Model Loss：-E[ log σ( r_w - r_l ) ]」，並註解「讓勝出回應分數高、落敗回應分數低」。
+
+WHY（因果或反直覺）: 先讓模型學會對話格式，再訓練一個「評分老師」來判斷哪個回應比較好。反直覺：Reward Model 並不是直接告訴模型怎麼改，而是先把人類偏好壓縮成一個純量分數，為後續 RL 提供目標。
+
+MUST show（必備要素）: ① SFT 階段的人類撰寫答案；② 同一 prompt 多個回應；③ 人類兩兩比較；④ Reward Model 輸出純量分數；⑤ Loss 公式用純文字/Unicode 呈現，無 LaTeX。
+
+AVOID（禁止）: 不要讓流程順序混亂；不要遺漏「多個回應 → 成對比較」的關鍵步驟；不要把 Reward Model 畫成輸出文字而不是分數；不要使用 LaTeX 反斜線。
+
+STYLE: flat vector, viewBox 720×360, white background, blue/purple/yellow/green pipeline blocks, grey formula bar, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">RLHF 三步驟：SFT → Reward Model → PPO</figcaption></figure></div>
+
+<div class="demo" data-demo-id="kp14">
+  <style>
+    [data-demo-id="kp14"] { border: 1px solid #cbd5e1; border-radius: 14px; overflow: hidden; background: #fff; margin: 16px 0; }
+    [data-demo-id="kp14"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#7c3aed,#5b21b6); color: #fff; font-weight: 700; }
+    [data-demo-id="kp14"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #f5f3ff; }
+    [data-demo-id="kp14"] .demo-controls { flex: 1 1 280px; display: flex; flex-direction: column; gap: 8px; }
+    [data-demo-id="kp14"] .demo-canvas { flex: 1 1 420px; }
+    [data-demo-id="kp14"] canvas { border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp14"] .row { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; }
+    [data-demo-id="kp14"] .row label { min-width: 110px; font-weight: 600; }
+    [data-demo-id="kp14"] input[type="range"] { flex: 1; }
+    [data-demo-id="kp14"] .demo-readout { min-height: 9em; padding: 10px 12px; border: 1px solid #ddd6fe; border-radius: 8px; background: #fff; font-family: ui-monospace, Consolas, monospace; font-size: 0.78rem; line-height: 1.55; white-space: pre-wrap; }
+    [data-demo-id="kp14"] .demo-theory, [data-demo-id="kp14"] .demo-instruction { padding: 10px 18px; font-size: 0.85rem; line-height: 1.7; }
+    [data-demo-id="kp14"] .demo-theory { background: #eef2ff; border-top: 1px solid #e2e8f0; }
+  </style>
+  <div class="demo-head">Demo：Reward Model Loss 式 (1)</div>
+  <div class="demo-body">
+    <div class="demo-controls">
+      <div class="row"><label>勝出分數 r_w</label><input type="range" id="kp14-rw" min="0" max="5" step="0.1" value="2.0"><span id="kp14-rw-v">2.0</span></div>
+      <div class="row"><label>落敗分數 r_l</label><input type="range" id="kp14-rl" min="-2" max="3" step="0.1" value="0.5"><span id="kp14-rl-v">0.5</span></div>
+      <div class="demo-readout" id="kp14-ro"></div>
+    </div>
+    <div class="demo-canvas"><canvas id="kp14-cv" width="520" height="300"></canvas></div>
+  </div>
+  <div class="demo-theory"><strong>原理</strong>：式 (1) $\mathcal{L}=-\mathbb{E}[\log\sigma(r_w-r_l)]$。勝出分數 $r_w$ 越高、落敗分數 $r_l$ 越低，差值越大，$\sigma$ 越接近 1，loss 越接近 0。梯度 $\partial\mathcal{L}/\partial r_w=-(1-\sigma)$、$\partial\mathcal{L}/\partial r_l=(1-\sigma)$。</div>
+  <div class="demo-instruction">
+    <strong>這在做什麼：</strong>動手調整 RM 對「好回應」與「壞回應」的打分，觀察 loss 與梯度變化。<br>
+    <strong>怎麼操作：</strong>拉動 r_w 與 r_l 滑桿。<br>
+    <strong>觀察什麼：</strong>當 r_w 明顯大於 r_l，loss 快速下降並趨近 0；反之 loss 變大。<br>
+    <strong>正確基準：</strong>loss = -log sigmoid(r_w - r_l)。
+  </div>
+  <script src="demos/demo_kp14.js"></script>
+</div>
+<button class="guide-btn" type="button" data-kp="14" data-guide="kp-14" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：RLHF 前兩步：先教對話，再訓練評分老師</button><div class="quiz" data-ans="B"><p class="q"><p>RLHF 的第一步是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q14-0" value="A"><span>A. <p>Reward Modeling</p></span></label><label class="opt"><input type="radio" name="q14-0" value="B"><span>B. <p>Supervised Fine-Tuning（SFT）</p></span></label><label class="opt"><input type="radio" name="q14-0" value="C"><span>C. <p>Policy Gradient</p></span></label><label class="opt"><input type="radio" name="q14-0" value="D"><span>D. <p>DPO</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="RLHF 第一步是用人工撰寫的 prompt-response 配對進行監督式微調。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>若 SFT 模型對同一 prompt 產生 4 個回應，可形成多少對比較對？</p></p><div class="opts"><label class="opt"><input type="radio" name="q14-1" value="A"><span>A. <p>4</p></span></label><label class="opt"><input type="radio" name="q14-1" value="B"><span>B. <p>6</p></span></label><label class="opt"><input type="radio" name="q14-1" value="C"><span>C. <p>12</p></span></label><label class="opt"><input type="radio" name="q14-1" value="D"><span>D. <p>24</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="4 選 2 的組合數為 $C(4,2)=6$。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>Reward Model 的輸出是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q14-2" value="A"><span>A. <p>下一個 token 的機率分布</p></span></label><label class="opt"><input type="radio" name="q14-2" value="B"><span>B. <p>一個表示回應好壞的實數分數</p></span></label><label class="opt"><input type="radio" name="q14-2" value="C"><span>C. <p>遮罩 token 的預測</p></span></label><label class="opt"><input type="radio" name="q14-2" value="D"><span>D. <p>影像特徵向量</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="RM 去掉 softmax 層，改為單一輸出神經元，輸出純量獎勵。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>Reward Model 的損失函數式 (1) 鼓勵什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q14-3" value="A"><span>A. <p>讓勝出回應的分數遠低於落敗回應</p></span></label><label class="opt"><input type="radio" name="q14-3" value="B"><span>B. <p>讓勝出回應的分數高於落敗回應</p></span></label><label class="opt"><input type="radio" name="q14-3" value="C"><span>C. <p>讓所有回應分數相同</p></span></label><label class="opt"><input type="radio" name="q14-3" value="D"><span>D. <p>最小化模型參數</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="式 (1) 最小化 $-\log\sigma(r_w-r_l)$，即讓 $r_w$ 大於 $r_l$。"></div></div></div></section>
+<section id="kp15" class="card" data-kp="15"><div class="card-head"><span class="badge">8.3</span><h3>RLHF 的 policy gradient 與 KL 正則化</h3><span class="toggle">▼</span></div><div class="card-body"><h4>直覺：讓模型學會「討好評分老師」，但別走火入魔</h4>
+<p>RLHF 第三步是用<strong>強化學習</strong>進一步微調 SFT 模型。我們把 SFT 模型複製一份當作 RL model，讓它生成回應，再由 RM 給分，最後用 policy gradient 更新模型權重。</p>
+<h4>Policy gradient 目標</h4>
+<p>目標是最大化生成回應的期望獎勵：</p>
+<p>$$
+\underset{w}{\operatorname{maximize}} J(w):=\mathbb{E}_{x \sim p_{w}}[r(x)]. \tag{2}
+$$</p>
+<p>更新規則：</p>
+<p>$$
+w \leftarrow w+\alpha \nabla_{w} J(w). \tag{3}
+$$</p>
+<p>梯度可展開為：</p>
+<p>$$
+\nabla_{w} J(w)=\frac{1}{|D|} \sum_{D} \sum_{t=0}^{T} \nabla_{w} r(x) \log \left(p_{w}\left(x_{t} \mid x_{t-1}, x_{t-2}, \ldots\right)\right). \tag{4}
+$$</p>
+<h4>挑戰一：直接更新會讓模型亂講話</h4>
+<p>如果只最大化式 (2)，模型可能為了騙高分而產生無意義或離題的文字。解法是加入 <strong>KL 正則化</strong>，讓 RL model 不要離 SFT model 太遠：</p>
+<p>$$
+\underset{w}{\operatorname{maximize}} J(w):=\mathbb{E}_{x \sim p_{w}}\left[r(x)-\beta \operatorname{KL}\left(p_{w}(x) \| p_{\mathrm{SFT}}(x)\right)\right]. \tag{5}
+$$</p>
+<h4>挑戰二：忘記預訓練的 base LLM</h4>
+<p>alignment 過程可能讓模型忘記原本學到的通用知識。解法是再加分預訓練資料的對數似然：</p>
+<p>$$
+\underset{w}{\operatorname{maximize}} J(w):=\mathbb{E}_{x \sim p_{w}}\left[r(x)-\beta \operatorname{KL}\left(p_{w}(x) \| p_{\mathrm{SFT}}(x)\right)\right]+\gamma \mathbb{E}_{x \sim \text{pre-train}}\left[\log \left(p_{w}(x)\right)\right]. \tag{6}
+$$</p>
+<ul>
+<li>式 (2)-(4)：用 policy gradient 最大化 reward。</li>
+<li>式 (5)：加入 KL 正則化，防止模型偏離 SFT。</li>
+<li>式 (6)：再加預訓練 likelihood，防止忘記 base LLM 知識。</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">RLHF Policy Gradient：高分但別走火入魔</text>
+
+  <!-- loop -->
+  <rect x="40" y="80" width="120" height="60" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="100" y="105" text-anchor="middle" font-size="11" fill="#5b21b6" font-weight="bold">RL Model</text>
+  <text x="100" y="125" text-anchor="middle" font-size="9" fill="#7c3aed">(copy of SFT)</text>
+
+  <path d="M160 110 H240" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrB)"/>
+
+  <rect x="240" y="80" width="120" height="60" rx="8" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="300" y="105" text-anchor="middle" font-size="11" fill="#991b1b" font-weight="bold">Generate</text>
+  <text x="300" y="125" text-anchor="middle" font-size="9" fill="#dc2626">response</text>
+
+  <path d="M360 110 H440" stroke="#dc2626" stroke-width="2" marker-end="url(#arrR)"/>
+
+  <rect x="440" y="80" width="120" height="60" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="500" y="105" text-anchor="middle" font-size="11" fill="#166534" font-weight="bold">Reward</text>
+  <text x="500" y="125" text-anchor="middle" font-size="9" fill="#16a34a">Model</text>
+
+  <path d="M500 140 V220" stroke="#16a34a" stroke-width="2" marker-end="url(#arrG)"/>
+  <path d="M500 220 H100" stroke="#16a34a" stroke-width="2" marker-end="url(#arrG)"/>
+  <path d="M100 220 V140" stroke="#16a34a" stroke-width="2" marker-end="url(#arrG)"/>
+  <text x="300" y="245" text-anchor="middle" font-size="10" fill="#16a34a">Policy gradient update</text>
+
+  <!-- challenges -->
+  <rect x="40" y="270" width="300" height="70" rx="8" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="190" y="292" text-anchor="middle" font-size="11" fill="#b91c1c" font-weight="bold">挑戰 1：直接更新會亂講話</text>
+  <text x="190" y="312" text-anchor="middle" font-size="10" fill="#7f1d1d">解法：KL 正則化，讓 RL 別離 SFT 太遠</text>
+  <text x="190" y="330" text-anchor="middle" font-size="9" fill="#7f1d1d">+ β KL( p_RL || p_SFT )</text>
+
+  <rect x="380" y="270" width="300" height="70" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="530" y="292" text-anchor="middle" font-size="11" fill="#92400e" font-weight="bold">挑戰 2：忘記 base LLM</text>
+  <text x="530" y="312" text-anchor="middle" font-size="10" fill="#b45309">解法：加預訓練 likelihood 項</text>
+  <text x="530" y="330" text-anchor="middle" font-size="9" fill="#b45309">+ γ E[ log p_RL(pre-train) ]</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-15" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 頂部一個循環：紫底「RL Model (copy of SFT)」→ 紅底「Generate response」→ 綠底「Reward Model」→ 綠色箭頭回到 RL Model，標「Policy gradient update」。底部兩個警告框：左紅底「挑戰 1：直接更新會亂講話，解法：KL 正則化，讓 RL 別離 SFT 太遠，+ β KL(p_RL || p_SFT)」；右黃底「挑戰 2：忘記 base LLM，解法：加預訓練 likelihood 項，+ γ E[log p_RL(pre-train)]」。
+
+WHY（因果或反直覺）: 強化學習讓模型去「討好」Reward Model，但如果沒有約束，它可能會產生高分但無意義的文字。反直覺：為了讓模型變好，必須同時懲罼它「離 SFT 太遠」與「忘記預訓練知識」，也就是_alignment 不能走極端。
+
+MUST show（必備要素）: ① RL → Generate → Reward → RL 的循環；② Policy gradient update 方向；③ 兩大挑戰區塊用紅/黃警示色；④ KL 正則化與預訓練 likelihood 兩個解法的文字；⑤ 公式用純文字/Unicode，無 LaTeX。
+
+AVOID（禁止）: 不要只畫一個單向箭頭而沒有循環；不要讓兩大挑戰看起來是同一問題；不要把挑戰畫成文字清單而無警示區塊；不要使用 LaTeX 反斜線。
+
+STYLE: flat vector, viewBox 720×360, white background, purple/red/green cycle, red/yellow challenge boxes, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">Policy gradient + KL 正則化</figcaption></figure></div>
+
+\<div class="demo" data-demo-id="kp15">
+  <style>
+    [data-demo-id="kp15"] { border: 1px solid #cbd5e1; border-radius: 14px; overflow: hidden; background: #fff; margin: 16px 0; }
+    [data-demo-id="kp15"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#059669,#047857); color: #fff; font-weight: 700; }
+    [data-demo-id="kp15"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #ecfdf5; }
+    [data-demo-id="kp15"] .demo-controls { flex: 1 1 280px; display: flex; flex-direction: column; gap: 8px; }
+    [data-demo-id="kp15"] .demo-canvas { flex: 1 1 420px; }
+    [data-demo-id="kp15"] canvas { border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp15"] .row { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; }
+    [data-demo-id="kp15"] .row label { min-width: 110px; font-weight: 600; }
+    [data-demo-id="kp15"] input[type="range"] { flex: 1; }
+    [data-demo-id="kp15"] .demo-readout { min-height: 11em; padding: 10px 12px; border: 1px solid #a7f3d0; border-radius: 8px; background: #fff; font-family: ui-monospace, Consolas, monospace; font-size: 0.78rem; line-height: 1.55; white-space: pre-wrap; }
+    [data-demo-id="kp15"] .demo-theory, [data-demo-id="kp15"] .demo-instruction { padding: 10px 18px; font-size: 0.85rem; line-height: 1.7; }
+    [data-demo-id="kp15"] .demo-theory { background: #eef2ff; border-top: 1px solid #e2e8f0; }
+  </style>
+  <div class="demo-head">Demo：Policy Gradient + KL 正則化 式 (2)-(6)</div>
+  <div class="demo-body">
+    <div class="demo-controls">
+      <div class="row"><label>policy 權重 w</label><input type="range" id="kp15-w" min="-4" max="4" step="0.05" value="0"><span id="kp15-w-v">0.000</span></div>
+      <div class="row"><label>reward r_A</label><input type="range" id="kp15-ra" min="0" max="5" step="0.1" value="2"><span id="kp15-ra-v">2.0</span></div>
+      <div class="row"><label>reward r_B</label><input type="range" id="kp15-rb" min="-2" max="3" step="0.1" value="0.5"><span id="kp15-rb-v">0.5</span></div>
+      <div class="row"><label>KL 強度 beta</label><input type="range" id="kp15-beta" min="0" max="2" step="0.05" value="0.5"><span id="kp15-beta-v">0.5</span></div>
+      <div class="row"><label>pretrain 強度 gamma</label><input type="range" id="kp15-gamma" min="0" max="2" step="0.05" value="0.3"><span id="kp15-gamma-v">0.3</span></div>
+      <div class="row"><label>更新步長 alpha</label><input type="range" id="kp15-alpha" min="0" max="1" step="0.05" value="0.5"><span id="kp15-alpha-v">0.5</span></div>
+      <div class="demo-readout" id="kp15-ro"></div>
+    </div>
+    <div class="demo-canvas"><canvas id="kp15-cv" width="520" height="320"></canvas></div>
+  </div>
+  <div class="demo-theory"><strong>原理</strong>：式 (5) 在目標中加入 KL 正則：$J(w)=\mathbb{E}[r(x)-\beta\mathrm{KL}(p_w\|p_{\mathrm{SFT}})]$；式 (6) 再加預訓練 likelihood：$+\gamma\,\mathbb{E}[\log p_w(x)]$。此 demo 把 $p_w$ 視為兩個候選回應上的 softmax，$w$ 決定兩者機率；所有數值由閉式直接計算。</div>
+  <div class="demo-instruction">
+    <strong>這在做什麼：</strong>觀察 policy 在 reward、KL 與預訓練三股力量下的權衡。<br>
+    <strong>怎麼操作：</strong>調 w、r_A、r_B、beta、gamma、alpha。<br>
+    <strong>觀察什麼：</strong>beta=0 且 gamma=0 時，policy 會為了高分而快速偏向 r_A；加大 beta 會把 policy 拉回 SFT 參考分布。<br>
+    <strong>正確基準：</strong>梯度由 E[r]、-beta*KL、+gamma*pretrain 三項的解析導數組成，更新 $w \leftarrow w+\alpha\nabla J$。
+  </div>
+  <script src="demos/demo_kp15.js"></script>
+</div>
+<button class="guide-btn" type="button" data-kp="15" data-guide="kp-15" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：RLHF 第三步：討好評分老師，但別走火入魔</button><div class="quiz" data-ans="B"><p class="q"><p>RLHF 第三步的主要目標是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q15-0" value="A"><span>A. <p>預測下一個 token</p></span></label><label class="opt"><input type="radio" name="q15-0" value="B"><span>B. <p>最大化 reward model 給出的期望分數</p></span></label><label class="opt"><input type="radio" name="q15-0" value="C"><span>C. <p>減少模型參數</p></span></label><label class="opt"><input type="radio" name="q15-0" value="D"><span>D. <p>刪除 attention</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="RLHF 第三步用 policy gradient 微調模型，讓生成回應獲得更高 reward。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>式 (5) 中加入 KL 正則化的原因是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q15-1" value="A"><span>A. <p>讓模型完全偏離 SFT</p></span></label><label class="opt"><input type="radio" name="q15-1" value="B"><span>B. <p>防止 RL model 為了騙高分而產生無意義文字</p></span></label><label class="opt"><input type="radio" name="q15-1" value="C"><span>C. <p>增加訓練速度</p></span></label><label class="opt"><input type="radio" name="q15-1" value="D"><span>D. <p>刪除預訓練知識</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="KL 正則化限制 RL model 與 SFT model 的輸出分布差距，避免模型走火入魔。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>式 (6) 多出來的第三項是為了解決什麼問題？</p></p><div class="opts"><label class="opt"><input type="radio" name="q15-2" value="A"><span>A. <p>讓模型訓練更快</p></span></label><label class="opt"><input type="radio" name="q15-2" value="B"><span>B. <p>防止模型忘記預訓練 base LLM 的知識</p></span></label><label class="opt"><input type="radio" name="q15-2" value="C"><span>C. <p>增加模型大小</p></span></label><label class="opt"><input type="radio" name="q15-2" value="D"><span>D. <p>減少 reward model 的使用</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="透過最大化預訓練資料的對數似然，讓 RL model 保持對 base LLM 知識的記憶。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>Policy gradient 中的 $w$ 代表什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q15-3" value="A"><span>A. <p>輸入 token</p></span></label><label class="opt"><input type="radio" name="q15-3" value="B"><span>B. <p>RL model 的權重</p></span></label><label class="opt"><input type="radio" name="q15-3" value="C"><span>C. <p>學習率</p></span></label><label class="opt"><input type="radio" name="q15-3" value="D"><span>D. <p>reward model 的輸出</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="$w$ 是 RL model（即 policy）的權重參數，policy gradient 用來更新它。"></div></div></div></section>
+<section id="kp16" class="card" data-kp="16"><div class="card-head"><span class="badge">9-10</span><h3>DPO：LLM 自己當 reward + 總結</h3><span class="toggle">▼</span></div><div class="card-body"><h4>直覺：不用另外訓練評分老師，模型自己就能比較好壞</h4>
+<p><strong>Direct Preference Optimization（DPO）</strong>是一種比 RLHF 更簡單的 alignment 方法。它不需要單獨的 reward model，也不需要強化學習，直接用「成對偏好資料」進行監督式微調。</p>
+<p>DPO 分兩步：</p>
+<ol>
+<li>先進行 <strong>SFT</strong>，得到參考模型 $\pi_{\mathrm{ref}}$。</li>
+<li>再初始化一個與 $\pi_{\mathrm{ref}}$ 相同的模型 $\pi_{\theta}$，最小化 DPO 損失：</li>
+</ol>
+<p>$$
+\underset{\theta}{\operatorname{minimize}} \mathcal{L}_{\mathrm{DPO}}(\theta):=-\mathbb{E}_{\left(\boldsymbol{x}, y_{w}, y_{l}\right)}\left[\log \sigma\left(\beta \log \left(\frac{\pi_{\theta}\left(y_{w} \mid \boldsymbol{x}\right)}{\pi_{\mathrm{ref}}\left(y_{w} \mid \boldsymbol{x}\right)}\right)-\beta \log \left(\frac{\pi_{\theta}\left(y_{l} \mid \boldsymbol{x}\right)}{\pi_{\mathrm{ref}}\left(y_{l} \mid \boldsymbol{x}\right)}\right)\right)\right]. \tag{7}
+$$</p>
+<p>利用對數性質可改寫為：</p>
+<p>$$
+\mathcal{L}_{\mathrm{DPO}}(\theta)=-\mathbb{E}_{\left(\boldsymbol{x}, y_{w}, y_{l}\right)}\left[\log \sigma\left(\beta \log \left(\frac{\pi_{\theta}\left(y_{w} \mid \boldsymbol{x}\right) / \pi_{\mathrm{ref}}\left(y_{w} \mid \boldsymbol{x}\right)}{\pi_{\theta}\left(y_{l} \mid \boldsymbol{x}\right) / \pi_{\mathrm{ref}}\left(y_{l} \mid \boldsymbol{x}\right)}\right)\right)\right] . \tag{8}
+$$</p>
+<h4>三種情況</h4>
+<ul>
+<li>若 $\pi_{\mathrm{ref}}$ 對兩個回應無所謂，DPO 會強烈偏好 $y_{w}$。</li>
+<li>若 $\pi_{\mathrm{ref}}$ 已經偏好 $y_{w}$，DPO 只會微調。</li>
+<li>若 $\pi_{\mathrm{ref}}$ 反而偏好 $y_{l}$，DPO 會強烈修正。</li>
+</ul>
+<figure class="orig-fig">
+<img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-313_874_1253_195_249.jpg" alt="DPO pipeline">
+<figcaption>Fig. 4 DPO 方法：SFT 後直接用成對偏好資料微調，無需 reward model。</figcaption>
+</figure>
+
+<h4>本章總結</h4>
+<ul>
+<li>BERT 與 GPT 是 Transformer 的兩大分支，分別專注理解與生成。</li>
+<li>T5 統一了 text-to-text 框架。</li>
+<li>Alignment 讓 LLM 不只會接龍，更能符合人類價值與指令。</li>
+<li>RLHF 與 DPO 是兩種最廣泛使用的 alignment 方法。</li>
+</ul><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, 微軟正黑體, sans-serif">
+<defs>
+  <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+  <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+  <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker>
+  <marker id="arrK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1f2937"/></marker>
+</defs>
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#5b21b6">DPO：LLM 自己當 Reward Model，三種修正情境</text>
+
+  <!-- top: RLHF vs DPO -->
+  <rect x="40" y="55" width="300" height="80" rx="8" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="190" y="80" text-anchor="middle" font-size="12" fill="#991b1b" font-weight="bold">RLHF</text>
+  <text x="190" y="100" text-anchor="middle" font-size="10" fill="#dc2626">SFT → Reward Model → RL</text>
+  <text x="190" y="118" text-anchor="middle" font-size="9" fill="#6b7280">三步，需要 RL</text>
+
+  <text x="360" y="100" text-anchor="middle" font-size="14" fill="#1f2937" font-weight="bold">vs</text>
+
+  <rect x="380" y="55" width="300" height="80" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="530" y="80" text-anchor="middle" font-size="12" fill="#166534" font-weight="bold">DPO</text>
+  <text x="530" y="100" text-anchor="middle" font-size="10" fill="#16a34a">SFT → Direct Preference Loss</text>
+  <text x="530" y="118" text-anchor="middle" font-size="9" fill="#6b7280">兩步，無需 Reward Model</text>
+
+  <!-- three cases -->
+  <text x="360" y="160" text-anchor="middle" font-size="12" fill="#5b21b6" font-weight="bold">DPO 三種偏好修正情境</text>
+
+  <g transform="translate(50,180)">
+    <rect x="0" y="0" width="190" height="100" rx="8" fill="#dbeafe" stroke="#2563eb"/>
+    <text x="95" y="25" text-anchor="middle" font-size="11" fill="#1e3a8a" font-weight="bold">Reference 無所謂</text>
+    <text x="95" y="48" text-anchor="middle" font-size="9" fill="#2563eb">π_ref(y_w) ≈ π_ref(y_l)</text>
+    <text x="95" y="68" text-anchor="middle" font-size="10" fill="#1f2937">DPO 強烈偏好 y_w</text>
+    <path d="M50 85 H140" stroke="#2563eb" stroke-width="3" marker-end="url(#arrB)"/>
+  </g>
+
+  <g transform="translate(265,180)">
+    <rect x="0" y="0" width="190" height="100" rx="8" fill="#ede9fe" stroke="#7c3aed"/>
+    <text x="95" y="25" text-anchor="middle" font-size="11" fill="#5b21b6" font-weight="bold">Reference 已偏好 y_w</text>
+    <text x="95" y="48" text-anchor="middle" font-size="9" fill="#7c3aed">π_ref(y_w) &gt; π_ref(y_l)</text>
+    <text x="95" y="68" text-anchor="middle" font-size="10" fill="#1f2937">DPO 只做微調</text>
+    <path d="M55 88 H135" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrB)"/>
+  </g>
+
+  <g transform="translate(480,180)">
+    <rect x="0" y="0" width="190" height="100" rx="8" fill="#fef3c7" stroke="#d97706"/>
+    <text x="95" y="25" text-anchor="middle" font-size="11" fill="#92400e" font-weight="bold">Reference 偏好 y_l</text>
+    <text x="95" y="48" text-anchor="middle" font-size="9" fill="#b45309">π_ref(y_w) &lt; π_ref(y_l)</text>
+    <text x="95" y="68" text-anchor="middle" font-size="10" fill="#1f2937">DPO 強烈修正</text>
+    <path d="M50 85 L140 85" stroke="#d97706" stroke-width="4" marker-end="url(#arrK)"/>
+  </g>
+
+  <!-- bottom formula -->
+  <rect x="40" y="295" width="640" height="45" rx="8" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text x="360" y="322" text-anchor="middle" font-size="11" fill="#1f2937">DPO Loss：-E[ log σ( β log( πθ(y_w|x)/π_ref(y_w|x)  ÷  πθ(y_l|x)/π_ref(y_l|x) ) ) ]</text>
+
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-16" data-status="pending"><details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 頂部左右對比：左紅底「RLHF：SFT → Reward Model → RL（三步，需要 RL）」；右綠底「DPO：SFT → Direct Preference Loss（兩步，無需 Reward Model）」。中部標題「DPO 三種偏好修正情境」。下方三個並排情境框：藍底「Reference 無所謂，π_ref(y_w) ≈ π_ref(y_l)，DPO 強烈偏好 y_w」，配粗藍箭頭；紫底「Reference 已偏好 y_w，π_ref(y_w) &gt; π_ref(y_l)，DPO 只做微調」，配細紫箭頭；黃底「Reference 偏好 y_l，π_ref(y_w) &lt; π_ref(y_l)，DPO 強烈修正」，配粗黃箭頭。底部灰底長條寫 DPO Loss 公式文字。
+
+WHY（因果或反直覺）: DPO 發現語言模型本身就可以當 reward model，直接用偏好資料進行監督式微調，省去了訓練 reward model 與 RL 的複雜性。反直覺：DPO 不是「更簡化所以更弱」，而是利用 SFT 模型作為參考，根據它原本的偏好程度動態調整修正強度。
+
+MUST show（必備要素）: ① RLHF 與 DPO 流程對比；② 三種 reference 偏好情境；③ 箭頭粗細表示修正強度；④ 公式用純文字/Unicode 呈現；⑤ 強調 DPO 無需 reward model。
+
+AVOID（禁止）: 不要讓三種情境看起來修正強度相同；不要把 DPO 畫成三階段；不要用 LaTeX 反斜線；不要遺漏 reference 模型在 DPO 中的作用。
+
+STYLE: flat vector, viewBox 720×360, white background, red vs green top blocks, blue/purple/yellow scenario boxes, varying arrow thickness, Chinese + English labels.</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">DPO：模型自己當 reward，偏好優化</figcaption></figure></div>
+
+\<div class="demo" data-demo-id="kp16">
+  <style>
+    [data-demo-id="kp16"] { border: 1px solid #cbd5e1; border-radius: 14px; overflow: hidden; background: #fff; margin: 16px 0; }
+    [data-demo-id="kp16"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#d97706,#b45309); color: #fff; font-weight: 700; }
+    [data-demo-id="kp16"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #fffbeb; }
+    [data-demo-id="kp16"] .demo-controls { flex: 1 1 280px; display: flex; flex-direction: column; gap: 8px; }
+    [data-demo-id="kp16"] .demo-canvas { flex: 1 1 420px; }
+    [data-demo-id="kp16"] canvas { border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp16"] .row { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; }
+    [data-demo-id="kp16"] .row label { min-width: 130px; font-weight: 600; }
+    [data-demo-id="kp16"] input[type="range"] { flex: 1; }
+    [data-demo-id="kp16"] select { padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; }
+    [data-demo-id="kp16"] .demo-readout { min-height: 10em; padding: 10px 12px; border: 1px solid #fde68a; border-radius: 8px; background: #fff; font-family: ui-monospace, Consolas, monospace; font-size: 0.78rem; line-height: 1.55; white-space: pre-wrap; }
+    [data-demo-id="kp16"] .demo-theory, [data-demo-id="kp16"] .demo-instruction { padding: 10px 18px; font-size: 0.85rem; line-height: 1.7; }
+    [data-demo-id="kp16"] .demo-theory { background: #eef2ff; border-top: 1px solid #e2e8f0; }
+  </style>
+  <div class="demo-head">Demo：DPO Loss 式 (7)-(8) 三種偏好情境</div>
+  <div class="demo-body">
+    <div class="demo-controls">
+      <div class="row"><label>偏好情境</label><select id="kp16-scenario"><option value="indifferent">Reference 無所謂</option><option value="already">Reference 已偏好 y_w</option><option value="wrong">Reference 偏好 y_l</option></select></div>
+      <div class="row"><label>beta</label><input type="range" id="kp16-beta" min="0.1" max="2" step="0.1" value="1"><span id="kp16-beta-v">1.0</span></div>
+      <div class="row"><label>pi_theta(y_w)</label><input type="range" id="kp16-pw" min="0.01" max="0.99" step="0.01" value="0.6"><span id="kp16-pw-v">0.60</span></div>
+      <div class="row"><label>pi_theta(y_l)</label><input type="range" id="kp16-pl" min="0.01" max="0.99" step="0.01" value="0.4"><span id="kp16-pl-v">0.40</span></div>
+      <div class="demo-readout" id="kp16-ro"></div>
+    </div>
+    <div class="demo-canvas"><canvas id="kp16-cv" width="520" height="300"></canvas></div>
+  </div>
+  <div class="demo-theory"><strong>原理</strong>：式 (8) $\mathcal{L}_{\mathrm{DPO}}=-\mathbb{E}[\log\sigma(\beta\log\frac{\pi_\theta(y_w)/\pi_{\mathrm{ref}}(y_w)}{\pi_\theta(y_l)/\pi_{\mathrm{ref}}(y_l)})]$。當參考模型已偏好 $y_w$，比值大於 1，loss 小；當參考偏好 $y_l$，比值小於 1，DPO 須強烈修正。</div>
+  <div class="demo-instruction">
+    <strong>這在做什麼：</strong>切換三種參考偏好，觀察 DPO 損失如何反應。<br>
+    <strong>怎麼操作：</strong>選情境、調 beta、調 policy 對 y_w / y_l 的機率。<br>
+    <strong>觀察什麼：</strong>Reference 偏好 y_l 時，即使 pi_theta(y_w) 略高，loss 仍可能很大，因為需要扭轉參考分布。<br>
+    <strong>正確基準：</strong>term = beta * log((pi_theta(y_w)/pi_ref(y_w)) / (pi_theta(y_l)/pi_ref(y_l)))；loss = -log sigmoid(term)。
+  </div>
+  <script src="demos/demo_kp16.js"></script>
+</div>
+<button class="guide-btn" type="button" data-kp="16" data-guide="kp-16" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：DPO：不用 reward model，模型自己當評審</button><div class="quiz" data-ans="B"><p class="q"><p>DPO 與 RLHF 相比，最大的簡化是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q16-0" value="A"><span>A. <p>需要更多的資料</p></span></label><label class="opt"><input type="radio" name="q16-0" value="B"><span>B. <p>不需要 reward model 與強化學習</p></span></label><label class="opt"><input type="radio" name="q16-0" value="C"><span>C. <p>必須從頭訓練模型</p></span></label><label class="opt"><input type="radio" name="q16-0" value="D"><span>D. <p>只能處理英文</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="DPO 直接用成對偏好資料進行監督式微調，無需額外訓練 reward model 或使用 RL。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>DPO 的參考模型 $\pi_{\mathrm{ref}}$ 是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q16-1" value="A"><span>A. <p>預訓練 base LLM</p></span></label><label class="opt"><input type="radio" name="q16-1" value="B"><span>B. <p>經過 SFT 後凍結的模型</p></span></label><label class="opt"><input type="radio" name="q16-1" value="C"><span>C. <p>Reward model</p></span></label><label class="opt"><input type="radio" name="q16-1" value="D"><span>D. <p>隨機初始化模型</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="$\pi_{\mathrm{ref}}$ 是 SFT 後凍結的模型，用來提供相對比較的基準。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>式 (8) 中，若 $\pi_{\mathrm{ref}}$ 已經偏好 $y_{w}$，DPO 會怎麼做？</p></p><div class="opts"><label class="opt"><input type="radio" name="q16-2" value="A"><span>A. <p>強烈修正</p></span></label><label class="opt"><input type="radio" name="q16-2" value="B"><span>B. <p>只做微調</p></span></label><label class="opt"><input type="radio" name="q16-2" value="C"><span>C. <p>完全不改變</p></span></label><label class="opt"><input type="radio" name="q16-2" value="D"><span>D. <p>偏好 $y_{l}$</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="當參考模型已偏好勝出回應時，DPO 損失較小，只會微調模型。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>下列哪一句最能總結本章？</p></p><div class="opts"><label class="opt"><input type="radio" name="q16-3" value="A"><span>A. <p>BERT 與 GPT 都是 RNN</p></span></label><label class="opt"><input type="radio" name="q16-3" value="B"><span>B. <p>LLM 的 alignment 確保輸出符合人類價值，RLHF 與 DPO 是主要方法</p></span></label><label class="opt"><input type="radio" name="q16-3" value="C"><span>C. <p>T5 是純 decoder 模型</p></span></label><label class="opt"><input type="radio" name="q16-3" value="D"><span>D. <p>Chain-of-Thought 會降低推理能力</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="本章介紹 BERT/GPT/T5 等基礎架構，並以 RLHF 與 DPO 討論 LLM alignment。"></div></div></div></section></main></div>
+<footer>依 Elements of Deep Learning (Ghojogh &amp; Ghodsi) Ch11 改寫 · 自學用</footer>
+<script>
+(function(){
+function renderMath(){if(window.katex && window.renderMathInElement) window.renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"\\[",right:"\\]",display:true},{left:"\\(",right:"\\)",display:false},{left:"$",right:"$",display:false}],throwOnError:false,ignoredClasses:['katex']});}
+window.renderMath=renderMath;
+var cards=document.querySelectorAll('.card');
+function upd(){var n=cards.length,done=0;cards.forEach(function(c){if(c.classList.contains('done'))done++;});var pct=Math.round(done/n*100);document.getElementById('pf').style.width=pct+'%';document.getElementById('ptxt').textContent='已完成 '+done+' / '+n+'（'+pct+'%）';}
+cards.forEach(function(c){c.querySelector('.card-head').addEventListener('click',function(){c.classList.toggle('collapsed');});c.querySelectorAll('.quiz').forEach(function(qz){var btn=qz.querySelector('.check'),fb=qz.querySelector('.fb');btn.addEventListener('click',function(){var sel=qz.querySelector('input:checked');if(!sel){fb.className='fb wrong';fb.textContent='請先選擇答案。';return;}if(sel.value===qz.dataset.ans){fb.className='fb ok';fb.textContent='✓ 正確！';c.classList.add('done');} else {fb.className='fb wrong';fb.innerHTML='✗ 答錯：'+qz.querySelector('.fb').dataset.expl;if(window.renderMath)window.renderMath();}upd();});});});
+window.addEventListener('load',function(){setTimeout(renderMath,50);upd();});
+})();
+</script>
+<div id="guide-modal"><div class="modal-box"><button class="close" type="button" aria-label="關閉">×</button><h1 id="guide-title"></h1><div class="modal-body" id="guide-body"></div></div></div>
+<script data-phase-d="guides">
+window.__GUIDES__={"1": {"title": "教授祕笈：BERT 與 GPT 的「閱讀者 vs 寫手」分工", "body": "<p>同學，Transformer 是一塊積木，但同一塊積木可以蓋出兩種完全不同的建築。BERT 與 GPT 都是 Transformer，只差在「看文本的方向」，目標就從「理解」變成「生成」。</p> <h2>先把任務講成一句人話</h2> <p>BERT 學的是「讀完全文再回答」，GPT 學的是「看到前面就寫下一個字」。一個是閱讀理解選手，一個是接龍寫手。</p> <h2>鷹架式：先直覺，再符號</h2> <ul> <li>BERT 只保留 Transformer 的 encoder，每個 token 都能看完整句話：雙向（bidirectional）注意力。</li> <li>GPT 只保留 decoder，並加上因果遮罩，每個 token 只能看已經出現的字：單向（autoregressive）注意力。</li> </ul> <p>符號上，BERT 學的是上下文相關嵌入：</p> <p>$$ \\mathbf{h}_{\\mathrm{BERT}}^{(i)}=\\mathrm{Encoder}(x_1,\\dots,x_T). $$</p> <p>GPT 學的是條件機率：</p> <p>$$ p(x_t\\mid x_1,\\dots,x_{t-1}). $$</p> <h2>真的算一遍：同一個詞在不同方向下的命運</h2> <p>假設輸入是 \"bank\"：</p> <ul> <li>BERT 會同時看到 \"Money is in the bank\" 的左右文，於是知道這是「銀行」。</li> <li>GPT 只看到 \"Money is in the \"，然後預測下一個詞可能是 \"bank\"，但不會看到後面的句子。</li> </ul> <p>同一個詞，因為看的方向不同，學到的表示也不同。</p> <h2>先留一個反轉</h2> <p>你可能以為「BERT 只能分類、GPT 只能生成」。反轉是：BERT 也可以拿來生成（雖然不自然），GPT 也可以用 few-shot prompt 做分類或問答。架構偏好不等於任務限制，只是效率與效果的差別。</p> <h2>換個場景，自己找出同一條路</h2> <p>把 Transformer 想成一支麥克風：BERT 是會議室的全向麥，同時收錄全場聲音；GPT 是演講台上的單向麥，只收它前面已經說過的話。兩者錄到的內容一樣，用途卻不同。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：BERT 與 GPT 的差異是訓練資料不同。錯，核心差異是架構方向。第二個誤解：GPT 有 decoder 就一定比 BERT 強。錯，BERT 在許多理解任務上仍然更快、更便宜。第三個誤解：現代 LLM 都是 BERT 風格。錯，GPT-style decoder-only 才是當前主流。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-2 會把 BERT 的 encoder stack 拆開來看。</li> <li>KP-3 的遮罩語言建模，正是利用 BERT 的雙向性。</li> <li>KP-6 會把 GPT 的因果遮罩講清楚。</li> <li>KP-9 的 T5 則把 encoder 與 decoder 結合在一起。</li> </ul> <h2>換句話重述</h2> <p>BERT 看完全文再產生表示，適合理解；GPT 只看前文預測下一詞，適合生成。兩者都是 Transformer，方向決定任務。</p> <p><strong>一句話收尾：</strong> BERT 是讀完文章才下筆的讀者，GPT 是邊寫邊看的接龍寫手。</p>"}, "2": {"title": "教授祕笈：BERT 就是一疊 encoder block", "body": "<p>同學，BERT 的結構說穿了很單純：把 Chap.9 的 Transformer encoder 一層一層往上疊。難的不是疊，而是每一層都讓每個詞「偷看」完整句話。</p> <h2>先把任務講成一句人話</h2> <p>每一層 encoder 都問：「這個詞在整句話裡該怎麼理解？」問完之後，把答案濃縮成一個新向量，再傳給下一層。</p> <h2>鷹架式：先直覺，再符號</h2> <p>一個 encoder block 裡面有三件事：</p> <ol> <li>Multi-head self-attention：詞與詞之間互相打分數。</li> <li>Feed-forward network：把每個詞的向量再加工。</li> <li>Layer norm + residual connection：讓訓練穩定。</li> </ol> <p>符號上，第 $l$ 層的輸出可以寫成：</p> <p>$$ \\mathbf{H}^{(l)}=\\mathrm{LayerNorm}\\left(\\mathbf{H}^{(l-1)}+\\mathrm{FFN}\\left(\\mathrm{LayerNorm}\\left(\\mathbf{H}^{(l-1)}+\\mathrm{SelfAttn}(\\mathbf{H}^{(l-1)})\\right)\\right)\\right). $$</p> <p>輸入是 token embedding 加上位置編碼，輸出是每個位置的上下文向量。</p> <h2>真的算一遍：BERT-Base 的數字</h2> <p>BERT-Base 是 12 層 encoder、768 維 hidden、12 個 attention heads。每個 token 走進去是 768 維，經過 12 層後還是 768 維，但裡面已經混完整句話的資訊。</p> <h2>先留一個反轉</h2> <p>你可能會想：層數越多，模型越懂。反轉在：BERT 沒有 decoder，所以它不會「生成」下一個詞。如果你直接拿 BERT 做生成，它會給出一堆上下文向量，而不是一個個接龍的字。生成任務需要額外的解碼結構。</p> <h2>換個場景，自己找出同一條路</h2> <p>想像全班同學一起整理一份報告。Self-attention 是每個人同時問其他人：「你覺得這段該怎麼理解？」FFN 是每個人根據別人的意見，把自己的筆記再寫一遍。Layer norm 則是確保沒有人激動到偏離主題。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：BERT 只是查詢詞向量表。錯，BERT 的向量是上下文相關的，同詞不同句會不同。第二個誤解：<code>[CLS]</code> 是用來分隔句子。錯，<code>[SEP]</code> 才是分隔符，<code>[CLS]</code> 是整句摘要。第三個誤解：雙向注意力表示每個詞只看左邊與右邊一次。錯，它是一次性關注整句話所有位置。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-3 的遮罩語言建模，正是靠這個雙向結構才能猜中被遮住的詞。</li> <li>KP-4 會把 <code>[CLS]</code> 拿出來當句子嵌入，接分類器。</li> <li>KP-5 的 DistilBERT 則是把這疊 encoder 變薄變快。</li> </ul> <h2>換句話重述</h2> <p>BERT 是一疊 encoder，每一層都讓所有詞互相對話，最後輸出上下文向量。它沒有 decoder，所以專長是理解而不是生成。</p> <p><strong>一句話收尾：</strong> BERT 的每一層都在開全班會議，讓每個詞聽完整句話後再決定自己是誰。</p>"}, "3": {"title": "教授祕笈：遮住 15% 的詞，逼模型讀懂上下文", "body": "<p>同學，BERT 並沒有人告訴它每個詞的意思，而是讓它玩「填空題」。這個填空題叫做遮罩語言建模（Masked Language Modeling, MLM）。</p> <h2>先把任務講成一句人話</h2> <p>隨機把句子裡約 15% 的詞蓋住，讓模型根據左右兩邊剩下的詞，把被蓋住的詞猜回來。</p> <h2>鷹架式：先直覺，再符號</h2> <p>直覺上，如果要猜 \"Money is in the [MASK]\"，模型必須同時看到左邊的 \"Money is in the\" 與右邊可能出現的後文，才能判斷 [MASK] 是 \"bank\" 而不是 \"river\"。</p> <p>符號上，對每個被遮罩的位置 $m$，損失是：</p> <p>$$ \\mathcal{L}_{\\mathrm{MLM}}=-\\sum_{m\\in\\mathcal{M}}\\log P(x_m\\mid x_{\\setminus\\mathcal{M}}). $$</p> <p>其中 $\\mathcal{M}$ 是被遮罩的位置集合，約占全部 token 的 15%。</p> <h2>真的算一遍：10 個詞遮幾個</h2> <p>假設一句話有 10 個 token，15% 就是 1.5，實作上會遮 1 到 2 個。20 個 token 就遮 3 個。遮太少沒挑戰，遮太多上下文不夠，15% 是經驗上抓出來的平衡點。</p> <h2>先留一個反轉</h2> <p>你可能以為遮罩比例越高，模型學得越強。反轉是：遮太多時，上下文被破壞得太嚴重，模型反而學不到穩定的語義關聯。BERT 的 15% 不是隨便定的，而是效率與難度的折衷。</p> <h2>換個場景，自己找出同一條路</h2> <p>想像老師出一張克漏字考卷：挖掉一些單字讓你填。如果你只能看挖空前的那幾個字，那就是 GPT 的單向接龍；如果你可以看整段文章，那就是 BERT 的雙向 MLM。後者明顯比較像真正的閱讀理解。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：BERT 預測下一個詞。錯，BERT 預測的是被遮罩的任意位置。第二個誤解：<code>[MASK]</code> 在微調時也會出現。錯，<code>[MASK]</code> 只在預訓練出現。第三個誤解：15% 是黃金比例，不能改。錯，它是經驗值，特定任務可以調整。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-2 的雙向 encoder 讓 MLM 成為可能。</li> <li>KP-4 微調時會把 <code>[MASK]</code> 拿掉，換成實際任務。</li> <li>KP-5 提到 RoBERTa 使用動態遮罩，每次 epoch 遮不同位置。</li> </ul> <h2>換句話重述</h2> <p>MLM 透過隨機遮罩與雙向上下文預測，讓 BERT 學到詞的語境意義。它不需要人工標籤，是一種自監督學習。</p> <p><strong>一句話收尾：</strong> 挖空讓 BERT 學會瞻前顧後，同一個詞在不同句子裡會有不一樣的面孔。</p>"}, "4": {"title": "教授祕笈：把預訓練的閱讀能力接到你的任務", "body": "<p>同學，BERT 預訓練完後就像一個讀過很多書的人，但還沒有針對任何考試練習。微調（fine-tuning）就是讓它適應你的特定任務。</p> <h2>先把任務講成一句人話</h2> <p>在 BERT 頂端加一層或多層任務專用輸出，然後用你手上的標籤資料去調整 BERT，讓它從「會讀書」變成「會考試」。</p> <h2>鷹架式：先直覺，再符號</h2> <p>有兩種調整策略：</p> <ul> <li><strong>凍結 BERT</strong>：只訓練新任務的輸出層，速度快但效果可能較差。</li> <li><strong>整體微調</strong>：讓 BERT 內部權重也跟著更新，效果通常更好。</li> </ul> <p>符號上，句子分類可以寫成：</p> <p>$$ y=\\mathrm{softmax}(\\mathbf{W}\\cdot \\mathbf{h}_{[\\mathrm{CLS}]}+b). $$</p> <p>其中 $\\mathbf{h}_{[\\mathrm{CLS}]}$ 是 <code>[CLS]</code> token 在最頂層的隱藏狀態，當作整句的句子嵌入。</p> <h2>真的算一遍：情感分析的例子</h2> <p>假設輸入是 \"這部電影很好看\"，經過 BERT 後，<code>[CLS]</code> 變成 768 維向量。我們接一個線性層：</p> <p>$$ \\mathbf{W}\\in\\mathbb{R}^{2\\times 768},\\quad b\\in\\mathbb{R}^{2}, $$</p> <p>輸出兩個分數，分別對應「正面」與「負面」。</p> <h2>先留一個反轉</h2> <p>你可能想：凍結 BERT 比較省算力，應該先用。反轉是：對於資料充足的下任教務，整體微調通常顯著更好，因為它能讓 BERT 內部的表示也適應新任務。凍結只適合資料很少或想省算力的場景。</p> <h2>換個場景，自己找出同一條路</h2> <p>把 BERT 想成一位已經學會中文的外國人。預訓練是他讀了大量中文書；微調則是針對特定考試題型（如國考、多益）做衝刺。衝刺時如果只教答題技巧（凍結 BERT）當然有幫助，但如果連語感也一起調整（整體微調），成績通常更好。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：<code>[CLS]</code> 是用來分隔兩個句子。錯，<code>[SEP]</code> 才是分隔符。第二個誤解：微調等於從頭訓練。錯，微調是從預訓練權重出發。第三個誤解：BERT 只能用於句子分類。錯，token 級任務（如命名實體辨識）直接拿每個 token 的向量即可。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-2 提供 encoder 輸出向量。</li> <li>KP-3 的預訓練目標讓這些向量有意義。</li> <li>KP-5 的領域專用 BERT 本質上就是在大規模領域資料上預訓練後再微調。</li> </ul> <h2>換句話重述</h2> <p>微調把通用語言模型轉成任務專家。<code>[CLS]</code> 是整句話的摘要，常被拿來做分類。</p> <p><strong>一句話收尾：</strong> BERT 先學會語言，再學你的任務；<code>[CLS]</code> 就是整句話交給分類器的名片。</p>"}, "5": {"title": "教授祕笈：BERT 家族：變大、變小、變專業", "body": "<p>同學，原始 BERT 雖然強，但對手機與嵌入式裝置來說太大了。研究者於是發展出變大、變小、變專業的各種版本。</p> <h2>先把任務講講成一句人話</h2> <p>調整層數與維度可以改變模型大小；用知識蒸餾可以讓小模型學大模型；換訓練資料可以讓模型變成特定領域專家。</p> <h2>鷹架式：先直覺，再符號</h2> <p>參數量大致與層數 $L$ 和隱藏維度 $H$ 有關，Transformer 層的複雜度約為 $O(L\\cdot H^2)$。因此：</p> <ul> <li>BERT-Base：$L=12, H=768$，約 1.1 億參數。</li> <li>BERT-Large：$L=24, H=1024$，約 3.4 億參數。</li> </ul> <p>蒸餾的損失通常包含：</p> <p>$$ \\mathcal{L}_{\\mathrm{distill}}=(1-\\lambda)\\mathcal{L}_{\\mathrm{task}}+\\lambda\\mathcal{L}_{\\mathrm{soft}}. $$</p> <p>其中 $\\mathcal{L}_{\\mathrm{soft}}$ 讓小模型模仿大模型的軟標籤分布。</p> <h2>真的算一遍：DistilBERT 省多少</h2> <p>DistilBERT 有 6 層、768 維，大小約為 BERT-Base 的 40%，速度約快 60%，在 GLUE 上仍保留約 97% 的 BERT-Base 表現。</p> <h2>先留一個反轉</h2> <p>你可能以為模型越大，實務上就一定越好。反轉是：在推理成本與延遲敏感的場景（手機、邊緣裝置、即時對話），一個經過蒸餾的小模型往往比大模型更有價值。大小與效果的 trade-off 才是重點。</p> <h2>換個場景，自己找出同一條路</h2> <p>把 BERT 家族想成汽車市場：BERT-Large 是豪華轎車，性能最好但耗油；DistilBERT 是省油小車，適合通勤；BioBERT、FinBERT 則是針對不同地形（醫療、金融）改造的特仕車。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：DistilBERT 只是把 BERT 的層數砍掉一半。錯，它還用軟標籤蒸餾保留行為。第二個誤解：RoBERTa 比 BERT 小。錯，RoBERTa 是優化訓練流程的更大版本。第三個誤解：領域專用 BERT 改了架構。錯，它們通常只換訓練資料。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-2 介紹了原始 BERT 的架構。</li> <li>KP-4 的微調可以接在各種變體上。</li> <li>KP-10 的生態系地圖會把這些變體放進更廣的 LLM 版圖。</li> </ul> <h2>換句話重述</h2> <p>BERT 家族透過調整規模、蒸餾與領域資料，讓同一個架構適應不同資源與任務。</p> <p><strong>一句話收尾：</strong> BERT 可以長大、瘦身，也可以變成某個領域的特務專家。</p>"}, "6": {"title": "教授祕笈：GPT：只往左看，一個字一個字寫", "body": "<p>同學，BERT 是讀完全文才回答，GPT 則是一邊寫一邊看。這個「不能偷看後面」的限制，就是 GPT 能生成流暢文字的原因。</p> <h2>先把任務講成一句人話</h2> <p>GPT 每次只看到目前已經寫出來的字，然後預測下一個字應該是什麼。重複這個動作，就能寫出完整句子。</p> <h2>鷹架式：先直覺，再符號</h2> <p>GPT 只使用 Transformer 的 decoder，並移除 cross-attention，因為沒有 encoder 輸出可以參考。它使用因果遮罩（causal mask）：</p> <p>$$ M_{ij}=\\begin{cases}1 & i\\ge j,\\\\0 & i\\lt j.\\end{cases} $$</p> <p>這表示位置 $i$ 只能關注位置 $j\\le i$。</p> <p>訓練目標是：</p> <p>$$ \\mathcal{L}_{\\mathrm{CLM}}=-\\sum_t\\log p(x_t\\mid x_1,\\dots,x_{t-1}). $$</p> <h2>真的算一遍：長度 4 的遮罩</h2> <p>對於序列 $[x_1,x_2,x_3,x_4]$，注意力矩陣是下三角：</p> <p><div style=\"white-space:pre;font-family:monospace;font-size:.85rem;\">x1: 只能看 x1 x2: 只能看 x1, x2 x3: 只能看 x1, x2, x3 x4: 只能看 x1, x2, x3, x4 </div></p> <p>這就是 GPT 無法偷看未來的數學表達。</p> <h2>先留一個反轉</h2> <p>你可能會覺得「不能看未來」是個弱點。反轉是：正因為有這個限制，GPT 才能用同一個模型進行自回歸生成——每次只產生一個 token，再把它餵回輸入。如果像 BERT 一樣雙向，生成時就不知道下一步該放什麼。</p> <h2>換個場景，自己找出同一條路</h2> <p>想像玩故事接龍：每個人只能根據前面已經寫好的段落續寫。你不能翻後面幾頁看結局，否則就不公平。GPT 就是這樣一個永遠只能「接著寫」的模型。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：GPT 沒有 attention。錯，它有 masked self-attention。第二個誤解：GPT 只能生成，不能做分類。錯，用適當 prompt 可以做 few-shot 分類。第三個誤解：decoder 一定有 cross-attention。錯，GPT 是 decoder-only，沒有 encoder 就沒有 cross-attention。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-1 對比了 BERT 與 GPT 的方向。</li> <li>KP-7 的 Chain-of-Thought 讓 GPT 的生成更有條理。</li> <li>KP-8 會看到 GPT 家族如何把這個架構一路放大。</li> <li>KP-14 的 SFT 就是從預訓練 GPT 開始。</li> </ul> <h2>換句話重述</h2> <p>GPT 是 decoder-only 模型，用因果遮罩強迫每個 token 只看過去的上下文。這讓它擅長自回歸生成。</p> <p><strong>一句話收尾：</strong> GPT 寫文章時不能偷看後面，所以只能照著前面的脈絡，一個字一個字接下去。</p>"}, "7": {"title": "教授祕笈：不要只給答案，要示範「怎麼想」", "body": "<p>同學，LLM 有時不是不會算，而是沒被提醒要「寫出過程」。Chain-of-Thought prompting 就是在 prompt 裡給它幾個「寫過程」的範例，讓它跟著模仿。</p> <h2>先把任務講成一句人話</h2> <p>標準 prompt 是「問題 → 答案」；CoT prompt 是「問題 → 一步一步推理 → 答案」。模型看到範例後，會在生成答案前先把中間思考寫出來。</p> <h2>鷹架式：先直覺，再符號</h2> <p>直覺上，LLM 在訓練資料裡看過大量「人類解釋推理過程」的文字。當 prompt 也提供這種結構，模型就會觸發類似行為。</p> <p>符號上，差別在條件分佈：</p> <ul> <li>標準：$p(A\\mid Q)$。</li> <li>CoT：$p(A\\mid Q, C_1, A_1, \\dots, C_K, A_K, Q)$，其中 $C_i,A_i$ 是示範的推理步驟與答案。</li> </ul> <h2>真的算一遍：蘋果問題</h2> <p>標準 prompt：</p> <ul> <li>Question: There are 3 apples. You eat 1. How many are left?</li> <li>Answer: 2.</li> </ul> <p>CoT prompt：</p> <ul> <li>Question: There are 3 apples. You eat 1. How many are left?</li> <li>Answer: There are 3 apples. If you eat 1, then $3-1=2$ apples are left. So the answer is 2.</li> </ul> <p>多寫兩行，數學應用題的正確率常大幅提升。</p> <h2>先留一個反轉</h2> <p>你可能以為 CoT 對所有模型都有效。反轉是：研究發現 CoT 的效果隨模型規模變大而更明顯；小模型即使照格式寫出步驟，內容也常是胡說八道。</p> <h2>換個場景，自己找出同一條路</h2> <p>想像數學老師要求「寫算式，不只看答案」。學生為了拿到分數，會被迫把思考過程寫清楚。LLM 也是一樣：prompt 給它「寫過程」的格式，它就會生成更有條理的推理。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：CoT 是模型自己發明的。錯，是人類在 prompt 中提供的範例觸發的。第二個誤解：CoT 對所有任務都有幫助。錯，對需要多步推理的任務最有效。第三個誤解：CoT 不會出錯。錯，模型可能捏造看似合理的步驟。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-6 的 GPT 生成能力讓 CoT 得以實現。</li> <li>KP-8 顯示大型模型更能發揮 CoT。</li> <li>KP-11 探討 LLM 為何能從範例中學習新任務。</li> </ul> <h2>換句話重述</h2> <p>CoT prompting 透過在 prompt 中示範中間推理步驟，引導 LLM 先思考再回答。它對數學、邏輯等多步推理任務特別有效。</p> <p><strong>一句話收尾：</strong> 把「為什麼」寫進 prompt，模型就會跟著一步步想，而不是直接瞎猜答案。</p>"}, "8": {"title": "教授祕笈：從 1 億到千億：GPT 家族的長大史", "body": "<p>同學，GPT 家族在幾年內從 1.17 億參數長到 1750 億以上。規模變大不只是數字遊戲，也帶來了 few-shot、CoT 等湧現能力。</p> <h2>先把任務講成一句人話</h2> <p>GPT 模型越來越大、資料越來越多，從「會接龍」變成「看幾個例子就會新任務」，再進一步發展出多模態與推理能力。</p> <h2>鷹架式：先直覺，再符號</h2> <p>Scaling laws 告訴我們，測試損失大約隨參數量 $N$ 與資料量 $D$ 呈冪律下降：</p> <p>$$ L(N,D)\\approx A N^{-\\alpha}+B D^{-\\beta}+L_\\infty. $$</p> <p>其中 $L_\\infty$ 是無法消除的誤差底線。</p> <h2>真的算一遍：參數與資料的成長</h2> <ul> <li>GPT-1：117M params，BookCorpus。</li> <li>GPT-2：1.5B params，WebText 40GB。</li> <li>GPT-3：175B params，570GB 多語言文本。</li> <li>GPT-4：多模態，接受文字與圖片。</li> </ul> <p>每一次數量級跳躍，都帶來新的使用方式。</p> <h2>先留一個反轉</h2> <p>你可能以為「參數越多就越聰明」是線性的。反轉是：某些能力（如 CoT、算術推理）並不是平滑提升，而是在某個規模附近突然出現。我們稱之為湧現能力（emergent abilities）。</p> <h2>換個場景，自己找出同一條路</h2> <p>把模型規模想成學生的閱讀量與腦容量。讀越多、腦容量越大，就能舉一反三，看幾個範例就學會新題型。但閱讀量本身不能保證品德，這就是為什麼後面還需要 alignment。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：參數量等於能力。錯，訓練資料品質、架構、對齊都重要。第二個誤解：GPT-4 的細節公開。錯，OpenAI 未公開架構與參數量。第三個誤解：scaling laws 保證未來一定更強。錯，它們是經驗規律，不保證無限延伸。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-1/6 介紹了 GPT 的架構與訓練目標。</li> <li>KP-7 的 CoT 在大型模型上效果更明顯。</li> <li>KP-11 會解釋為什麼 LLM 有效。</li> <li>KP-14–16 討論如何對大型模型做 alignment。</li> </ul> <h2>換句話重述</h2> <p>GPT 家族透過規模、資料與多模態訓練，從簡單的語言模型演進成通用的 AI 助手。</p> <p><strong>一句話收尾：</strong> GPT 一路變大變強，從會接龍進化成會思考、會看圖、會舉一反三。</p>"}, "9": {"title": "教授祕笈：所有 NLP 任務都是「文字進、文字出」", "body": "<p>同學，T5 提出一個很大膽的想法：別管任務名稱是什麼，全部改成「輸入一段文字，輸出一段文字」。這就是 text-to-text 框架。</p> <h2>先把任務講成一句人話</h2> <p>分類、翻譯、摘要、問答，在 T5 眼裡都是同一種任務：給模型一段文字，它再還你一段文字。標籤可以是很短的字，如 \"positive\"。</p> <h2>鷹架式：先直覺，再符號</h2> <p>T5 使用完整的 encoder-decoder 架構：</p> <ul> <li>Encoder 讀取輸入文字，產生上下文表示。</li> <li>Decoder 自回歸地生成輸出文字。</li> </ul> <p>訓練目標可以寫成：</p> <p>$$ \\mathcal{L}=-\\sum_t\\log p(y_t\\mid y_{\\lt t}, \\mathbf{x}). $$</p> <p>其中 $\\mathbf{x}$ 是輸入，$y_t$ 是目標輸出的第 $t$ 個 token。</p> <h2>真的算一遍：情感分析變 text-to-text</h2> <p>輸入：\"I like this product\"</p> <p>輸出：\"positive\"</p> <p>翻譯也一樣：</p> <p>輸入：\"I am a student\"</p> <p>輸出：\"Je suis etudiant\"</p> <p>同一個模型、同一個 loss，只換輸入輸出文字。</p> <h2>先留一個反轉</h2> <p>你可能想：「把所有任務統一成 text-to-text，會不會讓簡單分類變得太複雜？」反轉是：雖然輸出變長，但統一框架讓 T5 可以用同一組解碼器、同一個預訓練目標處理所有任務，簡化了研究與部署。</p> <h2>換個場景，自己找出同一條路</h2> <p>想像學校所有考試都改成「問答題」：數學題寫算式與答案，歷史題寫論述，英文題寫翻譯。雖然題型不同，但作答格式統一，學生只需要練習「讀題目、寫答案」這一種能力。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：T5 只適合翻譯。錯，它適合所有 text-to-text 任務。第二個誤解：T5 用 <code>[MASK]</code>。錯，它用 sentinel token，如 <code>&lt;X&gt;</code>、<code>&lt;Y&gt;</code>。第三個誤解：T5 是 decoder-only。錯，它是 encoder-decoder。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-2 介紹 BERT 的 encoder。</li> <li>KP-6 介紹 GPT 的 decoder。</li> <li>T5 把兩者結合，並用 text-to-text 統一任務格式。</li> </ul> <h2>換句話重述</h2> <p>T5 用 encoder-decoder 架構，把所有 NLP 任務都視為「文字進、文字出」。同一個模型、同一個訓練流程，就能處理分類、翻譯、摘要等任務。</p> <p><strong>一句話收尾：</strong> T5 說：「別管任務名稱，全部給我一段文字，再還我一段文字。」</p>"}, "10": {"title": "教授祕笈：LLM 不只是 OpenAI：一張生態系地圖", "body": "<p>同學，講到 LLM 不要只想到 OpenAI。2025 年的生態系已經非常豐富，有專有模型、開放權重、MoE，甚至非 Transformer 架構。</p> <h2>先把任務講成一句人話</h2> <p>LLM 市場裡有很多玩家：OpenAI、Meta、Google、Anthropic、Mistral、阿里巴巴、DeepSeek、xAI 等。它們的模型大小、授權方式、架構特色都不同。</p> <h2>鷹架式：先直覺，再符號</h2> <p>幾個重要分類：</p> <ul> <li>專有模型：GPT-4、Claude、Gemini，通常能力最強但透明度低。</li> <li>開放權重：LLaMA、Qwen、Mistral，權重可下載，社群可微調。</li> <li>MoE（Mixture-of-Experts）：Mixtral 8×7B、Grok-1、Qwen3，每次只啟用部分專家，提高效率。</li> <li>SSM（State Space Model）：Mamba，提供線性複雜度的長序列建模。</li> </ul> <h2>真的算一遍：模型尺寸速查</h2> <ul> <li>LLaMA 3：7B / 13B / 70B / 405B。</li> <li>Mixtral 8×7B：約 47B 總參數，每次啟用約 13B。</li> <li>Grok-1：314B MoE。</li> <li>Qwen3：235B MoE。</li> </ul> <h2>先留一個反轉</h2> <p>你可能以為「開放權重」等於「開源」。反轉是：開放權重只公開模型參數，不一定公開訓練資料、程式碼與完整訓練流程。真正的開源需要更多東西。</p> <h2>換個場景，自己找出同一條路</h2> <p>把 LLM 生態系想成汽車市場：OpenAI 像豪華轎車，性能最好但貴；Meta 的 LLaMA 像熱門平價車，零件齊全大家改；Mamba 像電動車，走完全不同的動力路線。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：開放權重就是開源。錯，權重只是其中一部分。第二個誤解：MoE 一定比 dense 模型快。錯，MoE 節省計算是條件式的，取決於路由與專家啟用策略。第三個誤解：Mamba 是 Transformer。錯，它是 State Space Model，屬於另類架構。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-1/6/8 介紹 GPT 家族。</li> <li>KP-9 介紹 T5。</li> <li>KP-11 解釋 LLM 為何有效。</li> <li>KP-14–16 的 alignment 方法適用於所有這些模型。</li> </ul> <h2>換句話重述</h2> <p>LLM 生態系多元且快速演進，專有、開放、MoE、SSM 各有優勢，沒有單一贏家。</p> <p><strong>一句話收尾：</strong> LLM 世界不是只有一家店，而是整條街都在賣不同款式的智慧引擎。</p>"}, "11": {"title": "教授祕笈：為什麼大模型會突然變聰明？六條研究路線", "body": "<p>同學，我們知道 LLM 變大後會變強，但傳統 PAC 學習理論很難完整解釋。研究者於是從六個方向拆解這個現象。</p> <h2>先把任務講成一句人話</h2> <p>LLM 的有效性不是單一原因，而是「規模、表示方式、內部電路、學習動力學」共同作用的結果。我們還在拆解它。</p> <h2>鷹架式：先直覺，再符號</h2> <p>六條研究路線：</p> <ol> <li><strong>Scaling laws</strong>：測試損失隨參數量 $N$ 與資料量 $D$ 冪律下降：</li> </ol> <p>$$ L(N,D)\\propto N^{-\\alpha}+D^{-\\beta}. $$</p> <ol> <li><strong>In-context learning</strong>：模型從 prompt 中的少數範例學習新任務，無需更新權重。</li> <li><strong>Linear representations</strong>：雖然網路非線性，但某些概念以近似線性的方式存在於表示空間。</li> <li><strong>Superposition</strong>：多個概念重疊存放在同一群神經元中。</li> <li><strong>Mechanistic interpretability</strong>：反向工程模型內部電路，理解它如何計算特定行為。</li> <li><strong>Causal tracing</strong>：追蹤模型內部哪些部分對特定輸出負責。</li> </ol> <h2>真的算一遍：規模預測</h2> <p>假設某個能力的湧現閾值在 $10^{10}$ 參數附近。當模型從 1B 成長到 100B，損失可能平穩下降，但某個推理能力會在 10B 到 100B 之間突然出現。這就是湧現（emergence）的反直覺之處。</p> <h2>先留一個反轉</h2> <p>你可能以為 Scaling laws 已經完全解釋了 LLM。反轉是：Scaling laws 能預測損失，卻不一定能預測哪些能力會出現，也不能解釋模型內部怎麼做推理。</p> <h2>換個場景，自己找出同一條路</h2> <p>把 LLM 想成一座大城市。Scaling laws 說城市越大經濟越強；in-context learning 像市民看幾個範例就學會新工作；mechanistic interpretability 則像拆開城市的交通網，理解為什麼某些區域總是塞車。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：Scaling laws 能預測一切。錯，它主要預測損失。第二個誤解：Superposition 是量子力學概念。錯，這裡指神經元表示的疊加。第三個誤解：Mechanistic interpretability 已經完全解釋 LLM。錯，它還在早期階段。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-8 的 GPT 家族是 Scaling laws 最直接的例證。</li> <li>KP-7 的 CoT 屬於 in-context learning 的應用。</li> <li>KP-12 的 alignment 安全問題也與可解釋性相關。</li> </ul> <h2>換句話重述</h2> <p>LLM 的有效性來自多種機制：規模、上下文學習、線性表示、神經元疊加、電路分析與因果追蹤。我們正在用這些工具理解它。</p> <p><strong>一句話收尾：</strong> 大模型有效是規模、表示、電路與學習動力學共同作用的結果，我們還在拆解它。</p>"}, "12": {"title": "教授祕笈：LLM 只會「猜下一個詞」，不一定「照你說的做」", "body": "<p>同學，LLM 的本質是「預測下一個 token」。這讓它會說人話，但不一定聽話、不說謊、不傷人。Alignment 就是把模型從「會接龍」調整成「有用且安全」。</p> <h2>先把任務講成一句人話</h2> <p>Alignment 讓模型輸出符合使用者意圖與人類價值觀，而不只是「統計上最可能出現的下一個詞」。</p> <h2>鷹架式：先直覺，再符號</h2> <p>預訓練目標：</p> <p>$$ \\max_\\theta\\mathbb{E}_{x\\sim\\mathcal{D}}\\left[\\sum_t\\log p_\\theta(x_t\\mid x_{\\lt t})\\right]. $$</p> <p>這只要求模型模仿訓練資料，不要求它「聽指令」或「說真話」。Alignment 則額外引入人類偏好，讓模型學會：</p> <p>$$ \\pi^*=\\arg\\max_\\pi\\,\\mathbb{E}_{x\\sim\\pi}[r(x)]\\quad\\text{s.t.}\\quad \\pi\\approx\\pi_{\\mathrm{ref}}. $$</p> <p>其中 $r(x)$ 是人類偏好的獎勵函數。</p> <h2>真的算一遍：幻覺的例子</h2> <p>如果訓練資料裡常出現「拿破崙打贏了滑鐵盧」這種錯誤句子，LLM 可能會輸出同樣錯誤的內容，因為它只是預測「下一個最可能的 token」。Alignment 要讓模型學會「雖然這句話機率高，但它是錯的，我不該說」。</p> <h2>先留一個反轉</h2> <p>你可能以為 alignment 就是把不良資料過濾掉。反轉是：即使資料乾淨，模型仍可能為了取悅使用者而編造事實，或為了得到高分而輸出無意義文字。過濾只是第一道防線。</p> <h2>換個場景，自己找出同一條路</h2> <p>把 LLM 想成一個只會背課本的學生。他會背很多知識，但不懂得回答問題的禮貌、也不知道哪些話會傷人。Alignment 就像給他上「公民與倫理」課，教他如何與人互動。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：alignment 只是資料過濾。錯，過濾只是其中一環。第二個誤解：RLHF 是從頭訓練。錯，它是在預訓練後進行。第三個誤解：alignment 沒有代價。錯，alignment tax 可能讓模型在某些能力上稍微下降。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-13 介紹簡單 alignment 策略。</li> <li>KP-14–16 講 RLHF 與 DPO 兩種主流方法。</li> <li>KP-11 的可解釋性也與安全性研究相關。</li> </ul> <h2>換句話重述</h2> <p>Alignment 彌補了 next-token prediction 與人類期望之間的落差，讓 LLM 不僅會說話，還會聽話、誠實、安全。</p> <p><strong>一句話收尾：</strong> 讓 LLM 不只會接龍，還會聽話、不說謊、不傷人。</p>"}, "13": {"title": "教授祕笈：在動用 RLHF 之前，先做兩件簡單的事", "body": "<p>同學，RLHF 與 DPO 雖然強大，但在此之前有兩件更簡單、更便宜的事可以先做：資料過濾與價值導向微調。</p> <h2>先把任務講成一句人話</h2> <p>第一，把訓練資料裡不想要的内容（仇恨、錯誤資訊、個資）先清掉。第二，用強調特定價值觀的資料集做微調，讓模型傾向產生符合期望的輸出。</p> <h2>鷹架式：先直覺，再符號</h2> <p>資料過濾可以看作改變訓練分布：</p> <p>$$ \\mathcal{D}_{\\mathrm{clean}}=\\{x\\in\\mathcal{D}_{\\mathrm{raw}}\\mid c(x)=1\\}, $$</p> <p>其中 $c(x)$ 是內容安全分類器。</p> <p>價值導向微調則是在乾淨資料上最小化：</p> <p>$$ \\mathcal{L}=-\\mathbb{E}_{(x,y)\\sim\\mathcal{D}_{\\mathrm{value}}}\\left[\\log p_\\theta(y\\mid x)\\right]. $$</p> <h2>真的算一遍：過濾的效果</h2> <p>假設原始資料中有 5% 的仇恨言論，經過過濾後降到 0.5%。模型在這份資料上訓練，生成仇恨言論的機率通常也會顯著下降。當然，這只是第一步，因為模型仍可能從正常上下文泛化出有毒模式。</p> <h2>先留一個反轉</h2> <p>你可能以為「資料清乾淨就沒問題了」。反轉是：模型可以從看似正常的上下文中，學到刻板印象或歧視性聯想。過濾無法消滅所有未預期行為。</p> <h2>換個場景，自己找出同一條路</h2> <p>教小孩時，你會先避免讓他接觸髒話與暴力內容（資料過濾），再讓他讀很多道德故事（價值導向微調）。這兩步有用，但通常還需要更進一步的管教與對話（RLHF/DPO）。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：過濾能 100% 消除有害輸出。錯，模型仍會泛化。第二個誤解：價值導向微調等於審查。錯，它是調整行為分布，範圍可大可小。第三個誤解：簡單策略不需要搭配 RLHF/DPO。錯，它們通常只是第一道防線。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-12 定義 alignment 問題。</li> <li>KP-14 開始講 RLHF，這是更進階的對齊方法。</li> <li>KP-16 的 DPO 則是另一種進階選擇。</li> </ul> <h2>換句話重述</h2> <p>資料過濾與價值導向微調是 alignment 的兩道簡單防線：先移除有害資料，再用正面資料引導行為。它們通常需要與 RLHF/DPO 搭配。</p> <p><strong>一句話收尾：</strong> 先過濾環境、再正面引導，最後才用 RLHF/DPO 精修。</p>"}, "14": {"title": "教授祕笈：RLHF 前兩步：先教對話，再訓練評分老師", "body": "<p>同學，RLHF 分三步：SFT、Reward Model、RL fine-tuning。這一節講前兩步，先把模型教會說話，再請一位評分老師學會比較答案好壞。</p> <h2>先把任務講成一句人話</h2> <p>第一步 SFT：用人類寫的「問題 + 理想回答」微調預訓練模型，讓它從會接龍變成會對話。第二步 Reward Model：對同一個問題產生的多個回答，由人類標註哪個比較好，訓練一個會打分的模型。</p> <h2>鷹架式：先直覺，再符號</h2> <p>SFT 的損失就是監督式語言建模：</p> <p>$$ \\mathcal{L}_{\\mathrm{SFT}}=-\\sum_t\\log p_\\theta(y_t\\mid x, y_{\\lt t}). $$</p> <p>Reward Model 把 SFT 模型複製一份，去掉 softmax，換成輸出實數的神經元。它的損失是式 (1)：</p> <p>$$ \\min_\\theta\\mathcal{L}(\\theta)=-\\mathbb{E}\\left[\\log\\sigma(r_w-r_l)\\right]. $$</p> <p>其中 $r_w$ 是較好回答的分數，$r_l$ 是較差回答的分數。</p> <h2>真的算一遍：四個回答配成六對</h2> <p>假設對同一 prompt 產生 4 個回答，人類兩兩比較，共有 $C(4,2)=6$ 對。如果 $r_w=2.0, r_l=0.5$，則：</p> <p>$$ \\sigma(2.0-0.5)=\\sigma(1.5)\\approx 0.817, $$</p> <p>損失為 $-\\log(0.817)\\approx 0.202$。差距越大，損失越接近 0。</p> <h2>先留一個反轉</h2> <p>你可能以為 Reward Model 知道「絕對好壞」。反轉是：RM 只學過「哪個比哪個好」，並沒有絕對分數的刻度。它可能對兩個都很差的回答給出差異很大的分數，只要符合人類偏好排序。</p> <h2>換個場景，自己找出同一條路</h2> <p>SFT 就像家教教小孩禮貌回答問題；RM 就像比賽評審，學會比較兩個答案哪個更好。評審不需要給出滿分標準，只需要穩定地排出好壞順序。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：Reward Model 是生成模型。錯，它只輸出一個純量分數。第二個誤解：RLHF 就是更多預訓練。錯，SFT 與 RM 都是後續步驟。第三個誤解：成對比較不如直接打分數。錯，人類更擅長做「哪個比較好」的相對判斷。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-6 的 GPT 是 RLHF 的起點模型。</li> <li>KP-15 會把 Reward Model 的分數拿來做 policy gradient。</li> <li>KP-16 的 DPO 則跳過 RM，直接用偏好資料訓練。</li> </ul> <h2>換句話重述</h2> <p>RLHF 前兩步：SFT 教會對話，Reward Model 學會比較回答好壞。RM 的損失讓勝出回答的分數高於落敗回答。</p> <p><strong>一句話收尾：</strong> 先讓模型會說人話，再請一位評分老師告訴它哪個答案比較好。</p>"}, "15": {"title": "教授祕笈：RLHF 第三步：討好評分老師，但別走火入魔", "body": "<p>同學，有了 Reward Model 之後，我們可以用強化學習讓模型去「討好」評分老師。但只討好老師會出事：模型可能為了高分而說一些無意義或離題的話。KL 正則化與預訓練 likelihood 就是兩道煞車。</p> <h2>先把任務講成一句人話</h2> <p>目標是讓模型產生的回答得到 Reward Model 的高分，但同時不要偏離原來的 SFT 模型太遠，也不要忘記預訓練學到的通用知識。</p> <h2>鷹架式：先直覺，再符號</h2> <p>Policy gradient 目標式 (2)：</p> <p>$$ \\max_w J(w)=\\mathbb{E}_{x\\sim p_w}[r(x)]. $$</p> <p>更新規則式 (3)：</p> <p>$$ w\\leftarrow w+\\alpha\\nabla_w J(w). $$</p> <p>為了防止走火入魔，式 (5) 加入 KL 正則：</p> <p>$$ \\max_w J(w)=\\mathbb{E}_{x\\sim p_w}\\left[r(x)-\\beta\\mathrm{KL}(p_w(x)\\|p_{\\mathrm{SFT}}(x))\\right]. $$</p> <p>式 (6) 再加預訓練 likelihood：</p> <p>$$ \\max_w J(w)=\\mathbb{E}_{x\\sim p_w}\\left[r(x)-\\beta\\mathrm{KL}(p_w(x)\\|p_{\\mathrm{SFT}}(x))\\right]+\\gamma\\mathbb{E}_{x\\sim\\mathrm{pre-train}}[\\log p_w(x)]. $$</p> <h2>真的算一遍：KL 煞車的數字</h2> <p>假設 RL policy 對某個詞的機率 $p_w=0.7$，SFT reference $p_{\\mathrm{SFT}}=0.5$。則單一詞的 KL 貢獻約為：</p> <p>$$ 0.7\\log\\frac{0.7}{0.5}+0.3\\log\\frac{0.3}{0.5}\\approx 0.7\\times 0.336+0.3\\times(-0.511)\\approx 0.082. $$</p> <p>若 $\\beta=0.5$，這一項會從 reward 中扣掉約 $0.041$。</p> <h2>先留一個反轉</h2> <p>你可能以為 KL 正則只是「懲罰變化」。反轉是：如果沒有 KL，policy 會為了騙高分而輸出 RM 喜歡但人類看不懂的冗長文字或特殊標記。KL 讓 policy 保持在 SFT 的語言分布附近，避免這種「獎勵駭客」行為。</p> <h2>換個場景，自己找出同一條路</h2> <p>把模型想成學生，RM 是評分老師。如果只鼓勵考高分，學生可能學會猜題或寫冗長廢話；KL 正則像要求「回答風格必須跟課本一致」，預訓練項像要求「不能忘記基礎知識」。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：policy gradient 就是監督學習。錯，它是從采樣軌跡估計梯度並更新 policy。第二個誤解：KL 是對稱的。錯，$\\mathrm{KL}(p_w\\|p_{\\mathrm{SFT}})$ 衡量用 $p_{\\mathrm{SFT}}$ 近似 $p_w$ 時多出的位元數，不是 $\\mathrm{KL}(p_{\\mathrm{SFT}}\\|p_w)$。第三個誤解：預訓練 likelihood 項會讓模型變回預訓練模型。錯，它只是防止遺忘，權重仍會向 reward 移動。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-14 的 SFT 與 RM 是 RLHF 前兩步。</li> <li>KP-16 的 DPO 則用更簡單的方式達到類似效果。</li> <li>KP-12 的 alignment 問題是這一切的起源。</li> </ul> <h2>換句話重述</h2> <p>RLHF 第三步用 policy gradient 最大化 reward，同時用 KL 正則維持語言風格、用預訓練 likelihood 防止遺忘通用知識。</p> <p><strong>一句話收尾：</strong> 讓模型拿高分，但別為了騙分而離譜，也別忘記本來會的東西。</p>"}, "16": {"title": "教授祕笈：DPO：不用 reward model，模型自己當評審", "body": "<p>同學，RLHF 需要訓練 Reward Model 再跑強化學習，流程複雜。DPO 發現：我們可以直接用成對偏好資料訓練模型，讓模型自己當評審。</p> <h2>先把任務講成一句人話</h2> <p>DPO 不需要單獨的 Reward Model，也不需要 policy gradient。它把偏好對比直接寫進損失函數，讓模型在好回答上比參考模型更強、在壞回答上更弱。</p> <h2>鷹架式：先直覺，再符號</h2> <p>先從 SFT 得到凍結的參考模型 $\\pi_{\\mathrm{ref}}$，再初始化 $\\pi_\\theta$ 與它相同。DPO 損失式 (7)：</p> <p>$$ \\mathcal{L}_{\\mathrm{DPO}}(\\theta)=-\\mathbb{E}\\left[\\log\\sigma\\left(\\beta\\log\\frac{\\pi_\\theta(y_w\\mid x)}{\\pi_{\\mathrm{ref}}(y_w\\mid x)}-\\beta\\log\\frac{\\pi_\\theta(y_l\\mid x)}{\\pi_{\\mathrm{ref}}(y_l\\mid x)}\\right)\\right]. $$</p> <p>利用對數性質可改寫為式 (8)：</p> <p>$$ \\mathcal{L}_{\\mathrm{DPO}}(\\theta)=-\\mathbb{E}\\left[\\log\\sigma\\left(\\beta\\log\\frac{\\pi_\\theta(y_w\\mid x)/\\pi_{\\mathrm{ref}}(y_w\\mid x)}{\\pi_\\theta(y_l\\mid x)/\\pi_{\\mathrm{ref}}(y_l\\mid x)}\\right)\\right]. $$</p> <h2>真的算一遍：三種偏好情境</h2> <ol> <li> <p><strong>Reference 無所謂</strong>：$\\pi_{\\mathrm{ref}}(y_w)=\\pi_{\\mathrm{ref}}(y_l)=0.5$。只要 $\\pi_\\theta$ 給 $y_w$ 更高分，loss 就會下降，DPO 強烈偏好 $y_w$。</p> </li> <li> <p><strong>Reference 已偏好 $y_w$</strong>：$\\pi_{\\mathrm{ref}}(y_w)=0.8, \\pi_{\\mathrm{ref}}(y_l)=0.2$。若 $\\pi_\\theta=\\pi_{\\mathrm{ref}}$，則比值為 1，$\\log 1=0$，loss $=-\\log\\sigma(0)\\approx 0.693$。DPO 只會微調。</p> </li> <li> <p><strong>Reference 偏好 $y_l$</strong>：$\\pi_{\\mathrm{ref}}(y_w)=0.2, \\pi_{\\mathrm{ref}}(y_l)=0.8$。要讓 $\\pi_\\theta$ 轉而偏好 $y_w$，必須大幅扭轉分布，loss 會很大，DPO 強烈修正。</p> </li> </ol> <h2>先留一個反轉</h2> <p>你可能以為 DPO 不用 Reward Model 就代表它不用偏好資料。反轉是：DPO 仍然需要高品質的成對偏好資料，只是把「訓練 RM」與「跑 RL」兩步合併成一步監督式微調。資料品質仍是關鍵。</p> <h2>換個場景，自己找出同一條路</h2> <p>RLHF 像先培養一位專業評審（RM），再讓選手（policy）去討好評審。DPO 則像直接告訴選手：「這場比賽你必須贏過昨天的自己，而且贏在這些特定對決上。」省去了培養評審的過程。</p> <h2>大家最容易在這裡搞混</h2> <p>第一個誤解：DPO 不需要偏好資料。錯，它需要成對偏好。第二個誤解：DPO 沒有參考模型。錯，$\\pi_{\\mathrm{ref}}$ 就是 SFT 後凍結的模型。第三個誤解：DPO 一定比 RLHF 好。錯，兩者有各自的穩定性與資料效率 trade-off。</p> <h2>跨知識點掛勾</h2> <ul> <li>KP-14 介紹了 Reward Model 與成對偏好。</li> <li>KP-15 介紹了 RLHF 的 policy gradient 與 KL 正則。</li> <li>KP-13 的簡單策略是 DPO 之前的更基礎防線。</li> </ul> <h2>換句話重述</h2> <p>DPO 把偏好比較直接寫進損失，用凍結的 SFT 模型當參考基準，省去了單獨訓練 Reward Model 與 RL 的過程。</p> <p><strong>一句話收尾：</strong> DPO 把「評審」藏進 loss 裡，直接用成對偏好資料微調模型。</p>"}};
+(function(){
+  window.openGuide=function(kp){
+    var t=window.__GUIDES__[String(kp)]; if(!t) return;
+    document.getElementById('guide-title').textContent=t.title;
+    document.getElementById('guide-body').innerHTML=t.body;
+    document.getElementById('guide-modal').classList.add('open');
+    if(window.renderMath) setTimeout(window.renderMath,50);
+  };
+  window.closeGuide=function(){
+    var m=document.getElementById('guide-modal');
+    if(m) m.classList.remove('open');
+  };
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest('.guide-btn');
+    if(btn){ e.preventDefault(); window.openGuide(btn.getAttribute('data-kp')||btn.getAttribute('data-guide')); return; }
+    if(e.target.id==='guide-modal') window.closeGuide();
+    if(e.target.closest('#guide-modal .close')) window.closeGuide();
+  });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') window.closeGuide(); });
+})();
+</script>
+</body>
+</html>

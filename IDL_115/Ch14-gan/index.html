@@ -1,0 +1,2599 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IDL 115學年度 Ch14：產生式對抗網絡 (Generative Adversarial Networks, GANs) 互動講義</title>
+  <!-- KaTeX CSS & JS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}], ignoredClasses: ['katex']});"></script>
+  <style>
+    :root {
+      --primary: #0f172a;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #334155;
+      --heading: #0f172a;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --error: #dc2626;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding-top: 100px;
+      padding-bottom: 60px;
+    }
+
+    /* Sticky Header & Progress Bar */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 90px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      color: white;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 24px;
+    }
+    .header-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: 0.5px;
+    }
+    .header-toc {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      max-width: 65%;
+    }
+    .header-toc a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.05);
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .header-toc a:hover {
+      color: #ffffff;
+      background: var(--accent);
+    }
+
+    .progress-bar-wrap {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+      transition: width 0.3s ease;
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Card Styling */
+    .card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 32px;
+      margin-bottom: 40px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      scroll-margin-top: 100px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--bg);
+    }
+    .badge {
+      background: #dbeafe;
+      color: #1e40af;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      white-space: nowrap;
+    }
+    .card-title {
+      font-size: 1.35rem;
+      color: var(--heading);
+      font-weight: 700;
+    }
+
+    .card-body h4 {
+      color: var(--heading);
+      margin: 20px 0 10px 0;
+      font-size: 1.1rem;
+    }
+    .card-body p {
+      margin-bottom: 14px;
+      text-align: justify;
+    }
+    .card-body ul, .card-body ol {
+      margin: 10px 0 16px 24px;
+    }
+    .card-body li {
+      margin-bottom: 6px;
+    }
+
+    /* Phase B & Orig Image Styling */
+    .diagram-figure, .orig-fig {
+      margin: 24px 0;
+      text-align: center;
+      background: #f1f5f9;
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+    .diagram-figure img, .orig-fig img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .diagram-figure figcaption, .orig-fig figcaption {
+      margin-top: 10px;
+      font-size: 0.88rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    /* AI Prompt Placeholder */
+    .ai-illustration {
+      margin: 16px 0;
+      background: #faf5ff;
+      border: 1px dashed #c084fc;
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .ai-illustration summary {
+      font-weight: 600;
+      color: #7e22ce;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .ai-illustration-prompt {
+      margin-top: 10px;
+      background: #ffffff;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.82rem;
+      color: #4c1d95;
+      white-space: pre-wrap;
+      border: 1px solid #e9d5ff;
+    }
+
+    /* Phase C Interactive Demo Styling */
+    .demo {
+      margin: 28px 0;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .demo-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #0369a1;
+      margin-bottom: 12px;
+    }
+    .demo-instruction {
+      background: #ffffff;
+      padding: 14px;
+      border-radius: 8px;
+      border-left: 4px solid #0284c7;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+    .demo-instruction h5 {
+      color: #0369a1;
+      margin-bottom: 6px;
+    }
+    .demo-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 16px;
+      background: #ffffff;
+      padding: 14px;
+      border-radius: 8px;
+      align-items: center;
+    }
+    .demo-control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+    }
+    .demo-control-group label {
+      font-weight: 600;
+      color: #334155;
+    }
+    .demo-control-group input[type=range] {
+      width: 160px;
+    }
+    .demo-canvas-wrap {
+      text-align: center;
+      background: #ffffff;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #e0f2fe;
+      margin-bottom: 12px;
+    }
+    .demo-canvas-wrap canvas {
+      max-width: 100%;
+      height: auto;
+    }
+    .demo-readout {
+      background: #0f172a;
+      color: #38bdf8;
+      font-family: monospace;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+    }
+
+    /* Phase D Guide Button & Modal Styling */
+    .guide-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #4f46e5, #3b82f6);
+      color: #ffffff;
+      font-weight: 700;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+      transition: all 0.2s;
+      margin: 16px 0;
+    }
+    .guide-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+    }
+    .guide-flag {
+      background: rgba(255,255,255,0.2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+    }
+
+    /* Modal Overlay */
+    #guide-modal {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(6px);
+      z-index: 2000;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    #guide-modal.open {
+      display: flex;
+    }
+    .modal-box {
+      background: #ffffff;
+      width: 100%;
+      max-width: 800px;
+      max-height: 85vh;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 20px 24px;
+      background: #0f172a;
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 { font-size: 1.15rem; font-weight: 700; }
+    .modal-close-btn {
+      background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;
+    }
+    .modal-close-btn:hover { color: #ffffff; }
+    .modal-body {
+      padding: 28px 32px;
+      overflow-y: auto;
+      line-height: 1.8;
+      font-size: 0.95rem;
+    }
+    .modal-body h1 { font-size: 1.4rem; color: #0f172a; margin-bottom: 16px; }
+    .modal-body h3 { font-size: 1.1rem; color: #1e40af; margin: 20px 0 10px 0; }
+    .modal-body blockquote {
+      background: #f1f5f9; border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 16px 0; border-radius: 4px;
+    }
+
+    /* Self Assessment Quiz */
+    .quiz-sec {
+      margin-top: 24px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .quiz-title { font-weight: 700; color: #0f172a; margin-bottom: 12px; font-size: 0.95rem; }
+    .quiz-option-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .quiz-option-btn:hover { background: #f1f5f9; }
+    .quiz-option-btn.correct { background: #dcfce7 !important; border-color: #16a34a !important; color: #15803d; font-weight: 600; }
+    .quiz-option-btn.wrong { background: #fee2e2 !important; border-color: #dc2626 !important; color: #b91c1c; }
+    .quiz-exp {
+      margin-top: 12px;
+      padding: 12px;
+      background: #eff6ff;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      color: #1e40af;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-content">
+    <div class="header-title">⚡ IDL 115學年度 Ch14：產生式對抗網絡 (GANs)</div>
+    <div class="header-toc">
+<a href="#kp1">KP 1</a>
+<a href="#kp2">KP 2</a>
+<a href="#kp3">KP 3</a>
+<a href="#kp4">KP 4</a>
+<a href="#kp5">KP 5</a>
+<a href="#kp6">KP 6</a>
+<a href="#kp7">KP 7</a>
+<a href="#kp8">KP 8</a>
+<a href="#kp9">KP 9</a>
+<a href="#kp10">KP 10</a>
+<a href="#kp11">KP 11</a>
+<a href="#kp12">KP 12</a>
+<a href="#kp13">KP 13</a>
+<a href="#kp14">KP 14</a>
+<a href="#kp15">KP 15</a>
+<a href="#kp16">KP 16</a>
+    </div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="page-progress"></div>
+  </div>
+</header>
+
+<div class="container">
+
+    <!-- CARD KP-1 -->
+    <section id="kp1" class="card" data-kp="1">
+      <div class="card-header">
+        <span class="badge">§1</span>
+        <h2 class="card-title">KP-1：產生式對抗網絡 (GAN) 導論與博弈論基礎</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 生成模型與評估的歷史難題</h4>
+<p>在深度學習領域，<b>生成模型 (Generative Models)</b> 的目標是學習真實數據集的分佈 $p_{\text{data}}(\boldsymbol{x})$，並從中採樣生成全新的高品質數據（如人臉影像、藝術畫作、音訊信號）。傳統生成模型（如變分自編碼器 VAE、高斯混合模型 GMM）通常需要顯式擬合機率密度函數，這導致生成的樣本常常呈現模糊或邊緣失真。</p>
+<p>早期的生成品質評估依賴於人工肉眼觀察，但人類的主觀判斷無法作為計算梯度（Gradient）以進行反向傳播優化的標的。2014 年由 Ian Goodfellow 等人提出的<b>產生式對抗網絡 (Generative Adversarial Network, GAN)</b> 徹底變革了這一領域——它引入了一個由神經網絡構成的「人工裁判」（判別器），實現了可微分的端到端生成優化。</p>
+
+<h4>2. 對抗學習的三大核心組件</h4>
+<p>GAN 架構由兩個相互競爭的神經網絡組成：</p>
+<ul>
+  <li><b>生成器 (Generator, $G$)</b>：輸入來自潛在空間（Latent Space）的隨機雜訊向量 $\boldsymbol{z} \sim p_z(\boldsymbol{z})$，輸出合成樣本 $\widehat{\boldsymbol{x}} = G(\boldsymbol{z})$。其使命是「偽造真品以欺騙判別器」。</li>
+  <li><b>判別器 (Discriminator, $D$)</b>：輸入一個樣本 $\boldsymbol{x}$，輸出其來自真實數據集而非生成器的機率 $D(\boldsymbol{x}) \in [0, 1]$。其使命是「精準識別真品與偽造品」。</li>
+  <li><b>零和動態博弈 (Zero-Sum Game)</b>：兩者在訓練過程中不斷互相強化。生成器越逼真，判別器逼迫自己提升識別力；判別器越嚴苛，生成器迫使自己生成更高品質的細節。</li>
+</ul>
+      </div>
+<!-- == Orig Image kp-1 == -->
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-354_242_84_1961_1498.jpg" alt="教科書圖 14.1：隨機潛在變數 z 條件化生成 x 的概率圖模型 (Probabilistic Graphical Model)">
+        <figcaption>教科書圖 14.1：隨機潛在變數 z 條件化生成 x 的概率圖模型 (Probabilistic Graphical Model)</figcaption>
+      </figure>
+<!-- END Orig Image -->
+
+      <!-- == Phase B 圖解 kp-1 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp1.png" alt="KP-1 概念架構圖解">
+        <figcaption>圖解 KP-1：assets/diagram-kp1.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-1 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: A conceptual diagram of a Generative Adversarial Network (GAN) architecture showing the zero-sum game between Generator and Discriminator.
+[WHY]: To visually communicate how random noise z is transformed into a synthetic sample G(z), while Discriminator D classifies both real data x and generated data G(z).
+[MUST show]: Latent noise z vector, Generator box, Discriminator box, Real Dataset box, decision probability D(x) in [0, 1].
+[AVOID]: Complex internal neural network weights, unrelated 3D rendering elements.
+[STYLE]: Clean academic diagram with blue and green accent colors, dark background headers, high contrast.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-1 == -->
+
+<div class="demo" data-demo-id="kp-1">
+  <div class="demo-title">🎮 互動展示 kp-1：GAN 產生器 vs 判別器零和對抗賽局模擬</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>模擬生成器 $G$（擬合數據）與判別器 $D$（區分真假）在對抗過程中，樣本分佈與判別分數的動態演化。</p>
+    <p><b>怎麼操作：</b>點擊「執行對抗訓練步」，調整產生器學習率與判別器學習率。</p>
+    <p><b>觀察什麼：</b>隨著訓練推進，生成分佈 $p_g(x)$ 逐漸覆蓋真實數據分佈 $p_{\text{data}}(x)$，判別器得分 $D(x)$ 趨近 0.5。</p>
+    <p><b>理論基準：</b>完美理想狀態下 $p_g = p_{\text{data}}$ 且 $D^*(x) = 0.5$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>對抗訓練迭代步: <span id="kp1_step_val">0</span></label>
+      <button class="quiz-option-btn" id="kp1_step_btn" style="background:#2563eb; color:white; font-weight:bold;">▶ 執行對抗訓練 (Step SGD)</button>
+    </div>
+    <button class="quiz-option-btn" id="kp1_reset_btn">↺ 重置賽局</button>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp1_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp1_readout">準備執行對抗賽局...</div>
+</div>
+<script>
+(function(){
+  var stepCount = 0;
+  var gMean = -2.0;
+
+  function stepGAN() {
+    stepCount++;
+    gMean += 0.1 * (0.0 - gMean);
+    drawGAN();
+  }
+
+  function resetGAN() {
+    stepCount = 0;
+    gMean = -2.0;
+    drawGAN();
+  }
+
+  function drawGAN() {
+    var cvs = document.getElementById('kp1_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    document.getElementById('kp1_step_val').textContent = stepCount;
+
+    // Baseline
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(40, 160); ctx.lineTo(560, 160); ctx.stroke();
+
+    // Real Distribution (Blue Gauss mean 0)
+    ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2.5; ctx.beginPath();
+    for (var x = -4; x <= 4; x += 0.1) {
+      var px = 300 + x * 50;
+      var py = 160 - Math.exp(-0.5 * x * x) * 120;
+      if (x === -4) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Fake Distribution (Green Gauss mean gMean)
+    ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2.5; ctx.beginPath();
+    for (var x = -4; x <= 4; x += 0.1) {
+      var px = 300 + (x + gMean) * 50;
+      var py = 160 - Math.exp(-0.5 * x * x) * 110;
+      if (x === -4) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = '#2563eb'; ctx.fillText('真實分佈 p_data (Mean=0)', 40, 30);
+    ctx.fillStyle = '#10b981'; ctx.fillText('生成分佈 p_g (Mean=' + gMean.toFixed(2) + ')', 240, 30);
+
+    var dScore = 1.0 / (1.0 + Math.exp(-Math.abs(gMean)));
+    var readout = '迭代次數 step=' + stepCount + ' | 生成器均值 = ' + gMean.toFixed(3) + ' | 判別器區分信心 D(G(z)) = ' + dScore.toFixed(3) + (gMean > -0.2 ? ' (接近納許均衡！)' : '');
+    document.getElementById('kp1_readout').textContent = readout;
+  }
+
+  var btn = document.getElementById('kp1_step_btn');
+  if (btn) {
+    btn.addEventListener('click', stepGAN);
+    document.getElementById('kp1_reset_btn').addEventListener('click', resetGAN);
+    setTimeout(drawGAN, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：傳統人眼觀察評估生成樣本品質無法直接用於神經網絡優化的根本原因為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 因為人類觀察者審美觀各不相同，數據雜訊過大</button>
+<button class="quiz-option-btn" data-correct="true">2. 因為人類主觀判斷無法計算數學導數 (Derivatives)，無法進行反向傳播梯度優化</button>
+<button class="quiz-option-btn" data-correct="false">3. 因為人眼處理影像的速度太慢</button>
+<button class="quiz-option-btn" data-correct="false">4. 因為人類只能識別 RGB 彩色照片</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>深度學習反向傳播演算法需要可微分的損失函數；人類主觀判斷無法計算梯度導數，而 GAN 透過引入判別器神經網絡解決了可微分評估的難題。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-2 -->
+    <section id="kp2" class="card" data-kp="2">
+      <div class="card-header">
+        <span class="badge">§2.1</span>
+        <h2 class="card-title">KP-2：對抗式學習與極小化極大賽局 (Minimax Game)</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 假鈔製造者與警察的比喻</h4>
+<p>Goodfellow 在 2014 年的開創性論文中，將 GAN 比喻為<b>假鈔製造者 (Generator)</b> 與<b>警察 (Discriminator)</b> 之間的博弈：</p>
+<ul>
+  <li>假鈔製造者努力改進造假技術，希望製作出與真鈔無異的假鈔。</li>
+  <li>警察努力提升防偽技術與檢測設備，希望準確辨識假鈔與真鈔。</li>
+  <li>雙方在動態對抗中同時升級，最終假鈔製造出的假鈔與真鈔達到完全不可區分的狀態。</li>
+</ul>
+
+<h4>2. GAN 的 Minimax 目標函數</h4>
+<p>設真實數據分佈為 $\boldsymbol{x} \sim p_{\text{data}}(\boldsymbol{x})$，潛在雜訊分佈為 $\boldsymbol{z} \sim p_z(\boldsymbol{z})$。判別器 $D(\boldsymbol{x})$ 對真實樣本輸出接近 1，對生成樣本 $G(\boldsymbol{z})$ 輸出接近 0。兩者的二玩家零和賽局可表示為極小化極大 (Minimax) 優化問題：</p>
+
+$$\min_G \max_D V(D, G) := \mathbb{E}_{\boldsymbol{x} \sim p_{\text{data}}(\boldsymbol{x})}[\log D(\boldsymbol{x})] + \mathbb{E}_{\boldsymbol{z} \sim p_z(\boldsymbol{z})}[\log (1 - D(G(\boldsymbol{z})))]$$
+
+<h4>3. 目標函數的拆解解析</h4>
+<ol>
+  <li>$\mathbb{E}_{\boldsymbol{x} \sim p_{\text{data}}}[\log D(\boldsymbol{x})]$：判別器希望對真實樣本評出高分 $D(\boldsymbol{x}) \to 1$，此項值越大越好。</li>
+  <li>$\mathbb{E}_{\boldsymbol{z} \sim p_z}[\log (1 - D(G(\boldsymbol{z})))]$：判別器希望對生成樣本評出低分 $D(G(\boldsymbol{z})) \to 0$，使得 $1 - D(G(\boldsymbol{z})) \to 1$，此項值越大越好；而生成器 $G$ 則希望欺騙判別器使 $D(G(\boldsymbol{z})) \to 1$，進而<b>極小化</b>該項。</li>
+</ol>
+      </div>
+<!-- == Orig Image kp-2 == -->
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-355_420_1041_1771_539.jpg" alt="教科書圖 14.2：GAN 產生器 G 與判別器 D 的對抗式訓練架構圖">
+        <figcaption>教科書圖 14.2：GAN 產生器 G 與判別器 D 的對抗式訓練架構圖</figcaption>
+      </figure>
+<!-- END Orig Image -->
+
+      <!-- == Phase B 圖解 kp-2 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp2.png" alt="KP-2 概念架構圖解">
+        <figcaption>圖解 KP-2：assets/diagram-kp2.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-2 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: A minimax game optimization landscape illustrating min_G max_D V(D, G).
+[WHY]: To clarify the conflicting optimization objectives of Discriminator (maximizing V) versus Generator (minimizing V).
+[MUST show]: Mathematical loss equation, Discriminator objective D(x)->1 and D(G(z))->0, Generator objective D(G(z))->1.
+[AVOID]: Overly dense mathematical equations without clear labels.
+[STYLE]: Dual-panel comparison card with gold and green borders.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-2 == -->
+
+<div class="demo" data-demo-id="kp-2">
+  <div class="demo-title">🎮 互動展示 kp-2：Minimax 博弈目標函數 $V(D, G)$ 數值實時計算器</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>計算給定判別器對真實樣本給分 $D(\boldsymbol{x})$ 與對生成樣本給分 $D(G(\boldsymbol{z}))$ 下的博弈價值函數 $V(D, G)$。</p>
+    <p><b>怎麼操作：</b>滑動 $D(\boldsymbol{x})$ (真實評分) 與 $D(G(\boldsymbol{z}))$ (偽造評分)。</p>
+    <p><b>觀察什麼：</b>當 $D(\boldsymbol{x}) \to 1$ 且 $D(G(\boldsymbol{z})) \to 0$ 時，判別器極大化 $V(D, G)$；當 $D(G(\boldsymbol{z})) \to 1$ 時，生成器極小化 $V(D, G)$。</p>
+    <p><b>理論基準：</b>$V(D, G) = \log D(\boldsymbol{x}) + \log (1 - D(G(\boldsymbol{z})))$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>真實數據評分 D(x) (0.01 ~ 0.99): <span id="kp2_dx_val">0.90</span></label>
+      <input type="range" id="kp2_dx" min="0.01" max="0.99" step="0.01" value="0.90">
+    </div>
+    <div class="demo-control-group">
+      <label>生成數據評分 D(G(z)) (0.01 ~ 0.99): <span id="kp2_dg_val">0.10</span></label>
+      <input type="range" id="kp2_dg" min="0.01" max="0.99" step="0.01" value="0.10">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp2_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp2_readout">計算價值函數中...</div>
+</div>
+<script>
+(function(){
+  function updateKP2() {
+    var dx = parseFloat(document.getElementById('kp2_dx').value);
+    var dg = parseFloat(document.getElementById('kp2_dg').value);
+    document.getElementById('kp2_dx_val').textContent = dx.toFixed(2);
+    document.getElementById('kp2_dg_val').textContent = dg.toFixed(2);
+
+    var term1 = Math.log(dx);
+    var term2 = Math.log(1 - dg);
+    var V = term1 + term2;
+
+    var cvs = document.getElementById('kp2_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.fillStyle = '#fef08a'; ctx.strokeStyle = '#ca8a04';
+    ctx.fillRect(40, 30, 240, 80); ctx.strokeRect(40, 30, 240, 80);
+    ctx.fillStyle = '#ca8a04'; ctx.font = '12px sans-serif';
+    ctx.fillText('真實項 log D(x)', 60, 55);
+    ctx.font = '16px monospace'; ctx.fillText(term1.toFixed(4), 60, 85);
+
+    ctx.fillStyle = '#dcfce7'; ctx.strokeStyle = '#166534';
+    ctx.fillRect(320, 30, 240, 80); ctx.strokeRect(320, 30, 240, 80);
+    ctx.fillStyle = '#166534'; ctx.font = '12px sans-serif';
+    ctx.fillText('偽造項 log(1 - D(G(z)))', 340, 55);
+    ctx.font = '16px monospace'; ctx.fillText(term2.toFixed(4), 340, 85);
+
+    var readout = '博弈價值 V(D, G) = ' + V.toFixed(4) + ' | (判別器欲極大化 V，生成器欲極小化 V)';
+    document.getElementById('kp2_readout').textContent = readout;
+  }
+
+  var dxEl = document.getElementById('kp2_dx');
+  if (dxEl) {
+    dxEl.addEventListener('input', updateKP2);
+    document.getElementById('kp2_dg').addEventListener('input', updateKP2);
+    setTimeout(updateKP2, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：在 GAN 的 Minimax 目標函數 min_G max_D V(D, G) 中，生成器 G 的優化目標為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 極大化 E[log D(x)] + E[log(1 - D(G(z)))]</button>
+<button class="quiz-option-btn" data-correct="true">2. 極小化 E[log(1 - D(G(z)))]，即設法讓判別器對生成樣本輸出 D(G(z)) 接近 1</button>
+<button class="quiz-option-btn" data-correct="false">3. 將雜訊 z 直接變為 0 向量</button>
+<button class="quiz-option-btn" data-correct="false">4. 極大化判別器的權重矩陣特徵值</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>生成器 G 不參與第一項（與真實樣本無關），其目標是極小化第二項 log(1 - D(G(z)))，即設法提高 D(G(z)) 使其逼近 1，成功欺騙判別器。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-3 -->
+    <section id="kp3" class="card" data-kp="3">
+      <div class="card-header">
+        <span class="badge">§2.2</span>
+        <h2 class="card-title">KP-3：損失函數、交叉熵與二階段梯度優化</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 二階段交替梯度優化演算法</h4>
+<p>在實際訓練中，由於生成器與判別器的目標相反，我們採用<b>交替隨機梯度下降 (Alternating SGD)</b> 進行求解：</p>
+<ol>
+  <li><b>第一階段（更新判別器 $D$）</b>：固定生成器 $G$，對判別器執行梯度上升以極大化 $V(D, G)$：
+$$\theta_D^{(k+1)} \leftarrow \theta_D^{(k)} + \eta \nabla_{\theta_D} \left( \frac{1}{m} \sum_{i=1}^m \log D(\boldsymbol{x}^{(i)}) + \frac{1}{m} \sum_{i=1}^m \log (1 - D(G(\boldsymbol{z}^{(i)}))) \right)$$</li>
+  <li><b>第二階段（更新生成器 $G$）</b>：固定判別器 $D$，對生成器執行梯度下降以極小化 $V(D, G)$：
+$$\theta_G^{(k+1)} \leftarrow \theta_G^{(k)} - \eta \nabla_{\theta_G} \left( \frac{1}{m} \sum_{i=1}^m \log (1 - D(G(\boldsymbol{z}^{(i)}))) \right)$$</li>
+</ol>
+
+<h4>2. 飽和梯度問題與 $-\log D(G(\boldsymbol{z}))$ 替代技巧</h4>
+<p>在訓練初期，生成器品質極差，判別器很容易以高信心區分真假（$D(G(\boldsymbol{z})) \approx 0$）。此時 $\log (1 - D(G(\boldsymbol{z})))$ 的斜率極度平緩，導致生成器遭遇<b>梯度飽和與消失 (Saturating Gradients)</b>。</p>
+<p>Goodfellow 等人建議在訓練初期將生成器的目標由極小化 $\log(1 - D(G(\boldsymbol{z})))$ 改為<b>極大化 $\log D(G(\boldsymbol{z}))$</b>（非飽和損失 Non-saturating Loss），在初期提供強大的梯度推動力。</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-3 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp3.png" alt="KP-3 概念架構圖解">
+        <figcaption>圖解 KP-3：assets/diagram-kp3.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-3 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: A plot comparing saturating loss log(1 - D(G(z))) with non-saturating loss -log D(G(z)).
+[WHY]: To demonstrate why standard GAN loss suffers from zero gradient when D is confident, and how -log D avoids early training stalling.
+[MUST show]: X-axis D(G(z)) from 0 to 1, Y-axis loss value, steep slope of -log D at D=0, flat slope of log(1-D) at D=0.
+[AVOID]: Hand-drawn non-vector curves.
+[STYLE]: Minimalist line graph with green and red line indicators.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-3 == -->
+
+<div class="demo" data-demo-id="kp-3">
+  <div class="demo-title">🎮 互動展示 kp-3：飽和損失 $\log(1 - D(G(\boldsymbol{z})))$ vs 非飽和損失 $-\log D(G(\boldsymbol{z}))$ 梯度強度對比</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>對比判別器輸出 $D(G(\boldsymbol{z}))$ 近於 0 時，兩種生成器損失函數產生的梯度強度差異。</p>
+    <p><b>怎麼操作：</b>拖動判別器分數 $D(G(\boldsymbol{z}))$ (0.001 到 0.95)。</p>
+    <p><b>觀察什麼：</b>當 $D(G(\boldsymbol{z})) \to 0$ 時，飽和損失的梯度趨近於 -1 平緩飽和，而非飽和損失 $-\log D$ 產生極大的驅動梯度！</p>
+    <p><b>理論基準：</b>非飽和替代損失在初期提供更強大的反向傳播梯度。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>判別器分數 D(G(z)) (0.001 ~ 0.95): <span id="kp3_dg_val">0.05</span></label>
+      <input type="range" id="kp3_dg" min="0.001" max="0.95" step="0.01" value="0.05">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp3_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp3_readout">對比梯度中...</div>
+</div>
+<script>
+(function(){
+  function updateKP3() {
+    var dg = parseFloat(document.getElementById('kp3_dg').value);
+    document.getElementById('kp3_dg_val').textContent = dg.toFixed(3);
+
+    var grad_sat = -1.0 / (1.0 - dg);
+    var grad_nonsat = -1.0 / dg;
+
+    var cvs = document.getElementById('kp3_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    var bars = [
+      { name: "飽和損失梯度 (log(1-D))", val: Math.abs(grad_sat), color: "#ef4444" },
+      { name: "非飽和損失梯度 (-log D)", val: Math.abs(grad_nonsat), color: "#10b981" }
+    ];
+
+    var maxV = Math.max(Math.abs(grad_sat), Math.abs(grad_nonsat));
+
+    for (var i = 0; i < bars.length; i++) {
+      var b = bars[i];
+      var y = 35 + i * 60;
+      var w = (b.val / maxV) * 350;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(200, y, Math.max(w, 4), 32);
+      ctx.fillStyle = '#1e293b'; ctx.font = '12px sans-serif';
+      ctx.fillText(b.name, 20, y + 20);
+      ctx.fillText(b.val.toFixed(2), 210 + Math.max(w, 4), y + 20);
+    }
+
+    var readout = 'D(G(z))=' + dg.toFixed(3) + ': 非飽和損失梯度強度為飽和損失的 ' + (Math.abs(grad_nonsat)/Math.abs(grad_sat)).toFixed(1) + ' 倍！';
+    document.getElementById('kp3_readout').textContent = readout;
+  }
+
+  var dgEl = document.getElementById('kp3_dg');
+  if (dgEl) {
+    dgEl.addEventListener('input', updateKP3);
+    setTimeout(updateKP3, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：GAN 在訓練初期生成器品質極差時，為何建議將生成器損失改為極大化 log D(G(z))？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="true">1. 因為原始的 log(1 - D(G(z))) 在 D(G(z)) 近於 0 時梯度平緩飽和，改用 log D(G(z)) 能提供更大的初始梯度驅動力</button>
+<button class="quiz-option-btn" data-correct="false">2. 因為 log D(G(z)) 可以省去計算二進位交叉熵</button>
+<button class="quiz-option-btn" data-correct="false">3. 因為判別器在初期無法計算導數</button>
+<button class="quiz-option-btn" data-correct="false">4. 因為改用 log D(G(z)) 能夠保證生成器永不崩塌</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>訓練初期 D(G(z)) 近於 0，log(1 - x) 在 x=0 附近的導數只有 -1，梯度過小；而 log(x) 在 x=0 附近的導數趨近無窮大，能提供極強的初始更新梯度。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-4 -->
+    <section id="kp4" class="card" data-kp="4">
+      <div class="card-header">
+        <span class="badge">§2.4</span>
+        <h2 class="card-title">KP-4：最優判別器 D* 與 Jensen-Shannon (JS) 散度極值推導</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 最優判別器 $D^*(\boldsymbol{x})$ 的解析解推導</h4>
+<p>給定任意固定生成器 $G$，其產生的數據分佈記為 $p_g(\boldsymbol{x})$。目標函數 $V(D, G)$ 可表示為對全空間的連續積分：</p>
+$$V(D, G) = \int_{\boldsymbol{x}} \left( p_{\text{data}}(\boldsymbol{x}) \log D(\boldsymbol{x}) + p_g(\boldsymbol{x}) \log (1 - D(\boldsymbol{x})) \right) d\boldsymbol{x}$$
+<p>為了對每個 $\boldsymbol{x}$ 求極大值，考察極值函數 $f(y) = a \log y + b \log (1 - y)$（其中 $a = p_{\text{data}}(\boldsymbol{x}), b = p_g(\boldsymbol{x}), y = D(\boldsymbol{x})$）。求導數並設為零：</p>
+$$f'(y) = \frac{a}{y} - \frac{b}{1 - y} = 0 \implies a(1 - y) = b y \implies y^* = \frac{a}{a + b}$$
+<p>因此，<b>對於給定生成器 $G$，全局最優判別器 $D^*(\boldsymbol{x})$ 的解析表示式為</b>：</p>
+$$D^*(\boldsymbol{x}) = \frac{p_{\text{data}}(\boldsymbol{x})}{p_{\text{data}}(\boldsymbol{x}) + p_g(\boldsymbol{x})}$$
+
+<h4>2. 最優目標函數與 Jensen-Shannon (JS) 散度的聯繫</h4>
+<p>將最優判別器 $D^*(\boldsymbol{x})$ 代回目標函數 $V(D^*, G)$：</p>
+$$V(D^*, G) = \mathbb{E}_{\boldsymbol{x} \sim p_{\text{data}}}\left[\log \frac{p_{\text{data}}(\boldsymbol{x})}{p_{\text{data}}(\boldsymbol{x}) + p_g(\boldsymbol{x})}\right] + \mathbb{E}_{\boldsymbol{x} \sim p_g}\left[\log \frac{p_g(\boldsymbol{x})}{p_{\text{data}}(\boldsymbol{x}) + p_g(\boldsymbol{x})}\right]$$
+<p>引入 KL 散度與 JS 散度的定義（$JSD(P \| Q) = \frac{1}{2} KLD\left(P \| \frac{P+Q}{2}\right) + \frac{1}{2} KLD\left(Q \| \frac{P+Q}{2}\right)$），整理可得：</p>
+$$V(D^*, G) = -\log 4 + 2 \cdot JSD(p_{\text{data}} \| p_g)$$
+<p><b>結論：當判別器達到最優時，生成器 $G$ 的訓練目標等價於極小化真實分佈與生成分佈之間的 JS 散度！當 $p_g = p_{\text{data}}$ 時，JS 散度為 0，最小值為 $-\log 4 \approx -1.386$。</b></p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-4 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp4.png" alt="KP-4 概念架構圖解">
+        <figcaption>圖解 KP-4：assets/diagram-kp4.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-4 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: Derivation curve of optimal Discriminator D*(x) = p_data / (p_data + p_g) and JS Divergence.
+[WHY]: To visually link binary cross-entropy optimization to Jensen-Shannon Divergence minimization.
+[MUST show]: Formula for D*(x), Minimum V(D*, G) = -log 4 at p_g = p_data.
+[AVOID]: Confusing non-standard notations.
+[STYLE]: Highlighted mathematical callout box with gold and emerald accents.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-4 == -->
+
+<div class="demo" data-demo-id="kp-4">
+  <div class="demo-title">🎮 互動展示 kp-4：最優判別器 $D^*(\boldsymbol{x}) = \frac{p_{\text{data}}}{p_{\text{data}} + p_g}$ 與 JS 散度計算</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>計算給定數據密度 $p_{\text{data}}(\boldsymbol{x})$ 與生成密度 $p_g(\boldsymbol{x})$ 下的最優判別器 $D^*(\boldsymbol{x})$ 及兩分佈之間的 JS 散度。</p>
+    <p><b>怎麼操作：</b>調整生成密度 $p_g$ 的重合比例 (0.1 到 1.0)。</p>
+    <p><b>觀察什麼：</b>當 $p_g = p_{\text{data}}$ 時，$D^*(\boldsymbol{x}) = 0.5$ 且博弈價值 $V(D^*, G) = -\log 4 \approx -1.3863$。</p>
+    <p><b>理論基準：</b>最優目標函數等價於極小化 JS 散度。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>分佈重合度 (p_g / p_data): <span id="kp4_r_val">0.50</span></label>
+      <input type="range" id="kp4_r" min="0.1" max="1.0" step="0.05" value="0.50">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp4_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp4_readout">計算 JS 散度中...</div>
+</div>
+<script>
+(function(){
+  function updateKP4() {
+    var ratio = parseFloat(document.getElementById('kp4_r').value);
+    document.getElementById('kp4_r_val').textContent = ratio.toFixed(2);
+
+    var p_data = 1.0;
+    var p_g = ratio * p_data;
+    var d_star = p_data / (p_data + p_g);
+
+    var jsd = 0.5 * (Math.log(2 * p_data / (p_data + p_g)) + Math.log(2 * p_g / (p_data + p_g)));
+    var V_star = -Math.log(4) + 2 * jsd;
+
+    var cvs = document.getElementById('kp4_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.fillStyle = '#fef08a'; ctx.strokeStyle = '#ca8a04';
+    ctx.fillRect(80, 40, 200, 90); ctx.strokeRect(80, 40, 200, 90);
+    ctx.fillStyle = '#ca8a04'; ctx.font = '12px sans-serif';
+    ctx.fillText('最優判別器 D*(x)', 100, 65);
+    ctx.font = '16px monospace'; ctx.fillText(d_star.toFixed(4), 100, 100);
+
+    ctx.fillStyle = '#dcfce7'; ctx.strokeStyle = '#166534';
+    ctx.fillRect(320, 40, 200, 90); ctx.strokeRect(320, 40, 200, 90);
+    ctx.fillStyle = '#166534'; ctx.font = '12px sans-serif';
+    ctx.fillText('最優目標 V(D*, G)', 340, 65);
+    ctx.font = '16px monospace'; ctx.fillText(V_star.toFixed(4), 340, 100);
+
+    var readout = '重合度 = ' + ratio.toFixed(2) + ' | 最優判別器 D* = ' + d_star.toFixed(4) + ' | JSD = ' + jsd.toFixed(4) + ' | V(D*, G) = ' + V_star.toFixed(4);
+    document.getElementById('kp4_readout').textContent = readout;
+  }
+
+  var rEl = document.getElementById('kp4_r');
+  if (rEl) {
+    rEl.addEventListener('input', updateKP4);
+    setTimeout(updateKP4, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：當判別器達到最優狀態 D*(x) 時，極小化極大博弈目標函數 V(D*, G) 的最小值為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 最小值為 0，此時 JS 散度為無窮大</button>
+<button class="quiz-option-btn" data-correct="true">2. 最小值為 -log 4，此時生成分佈 p_g 完全等於真實分佈 p_data</button>
+<button class="quiz-option-btn" data-correct="false">3. 最小值為 +log 2，此時生成器徹底失敗</button>
+<button class="quiz-option-btn" data-correct="false">4. 最小值為 -1，此時判別器準確率為 100%</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>當 p_g = p_data 時，D*(x) = 1/2，V(D*, G) = log(1/2) + log(1/2) = -log 4 ≈ -1.386，此時 JS 散度達到極小值 0。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-5 -->
+    <section id="kp5" class="card" data-kp="5">
+      <div class="card-header">
+        <span class="badge">§2.5</span>
+        <h2 class="card-title">KP-5：納許均衡 (Nash Equilibrium) 與收斂幾何分析</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 兩玩家零和賽局的納許均衡</h4>
+<p>在博弈論中，<b>納許均衡 (Nash Equilibrium)</b> 指的是這樣一種狀態：任何一位玩家單方面改變自己的策略都無法獲得更高的收益。</p>
+<p>在 GAN 的零和動態博弈中，全局納許均衡點精確對應於：</p>
+$$\begin{cases}
+p_g(\boldsymbol{x}) = p_{\text{data}}(\boldsymbol{x}) & \text{(生成器完美重構真實數據分佈)} \\
+D^*(\boldsymbol{x}) = \frac{1}{2} & \text{(判別器完全無法區分真假，盲猜機率為 50\%)}
+\end{cases}$$
+
+<h4>2. GAN 訓練不穩定性與迴旋波形軌跡</h4>
+<p>儘管理論證明了納許均衡點的存在性，但使用交替梯度下降 (Alternating SGD) 尋找納許均衡點在幾何面上極不穩定。</p>
+<p>考慮經典玩具問題 $\min_x \max_y (x \cdot y)$：其連續動態為 $\dot{x} = -y, \dot{y} = x$。若採用離散梯度更新，軌跡不會收斂到原點 $(0, 0)$，反而會以外擴螺旋線（Spiral Out）發散！這解釋了 GAN 訓練中常見的<b>旋轉振盪 (Oscillations) 與不收斂問題</b>。</p>
+      </div>
+<!-- == Orig Image kp-5 == -->
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-362_648_1242_1567_255.jpg" alt="教科書圖 14.3：GAN 訓練收斂過程、生成分佈 p_g 逼近真實分佈 p_data 與判別器 D 平滑化示意圖">
+        <figcaption>教科書圖 14.3：GAN 訓練收斂過程、生成分佈 p_g 逼近真實分佈 p_data 與判別器 D 平滑化示意圖</figcaption>
+      </figure>
+<!-- END Orig Image -->
+
+      <!-- == Phase B 圖解 kp-5 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp5.png" alt="KP-5 概念架構圖解">
+        <figcaption>圖解 KP-5：assets/diagram-kp5.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-5 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: Geometry of Nash Equilibrium and discrete gradient trajectory in GAN training.
+[WHY]: To explain why alternating gradient descent oscillates or spirals outward instead of converging straight to Nash Equilibrium.
+[MUST show]: Spiral outward trajectory of discrete SGD, star icon for Nash equilibrium point (p_g = p_data, D* = 0.5).
+[AVOID]: Cluttered grid background.
+[STYLE]: High-resolution phase portrait vector graph.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-5 == -->
+
+<div class="demo" data-demo-id="kp-5">
+  <div class="demo-title">🎮 互動展示 kp-5：納許均衡 (Nash Equilibrium) 與離散 SGD 旋轉發散軌跡</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>模擬玩具對抗問題 $\min_x \max_y (x \cdot y)$ 在離散梯度更新下，參數軌跡偏離納許均衡點 $(0, 0)$ 的幾何迴旋。</p>
+    <p><b>怎麼操作：</b>設定學習率 $\eta$，點擊「執行 10 步梯度更新」。</p>
+    <p><b>觀察什麼：</b>學習率過大時離散軌跡呈螺旋外擴發散，說明了 GAN 交替 SGD 訓練不穩定的幾何根源。</p>
+    <p><b>理論基準：</b>連續向量場微分方程為 $\dot{x} = -y, \dot{y} = x$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>學習率 eta (0.05 ~ 0.3): <span id="kp5_eta_val">0.15</span></label>
+      <input type="range" id="kp5_eta" min="0.05" max="0.3" step="0.01" value="0.15">
+    </div>
+    <button class="quiz-option-btn" id="kp5_step_btn" style="background:#2563eb; color:white; font-weight:bold;">▶ 執行 10 步 SGD 更新</button>
+    <button class="quiz-option-btn" id="kp5_reset_btn">↺ 重置軌跡</button>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp5_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp5_readout">準備模擬幾何軌跡...</div>
+</div>
+<script>
+(function(){
+  var x = 0.5, y = 0.5;
+  var path = [{x: 0.5, y: 0.5}];
+
+  function stepSpiral() {
+    var eta = parseFloat(document.getElementById('kp5_eta').value);
+    document.getElementById('kp5_eta_val').textContent = eta.toFixed(2);
+
+    for (var i = 0; i < 10; i++) {
+      var dx = -y;
+      var dy = x;
+      x = x + eta * dx;
+      y = y + eta * dy;
+      path.push({x: x, y: y});
+    }
+    drawSpiral();
+  }
+
+  function resetSpiral() {
+    x = 0.5; y = 0.5;
+    path = [{x: 0.5, y: 0.5}];
+    drawSpiral();
+  }
+
+  function drawSpiral() {
+    var cvs = document.getElementById('kp5_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath();
+    ctx.moveTo(40, 100); ctx.lineTo(560, 100);
+    ctx.moveTo(300, 20); ctx.lineTo(300, 180); ctx.stroke();
+
+    ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.arc(300, 100, 5, 0, Math.PI*2); ctx.fill();
+    ctx.fillText('納許均衡點 (0, 0)', 310, 95);
+
+    if (path.length > 1) {
+      ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2; ctx.beginPath();
+      for (var i = 0; i < path.length; i++) {
+        var px = 300 + path[i].x * 80;
+        var py = 100 - path[i].y * 80;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+
+    var dist = Math.sqrt(x*x + y*y);
+    var readout = '更新步數 = ' + path.length + ' | 當前距離原點距離 r = ' + dist.toFixed(4) + (dist > 1.0 ? ' (偏離發散中！)' : '');
+    document.getElementById('kp5_readout').textContent = readout;
+  }
+
+  var btn = document.getElementById('kp5_step_btn');
+  if (btn) {
+    btn.addEventListener('click', stepSpiral);
+    document.getElementById('kp5_reset_btn').addEventListener('click', resetSpiral);
+    setTimeout(drawSpiral, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：GAN 達致理論全局納許均衡 (Nash Equilibrium) 時，判別器 D*(x) 對任何輸入樣本的輸出值應為多少？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 輸出 1.0 (全部判為真)</button>
+<button class="quiz-option-btn" data-correct="false">2. 輸出 0.0 (全部判為假)</button>
+<button class="quiz-option-btn" data-correct="true">3. 輸出 0.5 (完全無法區分真假，機率各半)</button>
+<button class="quiz-option-btn" data-correct="false">4. 輸出與輸入樣本維度相等的矩陣</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>當生成分佈 p_g 與真實分佈 p_data 完全重合時，D*(x) = p_data / (p_data + p_g) = 1/2，即判別器完全喪失區分能力。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-6 -->
+    <section id="kp6" class="card" data-kp="6">
+      <div class="card-header">
+        <span class="badge">§2.6–2.7</span>
+        <h2 class="card-title">KP-6：條件式 GAN (cGAN) 與 DCGAN 潛在空間向量算術</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 條件式 GAN (Conditional GAN, cGAN)</h4>
+<p>標準原始 GAN 的生成過程是無受控的隨機採樣。為了精確控制生成樣本的類別或屬性（如指定生成「貓」或「數字 7」），Mirza 等人提出了 <b>Conditional GAN (cGAN)</b>。條件資訊 $\boldsymbol{y}$（如 One-hot 標籤或類別嵌入）同時被餵入生成器與判別器：</p>
+$$\min_G \max_D V(D, G) = \mathbb{E}_{\boldsymbol{x} \sim p_{\text{data}}}[\log D(\boldsymbol{x} \mid \boldsymbol{y})] + \mathbb{E}_{\boldsymbol{z} \sim p_z}[\log (1 - D(G(\boldsymbol{z} \mid \boldsymbol{y}) \mid \boldsymbol{y}))]$$
+
+<h4>2. 深度卷積 GAN (DCGAN) 與工程架構守則</h4>
+<p>2015 年 Radford 等人提出的 <b>DCGAN</b> 奠定了卷積神經網絡在 GAN 上的設計範式：</p>
+<ul>
+  <li>取消所有 Pooling 層：生成器改用<b>反卷積 / 轉置卷積 (Transposed Convolution)</b>，判別器改用步長卷積 (Strided Convolution)。</li>
+  <li>在 G 與 D 中廣泛引入 <b>批次歸一化 (Batch Normalization)</b>（輸出層與輸入層除外）。</li>
+  <li>生成器內部使用 <b>ReLU</b> 激活，輸出層使用 <b>Tanh</b>；判別器內部全使用 <b>LeakyReLU</b> (斜率 0.2)。</li>
+</ul>
+
+<h4>3. 潛在空間向量算術 (Latent Space Arithmetic)</h4>
+<p>DCGAN 展現了連續潛在空間的語意結構。類似 Word2Vec，我們可以對潛在向量進行向量加減運算，例如：</p>
+$$\boldsymbol{z}_{\text{戴眼鏡男}} - \boldsymbol{z}_{\text{不戴眼鏡男}} + \boldsymbol{z}_{\text{不戴眼鏡女}} \approx \boldsymbol{z}_{\text{戴眼鏡女}}$$
+<p>將合成後的潛在向量餵入 $G$，便能生成高清晰度的「戴眼鏡女性」圖像！</p>
+      </div>
+<!-- == Orig Image kp-6 == -->
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-363_167_1388_2028_181.jpg" alt="教科書圖 14.4：條件式 GAN (cGAN) 拼接條件標籤 y 的網絡架構圖">
+        <figcaption>教科書圖 14.4：條件式 GAN (cGAN) 拼接條件標籤 y 的網絡架構圖</figcaption>
+      </figure>
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-366_341_845_210_734.jpg" alt="教科書圖 14.5：DCGAN 產生器反卷積 (Transposed Conv) 逐層升採樣圖像生成結構">
+        <figcaption>教科書圖 14.5：DCGAN 產生器反卷積 (Transposed Conv) 逐層升採樣圖像生成結構</figcaption>
+      </figure>
+<!-- END Orig Image -->
+
+      <!-- == Phase B 圖解 kp-6 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp6.png" alt="KP-6 概念架構圖解">
+        <figcaption>圖解 KP-6：assets/diagram-kp6.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-6 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: Conditional GAN (cGAN) flow and DCGAN latent space vector arithmetic diagram.
+[WHY]: To show how condition Y guides generation and how latent vectors exhibit linear semantic properties (e.g., Man with glasses - Man + Woman = Woman with glasses).
+[MUST show]: Label Y concatenation in cGAN, vector arithmetic equation in latent space.
+[AVOID]: Non-standard vector icons.
+[STYLE]: Two-column modern structural card.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-6 == -->
+
+<div class="demo" data-demo-id="kp-6">
+  <div class="demo-title">🎮 互動展示 kp-6：DCGAN 潛在空間向量算術 ($z_{\text{A}} - z_{\text{B}} + z_{\text{C}}$) 語意合成</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>模擬 DCGAN 潛在向量加減法（如 $\boldsymbol{z}_{\text{戴眼鏡男}} - \boldsymbol{z}_{\text{不戴眼鏡男}} + \boldsymbol{z}_{\text{不戴眼鏡女}}$）合成新特徵。</p>
+    <p><b>怎麼操作：</b>選擇特徵 A、B、C 屬性組合。</p>
+    <p><b>觀察什麼：</b>潛在空間具備連續線性語意流形結構，合成後的向量精確呈現目標組合特徵。</p>
+    <p><b>理論基準：</b>DCGAN 潛在空間可進行語意解耦向量算術。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>向量算術組合:</label>
+      <select id="kp6_combo" style="padding:6px; border-radius:6px;">
+        <option value="1" selected>z(戴眼鏡男) - z(不戴眼鏡男) + z(不戴眼鏡女) = z(戴眼鏡女)</option>
+        <option value="2">z(微笑男) - z(嚴肅男) + z(嚴肅女) = z(微笑女)</option>
+      </select>
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp6_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp6_readout">選擇組合驗證...</div>
+</div>
+<script>
+(function(){
+  function updateKP6() {
+    var combo = document.getElementById('kp6_combo').value;
+    var cvs = document.getElementById('kp6_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    var titleStr = combo === '1' ? '戴眼鏡女性 (Glasses Woman)' : '微笑女性 (Smiling Woman)';
+
+    ctx.fillStyle = '#fef08a'; ctx.strokeStyle = '#ca8a04';
+    ctx.fillRect(50, 40, 140, 80); ctx.strokeRect(50, 40, 140, 80);
+    ctx.fillStyle = '#ca8a04'; ctx.font = '12px sans-serif';
+    ctx.fillText('基底 A', 70, 65);
+    ctx.font = '11px sans-serif'; ctx.fillText(combo === '1' ? 'z(戴眼鏡男)' : 'z(微笑男)', 70, 90);
+
+    ctx.fillStyle = '#1e293b'; ctx.font = '20px sans-serif'; ctx.fillText('-', 205, 85);
+
+    ctx.fillStyle = '#fee2e2'; ctx.strokeStyle = '#dc2626';
+    ctx.fillRect(230, 40, 140, 80); ctx.strokeRect(230, 40, 140, 80);
+    ctx.fillStyle = '#b91c1c'; ctx.font = '12px sans-serif';
+    ctx.fillText('扣除 B', 250, 65);
+    ctx.font = '11px sans-serif'; ctx.fillText(combo === '1' ? 'z(不戴眼鏡男)' : 'z(嚴肅男)', 250, 90);
+
+    ctx.fillStyle = '#1e293b'; ctx.font = '20px sans-serif'; ctx.fillText('+', 385, 85);
+
+    ctx.fillStyle = '#dcfce7'; ctx.strokeStyle = '#166534';
+    ctx.fillRect(410, 40, 140, 80); ctx.strokeRect(410, 40, 140, 80);
+    ctx.fillStyle = '#166534'; ctx.font = '12px sans-serif';
+    ctx.fillText('加上 C', 430, 65);
+    ctx.font = '11px sans-serif'; ctx.fillText(combo === '1' ? 'z(不戴眼鏡女)' : 'z(嚴肅女)', 430, 90);
+
+    var readout = '合成結果: G(zA - zB + zC) 大機率生成 ' + titleStr + ' (潛在語意空間線性平移成功！)';
+    document.getElementById('kp6_readout').textContent = readout;
+  }
+
+  var cEl = document.getElementById('kp6_combo');
+  if (cEl) {
+    cEl.addEventListener('change', updateKP6);
+    setTimeout(updateKP6, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：下列關於 DCGAN 架構設計守則的敘述，何者正確？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 判別器應大量採用 Max Pooling 來降低特徵解析度</button>
+<button class="quiz-option-btn" data-correct="true">2. 生成器內部使用 ReLU 激活函數，判別器內部使用 LeakyReLU，並以轉置卷積取代 Pooling</button>
+<button class="quiz-option-btn" data-correct="false">3. 生成器與判別器的每一層都必須施加 Softmax 歸一化</button>
+<button class="quiz-option-btn" data-correct="false">4. DCGAN 的潛在空間向量無法進行加減算術運算</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>DCGAN 取消 Pooling 改用轉置卷積/步長卷積，生成器內部採用 ReLU、判別器內部採用 LeakyReLU，成功實現了穩定的深度卷積 GAN 訓練。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-7 -->
+    <section id="kp7" class="card" data-kp="7">
+      <div class="card-header">
+        <span class="badge">§3.1–3.3</span>
+        <h2 class="card-title">KP-7：模式崩塌 (Mode Collapse)、Minibatch Discrimination 與 Unrolled GAN</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 模式崩塌 (Mode Collapse) 世紀難題</h4>
+<p><b>模式崩塌 (Mode Collapse)</b> 是 GAN 訓練中最惡名昭彰的失敗模式。當真實數據集包含多個模式（例如包含 0 到 9 十種手寫數字）時，生成器發現某一個模式（如數字 "1"）能輕易欺騙判別器，於是只專注於生成該單一模式，徹底放棄生成其他模式。</p>
+<p>其數學根源在於：極小化 KL 散度 $KLD(p_g \| p_{\text{data}})$ 是 Mode-Seeking 的，當生成器更新過快時，容易塌陷到單一局部極小值。</p>
+
+<h4>2. 小批次判別 (Minibatch Discrimination)</h4>
+<p>Salimans 等人提出讓判別器同時觀察整個 Mini-batch 樣本之間的相似度。若生成器產生的批量中所有樣本高度相似（發生坍塌），判別器能立刻識別並給予極低分懲罰。</p>
+
+<h4>3. 展開 GAN (Unrolled GAN) 前瞻優化</h4>
+<p>Metz 等人提出在更新生成器 $G$ 時，讓生成器「前瞻 (Unroll)」判別器未來 $k$ 步的梯度更新。這破壞了單步貪婪對抗，使生成器無法透過單一模式投機取巧。</p>
+      </div>
+<!-- == Orig Image kp-7 == -->
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-382_780_1253_1407_247.jpg" alt="教科書圖 14.6：Unrolled GAN 前瞻判別器 k 步梯度的優化流程圖">
+        <figcaption>教科書圖 14.6：Unrolled GAN 前瞻判別器 k 步梯度的優化流程圖</figcaption>
+      </figure>
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-386_415_1240_195_255.jpg" alt="教科書圖 14.7：Mixture GAN (MGAN) 多生成器混合網路架構">
+        <figcaption>教科書圖 14.7：Mixture GAN (MGAN) 多生成器混合網路架構</figcaption>
+      </figure>
+<!-- END Orig Image -->
+
+      <!-- == Phase B 圖解 kp-7 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp7.png" alt="KP-7 概念架構圖解">
+        <figcaption>圖解 KP-7：assets/diagram-kp7.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-7 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: Comparison between ideal multi-mode data coverage versus Mode Collapse failure mode.
+[WHY]: To vividly illustrate Mode Collapse where the generator repeatedly outputs only a single mode (e.g., digit '1') while ignoring all other digits.
+[MUST show]: Multi-modal target distribution (0-9 digits), Single-mode collapsed generator output.
+[AVOID]: Messy overlapping text.
+[STYLE]: Contrast panel with green 'Success' and red 'Collapse' status indicators.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-7 == -->
+
+<div class="demo" data-demo-id="kp-7">
+  <div class="demo-title">🎮 互動展示 kp-7：模式崩塌 (Mode Collapse) vs Minibatch Discrimination 多樣性修復</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>對比標準 GAN 發生 Mode Collapse 只生成單一數字，與啟用 Minibatch Discrimination 後修復多樣性。</p>
+    <p><b>怎麼操作：</b>切換「標準 GAN (發生 Mode Collapse)」與「Minibatch GAN (多樣性維持)」。</p>
+    <p><b>觀察什麼：</b>標準 GAN 生成樣本全部凝固為數字 "1"；Minibatch GAN 均勻產出 0 到 9 多元數字。</p>
+    <p><b>理論基準：</b>Minibatch Discrimination 讓判別器同時檢查批量內樣本間的相似度。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>模式狀態:</label>
+      <select id="kp7_mode" style="padding:6px; border-radius:6px;">
+        <option value="collapse" selected>標準 GAN (Mode Collapse 崩塌中)</option>
+        <option value="minibatch">Minibatch GAN (多樣性正常)</option>
+      </select>
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp7_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp7_readout">選擇模式觀測...</div>
+</div>
+<script>
+(function(){
+  function updateKP7() {
+    var mode = document.getElementById('kp7_mode').value;
+    var cvs = document.getElementById('kp7_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    var samples = mode === 'collapse' ? ['1', '1', '1', '1', '1', '1', '1', '1'] : ['0', '1', '2', '3', '4', '5', '6', '7'];
+
+    for (var i = 0; i < samples.length; i++) {
+      var cx = 60 + i * 68;
+      ctx.fillStyle = mode === 'collapse' ? '#fee2e2' : '#dcfce7';
+      ctx.strokeStyle = mode === 'collapse' ? '#dc2626' : '#166534';
+      ctx.fillRect(cx - 22, 50, 44, 55); ctx.strokeRect(cx - 22, 50, 44, 55);
+
+      ctx.fillStyle = mode === 'collapse' ? '#b91c1c' : '#15803d';
+      ctx.font = '24px monospace';
+      ctx.fillText(samples[i], cx - 7, 86);
+    }
+
+    var readout = mode === 'collapse' ? '🛑 模式崩塌中：生成器陷入單一模式 1 (熵極低，喪失多樣性)' : '✅ Minibatch 判別奏效：生成批量涵蓋多元數字模式 0~7 (多樣性正常)';
+    document.getElementById('kp7_readout').textContent = readout;
+  }
+
+  var mEl = document.getElementById('kp7_mode');
+  if (mEl) {
+    mEl.addEventListener('change', updateKP7);
+    setTimeout(updateKP7, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：在 GAN 訓練中，模式崩塌 (Mode Collapse) 現象指的是什麼？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 判別器的梯度直接變為零且網絡崩潰</button>
+<button class="quiz-option-btn" data-correct="true">2. 生成器忽視真實數據的多樣性，只反覆生成少數幾種（甚至單一）高信心模式的樣本</button>
+<button class="quiz-option-btn" data-correct="false">3. 模型記憶體空間爆滿導致程式中斷</button>
+<button class="quiz-option-btn" data-correct="false">4. 生成器輸出的圖像解析度縮小為 1x1 像素</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>Mode Collapse 指生成器找到某個能欺騙判別器的局部樣本後，便停止學習全數據分佈的多樣性，只重複產出單一或少數幾種模式的數據。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-8 -->
+    <section id="kp8" class="card" data-kp="8">
+      <div class="card-header">
+        <span class="badge">§3.6–3.7</span>
+        <h2 class="card-title">KP-8：雙判別器 D2GAN 與 Wasserstein GAN (WGAN / Earth Mover's Distance)</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 雙判別器 D2GAN (Dual Discriminator GAN)</h4>
+<p>為了同時對抗 Overfitting 與 Mode Collapse，D2GAN 引入兩個判別器：$D_1$ 傾向對真實數據評高分，$D_2$ 傾向對生成數據評高分，利用 KL 與反向 KL 散度相結合避免模式遺漏。</p>
+
+<h4>2. Wasserstein GAN (WGAN) 的革命性突破</h4>
+<p>Arjovsky 等人在 2017 年提出的 <b>Wasserstein GAN (WGAN)</b> 從根本上解決了 JS 散度在兩分佈無重疊時梯度消失的問題。WGAN 採用 <b>Wasserstein 距離（又稱推土機距離 Earth Mover's Distance, EMD）</b>：</p>
+$$W(p_{\text{data}}, p_g) = \inf_{\gamma \in \Pi(p_{\text{data}}, p_g)} \mathbb{E}_{(\boldsymbol{x}, \boldsymbol{y}) \sim \gamma}[\|\boldsymbol{x} - \boldsymbol{y}\|]$$
+
+<h4>3. Kantorovich-Rubinstein 對偶性與 1-Lipschitz 約束</h4>
+<p>利用對偶定理，WGAN 的目標函數簡化為：</p>
+$$\max_{D \in \mathcal{D}_L} \mathbb{E}_{\boldsymbol{x} \sim p_{\text{data}}}[D(\boldsymbol{x})] - \mathbb{E}_{\boldsymbol{z} \sim p_z}[D(G(\boldsymbol{z}))]$$
+<p>其中判別器 $D$（此處稱為 Critic）必須滿足 <b>1-Lipschitz 連續條件</b>（即 $\|\nabla_{\boldsymbol{x}} D(\boldsymbol{x})\| \le 1$）。WGAN 原論文採用<b>權重剪裁 (Weight Clipping)</b> 來強制實施 1-Lipschitz，後續的 WGAN-GP 則升級為<b>梯度懲罰 (Gradient Penalty)</b>。</p>
+      </div>
+<!-- == Orig Image kp-8 == -->
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-387_397_845_208_734.jpg" alt="教科書圖 14.8：Dual Discriminator GAN (D2GAN) 雙判別器對抗架構">
+        <figcaption>教科書圖 14.8：Dual Discriminator GAN (D2GAN) 雙判別器對抗架構</figcaption>
+      </figure>
+<!-- END Orig Image -->
+
+      <!-- == Phase B 圖解 kp-8 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp8.png" alt="KP-8 概念架構圖解">
+        <figcaption>圖解 KP-8：assets/diagram-kp8.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-8 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: Wasserstein GAN (WGAN) EMD distance concept and 1-Lipschitz continuity constraint.
+[WHY]: To explain why EMD provides smooth continuous gradients even when data distributions have non-overlapping supports where JS divergence fails.
+[MUST show]: Earth Mover's Distance visualization, 1-Lipschitz gradient norm bound <= 1.
+[AVOID]: Complex 3D integral formulas without context.
+[STYLE]: Modern mathematical physics diagram.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-8 == -->
+
+<div class="demo" data-demo-id="kp-8">
+  <div class="demo-title">🎮 互動展示 kp-8：Wasserstein GAN (WGAN) EMD 距離與 1-Lipschitz 限制</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>計算兩無重疊高斯分佈間的中心距離 $\mu$ 下，JS 散度與 Wasserstein 距離 (EMD) 的變化。</p>
+    <p><b>怎麼操作：</b>移動分佈中心距離 $\mu$ (0.0 到 5.0)。</p>
+    <p><b>觀察什麼：</b>當 $\mu > 2$ 無重疊時，JS 散度恆定為 $\log 2 \approx 0.693$（梯度歸零）；而 Wasserstein 距離隨 $\mu$ 線性增長，提供恆定持續的梯度！</p>
+    <p><b>理論基準：</b>WGAN EMD 距離解決了 JS 散度的梯度消失問題。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>兩分佈中心距離 mu (0.0 ~ 5.0): <span id="kp8_mu_val">2.50</span></label>
+      <input type="range" id="kp8_mu" min="0.0" max="5.0" step="0.1" value="2.50">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp8_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp8_readout">計算 EMD 距離中...</div>
+</div>
+<script>
+(function(){
+  function updateKP8() {
+    var mu = parseFloat(document.getElementById('kp8_mu').value);
+    document.getElementById('kp8_mu_val').textContent = mu.toFixed(1);
+
+    var jsd = mu > 1.5 ? Math.log(2) : 0.5 * (Math.log(2) * (1 - mu/1.5));
+    var emd = mu; // linear distance
+
+    var cvs = document.getElementById('kp8_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.fillStyle = '#fee2e2'; ctx.strokeStyle = '#dc2626';
+    ctx.fillRect(80, 40, 200, 90); ctx.strokeRect(80, 40, 200, 90);
+    ctx.fillStyle = '#b91c1c'; ctx.font = '12px sans-serif';
+    ctx.fillText('JS 散度 JSD(p_data || p_g)', 95, 65);
+    ctx.font = '16px monospace'; ctx.fillText(jsd.toFixed(4) + (mu > 1.5 ? ' (梯度=0)' : ''), 95, 100);
+
+    ctx.fillStyle = '#dcfce7'; ctx.strokeStyle = '#166534';
+    ctx.fillRect(320, 40, 200, 90); ctx.strokeRect(320, 40, 200, 90);
+    ctx.fillStyle = '#166534'; ctx.font = '12px sans-serif';
+    ctx.fillText('Wasserstein 距離 EMD', 335, 65);
+    ctx.font = '16px monospace'; ctx.fillText(emd.toFixed(4) + ' (梯度=1.0)', 335, 100);
+
+    var readout = '距離 mu=' + mu.toFixed(1) + ': JS 散度梯度為 0 (無法優化) | WGAN EMD 提供常數 1.0 的優良梯度驅動！';
+    document.getElementById('kp8_readout').textContent = readout;
+  }
+
+  var muEl = document.getElementById('kp8_mu');
+  if (muEl) {
+    muEl.addEventListener('input', updateKP8);
+    setTimeout(updateKP8, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：Wasserstein GAN (WGAN) 相比於傳統原始 GAN，最大的理論突破為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 放棄使用神經網絡，改用高斯混合模型</button>
+<button class="quiz-option-btn" data-correct="true">2. 採用 Wasserstein 距離 (EMD) 取代 JS 散度，即使兩分佈無重疊也能提供平滑持續的梯度，從根本上解決訓練不穩定與模式崩塌</button>
+<button class="quiz-option-btn" data-correct="false">3. 將判別器的輸出強制設為 0 或 1 的離散整數</button>
+<button class="quiz-option-btn" data-correct="false">4. 不再需要潛在隨機雜訊 z 輸入</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>JS 散度在兩分佈支援集無重疊時為常數 log 2 且梯度為零；Wasserstein 距離具有平滑幾何連續性，即使兩分佈無重疊也能提供高性價比的滑步梯度。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-9 -->
+    <section id="kp9" class="card" data-kp="9">
+      <div class="card-header">
+        <span class="badge">§4.1</span>
+        <h2 class="card-title">KP-9：極大似然估計 (MLE) 與 GAN 隱式分配對比</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 顯式機率密度 (Explicit) vs 隱式採樣 (Implicit)</h4>
+<p>在生成模型領域，學習數據分佈主要有兩大哲學流派：</p>
+<ul>
+  <li><b>極大似然估計 (MLE / 顯式模型)</b>：顯式定義機率密度函數 $p_\theta(\boldsymbol{x})$（如 autoregressive 模型、Flow 模型），極大化對數似然 $\sum \log p_\theta(\boldsymbol{x}_i)$。相當於極小化方向 KL 散度 $KLD(p_{\text{data}} \| p_\theta)$。</li>
+  <li><b>GAN (隱式模型)</b>：不直接計算或寫出 $p_g(\boldsymbol{x})$ 的解析表達式，而是直接構建黑盒變換 $G(\boldsymbol{z})$ 進行採樣。判別器隱式地評估分佈重合度。</li>
+</ul>
+
+<h4>2. 散度方向性對比 (Asymmetry of KL Divergence)</h4>
+<ul>
+  <li><b>MLE (Forward KL: $KLD(p_{\text{data}} \| p_g)$)</b>：<b>Zero-Avoiding (Mode-Covering)</b>。只要 $p_{\text{data}}(\boldsymbol{x}) > 0$，模型必須讓 $p_g(\boldsymbol{x}) > 0$，因此傾向於產生平均泛化的模糊樣本。</li>
+  <li><b>Reverse KL ($KLD(p_g \| p_{\text{data}})$)</b>：<b>Zero-Attracting (Mode-Seeking)</b>。只要 $p_{\text{data}}(\boldsymbol{x}) = 0$，模型必須讓 $p_g(\boldsymbol{x}) = 0$，傾向於集中產生少數品質極高的清晰樣本。</li>
+</ul>
+      </div>
+<!-- == Orig Image kp-9 == -->
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-391_1016_1244_193_253.jpg" alt="教科書圖 14.9：極大似然估計 (MLE) 顯式擬合與 GAN 隱式生成模式對比">
+        <figcaption>教科書圖 14.9：極大似然估計 (MLE) 顯式擬合與 GAN 隱式生成模式對比</figcaption>
+      </figure>
+<!-- END Orig Image -->
+
+      <!-- == Phase B 圖解 kp-9 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp9.png" alt="KP-9 概念架構圖解">
+        <figcaption>圖解 KP-9：assets/diagram-kp9.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-9 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: Explicit MLE (Forward KL) versus Implicit GAN (Reverse KL) density fitting behavior.
+[WHY]: To contrast Mode-Covering (Forward KL / blurry averages) with Mode-Seeking (Reverse KL / sharp clear modes).
+[MUST show]: Forward KL covering both peaks with a broad distribution, Reverse KL locking onto one sharp peak.
+[AVOID]: Abstract unlabelled probability curves.
+[STYLE]: Double-panel distribution curve comparison.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-9 == -->
+
+<div class="demo" data-demo-id="kp-9">
+  <div class="demo-title">🎮 互動展示 kp-9：MLE (Forward KL) Mode-Covering vs GAN (Reverse KL) Mode-Seeking 對比</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>對比雙峰真實分佈下，MLE（極小化 $KLD(p_{\text{data}} \| p_g)$）與 GAN（極小化 $KLD(p_g \| p_{\text{data}})$）的擬合行為。</p>
+    <p><b>怎麼操作：</b>切換「MLE (Forward KL)」與「GAN (Reverse KL)」。</p>
+    <p><b>觀察什麼：</b>MLE 包覆雙峰形成平均模糊曲線；GAN 選擇鎖定其中單一峰值產生清晰高畫質。</p>
+    <p><b>理論基準：</b>Forward KL 為 Mode-Covering，Reverse KL 為 Mode-Seeking。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>擬合模型目標:</label>
+      <select id="kp9_target" style="padding:6px; border-radius:6px;">
+        <option value="mle" selected>MLE (Forward KL) - Mode-Covering (包覆雙峰模糊)</option>
+        <option value="gan">GAN (Reverse KL) - Mode-Seeking (鎖定單峰清晰)</option>
+      </select>
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp9_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp9_readout">選擇目標對比...</div>
+</div>
+<script>
+(function(){
+  function updateKP9() {
+    var mode = document.getElementById('kp9_target').value;
+    var cvs = document.getElementById('kp9_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(40, 160); ctx.lineTo(560, 160); ctx.stroke();
+
+    // Bimodal Real distribution (Two blue peaks at -2 and +2)
+    ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2; ctx.beginPath();
+    for (var x = -4; x <= 4; x += 0.1) {
+      var px = 300 + x * 50;
+      var py = 160 - (Math.exp(-0.5 * Math.pow(x+2, 2)) + Math.exp(-0.5 * Math.pow(x-2, 2))) * 60;
+      if (x === -4) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Fitted distribution p_g
+    ctx.strokeStyle = mode === 'mle' ? '#ef4444' : '#10b981'; ctx.lineWidth = 3; ctx.beginPath();
+    for (var x = -4; x <= 4; x += 0.1) {
+      var px = 300 + x * 50;
+      var py = 160;
+      if (mode === 'mle') {
+        // Broad single Gauss covering both peaks
+        py = 160 - Math.exp(-0.1 * x * x) * 55;
+      } else {
+        // Sharp single Gauss locked on right peak at +2
+        py = 160 - Math.exp(-0.5 * Math.pow(x-2, 2)) * 120;
+      }
+      if (x === -4) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = '#2563eb'; ctx.fillText('雙峰真實分佈 p_data', 40, 30);
+    ctx.fillStyle = mode === 'mle' ? '#ef4444' : '#10b981';
+    ctx.fillText(mode === 'mle' ? 'MLE 寬包覆擬合 p_g (Mode-Covering 產生模糊)' : 'GAN 聚焦單峰擬合 p_g (Mode-Seeking 產生清晰)', 250, 30);
+
+    var readout = mode === 'mle' ? 'MLE (Forward KL): 避免產生 0 機率區域，被迫平滑包覆所有 Mode (結果模糊)' : 'GAN (Reverse KL): 避免在 0 機率區域產生樣本，集中資源擬合單一 Mode (結果極為清晰)';
+    document.getElementById('kp9_readout').textContent = readout;
+  }
+
+  var tEl = document.getElementById('kp9_target');
+  if (tEl) {
+    tEl.addEventListener('change', updateKP9);
+    setTimeout(updateKP9, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：極大似然估計 (MLE) 與 GAN 隱式生成模型在學習數據分佈上的根本差異為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="true">1. MLE 需要顯式定義機率密度 p_theta(x)，而 GAN 為不需寫出機率密度的隱式採樣模型</button>
+<button class="quiz-option-btn" data-correct="false">2. MLE 只能處理一維數據，而 GAN 可以處理圖像</button>
+<button class="quiz-option-btn" data-correct="false">3. MLE 採用極小化極大賽局，而 GAN 採用最小二乘法</button>
+<button class="quiz-option-btn" data-correct="false">4. 兩者在數學上完全沒有任何區別</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>MLE 為顯式密度模型 (Explicit Density)，需直接優化 log p_theta(x)；而 GAN 為隱式模型 (Implicit Density)，透過采樣與判別器對抗隱式擬合分佈。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-10 -->
+    <section id="kp10" class="card" data-kp="10">
+      <div class="card-header">
+        <span class="badge">§4.2</span>
+        <h2 class="card-title">KP-10：f-GAN 廣義變分凸對偶推導</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 廣義 $f$-散度 ($f$-Divergence) 的定義</h4>
+<p>KL 散度與 JS 散度都是廣義 <b>$f$-散度 ($f$-Divergence)</b> 的特例。對於滿足 $f(1)=0$ 的凸函數 $f$，$f$-散度定義為：</p>
+$$D_f(p_{\text{data}} \| p_g) = \int_{\boldsymbol{x}} p_g(\boldsymbol{x}) f\left( \frac{p_{\text{data}}(\boldsymbol{x})}{p_g(\boldsymbol{x})} \right) d\boldsymbol{x}$$
+
+<h4>2. Fenchel 凸對偶變換 (Convex Conjugate)</h4>
+<p>利用 Fenchel 凸對偶定理，任何凸函數 $f(u)$ 都可以寫成其共軛函數 $f^*(t) = \sup_{u} \{u t - f^*(t)\}$ 的形式。Nowozin 等人在 2016 年提出了 <b>$f$-GAN</b>，將下界寫為：</p>
+$$D_f(p_{\text{data}} \| p_g) \ge \sup_{T \in \mathcal{T}} \left( \mathbb{E}_{\boldsymbol{x} \sim p_{\text{data}}}[T(\boldsymbol{x})] - \mathbb{E}_{\boldsymbol{x} \sim p_g}[f^*(T(\boldsymbol{x}))] \right)$$
+<p>這表明：<b>任何 $f$-散度（如 Total Variation, Pearson $\chi^2$, Reverse KL）都能透過選擇對應的 $f^*$ 構建出對應特性的 GAN！</b></p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-10 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp10.png" alt="KP-10 概念架構圖解">
+        <figcaption>圖解 KP-10：assets/diagram-kp10.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-10 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: Variational lower bound diagram of f-GAN using Fenchel convex conjugate.
+[WHY]: To prove that any f-divergence (Total Variation, Pearson chi^2, Reverse KL) can formulate a corresponding GAN objective.
+[MUST show]: Convex function f(u), Conjugate function f*(t), Unified f-GAN formula.
+[AVOID]: Dense unformatted LaTeX blocks.
+[STYLE]: Clean mathematical theorem card.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-10 == -->
+
+<div class="demo" data-demo-id="kp-10">
+  <div class="demo-title">🎮 互動展示 kp-10：f-GAN 廣義 f-散度與 Fenchel 凸共軛函數 $f^*(t)$ 計算器</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>計算選擇不同凸函數 $f(u)$ 時，其共軛函數 $f^*(t)$ 與導出的 GAN 目標函數。</p>
+    <p><b>怎麼操作：</b>選擇散度類型 (JS Divergence, Pearson $\chi^2$, Reverse KL)。</p>
+    <p><b>觀察什麼：</b>不同散度對應不同的共軛函數 $f^*(t)$，證明了所有 $f$-散度的統一對偶架構。</p>
+    <p><b>理論基準：</b>$D_f(p_{\text{data}} \| p_g) \ge \mathbb{E}_{p_{\text{data}}}[T(x)] - \mathbb{E}_{p_g}[f^*(T(x))]$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>選擇 f-散度類型:</label>
+      <select id="kp10_f_sel" style="padding:6px; border-radius:6px;">
+        <option value="js" selected>JS Divergence (標準原始 GAN)</option>
+        <option value="chi2">Pearson chi^2 Divergence (Least Squares GAN 關聯)</option>
+        <option value="rev_kl">Reverse KL Divergence (Mode-Seeking GAN)</option>
+      </select>
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp10_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp10_readout">選擇散度類型檢視...</div>
+</div>
+<script>
+(function(){
+  function updateKP10() {
+    var type = document.getElementById('kp10_f_sel').value;
+    var cvs = document.getElementById('kp10_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    var info = {
+      js: { name: "JS Divergence", f_expr: "f(u) = u log u - (u+1) log((u+1)/2)", f_star: "f*(t) = -log(1 - exp(t))" },
+      chi2: { name: "Pearson chi^2", f_expr: "f(u) = (u - 1)^2", f_star: "f*(t) = 1/4 * t^2 + t" },
+      rev_kl: { name: "Reverse KL", f_expr: "f(u) = -log u", f_star: "f*(t) = -1 - log(-t)" }
+    }[type];
+
+    ctx.fillStyle = '#fef08a'; ctx.strokeStyle = '#ca8a04';
+    ctx.fillRect(60, 40, 220, 90); ctx.strokeRect(60, 40, 220, 90);
+    ctx.fillStyle = '#ca8a04'; ctx.font = '12px sans-serif';
+    ctx.fillText('原凸函數 f(u)', 80, 65);
+    ctx.font = '11px monospace'; ctx.fillText(info.f_expr, 75, 95);
+
+    ctx.fillStyle = '#dcfce7'; ctx.strokeStyle = '#166534';
+    ctx.fillRect(320, 40, 220, 90); ctx.strokeRect(320, 40, 220, 90);
+    ctx.fillStyle = '#166534'; ctx.font = '12px sans-serif';
+    ctx.fillText('Fenchel 共軛 f*(t)', 340, 65);
+    ctx.font = '11px monospace'; ctx.fillText(info.f_star, 335, 95);
+
+    var readout = info.name + ': 透過對偶變換 f*(t)，可精確構建對應特性的神經網絡對抗極小化極大優化目標。';
+    document.getElementById('kp10_readout').textContent = readout;
+  }
+
+  var fEl = document.getElementById('kp10_f_sel');
+  if (fEl) {
+    fEl.addEventListener('change', updateKP10);
+    setTimeout(updateKP10, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：Nowozin 等人提出的 f-GAN 理論證明了什麼重要結論？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 證明了只有 JS 散度可以用於 GAN 的對抗訓練</button>
+<button class="quiz-option-btn" data-correct="true">2. 利用 Fenchel 凸對偶變換，證明了所有廣義 f-散度 (如 Total Variation, Pearson chi^2) 都能統一構建對應的 GAN 對抗目標</button>
+<button class="quiz-option-btn" data-correct="false">3. 證明了生成器神經網絡不需要激活函數</button>
+<button class="quiz-option-btn" data-correct="false">4. 證明了判別器權重必須保持全正數</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>f-GAN 透過凸對偶理論將散度下界轉化為變分優化形式，證明了任何 f-散度均可導出具備特定幾何性質的對抗訓練架構。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-11 -->
+    <section id="kp11" class="card" data-kp="11">
+      <div class="card-header">
+        <span class="badge">§4.3–4.4</span>
+        <h2 class="card-title">KP-11：對抗變分貝氏 (AVB) 與貝氏 GAN (BGAN)</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 對抗變分貝氏 (Adversarial Variational Bayes, AVB)</h4>
+<p>傳統變分自編碼器 (VAE) 限制變分後驗分佈 $q_\phi(\boldsymbol{z} \mid \boldsymbol{x})$ 必須為簡單的高斯分佈。Mescheder 等人提出了 <b>AVB</b>，利用對抗判別器隱式估算變分後驗與先驗之間的對數密度比 (Log-Density Ratio)，允許極度複雜靈活的任意變分後驗分佈。</p>
+
+<h4>2. 貝氏 GAN (Bayesian GAN, BGAN)</h4>
+<p>傳統 GAN 僅對單點權重 $\boldsymbol{\theta}_G, \boldsymbol{\theta}_D$ 進行極小化極大點估計。Saatci 等人提出的 <b>BGAN</b> 引入貝氏推斷，對生成器與判別器的權重後驗分佈 $p(\boldsymbol{\theta}_G \mid \mathcal{D}), p(\boldsymbol{\theta}_D \mid \mathcal{D})$ 進行 SGLD (Stochastic Gradient Langevin Dynamics) MCMC 採樣，有效防止了過擬合與 Mode Collapse。</p>
+      </div>
+<!-- == Orig Image kp-11 == -->
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-393_852_854_204_726.jpg" alt="教科書圖 14.10：對抗變分貝氏 (AVB) 對抗判別對數密度比架構">
+        <figcaption>教科書圖 14.10：對抗變分貝氏 (AVB) 對抗判別對數密度比架構</figcaption>
+      </figure>
+<!-- END Orig Image -->
+
+      <!-- == Phase B 圖解 kp-11 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp11.png" alt="KP-11 概念架構圖解">
+        <figcaption>圖解 KP-11：assets/diagram-kp11.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-11 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: Adversarial Variational Bayes (AVB) and Bayesian GAN (BGAN) architecture comparison.
+[WHY]: To show how AVB bypasses Gaussian posterior constraints and how BGAN samples posterior weights using SGLD.
+[MUST show]: AVB Log-Density Ratio estimation, BGAN weight distribution sampling over G and D.
+[AVOID]: Over-complicated neural node webs.
+[STYLE]: Dual structural comparison box.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-11 == -->
+
+<div class="demo" data-demo-id="kp-11">
+  <div class="demo-title">🎮 互動展示 kp-11：Bayesian GAN (BGAN) SGLD MCMC 權重採樣與 Mode Collapse 防護</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>模擬 BGAN 透過 SGLD MCMC 對生成器權重後驗分佈 $p(\boldsymbol{\theta}_G \mid \mathcal{D})$ 進行採樣，維持多個權重假說。</p>
+    <p><b>怎麼操作：</b>點擊「SGLD MCMC 採樣權重」。</p>
+    <p><b>觀察什麼：</b>傳統點估計易死鎖於單一模式；貝氏採樣探索多個權重模式，有效維持生成樣本多樣性。</p>
+    <p><b>理論基準：</b>SGLD 採樣公式 $\Delta \boldsymbol{\theta} = \frac{\eta}{2} \nabla \log p(\boldsymbol{\theta}) + \epsilon, \epsilon \sim \mathcal{N}(0, \eta)$。</p>
+  </div>
+  <div class="demo-controls">
+    <button class="quiz-option-btn" id="kp11_sample_btn" style="background:#2563eb; color:white; font-weight:bold;">▶ 執行 SGLD MCMC 權重採樣 Step</button>
+    <button class="quiz-option-btn" id="kp11_reset_btn">↺ 重置權重分佈</button>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp11_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp11_readout">準備採樣權重...</div>
+</div>
+<script>
+(function(){
+  var samples = [{x: -1.5, y: 0.5}, {x: 1.5, y: 0.5}];
+
+  function sampleBGAN() {
+    var last = samples[samples.length - 1];
+    var nx = last.x + (Math.random() - 0.5) * 0.8;
+    var ny = last.y + (Math.random() - 0.5) * 0.8;
+    samples.push({x: nx, y: ny});
+    drawBGAN();
+  }
+
+  function resetBGAN() {
+    samples = [{x: -1.5, y: 0.5}, {x: 1.5, y: 0.5}];
+    drawBGAN();
+  }
+
+  function drawBGAN() {
+    var cvs = document.getElementById('kp11_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(40, 90); ctx.lineTo(560, 90); ctx.stroke();
+
+    for (var i = 0; i < samples.length; i++) {
+      var px = 300 + samples[i].x * 80;
+      var py = 90 - samples[i].y * 40;
+      ctx.fillStyle = '#7e22ce'; ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI*2); ctx.fill();
+    }
+
+    var readout = 'BGAN 權重採樣點數 = ' + samples.length + ' | 權重後驗探索覆蓋多元模式 (成功避免點估計陷阱)';
+    document.getElementById('kp11_readout').textContent = readout;
+  }
+
+  var btn = document.getElementById('kp11_sample_btn');
+  if (btn) {
+    btn.addEventListener('click', sampleBGAN);
+    document.getElementById('kp11_reset_btn').addEventListener('click', resetBGAN);
+    setTimeout(drawBGAN, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：對抗變分貝氏 (AVB) 如何改進傳統 VAE 變分推斷的限制？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 徹底取消 Encoder 神經網絡</button>
+<button class="quiz-option-btn" data-correct="true">2. 利用對抗判別器隱式估算對數密度比，打破變分後驗 q(z|x) 必須為簡單高斯分佈的限制</button>
+<button class="quiz-option-btn" data-correct="false">3. 將影像強制降採樣為灰階圖</button>
+<button class="quiz-option-btn" data-correct="false">4. 使用手動規則替代反向傳播</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>AVB 利用判別器對抗計算後驗與先驗的密度比，使得模型可以使用任意複雜無封閉解的神經網絡作為變分後驗分佈。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-12 -->
+    <section id="kp12" class="card" data-kp="12">
+      <div class="card-header">
+        <span class="badge">§5.1–5.2</span>
+        <h2 class="card-title">KP-12：特徵匹配與 InfoGAN 互資訊 (Mutual Information) 解耦</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 特徵匹配 (Feature Matching)</h4>
+<p>Salimans 等人提出不要直接讓 $G$ 欺騙 $D$ 的最後純量輸出，而是要求 $G$ 生成的樣本在判別器中間隱藏層的<b>特徵統計平均值</b>與真實數據對齊：</p>
+$$\mathcal{L}_{\text{FM}} = \|\mathbb{E}_{\boldsymbol{x} \sim p_{\text{data}}}[f(\boldsymbol{x})] - \mathbb{E}_{\boldsymbol{z} \sim p_z}[f(G(\boldsymbol{z}))]\|_2^2$$
+<p>其中 $f(\boldsymbol{x})$ 為判別器中間特徵層提取器。</p>
+
+<h4>2. InfoGAN 與可解釋語意解耦 (Disentangled Representations)</h4>
+<p>Chen 等人提出的 <b>InfoGAN</b> 能夠在無監督條件下自動解耦數據的語意特徵（如數字傾斜度、筆劃粗細、情感表情）。</p>
+<p>InfoGAN 將潛在空間拆分為<b>不可解釋雜訊 $\boldsymbol{z}$</b> 與<b>可解釋語意代碼 $\boldsymbol{c}$</b>。透過極大化語意代碼 $\boldsymbol{c}$ 與生成樣本 $G(\boldsymbol{z}, \boldsymbol{c})$ 之間的<b>互資訊 (Mutual Information, $I(\boldsymbol{c}; G(\boldsymbol{z}, \boldsymbol{c}))$)</b>，模型被強迫將特定語意結構編碼到 $\boldsymbol{c}$ 中！</p>
+      </div>
+<!-- == Orig Image kp-12 == -->
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-395_687_664_1493_911.jpg" alt="教科書圖 14.11：InfoGAN 互資訊極大化與語意代碼 c 解耦結構">
+        <figcaption>教科書圖 14.11：InfoGAN 互資訊極大化與語意代碼 c 解耦結構</figcaption>
+      </figure>
+<!-- END Orig Image -->
+
+      <!-- == Phase B 圖解 kp-12 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp12.png" alt="KP-12 概念架構圖解">
+        <figcaption>圖解 KP-12：assets/diagram-kp12.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-12 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: InfoGAN latent space decomposition into noise z and interpretable code c with mutual information maximization.
+[WHY]: To illustrate unsupervised disentangled feature learning (e.g., digit rotation, stroke thickness).
+[MUST show]: Latent vector split (z + c), Mutual Information I(c; G(z, c)) maximization arrow.
+[AVOID]: Confusing non-disentangled feature representations.
+[STYLE]: Emerald and indigo modern architectural layout.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-12 == -->
+
+<div class="demo" data-demo-id="kp-12">
+  <div class="demo-title">🎮 互動展示 kp-12：InfoGAN 語意代碼 $c$ (旋轉角度與筆劃粗細) 無監督解耦控制</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>滑動解耦語意代碼 $c_1$（旋轉傾斜度）與 $c_2$（筆劃粗細），觀察生成樣本特徵的獨立平滑變化。</p>
+    <p><b>怎麼操作：</b>拖動 $c_1$ 旋轉角度與 $c_2$ 筆劃粗細。</p>
+    <p><b>觀察什麼：</b>極大化互資訊 $I(c; G(z, c))$ 使代碼 $c_1, c_2$ 分別控制獨立語意屬性而互不干擾。</p>
+    <p><b>理論基準：</b>互資訊極大化目標誘導無監督語意解耦。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>語意代碼 c1 (旋轉角度 -30° ~ +30°): <span id="kp12_c1_val">0</span>°</label>
+      <input type="range" id="kp12_c1" min="-30" max="30" step="5" value="0">
+    </div>
+    <div class="demo-control-group">
+      <label>語意代碼 c2 (筆劃粗細 1 ~ 10): <span id="kp12_c2_val">5</span></label>
+      <input type="range" id="kp12_c2" min="1" max="10" step="1" value="5">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp12_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp12_readout">拖動代碼解耦中...</div>
+</div>
+<script>
+(function(){
+  function updateKP12() {
+    var c1 = parseInt(document.getElementById('kp12_c1').value);
+    var c2 = parseInt(document.getElementById('kp12_c2').value);
+    document.getElementById('kp12_c1_val').textContent = c1;
+    document.getElementById('kp12_c2_val').textContent = c2;
+
+    var cvs = document.getElementById('kp12_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.save();
+    ctx.translate(300, 90);
+    ctx.rotate(c1 * Math.PI / 180);
+
+    ctx.strokeStyle = '#047857'; ctx.lineWidth = c2 * 2;
+    ctx.strokeRect(-40, -50, 80, 100);
+
+    ctx.restore();
+
+    var readout = '代碼 c1 (角度) = ' + c1 + '° | 代碼 c2 (粗細) = ' + c2 + ' | 互資訊 I(c; G) 成功解耦獨立操控！';
+    document.getElementById('kp12_readout').textContent = readout;
+  }
+
+  var c1El = document.getElementById('kp12_c1');
+  if (c1El) {
+    c1El.addEventListener('input', updateKP12);
+    document.getElementById('kp12_c2').addEventListener('input', updateKP12);
+    setTimeout(updateKP12, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：InfoGAN 能夠在無監督條件下實現語意解耦 (Disentangled Representation) 的核心機制為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="true">1. 極大化可解釋語意代碼 c 與生成樣本 G(z, c) 之間的互資訊 (Mutual Information) I(c; G(z, c))</button>
+<button class="quiz-option-btn" data-correct="false">2. 將潛在向量 z 的維度設定為 1</button>
+<button class="quiz-option-btn" data-correct="false">3. 在判別器中加入 L1 正則化</button>
+<button class="quiz-option-btn" data-correct="false">4. 強制將所有圖像轉為二值化圖像</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>InfoGAN 透過引入互資訊下界極大化目標 I(c; G(z, c))，強迫生成樣本保留關於語意變項 c 的顯著資訊，實現無監督特徵解耦。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-13 -->
+    <section id="kp13" class="card" data-kp="13">
+      <div class="card-header">
+        <span class="badge">§5.4–5.5</span>
+        <h2 class="card-title">KP-13：最小二乘 LSGAN 與基於能量 EBGAN</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 最小二乘 GAN (Least Squares GAN, LSGAN)</h4>
+<p>Mao 等人在 2017 年提出的 <b>LSGAN</b> 發現：傳統二進位交叉熵損失在判別器成功分類後，即便生成樣本離真實邊界極遠，也不會再產生梯度。LSGAN 將交叉熵替換為<b>最小二乘均方誤差 (MSE) 損失</b>：</p>
+$$\begin{align
+\min_D V_{\text{LSGAN}}(D) &= \frac{1}{2} \mathbb{E}_{\boldsymbol{x} \sim p_{\text{data}}}[(D(\boldsymbol{x}) - b)^2] + \frac{1}{2} \mathbb{E}_{\boldsymbol{z} \sim p_z}[(D(G(\boldsymbol{z})) - a)^2] \\
+\min_G V_{\text{LSGAN}}(G) &= \frac{1}{2} \mathbb{E}_{\boldsymbol{z} \sim p_z}[(D(G(\boldsymbol{z})) - c)^2]
+\end{align}$$
+<p>這強迫離 decision boundary 遠的生成樣本受到二次方懲罰，產生更穩定的梯度並提升生成畫質。</p>
+
+<h4>2. 基於能量的 GAN (Energy-Based GAN, EBGAN)</h4>
+<p>Zhao 等人提出的 <b>EBGAN</b> 將判別器看待為一個<b>能量函數 (Energy Function)</b>。判別器被設計為一個<b>自編碼器 (Autoencoder)</b>，其重構誤差 (Reconstruction Error) $\|D(\boldsymbol{x}) - \boldsymbol{x}\|^2$ 即代表能量。真實樣本賦予低能量（低重構誤差），偽造樣本賦予高能量。</p>
+      </div>
+<!-- == Orig Image kp-13 == -->
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-397_773_1047_206_531.jpg" alt="教科書圖 14.12：基於能量的 EBGAN 自編碼器重構誤差判別架構">
+        <figcaption>教科書圖 14.12：基於能量的 EBGAN 自編碼器重構誤差判別架構</figcaption>
+      </figure>
+<!-- END Orig Image -->
+
+      <!-- == Phase B 圖解 kp-13 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp13.png" alt="KP-13 概念架構圖解">
+        <figcaption>圖解 KP-13：assets/diagram-kp13.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-13 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: Least Squares GAN (LSGAN) MSE loss penalty versus Energy-Based GAN (EBGAN) autoencoder reconstruction.
+[WHY]: To highlight how LSGAN penalizes far-from-boundary samples and how EBGAN interprets discriminator output as energy.
+[MUST show]: LSGAN quadratic decision boundary distance penalty, EBGAN autoencoder reconstruction error.
+[AVOID]: Overloaded mathematical notation.
+[STYLE]: Modern dual-card specification layout.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-13 == -->
+
+<div class="demo" data-demo-id="kp-13">
+  <div class="demo-title">🎮 互動展示 kp-13：LSGAN (MSE 損失) vs 傳統 GAN (交叉熵) 離決策邊界距離懲罰</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>對比偏離決策邊界點處，傳統 GAN 交叉熵（無梯度）與 LSGAN MSE（二次方推回梯度）的懲罰力。</p>
+    <p><b>怎麼操作：</b>拖動生成樣本與決策邊界的距離 $d$ (0.1 到 4.0)。</p>
+    <p><b>觀察什麼：</b>距離增大時，LSGAN 的 MSE 懲罰呈二次方 $d^2$ 暴增，提供持續拉回力量。</p>
+    <p><b>理論基準：</b>LSGAN 的 MSE 損失在整個空間維持平滑拉回梯度。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>偏離決策邊界距離 d (0.1 ~ 4.0): <span id="kp13_d_val">2.0</span></label>
+      <input type="range" id="kp13_d" min="0.1" max="4.0" step="0.1" value="2.0">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp13_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp13_readout">計算邊界懲罰中...</div>
+</div>
+<script>
+(function(){
+  function updateKP13() {
+    var d = parseFloat(document.getElementById('kp13_d').value);
+    document.getElementById('kp13_d_val').textContent = d.toFixed(1);
+
+    var loss_bce = d > 1.0 ? 0.05 : 0.8; // saturates for far points
+    var loss_mse = 0.5 * d * d;
+
+    var cvs = document.getElementById('kp13_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    var bars = [
+      { name: "傳統 GAN 交叉熵 Loss", val: loss_bce, color: "#f59e0b" },
+      { name: "LSGAN 最小二乘 MSE Loss", val: loss_mse, color: "#10b981" }
+    ];
+
+    var maxV = Math.max(loss_bce, loss_mse, 1.0);
+
+    for (var i = 0; i < bars.length; i++) {
+      var b = bars[i];
+      var y = 35 + i * 60;
+      var w = (b.val / maxV) * 350;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(200, y, Math.max(w, 4), 32);
+      ctx.fillStyle = '#1e293b'; ctx.font = '12px sans-serif';
+      ctx.fillText(b.name, 20, y + 20);
+      ctx.fillText(b.val.toFixed(3), 210 + Math.max(w, 4), y + 20);
+    }
+
+    var readout = '距離 d=' + d.toFixed(1) + ': LSGAN 產生 ' + loss_mse.toFixed(3) + ' 二次方拉回懲罰 (避免傳統 GAN 梯度飽和！)';
+    document.getElementById('kp13_readout').textContent = readout;
+  }
+
+  var dEl = document.getElementById('kp13_d');
+  if (dEl) {
+    dEl.addEventListener('input', updateKP13);
+    setTimeout(updateKP13, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：最小二乘 GAN (LSGAN) 採用 MSE 損失取代傳統交叉熵損失的主要好處為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 可以完全不需要 GPU 加速</button>
+<button class="quiz-option-btn" data-correct="true">2. 對遠離決策邊界的偏離生成樣本給予二次方距離懲罰，避免了傳統 GAN 交叉熵的梯度飽和問題，使訓練更加穩定</button>
+<button class="quiz-option-btn" data-correct="false">3. 使生成器參數縮減 50%</button>
+<button class="quiz-option-btn" data-correct="false">4. 將生成圖像直接轉換為向量圖</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>傳統 GAN 交叉熵在成功判別後梯度為 0，而 LSGAN 的最小二乘損失會根據距離邊界的距離提供成比例的拉回梯度懲罰。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-14 -->
+    <section id="kp14" class="card" data-kp="14">
+      <div class="card-header">
+        <span class="badge">§5.6–5.13</span>
+        <h2 class="card-title">KP-14：半監督 CatGAN、ProGAN 金字塔與雙向推斷 BiGAN/ALI</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 半監督學習與 CatGAN / 額外類比法</h4>
+<p>在半監督學習中，GAN 展現出極強的特徵提取能力。<b>CatGAN (Categorical GAN)</b> 利用類別熵極小化進行半監督分類；另一種流行做法是將判別器由 2 分類擴展為 $K+1$ 分類（前 $K$ 個為真實數據的類別，第 $K+1$ 個專門代表生成器偽造樣本）。</p>
+
+<h4>2. 漸進式金字塔 GAN (Progressive GAN / ProGAN)</h4>
+<p>Karras 等人在 2018 年提出了 <b>ProGAN</b>，突破了高解析度圖像（如 $1024 \times 1024$）生成困難的限制。ProGAN 採用<b>金字塔漸進生長架構</b>：從低解析度（$4 \times 4$）開始訓練，穩定後平滑融入新層逐漸提升解析度（$8 \times 8 \to 16 \times 16 \to \dots \to 1024 \times 1024$）。</p>
+
+<h4>3. 雙向推斷模型 (BiGAN / ALI)</h4>
+<p>標準 GAN 只能從 $\boldsymbol{z} \to \boldsymbol{x}$，無法將真實圖像 $\boldsymbol{x}$ 反向編碼為潛在向量 $\boldsymbol{z}$。<b>BiGAN (Bidirectional GAN)</b> 與 <b>ALI (Adversarially Learned Inference)</b> 引入了一個編碼器 $E(\boldsymbol{x})$，判別器改為對聯合對 $D(\boldsymbol{x}, \boldsymbol{z})$ 進行判別，實現了雙向精確映射。</p>
+      </div>
+<!-- == Orig Image kp-14 == -->
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-398_366_847_1826_732.jpg" alt="教科書圖 14.13：CatGAN 半監督 K+1 類別判別架構">
+        <figcaption>教科書圖 14.13：CatGAN 半監督 K+1 類別判別架構</figcaption>
+      </figure>
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-400_490_1396_191_178.jpg" alt="教科書圖 14.14：Progressive GAN (ProGAN) 金字塔漸進分辨率生長結構">
+        <figcaption>教科書圖 14.14：Progressive GAN (ProGAN) 金字塔漸進分辨率生長結構</figcaption>
+      </figure>
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-401_599_847_208_732.jpg" alt="教科書圖 14.15：BiGAN / ALI 雙向推斷與聯合對 (x, z) 判別器架構">
+        <figcaption>教科書圖 14.15：BiGAN / ALI 雙向推斷與聯合對 (x, z) 判別器架構</figcaption>
+      </figure>
+<!-- END Orig Image -->
+
+      <!-- == Phase B 圖解 kp-14 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp14.png" alt="KP-14 概念架構圖解">
+        <figcaption>圖解 KP-14：assets/diagram-kp14.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-14 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: Progressive GAN (ProGAN) pyramid growth and Bidirectional GAN (BiGAN / ALI) joint pair discriminator.
+[WHY]: To detail 4x4 to 1024x1024 progressive resolution scaling and joint (x, z) discrimination for reverse encoding.
+[MUST show]: Multi-scale resolution pyramid (4x4 -> 1024x1024), BiGAN Joint Discriminator D(x, z).
+[AVOID]: Tiny illegible text in pyramid nodes.
+[STYLE]: Step-by-step progressive architecture diagram.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-14 == -->
+
+<div class="demo" data-demo-id="kp-14">
+  <div class="demo-title">🎮 互動展示 kp-14：ProGAN 金字塔漸進解析度生長 ($4 \times 4 \to 1024 \times 1024$) 模擬</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>模擬 ProGAN 隨著訓練階段漸進平滑融入新網絡層，提升影像解析度。</p>
+    <p><b>怎麼操作：</b>選擇金字塔生長階段 (4x4, 16x16, 128x128, 1024x1024)。</p>
+    <p><b>觀察什麼：</b>低階解析度先奠定幾何佈局與色彩，高階層逐漸補充發絲與皮膚細節。</p>
+    <p><b>理論基準：</b>漸進式分辨率生長確保極高解析度 GAN 穩定收斂。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>金字塔解析度階段:</label>
+      <select id="kp14_res" style="padding:6px; border-radius:6px;">
+        <option value="4">4 x 4 (基礎輪廓與色彩)</option>
+        <option value="16">16 x 16 (面部特徵五官)</option>
+        <option value="128">128 x 128 (中階紋理皮膚)</option>
+        <option value="1024" selected>1024 x 1024 (超高解析度發絲毛孔)</option>
+      </select>
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp14_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp14_readout">選擇解析度檢視...</div>
+</div>
+<script>
+(function(){
+  function updateKP14() {
+    var res = document.getElementById('kp14_res').value;
+    var cvs = document.getElementById('kp14_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(240, 20, 140, 140);
+    ctx.fillStyle = '#38bdf8'; ctx.font = '16px monospace';
+    ctx.fillText(res + ' x ' + res, 260, 95);
+
+    var readout = 'ProGAN 當前階段: ' + res + 'x' + res + ' 分辨率網絡層平滑融入完成 (畫質穩定無折疊失敗)。';
+    document.getElementById('kp14_readout').textContent = readout;
+  }
+
+  var rEl = document.getElementById('kp14_res');
+  if (rEl) {
+    rEl.addEventListener('change', updateKP14);
+    setTimeout(updateKP14, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：Progressive GAN (ProGAN) 成功生成 1024x1024 超高解析度逼真圖像的核心訓練策略為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 一次性直接訓練 1024x1024 網絡</button>
+<button class="quiz-option-btn" data-correct="true">2. 採用金字塔漸進生長策略，從 4x4 低解析度開始訓練，逐步平滑疊加高解析度網絡層</button>
+<button class="quiz-option-btn" data-correct="false">3. 將圖像拆成 1x1 像素點獨立生成</button>
+<button class="quiz-option-btn" data-correct="false">4. 取消所有卷積層，改用全連接層</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>ProGAN 先讓模型在 4x4 低解析度上學習基礎結構與顏色分佈，穩定後逐步動態加入高解析度網絡層，極大地提升了高解析度 GAN 訓練的穩定性。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-15 -->
+    <section id="kp15" class="card" data-kp="15">
+      <div class="card-header">
+        <span class="badge">§6</span>
+        <h2 class="card-title">KP-15：潛在空間球面線性插值 (Slerp) 與幾何流形</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 潛在空間的幾何流形結構</h4>
+<p>一個訓練良好的 GAN 生成器 defines 了一條從高維潛在空間 $\mathbb{R}^p$ 到數據幾何流形 (Data Manifold) $\mathcal{M} \subset \mathbb{R}^d$ 的光滑流形映射 $\boldsymbol{x} = G(\boldsymbol{z})$。</p>
+<p>評估 GAN 潛在空間是否平滑（即是否記憶過擬合）的標準方法是在潛在空間中挑選兩個點 $\boldsymbol{z}_1, \boldsymbol{z}_2$，並對其連線進行<b>路徑插值 (Interpolation)</b>，觀察生成圖像的漸變過程。</p>
+
+<h4>2. 線性插值 (Lerp) vs 球面線性插值 (Slerp)</h4>
+<p>在高維正態分佈 $\boldsymbol{z} \sim \mathcal{N}(\mathbf{0}, \boldsymbol{I})$ 中，隨機向量的模長 $\|\boldsymbol{z}\|$ 高度集中在半徑為 $\sqrt{p}$ 的超球面殼層（高維高斯薄殼現象 Gaussian Annulus Theorem）。</p>
+
+<ul>
+  <li><b>標準線性插值 (Lerp)</b>：
+$$\boldsymbol{z}(\alpha) = (1 - \alpha)\boldsymbol{z}_1 + \alpha \boldsymbol{z}_2, \quad \alpha \in [0, 1]$$
+   直條線連線會穿過超球面的內部中心低機率區域，導致插值中間點的生成樣本品質顯著下降（變模糊）。</li>
+  <li><b>球面線性插值 (Spherical Linear Interpolation, Slerp)</b>：
+$$\text{Slerp}(\boldsymbol{z}_1, \boldsymbol{z}_2; \alpha) = \frac{\sin((1 - \alpha)\theta)}{\sin \theta} \boldsymbol{z}_1 + \frac{\sin(\alpha \theta)}{\sin \theta} \boldsymbol{z}_2, \quad \theta = \arccos\left(\frac{\boldsymbol{z}_1^\top \boldsymbol{z}_2}{\|\boldsymbol{z}_1\| \|\boldsymbol{z}_2\|}\right)$$
+   沿著超球面大圓弧線進行旋轉插值，保持向量模長恆定，確保插值軌跡上的每一個點都部位於高品質採樣區域！</li>
+</ul>
+      </div>
+<!-- == Orig Image kp-15 == -->
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-402_381_846_1855_732.jpg" alt="教科書圖 14.16：潛在空間向量線性插值 (Lerp) 與球面插值 (Slerp) 效果比較圖">
+        <figcaption>教科書圖 14.16：潛在空間向量線性插值 (Lerp) 與球面插值 (Slerp) 效果比較圖</figcaption>
+      </figure>
+<!-- END Orig Image -->
+
+      <!-- == Phase B 圖解 kp-15 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp15.png" alt="KP-15 概念架構圖解">
+        <figcaption>圖解 KP-15：assets/diagram-kp15.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-15 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: Spherical Linear Interpolation (Slerp) versus Linear Interpolation (Lerp) in high-dimensional latent space.
+[WHY]: To prove why Slerp along the hyper-spherical arc preserves vector norm and generated image quality, whereas Lerp cuts through low-density interior causing blurriness.
+[MUST show]: Hyper-sphere surface, Slerp arc trajectory (green), Lerp straight line chord (red), norm vector preservation.
+[AVOID]: Flattened 2D lines without spherical context.
+[STYLE]: High-precision geometry trajectory chart.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-15 == -->
+
+<div class="demo" data-demo-id="kp-15">
+  <div class="demo-title">🎮 互動展示 kp-15：潛在空間向量插值 Linear (Lerp) vs Spherical (Slerp) 軌跡與模長對比</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>對比高維潛在空間中，直線插值 Lerp 與大圓弧球面插值 Slerp 的向量模長變化。</p>
+    <p><b>怎麼操作：</b>滑動插值比例 $\alpha$ (0.0 到 1.0)。</p>
+    <p><b>觀察什麼：</b>在 $\alpha=0.5$ 時，Lerp 直線穿過內部導致模長萎縮 $\|\boldsymbol{z}\| \to 0.707$（樣本模糊）；Slerp 沿大圓弧旋轉，模長恆定為 1.0（畫質清晰）。</p>
+    <p><b>理論基準：</b>高維高斯正態分佈樣本集中在超球面殼層。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>插值比例 alpha (0.0 ~ 1.0): <span id="kp15_a_val">0.50</span></label>
+      <input type="range" id="kp15_a" min="0.0" max="1.0" step="0.05" value="0.50">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp15_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp15_readout">計算插值模長中...</div>
+</div>
+<script>
+(function(){
+  function updateKP15() {
+    var a = parseFloat(document.getElementById('kp15_a').value);
+    document.getElementById('kp15_a_val').textContent = a.toFixed(2);
+
+    // z1 = (1, 0), z2 = (0, 1) angle = 90 deg
+    var lerp_x = (1 - a);
+    var lerp_y = a;
+    var lerp_norm = Math.sqrt(lerp_x * lerp_x + lerp_y * lerp_y);
+
+    var slerp_norm = 1.0; // constant on unit sphere
+
+    var cvs = document.getElementById('kp15_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.fillStyle = '#fee2e2'; ctx.strokeStyle = '#dc2626';
+    ctx.fillRect(80, 40, 200, 90); ctx.strokeRect(80, 40, 200, 90);
+    ctx.fillStyle = '#b91c1c'; ctx.font = '12px sans-serif';
+    ctx.fillText('Lerp 直線插值模長 ||z||', 95, 65);
+    ctx.font = '16px monospace'; ctx.fillText(lerp_norm.toFixed(4) + (lerp_norm < 0.9 ? ' (模長萎縮模糊!)' : ''), 95, 100);
+
+    ctx.fillStyle = '#dcfce7'; ctx.strokeStyle = '#166534';
+    ctx.fillRect(320, 40, 200, 90); ctx.strokeRect(320, 40, 200, 90);
+    ctx.fillStyle = '#166534'; ctx.font = '12px sans-serif';
+    ctx.fillText('Slerp 球面插值模長 ||z||', 335, 65);
+    ctx.font = '16px monospace'; ctx.fillText(slerp_norm.toFixed(4) + ' (模長恆定清晰!)', 335, 100);
+
+    var readout = 'alpha=' + a.toFixed(2) + ': Lerp 模長萎縮至 ' + lerp_norm.toFixed(4) + ' | Slerp 大圓弧保持模長 1.0 (生成的過渡特徵平滑清晰)';
+    document.getElementById('kp15_readout').textContent = readout;
+  }
+
+  var aEl = document.getElementById('kp15_a');
+  if (aEl) {
+    aEl.addEventListener('input', updateKP15);
+    setTimeout(updateKP15, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：在高維潛在空間 z ~ N(0, I) 中進行向量插值時，為何球面線性插值 (Slerp) 比普通線性插值 (Lerp) 更為優越？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="true">1. 因為 Lerp 直線穿過高維球面內部低機率密度區域導致畫質下降；Slerp 沿超球面弧線插值保持模長恆定與品質平滑</button>
+<button class="quiz-option-btn" data-correct="false">2. 因為 Slerp 的計算速度比 Lerp 快 1000 倍</button>
+<button class="quiz-option-btn" data-correct="false">3. 因為 Lerp 無法處理複數向量</button>
+<button class="quiz-option-btn" data-correct="false">4. 因為 Slerp 能將圖像自動轉為 3D 模型</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>高維高斯分佈的點集中在球面殼層。Lerp 的直線穿過球心偏離高密度殼層；Slerp 大圓弧旋轉插值保持了模長半徑，確保漸變過程中圖像畫質始終清晰。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-16 -->
+    <section id="kp16" class="card" data-kp="16">
+      <div class="card-header">
+        <span class="badge">§7–8</span>
+        <h2 class="card-title">KP-16：GAN 影像風格轉換 (CycleGAN) 與對抗自編碼器 (AAE)</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 無配對影像風格轉換 (CycleGAN)</h4>
+<p>Zhu 等人在 2017 年提出的 <b>CycleGAN</b> 解決了跨域圖像轉換（如「斑馬 ↔ 白馬」、「油畫 ↔ 照片」）缺乏成對（Paired）訓練數據的世紀難題。CycleGAN 引入了<b>循環一致性損失 (Cycle Consistency Loss)</b>：</p>
+$$\mathcal{L}_{\text{cyc}}(G, F) = \mathbb{E}_{\boldsymbol{x} \sim p_X}[\|F(G(\boldsymbol{x})) - \boldsymbol{x}\|_1] + \mathbb{E}_{\boldsymbol{y} \sim p_Y}[\|G(F(\boldsymbol{y})) - \boldsymbol{y}\|_1]$$
+<p>保證將圖像從 $X$ 映射到 $Y$（經由 $G$），再從 $Y$ 映射回 $X$（經由 $F$）後能夠精確還原，完美保留結構細節！</p>
+
+<h4>2. 對抗式自編碼器 (Adversarial Autoencoder, AAE)</h4>
+<p>Makhzani 等人在 2015 年提出的 <b>AAE</b> 將 GAN 的對抗思想融入自編碼器。AAE 用<b>對抗判別器</b>取代了 VAE 中的 KL 散度懲罰：</p>
+<ul>
+  <li>編碼器 $E(\boldsymbol{x})$ 作為生成器，產出隱藏代碼 $\boldsymbol{z}$。</li>
+  <li>判別器 $D_z$ 負責區分隱藏代碼 $\boldsymbol{z}$ 與指定的先驗分佈 $p(\boldsymbol{z})$（如高斯分佈或混合高斯分佈）。</li>
+  <li>AAE 能在隱藏空間中實現極其強大且彈性的形狀約束與半監督分類。</li>
+</ul>
+      </div>
+<!-- == Orig Image kp-16 == -->
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-402_520_848_211_730.jpg" alt="教科書圖 14.17：CycleGAN 雙向映射與循環一致性損失 (Cycle-Consistency) 示意圖">
+        <figcaption>教科書圖 14.17：CycleGAN 雙向映射與循環一致性損失 (Cycle-Consistency) 示意圖</figcaption>
+      </figure>
+<figure class="orig-fig">
+        <img src="assets/77d0fd08-039f-44f0-84a4-b5a6e8490f3a-403_364_1242_195_253.jpg" alt="教科書圖 14.18：對抗自編碼器 (Adversarial Autoencoder, AAE) 隱藏變異對抗匹配架構">
+        <figcaption>教科書圖 14.18：對抗自編碼器 (Adversarial Autoencoder, AAE) 隱藏變異對抗匹配架構</figcaption>
+      </figure>
+<!-- END Orig Image -->
+
+      <!-- == Phase B 圖解 kp-16 == -->
+      <figure class="diagram-figure">
+        <img src="assets/diagram-kp16.png" alt="KP-16 概念架構圖解">
+        <figcaption>圖解 KP-16：assets/diagram-kp16.png</figcaption>
+      </figure>
+
+      <details class="ai-illustration">
+        <summary>🎨 點擊查看 KP-16 的 AI 生圖 Prompt (Structured Image Generation Prompt)</summary>
+        <div class="ai-illustration-prompt">[WHAT]: CycleGAN cycle consistency loss L_cyc and Adversarial Autoencoder (AAE) hidden space matching.
+[WHY]: To demonstrate unpaired image-to-image translation (X -> G(X) -> F(G(X)) = X) and adversarial latent prior matching.
+[MUST show]: Domain X to Domain Y translation and recovery loop, L_cyc = ||F(G(X)) - X||_1 equation.
+[AVOID]: Messy overlapping arrows.
+[STYLE]: Circular feedback loop diagram with pastel accent colors.</div>
+      </details>
+      <!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-16 == -->
+
+<div class="demo" data-demo-id="kp-16">
+  <div class="demo-title">🎮 互動展示 kp-16：CycleGAN 循環一致性損失 $\mathcal{L}_{\text{cyc}} = \|F(G(X)) - X\|_1$ 計算器</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>計算雙向映射 $X \to G(X) \to F(G(X))$ 在不同重構誤差下的循環一致性損失。</p>
+    <p><b>怎麼操作：</b>調整還原像素誤差 $\Delta x$ (0.0 到 1.0)。</p>
+    <p><b>觀察什麼：</b>當還原誤差 $\Delta x \to 0$ 時，循環一致性損失趨近於 0，確保未成對數據也能保留原始圖像幾何特徵。</p>
+    <p><b>理論基準：</b>Cycle-Consistency Loss 防止無監督映射結構形變。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>還原像素誤差 Delta x (0.0 ~ 1.0): <span id="kp16_dx_val">0.10</span></label>
+      <input type="range" id="kp16_dx" min="0.0" max="1.0" step="0.05" value="0.10">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp16_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp16_readout">計算 L_cyc 中...</div>
+</div>
+<script>
+(function(){
+  function updateKP16() {
+    var dx = parseFloat(document.getElementById('kp16_dx').value);
+    document.getElementById('kp16_dx_val').textContent = dx.toFixed(2);
+
+    var l_cyc = dx; // L1 loss
+
+    var cvs = document.getElementById('kp16_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.fillStyle = '#dcfce7'; ctx.strokeStyle = '#166534';
+    ctx.fillRect(180, 40, 240, 90); ctx.strokeRect(180, 40, 240, 90);
+    ctx.fillStyle = '#166534'; ctx.font = '12px sans-serif';
+    ctx.fillText('循環一致性損失 L_cyc (L1 Norm)', 200, 65);
+    ctx.font = '16px monospace'; ctx.fillText(l_cyc.toFixed(4), 200, 100);
+
+    var readout = '還原誤差 Delta x = ' + dx.toFixed(2) + ' | L_cyc = ' + l_cyc.toFixed(4) + (dx < 0.15 ? ' (結構幾何完美還原！)' : '');
+    document.getElementById('kp16_readout').textContent = readout;
+  }
+
+  var dxEl = document.getElementById('kp16_dx');
+  if (dxEl) {
+    dxEl.addEventListener('input', updateKP16);
+    setTimeout(updateKP16, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-16 == -->
+      <button class="guide-btn" onclick="openGuideModal(16)">
+        🎓 教授祕笈 (Professor Secret Guide) <span class="guide-flag">Phase D</span>
+      </button>
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：CycleGAN 能在缺乏成對 (Unpaired) 影像訓練資料下實現高品質跨風格轉換 (如馬 ↔ 斑馬) 的核心損失函數為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 交叉熵損失 (Cross Entropy Loss)</button>
+<button class="quiz-option-btn" data-correct="true">2. 循環一致性損失 (Cycle Consistency Loss: ||F(G(x)) - x||_1)</button>
+<button class="quiz-option-btn" data-correct="false">3. 均方誤差損失 (MSE Loss)</button>
+<button class="quiz-option-btn" data-correct="false">4. Hinge 損失</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>CycleGAN 透過循環一致性損失 (Cycle Consistency Loss) 要求 x -> G(x) -> F(G(x)) 必須能夠精確還原回 x，強迫模型在無配對數據下保留原始圖像的結構幾何特徵。
+        </div>
+      </div>
+    </section>
+
+</div>
+
+<script>
+// Progress Bar & Scroll Listener
+window.addEventListener('scroll', function() {
+  var winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+  var height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+  var scrolled = (winScroll / height) * 100;
+  document.getElementById('page-progress').style.width = scrolled + '%';
+});
+
+// Quiz Option Click Handler
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('quiz-option-btn')) {
+    var btn = e.target;
+    var quizSec = btn.closest('.quiz-sec');
+    var isCorrect = btn.getAttribute('data-correct') === 'true';
+    var allBtns = quizSec.querySelectorAll('.quiz-option-btn');
+    var exp = quizSec.querySelector('.quiz-exp');
+
+    allBtns.forEach(function(b) {
+      b.classList.remove('correct', 'wrong');
+    });
+
+    if (isCorrect) {
+      btn.classList.add('correct');
+    } else {
+      btn.classList.add('wrong');
+      allBtns.forEach(function(b) {
+        if (b.getAttribute('data-correct') === 'true') {
+          b.classList.add('correct');
+        }
+      });
+    }
+    exp.style.display = 'block';
+  }
+});
+</script>
+
+<!-- == Phase D Modal & Script == -->
+<div id="guide-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">🎓 教授祕笈</h3>
+      <button class="modal-close-btn" onclick="closeGuideModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <!-- Guide Content Will Be Dynamic Injected -->
+    </div>
+  </div>
+</div>
+
+<script>
+var GUIDES_DATA = {"1": "<h1>教授祕笈 KP-1：產生式對抗網絡 (GAN) 導論與博弈論基礎</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元引領學生建立對抗式生成模型 (Generative Adversarial Networks) 的理論心智模型，從傳統生成模型的顯式密度擬合瓶頸，過渡到可微分博弈論 (Differentiable Game Theory) 的雙網路賽局。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <p><strong>產生式對抗網絡 (Generative Adversarial Network, GAN)</strong> 是一種無監督生成模型。它由兩個神經網絡組成：<br /> - <strong>生成器 (Generator, $G$)</strong>：將潛在隨機雜訊 $\\\\boldsymbol{z} \\\\sim p_z(\\\\boldsymbol{z})$ 映射為合成數據 $\\\\widehat{\\\\boldsymbol{x}} = G(\\\\boldsymbol{z}) \\\\in \\\\mathbb{R}^d$。<br /> - <strong>判別器 (Discriminator, $D$)</strong>：將數據樣本 $\\\\boldsymbol{x}$ 映射為純量機率 $D(\\\\boldsymbol{x}) \\\\in [0, 1]$，用以區分真實數據 $\\\\boldsymbol{x} \\\\sim p_{\\\\text{data}}$ 與偽造數據 $\\\\widehat{\\\\boldsymbol{x}} \\\\sim p_g$。</p> <hr /> <h3>2. 為什麼需要這個概念（對照未導入前的痛點）</h3> <p>在 GAN 誕生之前，傳統生成模型（如 Autoencoders, GMM）面臨以下兩大痛點：</p> <ul> <li><strong>痛點一：人眼評估不可微分</strong>：人工觀察生成圖片雖然準確，但無法計算梯度導數（Derivatives），無法進行反向傳播。</li> <li><strong>痛點二：顯式像素 MSE 損失導致模糊</strong>：採用 L2 均方誤差訓練生成器，會強迫模型輸出所有可能高清圖片的「平均值」，導致生成的影像高度模糊失真。</li> </ul> <p>GAN 透過引入神經網絡判別器作為「可微分裁判」，完美解決了這兩個痛點。</p> <hr /> <h3>3. 直覺比喻（用日常經驗或具體圖像說明）</h3> <ul> <li><strong>假鈔製造者 (Generator)</strong>：起初造假技術拙劣，畫出的假鈔一眼被看穿。但每次被警察抓到後，它根據警察檢驗的特徵點更新技術，逐漸做出紋理逼真的假鈔。</li> <li><strong>警察 / 鑑定專家 (Discriminator)</strong>：起初憑感覺鑑定，但在識別假鈔的過程中不斷升級檢驗設備。</li> <li><strong>動態升級結果</strong>：雙方在動態對抗中同時進化，最終假鈔製造者做出的假鈔達到連頂級警察也只能隨機盲猜（50% 機率）的完美境界。</li> </ul> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>設潛在變數機率密度為 $p_z(\\\\boldsymbol{z})$，真實數據分佈為 $p_{\\\\text{data}}(\\\\boldsymbol{x})$。</p> <p>生成器 $G$ 定義了一條從低維潛在空間 $\\\\mathbb{R}^p$ 到高維數據流形 $\\\\mathcal{M} \\\\subset \\\\mathbb{R}^d$ 的參數化映射：</p> <p>$$\\\\boldsymbol{x} = G(\\\\boldsymbol{z}; \\\\boldsymbol{\\\\theta}_G)$$</p> <p>判別器 $D$ 的幾何意義為空間中的一個可微分純量場 (Scalar Field)：</p> <p>$$D(\\\\boldsymbol{x}; \\\\boldsymbol{\\\\theta}_D) : \\\\mathbb{R}^d \\\\to [0, 1]$$</p> <p>兩者的對抗關係構成了一個零和賽局 (Zero-Sum Game)。</p> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <p>在 PyTorch 實作中，數據流 Tensor Shape 變化如下：</p> <pre><code class=\"language-python\">import torch import torch.nn as nn  # 1. 隨機潛在雜訊向量 Input Latent Noise z = torch.randn(batch_size, z_dim) # Shape: (B, z_dim)  # 2. 生成器正向傳播 Forward G fake_x = G(z) # Shape: (B, C, H, W)  # 3. 判別器正向傳播 Forward D d_real_score = D(real_x) # Shape: (B, 1) d_fake_score = D(fake_x) # Shape: (B, 1) </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li><strong>採樣</strong>：從真實數據集採樣 Batch $\\\\boldsymbol{x} \\\\sim p_{\\\\text{data}}$，從高斯分佈採樣雜訊 Batch $\\\\boldsymbol{z} \\\\sim p_z$。</li> <li><strong>判別器評分</strong>：計算 $D(\\\\boldsymbol{x})$ 與 $D(G(\\\\boldsymbol{z}))$。</li> <li><strong>對抗反向傳播</strong>：先更新判別器權重 $\\\\boldsymbol{\\\\theta}_D$，再更新生成器權重 $\\\\boldsymbol{\\\\theta}_G$。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗 (Pitfalls &amp; Debugging)</h3> <ul> <li><strong>坑點：更新生成器時忘記 detach</strong>：若在更新判別器時沒有使用 <code>fake_x.detach()</code>，梯度會一路傳回生成器，造成重複計算甚至記憶體爆滿。</li> <li><strong>除錯絕招</strong>：訓練判別器時必須使用 <code>D(fake_x.detach())</code>！</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比 (Variants &amp; State-of-the-Art)</h3> <ul> <li><strong>Vanilla GAN (2014)</strong>：Goodfellow 原始二進位交叉熵對抗。</li> <li><strong>Conditional GAN (cGAN)</strong>：引入條件標籤 $\\\\boldsymbol{y}$ 進行控向生成。</li> <li><strong>WGAN (2017)</strong>：採用 Earth Mover's Distance 取代二分類交叉熵。</li> </ul> <hr /> <h3>9. 教授自我提問與反思 (Self-Reflection Q&amp;A)</h3> <p><strong>Q：判別器如果訓練得太完美，生成器會發生什麼事？</strong><br /> A：若判別器達到 100% 完美識別，其輸出 $D(G(\\\\boldsymbol{z})) \\\\to 0$ 且梯度徹底變為 0，導致生成器遭遇梯度消失（Gradient Vanishing）而無法學習。因此判別器不能過度強大。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「假鈔警探雙升級，零和博弈可微分；判別無能五五開，生成逼真達均衡。」</strong></p> </blockquote>", "2": "<h1>教授祕笈 KP-2：對抗式學習與極小化極大賽局 (Minimax Game)</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元深入解構 Ian Goodfellow 提出的 $\\\\min_G \\\\max_D V(D, G)$ Minimax 極小化極大賽局目標函數的數學邏輯。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <p><strong>Minimax 極小化極大賽局</strong> 是博弈論中經典的兩玩家零和遊戲標的。在 GAN 中，價值函數 (Value Function) $V(D, G)$ 定義為：</p> <p>$$\\\\min_G \\\\max_D V(D, G) := \\\\mathbb{E}<em>{\\\\boldsymbol{x} \\\\sim p</em>{\\\\text{data}}(\\\\boldsymbol{x})}[\\\\log D(\\\\boldsymbol{x})] + \\\\mathbb{E}_{\\\\boldsymbol{z} \\\\sim p_z(\\\\boldsymbol{z})}[\\\\log (1 - D(G(\\\\boldsymbol{z})))]$$</p> <hr /> <h3>2. 為什麼需要這個概念（對照未導入前的痛點）</h3> <p>在單邊神經網絡優化中，損失函數只有單一極小化目標。但生成模型若缺乏對手監督，極易陷入局部無效記憶。Minimax 結構引入了動態競爭邊界，使得目標函數本身能夠隨模型能力成長而動態調整。</p> <hr /> <h3>3. 直覺比喻</h3> <p>好比拔河比賽：判別器 $D$ 在繩子左端努力將 $V(D, G)$ 拉向極大值；生成器 $G$ 在繩子右端努力將 $V(D, G)$ 拉向極小值。兩者的拉力在動態中達到力量相等的平衡點。</p> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>對標的式進行二拆解：</p> <ol> <li><strong>第一項 $\\\\mathbb{E}<em>{\\\\boldsymbol{x} \\\\sim p</em>{\\\\text{data}}}[\\\\log D(\\\\boldsymbol{x})]$</strong>：</li> <li>判別器希望對真實樣本評高分 $D(\\\\boldsymbol{x}) \\\\to 1$，此時 $\\\\log D(\\\\boldsymbol{x}) \\\\to 0$（極大值）。</li> <li> <p>生成器不包含在該項中，對其梯度為 0。</p> </li> <li> <p><strong>第二項 $\\\\mathbb{E}_{\\\\boldsymbol{z} \\\\sim p_z}[\\\\log (1 - D(G(\\\\boldsymbol{z})))]$</strong>：</p> </li> <li>判別器希望對生成樣本評低分 $D(G(\\\\boldsymbol{z})) \\\\to 0$，使得 $1 - D(G(\\\\boldsymbol{z})) \\\\to 1$，項值趨近 0（極大值）。</li> <li>生成器希望欺騙判別器使 $D(G(\\\\boldsymbol{z})) \\\\to 1$，使得 $1 - D(G(\\\\boldsymbol{z})) \\\\to 0$，項值趨近 $-\\\\infty$（極小化）。</li> </ol> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <pre><code class=\"language-python\"># 判別器 Loss (極大化 V &lt;=&gt; 極小化 -V) loss_D_real = criterion(D(real_x), torch.ones_like(d_real)) loss_D_fake = criterion(D(fake_x.detach()), torch.zeros_like(d_fake)) loss_D = loss_D_real + loss_D_fake  # 生成器 Loss (極小化 V) loss_G = criterion(D(fake_x), torch.ones_like(d_fake)) </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li>計算判別器對真實樣本的 Log-likelihood $\\\\log D(\\\\boldsymbol{x})$。</li> <li>計算判別器對生成樣本的 Log-likelihood $\\\\log (1 - D(G(\\\\boldsymbol{z})))$。</li> <li>判別器執行梯度上升，生成器執行梯度下降。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗 (Pitfalls &amp; Debugging)</h3> <ul> <li><strong>坑點</strong>：將生成器與判別器的 Loss 放在同一個 <code>optimizer.step()</code> 中更新，導致梯度相互干擾或抵消。</li> <li><strong>除錯絕招</strong>：必須使用兩個獨立的優化器 <code>optimizer_D</code> 與 <code>optimizer_G</code> 分階段更新！</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比</h3> <ul> <li><strong>Minimax 兩玩家</strong>：傳統 GAN 的標準形式。</li> <li><strong>Maximin 兩玩家</strong>：根據 von Neumann 馮紐曼 Minimax 定理，在純策略或混合策略下二者完全等價。</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：極小化極大問題能否保證一定能找到全局最優解？</strong><br /> A：非凸神經網絡上無法絕對保證，交替 SGD 容易產生持續迴旋（Oscillations）而不收斂。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「真樣本對數拉極大，假樣本對數兩爭強；生成欺騙求極小，Minimax 賽局展張力。」</strong></p> </blockquote>", "3": "<h1>教授祕笈 KP-3：損失函數、交叉熵與二階段梯度優化</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元聚焦 GAN 在實際工程訓練中的二階段交替梯度演算法，以及訓練初期「飽和梯度問題」與 $-\\\\log D(G(\\\\boldsymbol{z}))$ 替代技巧。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <ul> <li><strong>飽和損失 (Saturating Loss)</strong>：原始 Minimax 中的生成器損失 $\\\\log(1 - D(G(\\\\boldsymbol{z})))$。</li> <li><strong>非飽和損失 (Non-Saturating Loss)</strong>：實務中替代的生成器損失 $-\\\\log D(G(\\\\boldsymbol{z}))$，在 $D(G(\\\\boldsymbol{z})) \\\\approx 0$ 時提供巨大梯度。</li> </ul> <hr /> <h3>2. 為什麼需要這個概念</h3> <p>訓練初期，生成器產出的樣本極度品質低下，判別器能以 99.9% 信心區分真假（$D(G(\\\\boldsymbol{z})) \\\\to 0$）。</p> <p>此時考察導數 $\\\\frac{d}{dx} \\\\log(1 - x) = \\\\frac{-1}{1 - x}$：當 $x \\\\to 0$ 時，導數僅為 $-1$，梯度極度平緩（Saturating），導致生成器學習停滯。</p> <hr /> <h3>3. 直覺比喻</h3> <p>好比剛入學的新手學生（生成器）面對極其嚴苛的教授（判別器）。如果教授直接給 0 分且不給具體改進建議（梯度平緩），學生會失去改進動力；如果改用 $-\\\\log D$ 評分，零分附近會給予極強烈的拉動訊號，指明改進方向。</p> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>考察非飽和損失的導數：</p> <p>$$\\\\frac{d}{dx} (-\\\\log x) = -\\\\frac{1}{x}$$</p> <p>當 $x = D(G(\\\\boldsymbol{z})) \\\\to 0$ 時：</p> <p>$$\\\\lim_{x \\\\to 0^+} \\\\left| -\\\\frac{1}{x} \\\\right| = +\\\\infty$$</p> <p>這在數學上證明了非飽和損失能提供強大的梯度推動力！</p> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <pre><code class=\"language-python\"># 1. 判別器更新 (1 Step) optimizer_D.zero_grad() loss_D = BCE(D(x_real), 1) + BCE(D(G(z).detach()), 0) loss_D.backward() optimizer_D.step()  # 2. 生成器更新 (1 Step, 非飽和 Loss) optimizer_G.zero_grad() loss_G = BCE(D(G(z)), 1) # 等價於極大化 log D(G(z)) / 極小化 -log D(G(z)) loss_G.backward() optimizer_G.step() </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li>固定 $G$，更新 $D$ $k$ 次（通常 $k=1$）。</li> <li>固定 $D$，更新 $G$ $1$ 次。</li> <li>重複直到達致動態平衡。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗</h3> <ul> <li><strong>坑點</strong>：判別器學習率設得太高，導致 $D$ 迅速達到 100% 判準率，生成器徹底癱瘓。</li> <li><strong>除錯絕招</strong>：給判別器加入 Label Smoothing（如將真實標籤從 1.0 改為 0.9），避免 $D$ 過度自信。</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比</h3> <ul> <li><strong>BCE Loss</strong>：原始 GAN 使用。</li> <li><strong>LSGAN MSE Loss</strong>：使用二次方均方誤差徹底消除飽和。</li> <li><strong>Hinge Loss</strong>：SVM 風格的無飽和截斷損失。</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：非飽和損失 $-\\\\log D$ 是否還滿足原論文 JS 散度極小化的嚴格數學推導？</strong><br /> A：非飽和損失在數學上不再精確對應 JS 散度，而是隱式引入了 KL 散度項，但在工程實務中穩定度遠高於原始損失。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「初期飽和梯度消失，改用負對數破僵局；判別器適度平滑，二階段交替穩定推。」</strong></p> </blockquote>", "4": "<h1>教授祕笈 KP-4：最優判別器 D* 與 Jensen-Shannon (JS) 散度極值推導</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元是 GAN 理論體系中最精妙的數學里程碑：導出固定生成器下的最優判別器 $D^*(\\\\boldsymbol{x})$ 解析解，並證明博弈極值等價於極小化 JS 散度。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <ul> <li><strong>最優判別器 $D^*(\\\\boldsymbol{x})$</strong>：給定任意生成分佈 $p_g$ 時，極大化 $V(D, G)$ 的全局唯一解析解：<br /> $$D^*(\\\\boldsymbol{x}) = \\\\frac{p_{\\\\text{data}}(\\\\boldsymbol{x})}{p_{\\\\text{data}}(\\\\boldsymbol{x}) + p_g(\\\\boldsymbol{x})}$$</li> <li><strong>JS 散度 (Jensen-Shannon Divergence)</strong>：兩機率分佈對稱化的散度度量，當兩分佈相同時為 0。</li> </ul> <hr /> <h3>2. 為什麼需要這個概念</h3> <p>理解 $D^*$ 的解析解能夠讓我們將複雜的神經網絡黑盒優化，轉化為機率密度分佈之間的幾何距離（JSD）極小化問題，為 GAN 的收斂性分析奠定嚴格數學基礎。</p> <hr /> <h3>3. 直覺比喻</h3> <p>假設空間中某點 $\\\\boldsymbol{x}$，來自真實數據的機率為 $a$，來自生成器的機率為 $b$。一個完美的鑑定師評估該點為真的機率，自然就是該點真實來源所占的比例 $\\\\frac{a}{a+b}$！</p> <hr /> <h3>4. 數學推導與物理/幾何意義（嚴格推導）</h3> <p>將價值函數 $V(D, G)$ 展開為空間積分：</p> <p>$$V(D, G) = \\\\int_{\\\\boldsymbol{x}} \\\\left( p_{\\\\text{data}}(\\\\boldsymbol{x}) \\\\log D(\\\\boldsymbol{x}) + p_g(\\\\boldsymbol{x}) \\\\log (1 - D(\\\\boldsymbol{x})) \\\\right) d\\\\boldsymbol{x}$$</p> <p>對於任意點 $\\\\boldsymbol{x}$，設 $y = D(\\\\boldsymbol{x}), a = p_{\\\\text{data}}(\\\\boldsymbol{x}), b = p_g(\\\\boldsymbol{x})$。考察極值函數：</p> <p>$$f(y) = a \\\\log y + b \\\\log (1 - y)$$</p> <p>求一階導數：</p> <p>$$f'(y) = \\\\frac{a}{y} - \\\\frac{b}{1 - y} = 0 \\\\implies a(1 - y) = b y \\\\implies y^* = \\\\frac{a}{a + b}$$</p> <p>將 $D^<em>(\\\\boldsymbol{x}) = \\\\frac{p_{\\\\text{data}}}{p_{\\\\text{data}} + p_g}$ 代回 $V(D^</em>, G)$：</p> <p>$$\\\\begin{align}<br /> V(D^*, G) &amp;= \\\\mathbb{E}<em>{p</em>{\\\\text{data}}}\\\\left[\\\\log \\\\frac{p_{\\\\text{data}}}{p_{\\\\text{data}} + p_g}\\\\right] + \\\\mathbb{E}<em>{p_g}\\\\left[\\\\log \\\\frac{p_g}{p</em>{\\\\text{data}} + p_g}\\\\right] \\\\<br /> &amp;= -\\\\log 4 + KLD\\\\left(p_{\\\\text{data}} \\\\Big| \\\\frac{p_{\\\\text{data}}+p_g}{2}\\\\right) + KLD\\\\left(p_g \\\\Big| \\\\frac{p_{\\\\text{data}}+p_g}{2}\\\\right) \\\\<br /> &amp;= -\\\\log 4 + 2 \\\\cdot JSD(p_{\\\\text{data}} | p_g)<br /> \\\\end{align}$$</p> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <p>驗證代碼：當 $p_g = p_{\\\\text{data}}$ 時：</p> <pre><code class=\"language-python\">import math V_min = -math.log(4) # 大約 -1.386294 print(f&quot;JSD=0 時的最優目標極值: {V_min:.6f}&quot;) </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li>假設生成器 $G$ 固定。</li> <li>求一階微商導出 $D^*(\\\\boldsymbol{x})$。</li> <li>將最優解代入 $V(D^*, G)$。</li> <li>導出 $2 \\\\cdot JSD(p_{\\\\text{data}} | p_g) - \\\\log 4$。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗</h3> <ul> <li><strong>坑點</strong>：學生誤以為判別器在極限時會輸出 1.0。</li> <li><strong>糾正</strong>：當生成器完美時 $p_g = p_{\\\\text{data}}$，$D^*(\\\\boldsymbol{x}) = \\\\frac{p_{\\\\text{data}}}{2 p_{\\\\text{data}}} = 0.5$！</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比</h3> <ul> <li><strong>JS 散度 (Vanilla GAN)</strong>：邊界無重疊時常數化。</li> <li><strong>Wasserstein 距離 (WGAN)</strong>：解決 JS 散度非連續痛點。</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：如果真實分佈與生成分佈的支援集 (Support) 沒有任何重疊，JS 散度會是多少？</strong><br /> A：若支援集無重疊，JSD 恆等於 $\\\\log 2 \\\\approx 0.693$，此時 $V(D^*, G) = 0$，梯度完全消失！這正是 WGAN 誕生的原因。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「最優判別真占總，代回導出 JSD；相等之時半對半，極小目標負對數四。」</strong></p> </blockquote>", "5": "<h1>教授祕笈 KP-5：納許均衡 (Nash Equilibrium) 與收斂幾何分析</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元從博弈論角度解析 GAN 的訓練穩定性，並透過 2D 向量場動態解釋 discrete SGD 為何會產生外擴迴旋 (Spiral Out)。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <ul> <li><strong>納許均衡 (Nash Equilibrium)</strong>：零和賽局中任何單一玩家單方面改變策略均無法增加收益的穩定點。在 GAN 中對應 $p_g = p_{\\\\text{data}}$ 且 $D^*(\\\\boldsymbol{x}) = 0.5$。</li> <li><strong>旋轉外擴振盪 (Rotational Oscillations)</strong>：離散交替梯度更新引發的幾何發散現象。</li> </ul> <hr /> <h3>2. 為什麼需要這個概念</h3> <p>許多學生以為只要網路由梯度下降驅動就一定會收斂到極小值。理解納許均衡的幾何流形，能讓學生明白為什麼對抗網絡訓練極其脆弱且容易發散。</p> <hr /> <h3>3. 直覺比喻</h3> <p>想像兩個人在圓形操場上玩貓抓老鼠。連續運動時老鼠繞著圓圈跑；但如果改為離散跳躍（步長過大），每一次跳躍都會跳到圓圈外側，最終越跳越遠（外擴螺旋線）。</p> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>考慮 Minimax 玩具模型：</p> <p>$$\\\\min_x \\\\max_y (x \\\\cdot y)$$</p> <p>連續系統的常微分方程 (ODE) 為：</p> <p>$$\\\\dot{x} = -\\\\frac{\\\\partial}{\\\\partial x}(xy) = -y, \\\\quad \\\\dot{y} = \\\\frac{\\\\partial}{\\\\partial y}(xy) = x$$</p> <p>此微分方程的軌跡為圓周運動 $x^2 + y^2 = C$。然而採用離散歐拉更新：</p> <p>$$\\\\begin{cases} x^{(k+1)} = x^{(k)} - \\\\eta y^{(k)} \\\\ y^{(k+1)} = y^{(k)} + \\\\eta x^{(k)} \\\\end{cases}$$</p> <p>計算其模長平方：</p> <p>$$(x^{(k+1)})^2 + (y^{(k+1)})^2 = (1 + \\\\eta^2) \\\\left( (x^{(k)})^2 + (y^{(k)})^2 \\\\right)$$</p> <p>由於 $(1 + \\\\eta^2) &gt; 1$，模長隨迭代呈指數級膨脹發散！</p> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <pre><code class=\"language-python\"># 離散軌跡模擬 x, y = 0.5, 0.5 eta = 0.1 for _ in range(100):     x_new = x - eta * y     y_new = y + eta * x     x, y = x_new, y_new     # 距離 r 隨時間放大！ </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li>導出連續動態相空間向量場。</li> <li>證明離散 Jacobi 矩陣特徵值實部放大係數 $&gt; 1$。</li> <li>引入梯度懲罰或歷史路徑累積以穩定動態。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗</h3> <ul> <li><strong>坑點</strong>：發現 Loss 在某個區間內上下劇烈擺動就以為訓練失敗而終止程式。</li> <li><strong>除錯</strong>：GAN Loss 振盪是常態，應以生成圖像畫質與 FID (Fréchet Inception Distance) 分數為準。</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比</h3> <ul> <li><strong>Alternating SGD</strong>：傳統交替更新（易外擴）。</li> <li><strong>Consensus Optimization</strong>：引入二階 Jacobi 向量場懲罰抑止旋轉。</li> <li><strong>TTUR (Two-Time-Scale Update Rule)</strong>：給予 $D$ 與 $G$ 不同的學習率。</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：為什麼給予判別器更大的學習率 (TTUR) 有助於收斂？</strong><br /> A：讓判別器更新得更快，能使連續系統的軌跡向內收縮，克服離散更新帶來的外擴效應。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「納許均衡半對半，離散更新易外擴；莫憑 Loss 判成敗，雙時間尺度穩幾何。」</strong></p> </blockquote>", "6": "<h1>教授祕笈 KP-6：條件式 GAN (cGAN) 與 DCGAN 潛在空間向量算術</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元涵蓋 GAN 的兩大里程碑：Conditional GAN (cGAN) 實現定向受控生成，以及 DCGAN 建立卷積設計原則與潛在空間向量算術。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <ul> <li><strong>Conditional GAN (cGAN)</strong>：將條件標籤 $\\\\boldsymbol{y}$ 拼接輸入 $G$ 與 $D$，實現受控生成 $G(\\\\boldsymbol{z} \\\\mid \\\\boldsymbol{y})$。</li> <li><strong>DCGAN (Deep Convolutional GAN)</strong>：將轉置卷積 (Transposed Conv) 與 BatchNorm 引入 GAN。</li> <li><strong>潛在向量算術</strong>：潛在空間 $\\\\boldsymbol{z}$ 具備連續語意幾何，可進行向量加減運算。</li> </ul> <hr /> <h3>2. 為什麼需要這個概念</h3> <ul> <li>原始 GAN 只能隨機生成，無法指定類別（如無法指定生成「3」而非「7」）。</li> <li>傳統全連接網絡無法擴展到高解析度圖像生成。</li> </ul> <hr /> <h3>3. 直覺比喻</h3> <ul> <li><strong>cGAN</strong>：好比給畫家（Generator）下定單：「請畫一隻『黑色的』『貓』」，條件標籤 $\\\\boldsymbol{y}$ 就是訂單要求。</li> <li><strong>DCGAN 向量算術</strong>：好比顏料調色盤，戴眼鏡向量減去男性向量加上女性向量，就能精確調出「戴眼鏡女性」的畫像。</li> </ul> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>cGAN 的 Minimax 目標函數寫為條件機率形式：</p> <p>$$\\\\min_G \\\\max_D V(D, G) = \\\\mathbb{E}<em>{\\\\boldsymbol{x} \\\\sim p</em>{\\\\text{data}}}[\\\\log D(\\\\boldsymbol{x} \\\\mid \\\\boldsymbol{y})] + \\\\mathbb{E}_{\\\\boldsymbol{z} \\\\sim p_z}[\\\\log (1 - D(G(\\\\boldsymbol{z} \\\\mid \\\\boldsymbol{y}) \\\\mid \\\\boldsymbol{y}))]$$</p> <p>DCGAN 架構四大守則：<br /> 1. 取消 Pooling，改用 Strided Conv (D) 與 Transposed Conv (G)。<br /> 2. G 與 D 均施加 Batch Normalization（輸出層與輸入層除外）。<br /> 3. G 內部採用 ReLU，輸出層採用 Tanh。<br /> 4. D 內部全採用 LeakyReLU (α=0.2)。</p> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <pre><code class=\"language-python\"># cGAN 拼接條件 y z = torch.randn(B, z_dim) y_embed = embed_layer(y) # (B, y_dim) g_input = torch.cat([z, y_embed], dim=1) # (B, z_dim + y_dim) fake_img = G(g_input) </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li>構建條件標籤 One-hot 或 Embedding 向量。</li> <li>在通道或維度上與雜訊/圖像拼接。</li> <li>經由轉置卷積逐步升採樣至目標解析度。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗</h3> <ul> <li><strong>坑點</strong>：DCGAN 生成器最後一層忘了加 <code>Tanh</code>，導致像素值暴衝超出 $[-1, 1]$ 範圍。</li> <li><strong>除錯</strong>：圖像預處理必須 Normalize 至 $[-1, 1]$，配合 G 的 <code>Tanh</code> 輸出！</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比</h3> <ul> <li><strong>cGAN</strong>：條件標籤拼接。</li> <li><strong>Projection Discriminator</strong>：內積投影條件判別器 (SOTA)。</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：為什麼 DCGAN 判別器推薦用 LeakyReLU 而非普通 ReLU？</strong><br /> A：LeakyReLU 在負數區間保留 0.2 斜率，避免判別器神經元「死亡」而停止提供梯度。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「條件拼接導方向，DC 卷積建範式；Leaky 判別 Tanh 輸出，向量加減展語意。」</strong></p> </blockquote>", "7": "<h1>教授祕笈 KP-7：模式崩塌 (Mode Collapse)、Minibatch Discrimination 與 Unrolled GAN</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元專題剖析 GAN 最致命的失敗現象——模式崩塌 (Mode Collapse)，並介紹 Minibatch Discrimination 與 Unrolled GAN 前瞻優化兩大解法。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <ul> <li><strong>模式崩塌 (Mode Collapse)</strong>：生成器發現某個局部樣本容易騙過判別器，因而反覆產出該單一模式，忽視真實數據的多樣性。</li> <li><strong>小批次判別 (Minibatch Discrimination)</strong>：讓判別器同時檢查批量內樣本間的距離與相似度。</li> <li><strong>展開 GAN (Unrolled GAN)</strong>：更新 G 時前瞻判別器未來 $k$ 步的梯度更新。</li> </ul> <hr /> <h3>2. 為什麼需要這個概念</h3> <p>在 MNIST 數據集中，如果 GAN 發生 Mode Collapse，它可能 100% 只生成數字「1」，雖然單張圖片品質極高，但完全喪失了生成 0、2~9 的能力，模型徹底失效。</p> <hr /> <h3>3. 直覺比喻</h3> <p>好比考試抓到作弊規律的學生。學生發現老師只改第一頁第一題，只要第一題寫對就能得高分，於是學生所有試卷都只寫第一題，徹底放棄學習其他章節。</p> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>Mode Collapse 的數學根源：</p> <p>極小化 $KLD(p_g | p_{\\\\text{data}})$ 是 Mode-Seeking 的。當 $G$ 更新比 $D$ 快時：</p> <p>$$\\\\arg\\\\min_G \\\\max_D V(D, G) \\\\neq \\\\arg\\\\max_D \\\\min_G V(D, G)$$</p> <p>優化順序顛倒會導致生成器收縮到單一點 $\\\\delta(\\\\boldsymbol{x} - \\\\boldsymbol{x}^*)$ 的狄拉克函數。</p> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <p>Minibatch Discrimination 計算特徵層矩陣相似度：</p> <pre><code class=\"language-python\"># M = f(x) * W -&gt; Tensor Shape: (B, A, B_dim) # 計算批量內樣本間 L1 距離總和: # c(x_i, x_j) = exp(-||M_i - M_j||_1) # o(x_i) = sum_j c(x_i, x_j) -&gt; 拼接回判別器特徵層 </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li>提取判別器中間層特徵。</li> <li>矩陣相乘計算批量樣本間歐氏/L1 距離。</li> <li>若批量樣本距離極小（相似度極高），給予強烈懲罰。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗</h3> <ul> <li><strong>坑點</strong>：發現生成樣本重複，誤以為是學習率過大而盲目調小學習率。</li> <li><strong>除錯</strong>：應引入 Minibatch Discrimination 或改用 WGAN-GP 損失！</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比</h3> <ul> <li><strong>Minibatch Discrimination</strong>：顯式距離特徵。</li> <li><strong>Unrolled GAN</strong>：前瞻 $k$ 步二階導數。</li> <li><strong>PacGAN</strong>：打包多張圖像一同輸入判別器。</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：Unrolled GAN 前瞻 $k$ 步更新如何阻止 Mode Collapse？</strong><br /> A：前瞻讓生成器「預知」如果自己投機生成單一模式，判別器下一步會對該模式施加極大懲罰，從而迫使 $G$ 提前避開崩塌陷阱。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「模式崩塌單點塌，多樣消失投機巧；小批判別查相似，前瞻 $k$ 步防投機。」</strong></p> </blockquote>", "8": "<h1>教授祕笈 KP-8：雙判別器 D2GAN 與 Wasserstein GAN (WGAN / Earth Mover's Distance)</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元詳細解析打破傳統 GAN 瓶頸的革命性研究：Wasserstein GAN (WGAN)。透過推土機距離 (EMD) 與 1-Lipschitz 約束，從根本上解決梯度消失與模式崩塌。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <ul> <li><strong>Wasserstein 距離 (Earth Mover's Distance, EMD)</strong>：將一個機率分佈形變為另一個機率分佈所需的最小總搬運代價。</li> <li><strong>Critic (WGAN 判別器)</strong>：取消 Sigmoid 輸出，輸出實數純量分數。</li> <li><strong>1-Lipschitz 連續性</strong>：限制函數梯度範數 $|\\\\nabla_{\\\\boldsymbol{x}} D(\\\\boldsymbol{x})| \\\\le 1$。</li> </ul> <hr /> <h3>2. 為什麼需要這個概念</h3> <p>當真實分佈 $p_{\\\\text{data}}$ 與生成分佈 $p_g$ 在高維空間中支援集無重疊時（測度為 0 的集合）：<br /> - JS 散度恆為常數 $\\\\log 2$，梯度為 0。<br /> - Wasserstein 距離仍保持平滑連續，提供高性價比的線性梯度！</p> <hr /> <h3>3. 直覺比喻</h3> <p>把機率分佈想像成兩堆形狀不同的泥土。把泥土堆 A 搬運重構為泥土堆 B，所移動的「泥土重量 $\\\\times$ 搬運距離」的最省力總功，就是 EMD 距離。即使兩堆泥土相距遙遠，搬運代價依然與距離成正比，不會突然失去幾何意義。</p> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>WGAN 利用 Kantorovich-Rubinstein 對偶定理，將 EMD 轉化為：</p> <p>$$W(p_{\\\\text{data}}, p_g) = \\\\max_{D \\\\in \\\\mathcal{D}<em>L} \\\\mathbb{E}</em>{\\\\boldsymbol{x} \\\\sim p_{\\\\text{data}}}[D(\\\\boldsymbol{x})] - \\\\mathbb{E}_{\\\\boldsymbol{z} \\\\sim p_z}[D(G(\\\\boldsymbol{z}))]$$</p> <p>其中 $\\\\mathcal{D}_L$ 代表所有滿足 1-Lipschitz 條件的函數集合。</p> <p>原版 WGAN 採用<strong>權重剪裁 (Weight Clipping)</strong> 將權重限制在 $[-c, c]$；後續 WGAN-GP 採用<strong>梯度懲罰 (Gradient Penalty)</strong>：</p> <p>$$\\\\mathcal{L}<em>{\\\\text{GP}} = \\\\mathbb{E}</em>{\\\\widehat{\\\\boldsymbol{x}}}\\\\left[ (|\\\\nabla_{\\\\widehat{\\\\boldsymbol{x}}} D(\\\\widehat{\\\\boldsymbol{x}})|_2 - 1)^2 \\\\right]$$</p> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <pre><code class=\"language-python\"># 1. 內插點 Sample Interpolates alpha = torch.rand(B, 1, 1, 1) interpolates = (alpha * real_x + (1 - alpha) * fake_x).requires_grad_(True)  # 2. 計算 Critic 梯度 d_interp = Critic(interpolates) gradients = torch.autograd.grad(outputs=d_interp, inputs=interpolates,                                 grad_outputs=torch.ones_like(d_interp),                                 create_graph=True, retain_graph=True)[0]  # 3. 梯度懲罰 Penalty gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() loss_C = -(torch.mean(d_real) - torch.mean(d_fake)) + 10.0 * gradient_penalty </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li>取消 Critic 最後一層 Sigmoid 激活。</li> <li>不使用 Log Cross-Entropy，直接優化 $\\\\mathbb{E}[D(x)] - \\\\mathbb{E}[D(G(z))]$。</li> <li>加上 Gradient Penalty 確保 1-Lipschitz。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗</h3> <ul> <li><strong>坑點</strong>：在 WGAN 中使用 BatchNorm，破壞了單一樣本獨立梯度的 Lipschitz 限制。</li> <li><strong>除錯</strong>：WGAN-GP 必須使用 <strong>LayerNorm</strong> 或 <strong>InstanceNorm</strong> 取代 BatchNorm！</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比</h3> <ul> <li><strong>WGAN (Weight Clipping)</strong>：簡單但易導致權重集中在極值。</li> <li><strong>WGAN-GP (Gradient Penalty)</strong>：柔性梯度懲罰（SOTA 穩定首選）。</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：為什麼 WGAN 的 Loss 數值具有實際意義，而傳統 GAN 的 Loss 沒有？</strong><br /> A：WGAN 的 Critic Loss 直接近似 Wasserstein 距離，Loss 越小代表生成畫質越高；傳統 GAN Loss 振盪且不反映畫質。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「推土距離連續滑，無重疊時梯度在；取消對數 Sigmoid，梯度懲罰 Lipschitz 穩。」</strong></p> </blockquote>", "9": "<h1>教授祕笈 KP-9：極大似然估計 (MLE) 與 GAN 隱式分配對比</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元從生成模型的兩大哲學視角對比顯式密度極大似然估計 (MLE) 與隱式對抗模型 (GAN)，揭示 Mode-Covering 與 Mode-Seeking 的幾何本質。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <ul> <li><strong>極大似然估計 (MLE)</strong>：顯式定義密度 $p_\\\\theta(\\\\boldsymbol{x})$，極小化 Forward KL 散度 $KLD(p_{\\\\text{data}} | p_\\\\theta)$。</li> <li><strong>GAN (隱式模型)</strong>：不定義解析密度，極小化 Reverse KL 或 JS 散度。</li> </ul> <hr /> <h3>2. 為什麼需要這個概念</h3> <p>理解這兩者的對比，能解答神經網絡深度學習中最核心的疑問：「為什麼 VAE/Autoregressive 生成的圖像往往偏模糊，而 GAN 生成的圖像極其清晰？」</p> <hr /> <h3>3. 直覺比喻</h3> <ul> <li><strong>MLE (Forward KL)</strong>：老好人政策。為了不漏掉任何一個真實數據點，寧可拉大天網把所有點包進來，結果中間夾雜了大量的無效空白區（模糊影像）。</li> <li><strong>GAN (Reverse KL)</strong>：完美主義者。只專注在確信真實的狹窄區域精雕細琢，絕對不在無效區域浪費資源（畫質清晰但易模式崩塌）。</li> </ul> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>散度非對稱性分析：</p> <ol> <li><strong>Forward KL ($KLD(p_{\\\\text{data}} | p_\\\\theta) = \\\\int p_{\\\\text{data}} \\\\log \\\\frac{p_{\\\\text{data}}}{p_\\\\theta}$)</strong>：</li> <li>當 $p_{\\\\text{data}}(\\\\boldsymbol{x}) &gt; 0$ 時，若 $p_\\\\theta(\\\\boldsymbol{x}) \\\\to 0$，則項值爆炸趨近 $+\\\\infty$。</li> <li> <p>為避免無窮大代價，模型被強迫在所有 $p_{\\\\text{data}} &gt; 0$ 之處均保持 $p_\\\\theta &gt; 0$（<strong>Zero-Avoiding / Mode-Covering</strong>）。</p> </li> <li> <p><strong>Reverse KL ($KLD(p_\\\\theta | p_{\\\\text{data}}) = \\\\int p_\\\\theta \\\\log \\\\frac{p_\\\\theta}{p_{\\\\text{data}}}$)</strong>：</p> </li> <li>當 $p_{\\\\text{data}}(\\\\boldsymbol{x}) = 0$ 時，若 $p_\\\\theta(\\\\boldsymbol{x}) &gt; 0$，項值爆炸。</li> <li>為避免代價，模型被強迫在 $p_{\\\\text{data}} = 0$ 之處設 $p_\\\\theta = 0$（<strong>Zero-Attracting / Mode-Seeking</strong>）。</li> </ol> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <p>MLE 與 GAN 的訓練損失對比：</p> <pre><code class=\"language-python\"># MLE Loss (Explicit) loss_MLE = -torch.mean(log_prob_model(x_real))  # GAN Loss (Implicit) loss_GAN = criterion(D(G(z)), 1) </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li>Forward KL 強制模型覆蓋所有真實模式。</li> <li>Reverse KL 強制模型聚焦局部高品質模式。</li> <li>GAN 透過動態對抗實現隱式採樣評估。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗</h3> <ul> <li><strong>坑點</strong>：學生嘗試在 GAN 中計算生成樣本的 Log-likelihood $\\\\log p_g(\\\\boldsymbol{x})$。</li> <li><strong>除錯</strong>：GAN 是隱式模型 (Implicit Density)，無法直接導出解析 Log-likelihood！</li> </ul> <hr /> <h3>8. 前沿擴充與變体對比</h3> <ul> <li><strong>Explicit Density</strong>：Autoregressive (PixelCNN), Normalizing Flows (RealNVP), VAE.</li> <li><strong>Implicit Density</strong>：GAN, Diffusion Models (DDPM).</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：擴散模型 (Diffusion Models) 屬於顯式還是隱式？</strong><br /> A：擴散模型透過 score matching 擬合梯度場，兼具了 MLE 的分佈覆蓋度與 GAN 的高清畫質。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「正向 KL 避免零，包覆分佈產模糊；反向 KL 趨向零，聚焦單峰高清畫。」</strong></p> </blockquote>", "10": "<h1>教授祕笈 KP-10：f-GAN 廣義變分凸對偶推導</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元介紹 Nowozin 等人提出的 $f$-GAN 理論框架，利用 Fenchel 凸對偶定理將所有廣義 $f$-散度統一納入對抗訓練。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <ul> <li><strong>$f$-散度 ($f$-Divergence)</strong>：定義為 $D_f(P | Q) = \\\\int q(x) f\\\\left(\\\\frac{p(x)}{q(x)}\\\\right) dx$，其中 $f$ 為滿足 $f(1)=0$ 的凸函數。</li> <li><strong>Fenchel 凸共軛 (Convex Conjugate)</strong>：$f^*(t) = \\\\sup_{u \\\\in \\\\text{dom}_f} {u t - f(u)}$。</li> </ul> <hr /> <h3>2. 為什麼需要這個概念</h3> <p>原始 GAN 僅推導了 JS 散度。$f$-GAN 提供了龐大的數學工具箱，證明了 Total Variation, Pearson $\\\\chi^2$, Reverse KL 等任意散度均可導出對應的神經網絡對抗架構。</p> <hr /> <h3>3. 直覺比喻</h3> <p>好比通用插座適配器。原本 GAN 只適用 JS 散度這款專用插頭；$f$-GAN 提供了 Fenchel 凸對偶這個通用適配器，只要換上不同的凸函數 $f(u)$，就能立即插上各種不同幾何性質的散度。</p> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>利用 Fenchel 對偶替換：</p> <p>$$f(u) = \\\\max_t {u t - f^*(t)}$$</p> <p>將 $u = \\\\frac{p_{\\\\text{data}}(x)}{p_g(x)}$ 代入 $f$-散度定義：</p> <p>$$\\\\begin{align}<br /> D_f(p_{\\\\text{data}} | p_g) &amp;= \\\\int p_g(x) f\\\\left( \\\\frac{p_{\\\\text{data}}(x)}{p_g(x)} \\\\right) dx \\\\<br /> &amp;= \\\\int p_g(x) \\\\sup_{T(x)} \\\\left{ \\\\frac{p_{\\\\text{data}}(x)}{p_g(x)} T(x) - f^<em>(T(x)) \\\\right} dx \\\\<br /> &amp;\\\\ge \\\\sup_{T \\\\in \\\\mathcal{T}} \\\\left( \\\\int p_{\\\\text{data}}(x) T(x) dx - \\\\int p_g(x) f^</em>(T(x)) dx \\\\right) \\\\<br /> &amp;= \\\\sup_{T \\\\in \\\\mathcal{T}} \\\\left( \\\\mathbb{E}<em>{x \\\\sim p</em>{\\\\text{data}}}[T(x)] - \\\\mathbb{E}_{x \\\\sim p_g}[f^*(T(x))] \\\\right)<br /> \\\\end{align}$$</p> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <p>常用 $f$-散度及其共軛表：</p> <table> <thead> <tr> <th style=\"text-align: left;\">散度類型</th> <th style=\"text-align: left;\">凸函數 $f(u)$</th> <th style=\"text-align: left;\">共軛 $f^*(t)$</th> <th style=\"text-align: left;\">輸出域限制 $T(x)$</th> </tr> </thead> <tbody> <tr> <td style=\"text-align: left;\"><strong>JS Divergence</strong></td> <td style=\"text-align: left;\">$u \\\\log u - (u+1)\\\\log\\\\frac{u+1}{2}$</td> <td style=\"text-align: left;\">$-\\\\log(1 - e^t)$</td> <td style=\"text-align: left;\">$t &lt; 0$</td> </tr> <tr> <td style=\"text-align: left;\"><strong>Pearson $\\\\chi^2$</strong></td> <td style=\"text-align: left;\">$(u-1)^2$</td> <td style=\"text-align: left;\">$\\\\frac{1}{4}t^2 + t$</td> <td style=\"text-align: left;\">$\\\\mathbb{R}$</td> </tr> <tr> <td style=\"text-align: left;\"><strong>Reverse KL</strong></td> <td style=\"text-align: left;\">$-\\\\log u$</td> <td style=\"text-align: left;\">$-1 - \\\\log(-t)$</td> <td style=\"text-align: left;\">$t &lt; 0$</td> </tr> </tbody> </table> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li>選擇目標 $f$-散度及其對應凸共軛 $f^*$。</li> <li>設計判別器輸出域激活函數（確保符合 $\\\\text{dom}_{f^*}$）。</li> <li>變分極大化下界目標。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗</h3> <ul> <li><strong>坑點</strong>：忘記限制判別器輸出 $T(x)$ 的定義域（如 Reverse KL 要求 $T(x) &lt; 0$），導致對數負數微商崩潰。</li> <li><strong>除錯</strong>：最後一層必須加適當的激活函數（如 $-\\\\exp(\\\\cdot)$）！</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比</h3> <ul> <li><strong>f-GAN (2016)</strong>：廣義變分凸對偶。</li> <li><strong>Wasserstein GAN</strong>：非 $f$-散度（屬於 Integral Probability Metric, IPM 家族）。</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：$f$-GAN 與 IPM (如 WGAN, MMD GAN) 的根本區別在哪？</strong><br /> A：$f$-散度依賴兩分佈的點對點密度比 $\\\\frac{p(x)}{q(x)}$，而 IPM 依賴連續函數空間的積分差值。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「凸函數對偶 Fenchel 變，廣義散度下界顯；選擇共軛適配器，各式 GAN 架構統一歸。」</strong></p> </blockquote>", "11": "<h1>教授祕笈 KP-11：對抗變分貝氏 (AVB) 與貝氏 GAN (BGAN)</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元探討將對抗學習與貝氏推斷 (Bayesian Inference) 結合的兩大前沿方向：Adversarial Variational Bayes (AVB) 與 Bayesian GAN (BGAN)。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <ul> <li><strong>Adversarial Variational Bayes (AVB)</strong>：用對抗判別器隱式估算變分後驗密度比，允許任意複雜的 VAE 後驗分佈。</li> <li><strong>Bayesian GAN (BGAN)</strong>：對 $G$ 與 $D$ 的權重後驗 $p(\\\\boldsymbol{\\\\theta}_G \\\\mid \\\\mathcal{D}), p(\\\\boldsymbol{\\\\theta}_D \\\\mid \\\\mathcal{D})$ 進行 SGLD MCMC 採樣，避免單點過擬合。</li> </ul> <hr /> <h3>2. 為什麼需要這個概念</h3> <ul> <li>傳統 VAE 限制變分後驗 $q_\\\\phi(\\\\boldsymbol{z} \\\\mid \\\\boldsymbol{x})$ 必須為簡單的對角高斯分佈，表達能力受限。</li> <li>傳統 GAN 對權重進行 MLE 點估計，極易過擬合與 Mode Collapse。</li> </ul> <hr /> <h3>3. 直覺比喻</h3> <ul> <li><strong>AVB</strong>：好比給 VAE 裝上了高靈敏度的神經網絡檢測儀，不再限制腦海中的思考模式必須符合簡單的高斯球，允許任意奇形怪狀的複雜思想。</li> <li><strong>BGAN</strong>：好比委員會投票。不依賴單一決策者的點估計，而是採樣出一群風格各異的畫家與鑑定師組成的委員會共同決策。</li> </ul> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>AVB 的核心理念：ELBO 目標包含 KL 項 $KLD(q_\\\\phi(\\\\boldsymbol{z} \\\\mid \\\\boldsymbol{x}) | p(\\\\boldsymbol{z}))$。引入對抗判別器 $T(\\\\boldsymbol{x}, \\\\boldsymbol{z})$：</p> <p>$$T^*(\\\\boldsymbol{x}, \\\\boldsymbol{z}) = \\\\log \\\\frac{q_\\\\phi(\\\\boldsymbol{z} \\\\mid \\\\boldsymbol{x})}{p(\\\\boldsymbol{z})}$$</p> <p>代入 ELBO 即可繞過顯式密度計算！</p> <p>BGAN 使用 Stochastic Gradient Langevin Dynamics (SGLD) 採樣權重：</p> <p>$$\\\\Delta \\\\boldsymbol{\\\\theta} = \\\\frac{\\\\eta}{2} \\\\left( \\\\nabla_\\\\boldsymbol{\\\\theta} \\\\log p(\\\\boldsymbol{\\\\theta}) + \\\\frac{N}{n} \\\\sum_{i=1}^n \\\\nabla_\\\\boldsymbol{\\\\theta} \\\\log p(\\\\boldsymbol{x}_i \\\\mid \\\\boldsymbol{\\\\theta}) \\\\right) + \\\\boldsymbol{\\\\epsilon}, \\\\quad \\\\boldsymbol{\\\\epsilon} \\\\sim \\\\mathcal{N}(0, \\\\eta \\\\boldsymbol{I})$$</p> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <p>AVB 判別器與 Encoder/Decoder 訓練：</p> <pre><code class=\"language-python\"># 1. 採樣 Posterior z ~ q(z|x) 與 Prior z_prior ~ p(z) z_post = Encoder(x, noise) z_prior = torch.randn(B, z_dim)  # 2. 判別器區分 (x, z_post) vs (x, z_prior) d_post = T(x, z_post) d_prior = T(x, z_prior)  # 3. ELBO 重構 + 對抗 Log Density Ratio loss_AVB = Reconstruction_Loss(Decoder(z_post), x) + d_post.mean() </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li>Encoder 輸入 $x$ 與額外隨機雜訊，輸出無封閉解後驗 $z$。</li> <li>判別器 $T(x, z)$ 估算對數密度比。</li> <li>反向傳播優化變分下界。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗</h3> <ul> <li><strong>坑點</strong>：BGAN 採樣時注入的雜訊 $\\\\boldsymbol{\\\\epsilon}$ 方差過大，導致網絡權重隨機漂移發散。</li> <li><strong>除錯</strong>：SGLD 的學習率 $\\\\eta$ 必須隨時間逐漸衰減退火 (Annealing)！</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比</h3> <ul> <li><strong>VAE</strong>：高斯限制顯式密度。</li> <li><strong>AVB</strong>：對抗密度比隱式推斷。</li> <li><strong>BGAN</strong>：權重分佈貝氏 MCMC。</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：BGAN 的權重後驗採樣為什麼能防止 Mode Collapse？</strong><br /> A：不同採樣出的權重 $\\\\boldsymbol{\\\\theta}_G^{(s)}$ 會聚焦於真實分佈的不同模式，委員會整體輸出自然具備了極高的多樣性。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「AVB 對抗求比值，突破高斯後驗限制；BGAN 採樣權重集，委員會制抑坍塌。」</strong></p> </blockquote>", "12": "<h1>教授祕笈 KP-12：特徵匹配與 InfoGAN 互資訊 (Mutual Information) 解耦</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元介紹 Salimans 的特徵匹配 (Feature Matching) 穩定技巧，以及 Chen 等人的 InfoGAN 如何在無監督下實現可解釋語意解耦 (Disentangled Representations)。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <ul> <li><strong>特徵匹配 (Feature Matching)</strong>：不直接欺騙判別器最終純量，而是要求 $G$ 生成樣本的判別器中間特徵平均值逼近真實樣本。</li> <li><strong>InfoGAN</strong>：將潛在變數拆分為雜訊 $\\\\boldsymbol{z}$ 與語意代碼 $\\\\boldsymbol{c}$，極大化 $\\\\boldsymbol{c}$ 與 $G(\\\\boldsymbol{z}, \\\\boldsymbol{c})$ 的互資訊 $I(\\\\boldsymbol{c}; G(\\\\boldsymbol{z}, \\\\boldsymbol{c}))$。</li> </ul> <hr /> <h3>2. 為什麼需要這個概念</h3> <p>傳統 GAN 的潛在空間 $\\\\boldsymbol{z}$ 是高度糾纏 (Entangled) 的黑盒，無法單獨控制「旋轉角度」或「筆劃粗細」。InfoGAN 實現了無監督語意解耦。</p> <hr /> <h3>3. 直覺比喻</h3> <p>好比收音機的調諧旋鈕。傳統 GAN 的旋鈕把頻率、音量、音調全都綁在一起；InfoGAN 透過極大化互資訊，自動把旋鈕拆開為：旋鈕 1 專門調音量（筆劃粗細），旋鈕 2 專門調頻率（旋轉角度）。</p> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>互資訊定義：</p> <p>$$I(\\\\boldsymbol{c}; G(\\\\boldsymbol{z}, \\\\boldsymbol{c})) = H(\\\\boldsymbol{c}) - H(\\\\boldsymbol{c} \\\\mid G(\\\\boldsymbol{z}, \\\\boldsymbol{c}))$$</p> <p>由於條件熵 $H(\\\\boldsymbol{c} \\\\mid G(\\\\boldsymbol{z}, \\\\boldsymbol{c}))$ 難以直接計算，引入變分下界網絡 $Q(\\\\boldsymbol{c} \\\\mid \\\\boldsymbol{x})$ (Variational Lower Bound)：</p> <p>$$I(\\\\boldsymbol{c}; G(\\\\boldsymbol{z}, \\\\boldsymbol{c})) \\\\ge \\\\mathbb{E}_{\\\\boldsymbol{c} \\\\sim p(\\\\boldsymbol{c}), \\\\boldsymbol{x} \\\\sim G(\\\\boldsymbol{z}, \\\\boldsymbol{c})}[\\\\log Q(\\\\boldsymbol{c} \\\\mid \\\\boldsymbol{x})] + H(\\\\boldsymbol{c}) := L_I(G, Q)$$</p> <p>InfoGAN 最終目標：</p> <p>$$\\\\min_G \\\\max_D V_{\\\\text{InfoGAN}}(D, G, Q) = V(D, G) - \\\\lambda L_I(G, Q)$$</p> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <pre><code class=\"language-python\"># 1. 潛在空間 z 與 語意代碼 c z = torch.randn(B, 64) c_cat = F.one_hot(torch.randint(0, 10, (B,)), 10).float() # 分類代碼 c_cont = torch.rand(B, 2) * 2 - 1 # 連續代碼 (傾斜, 粗細) latent = torch.cat([z, c_cat, c_cont], dim=1)  # 2. 生成與 Q 網絡預測 fake_x = G(latent) q_cat_logits, q_cont_mean = Q(fake_x) loss_Q = CrossEntropy(q_cat_logits, c_cat) + MSE(q_cont_mean, c_cont) </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li>採樣隨機雜訊 $\\\\boldsymbol{z}$ 與已知先驗分佈的語意代碼 $\\\\boldsymbol{c}$。</li> <li>生成圖像 $\\\\boldsymbol{x} = G(\\\\boldsymbol{z}, \\\\boldsymbol{c})$。</li> <li>輔助網絡 $Q$ 從 $\\\\boldsymbol{x}$ 中重構預測 $\\\\boldsymbol{c}$，極小化重構誤差。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗</h3> <ul> <li><strong>坑點</strong>：超參數 $\\\\lambda$ 設得太小，導致生成器忽略語意代碼 $\\\\boldsymbol{c}$；設得太小，導致生成畫質下降。</li> <li><strong>除錯</strong>：通常設 $\\\\lambda = 1.0$，且讓 $Q$ 與 $D$ 共享前段卷積特徵提取層。</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比</h3> <ul> <li><strong>InfoGAN</strong>：無監督互資訊極大化。</li> <li><strong>$\\\\beta$-VAE</strong>：VAE 框架下的解耦。</li> <li><strong>StyleGAN</strong>：現代 Style-based 顯式解耦 (SOTA)。</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：特徵匹配 (Feature Matching) 為什麼能抑止 Mode Collapse？</strong><br /> A：要求特徵平均值對齊，迫使生成器產出的數據在判別器隱藏空間的統計矩（Mean/Variance）上覆蓋真實數據集，避免塌陷到離群點。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「特徵匹配對齊矩，InfoGAN 解耦互資訊；語意代碼 Q 重構，無監督下調旋鈕。」</strong></p> </blockquote>", "13": "<h1>教授祕笈 KP-13：最小二乘 LSGAN 與基於能量 EBGAN</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元介紹改進傳統交叉熵損失的兩大重要變體：以 L2 二次方懲罰為核心的 Least Squares GAN (LSGAN)，以及將判別器視為自編碼器能量函數的 Energy-Based GAN (EBGAN)。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <ul> <li><strong>LSGAN (Least Squares GAN)</strong>：使用 L2 均方誤差 (MSE) 取代 Log 交叉熵。</li> <li><strong>EBGAN (Energy-Based GAN)</strong>：將判別器看作能量函數，真實樣本賦予低能量，生成樣本賦予高能量。</li> </ul> <hr /> <h3>2. 為什麼需要這個概念</h3> <p>傳統二進位交叉熵在判別器成功分類後（如判別器以高信心判斷生成樣本為假），即使該生成樣本離真實決策邊界極遠，交叉熵也不會再產生回拉梯度。LSGAN 對偏離邊界的點給予二次方懲罰。</p> <hr /> <h3>3. 直覺比喻</h3> <ul> <li><strong>LSGAN</strong>：彈簧模型。離真實邊界越遠的生成樣本，彈簧被拉得越長，產生的二次方回拉力越大。</li> <li><strong>EBGAN</strong>：地形地形圖。真實數據落在低窪谷底（低能量），生成數據被判別器自編碼器推向高山山頂（高能量重構誤差）。</li> </ul> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>LSGAN 的目標函數（設 $a, b$ 為假/真標籤，$c$ 為 G 欲欺騙標籤）：</p> <p>$$\\\\begin{align}<br /> \\\\min_D V_{\\\\text{LSGAN}}(D) &amp;= \\\\frac{1}{2} \\\\mathbb{E}<em>{\\\\boldsymbol{x} \\\\sim p</em>{\\\\text{data}}}[(D(\\\\boldsymbol{x}) - b)^2] + \\\\frac{1}{2} \\\\mathbb{E}<em>{\\\\boldsymbol{z} \\\\sim p_z}[(D(G(\\\\boldsymbol{z})) - a)^2] \\\\<br /> \\\\min_G V</em>{\\\\text{LSGAN}}(G) &amp;= \\\\frac{1}{2} \\\\mathbb{E}_{\\\\boldsymbol{z} \\\\sim p_z}[(D(G(\\\\boldsymbol{z})) - c)^2]<br /> \\\\end{align}$$</p> <p>當 $b-c=1, b-a=2$ 時，極小化等價於極小化 Pearson $\\\\chi^2$ 散度！</p> <p>EBGAN 判別器採用 Autoencoder $D(\\\\boldsymbol{x})$，能量定義為重構誤差：</p> <p>$$E(\\\\boldsymbol{x}) = |D(\\\\boldsymbol{x}) - \\\\boldsymbol{x}|$$</p> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <p>LSGAN 實作極簡：</p> <pre><code class=\"language-python\"># 判別器 MSE Loss loss_D = 0.5 * MSE(D(real_x), 1.0) + 0.5 * MSE(D(fake_x.detach()), 0.0)  # 生成器 MSE Loss loss_G = 0.5 * MSE(D(fake_x), 1.0) </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li>取消判別器最後一層 Sigmoid。</li> <li>直接計算 MSE 均方誤差。</li> <li>EBGAN 在能量過低時使用 Margin Hinge Loss 截斷。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗</h3> <ul> <li><strong>坑點</strong>：EBGAN 訓練時自編碼器能量崩潰（所有點重構誤差均變為 0）。</li> <li><strong>除錯</strong>：必須施加 Hinge Margin 限制 $\\\\max(0, m - E(G(z)))$！</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比</h3> <ul> <li><strong>Vanilla GAN</strong>：Binary Cross-Entropy.</li> <li><strong>LSGAN</strong>：MSE (Pearson $\\\\chi^2$).</li> <li><strong>EBGAN</strong>：Autoencoder Energy.</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：LSGAN 的二次方懲罰是否會對離群點 (Outliers) 過度敏感？</strong><br /> A：確實會對極端離群點產生較大拉力，但在實務圖像生成中，這一特性顯著提升了生成邊緣細節的清晰度。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「LS 最小二乘二次方，偏離邊界彈簧拉；EB 能量看重構，低谷真品高山假。」</strong></p> </blockquote>", "14": "<h1>教授祕笈 KP-14：半監督 CatGAN、ProGAN 金字塔與雙向推斷 BiGAN/ALI</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元涵蓋 GAN 的高階擴充領域：半監督 CatGAN、$K+1$ 類別法、ProGAN 漸進式金字塔高解析度生成，以及 BiGAN/ALI 雙向潛在空間推斷。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <ul> <li><strong>CatGAN / $K+1$ 分類法</strong>：將判別器擴展為 $K+1$ 分類器（前 $K$ 個為真實類別，第 $K+1$ 個為生成假數據）。</li> <li><strong>Progressive GAN (ProGAN)</strong>：從低解析度 ($4 \\\\times 4$) 漸進生長至高解析度 ($1024 \\\\times 1024$)。</li> <li><strong>BiGAN / ALI</strong>：引入 Encoder $E(\\\\boldsymbol{x})$，判別器判別聯合對 $(\\\\boldsymbol{x}, \\\\boldsymbol{z})$。</li> </ul> <hr /> <h3>2. 為什麼需要這個概念</h3> <ul> <li>傳統 GAN 無法進行圖像反向編碼（即無法從圖像 $\\\\boldsymbol{x}$ 求出對應的潛在向量 $\\\\boldsymbol{z}$）。</li> <li>一次性直接訓練 $1024 \\\\times 1024$ 超高解析度 GAN 極度容易崩潰。</li> </ul> <hr /> <h3>3. 直覺比喻</h3> <ul> <li><strong>ProGAN</strong>：好比畫家畫畫。先打 $4 \\\\times 4$ 底稿草圖確定顏色大局，再畫 $16 \\\\times 16$ 輪廓，最後用極細毛筆描繪 $1024 \\\\times 1024$ 發絲。</li> <li><strong>BiGAN (ALI)</strong>：好比雙向翻譯官。不僅能把中文（$\\\\boldsymbol{z}$）翻譯成英文（$\\\\boldsymbol{x}$），還能把英文精確翻譯回中文。</li> </ul> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>BiGAN 判別器輸入為聯合機率分佈對 $(\\\\boldsymbol{x}, \\\\boldsymbol{z})$：</p> <ul> <li>真實聯合分佈：$p_E(\\\\boldsymbol{x}, \\\\boldsymbol{z}) = p_{\\\\text{data}}(\\\\boldsymbol{x}) q_E(\\\\boldsymbol{z} \\\\mid \\\\boldsymbol{x})$</li> <li>生成聯合分佈：$p_G(\\\\boldsymbol{x}, \\\\boldsymbol{z}) = p_z(\\\\boldsymbol{z}) p_G(\\\\boldsymbol{x} \\\\mid \\\\boldsymbol{z})$</li> </ul> <p>Minimax 目標為：</p> <p>$$\\\\min_{G, E} \\\\max_D V(D, G, E) = \\\\mathbb{E}<em>{\\\\boldsymbol{x} \\\\sim p</em>{\\\\text{data}}, \\\\boldsymbol{z} \\\\sim E(\\\\boldsymbol{x})}[\\\\log D(\\\\boldsymbol{x}, \\\\boldsymbol{z})] + \\\\mathbb{E}_{\\\\boldsymbol{z} \\\\sim p_z, \\\\boldsymbol{x} \\\\sim G(\\\\boldsymbol{z})}[\\\\log (1 - D(\\\\boldsymbol{x}, \\\\boldsymbol{z}))]$$</p> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <p>ProGAN 漸進平滑融入層 (Fade-in Block)：</p> <pre><code class=\"language-python\"># alpha 在 0.0 到 1.0 之間隨訓練步數平滑增長 output = (1 - alpha) * Upsample(low_res_img) + alpha * New_High_Res_Conv(x) </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li><strong>ProGAN</strong>：穩定後平滑增加 $2 \\\\times$ 分辨率層。</li> <li><strong>BiGAN</strong>：Encoder 與 Generator 同時與 Joint Discriminator 對抗。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗</h3> <ul> <li><strong>坑點</strong>：ProGAN 加入新層時沒有使用 $\\\\alpha$ 平滑過渡 (Fade-in)，直接突變導致訓練瞬間崩潰。</li> <li><strong>除錯</strong>：必須設定至少 100k steps 的 $\\\\alpha \\\\in [0, 1]$ 平滑淡入階段！</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比</h3> <ul> <li><strong>ProGAN (2018)</strong>：金字塔生長。</li> <li><strong>StyleGAN (2019)</strong>：基於樣式的漸進生成 (SOTA)。</li> <li><strong>BiGAN / ALI</strong>：雙向推斷編碼。</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：BiGAN 中判別器為何必須對 $(\\\\boldsymbol{x}, \\\\boldsymbol{z})$ 聯合判別，而不能分別獨立判別？</strong><br /> A：獨立判別無法保證編碼器 $E(\\\\boldsymbol{x})$ 與生成器 $G(\\\\boldsymbol{z})$ 互為逆變換；聯合判別在理論上證明了收斂時 $E = G^{-1}$。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「金字塔漸進生長，雙向聯合對抗推；半監督 $K+1$ 判，高質高清逆映射。」</strong></p> </blockquote>", "15": "<h1>教授祕笈 KP-15：潛在空間球面線性插值 (Slerp) 與幾何流形</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元介紹潛在空間的高維幾何特性（高斯薄殼現象 Gaussian Annulus Theorem），並說明為何球面線性插值 (Slerp) 優於普通線性插值 (Lerp)。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <ul> <li><strong>線性插值 (Lerp)</strong>：$\\\\boldsymbol{z}(\\\\alpha) = (1 - \\\\alpha)\\\\boldsymbol{z}_1 + \\\\alpha \\\\boldsymbol{z}_2$。</li> <li><strong>球面線性插值 (Slerp)</strong>：沿超球面大圓弧進行角度旋轉插值。</li> <li><strong>高斯薄殼現象</strong>：高維高斯正態分佈的隨機向量，其模長 $|\\\\boldsymbol{z}|$ 以極高機率集中在半徑為 $\\\\sqrt{d}$ 的超球面薄殼上。</li> </ul> <hr /> <h3>2. 為什麼需要這個概念</h3> <p>在高維潛在空間中，如果直接用直線插值 (Lerp)，連線中點會穿過超球面的內部中心區域。中心區域的模長萎縮，導致生成圖像在漸變中間過程出現嚴重模糊或扭曲。</p> <hr /> <h3>3. 直覺比喻</h3> <p>好比從地球上的紐約飛往東京。如果沿直線鑽穿地心（Lerp），會掉入炙熱無效的地核；如果沿著地球表面的大圓航線飛行（Slerp），能始終保持在宜居的地面大氣層（高品質採樣薄殼）。</p> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>Slerp 的嚴格數學表示式：</p> <p>設兩單位向量 $\\\\boldsymbol{q}_1, \\\\boldsymbol{q}_2$，夾角 $\\\\theta = \\\\arccos(\\\\boldsymbol{q}_1^\\\\top \\\\boldsymbol{q}_2)$：</p> <p>$$\\\\text{Slerp}(\\\\boldsymbol{q}_1, \\\\boldsymbol{q}_2; \\\\alpha) = \\\\frac{\\\\sin((1 - \\\\alpha)\\\\theta)}{\\\\sin \\\\theta} \\\\boldsymbol{q}_1 + \\\\frac{\\\\sin(\\\\alpha \\\\theta)}{\\\\sin \\\\theta} \\\\boldsymbol{q}_2, \\\\quad \\\\alpha \\\\in [0, 1]$$</p> <p>考察模長變化：<br /> - <strong>Lerp 在 $\\\\alpha=0.5, \\\\theta=90^\\\\circ$ 時</strong>：模長 $|\\\\boldsymbol{z}_{\\\\text{Lerp}}| = \\\\sqrt{0.5^2 + 0.5^2} = \\\\frac{\\\\sqrt{2}}{2} \\\\approx 0.707$（萎縮 30%！）。<br /> - <strong>Slerp 模長</strong>：恆等於 $1.0$！</p> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <p>Python Slerp 實作：</p> <pre><code class=\"language-python\">import numpy as np  def slerp(val, low, high):     omega = np.arccos(np.clip(np.dot(low/np.linalg.norm(low), high/np.linalg.norm(high)), -1.0, 1.0))     so = np.sin(omega)     if so == 0:         return (1.0 - val) * low + val * high # L'Hopital limit     return np.sin((1.0 - val) * omega) / so * low + np.sin(val * omega) / so * high </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li>計算兩潛在向量夾角 $\\\\theta$。</li> <li>根據正弦比例權重進行角度旋轉插值。</li> <li>將插值軌跡上的向量輸入生成器 $G$ 輸出連續過渡圖像。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗</h3> <ul> <li><strong>坑點</strong>：直接使用 <code>lerp</code> 進行潛在向量漸變動畫，發現中間幀畫質明顯變暗、變模糊。</li> <li><strong>除錯</strong>：換用 <code>slerp</code> 或將 Lerp 結果重新 Normalize 到 radius $\\\\sqrt{d}$！</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比</h3> <ul> <li><strong>Lerp</strong>：直角坐標線段。</li> <li><strong>Slerp</strong>：超球面大圓弧（Gaussian 先驗首選）。</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：如果先驗分佈是均勻分佈 $U[-1, 1]$ 而非高斯分佈，還需要用 Slerp 嗎？</strong><br /> A：若先驗為均勻超立方體分佈，薄殼現象不明顯，此時 Lerp 影響較小；但現代 GAN 大多採用高斯先驗，Slerp 為標準配備。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「高維高斯薄殼集，直線 Lerp 穿地心；大圓 Slerp 繞球面，模長恆定畫質清。」</strong></p> </blockquote>", "16": "<h1>教授祕笈 KP-16：GAN 影像風格轉換 (CycleGAN) 與對抗自編碼器 (AAE)</h1> <blockquote class=\"callout-note\"><b>💡 觀念導覽：</b>本單元介紹 GAN 在跨風格圖像轉換領域的霸主 CycleGAN（無配對數據圖像轉換），以及結合自編碼器的 Adversarial Autoencoder (AAE)。</blockquote>  <hr /> <h3>1. 概念名稱與核心定義</h3> <ul> <li><strong>CycleGAN</strong>：引入循環一致性損失 (Cycle Consistency Loss)，實現無配對數據 (Unpaired Data) 的跨域圖像轉換（如馬 ↔ 斑馬）。</li> <li><strong>AAE (Adversarial Autoencoder)</strong>：用對抗判別器替代 VAE 中的 KL 散度懲罰，約束隱藏空間分佈。</li> </ul> <hr /> <h3>2. 為什麼需要這個概念</h3> <ul> <li>Pix2Pix 等傳統圖像轉換模型需要嚴格成對 (Paired) 的訓練數據（如同一場景的白天與黑夜照片），這在現實中極難收集。</li> <li>CycleGAN 允許輸入兩個獨立的無配對圖像集（如任意照片與莫內油畫集）。</li> </ul> <hr /> <h3>3. 直覺比喻</h3> <ul> <li><strong>CycleGAN 循環一致性</strong>：好比將中文句子（域 X）翻譯成法文（域 Y），再將法文翻譯回中文。如果還原出來的中文句子與原句完全一致，說明翻譯過程保留了核心語意，沒有胡編亂造。</li> <li><strong>AAE</strong>：自編碼器的隱藏代碼好比學生寫的報告，對抗判別器是檢查格式的助教，強迫報告格式符合標準的高斯分佈範式。</li> </ul> <hr /> <h3>4. 數學推導與物理/幾何意義</h3> <p>CycleGAN 包含兩個生成器 $G: X \\\\to Y, F: Y \\\\to X$ 與兩個判別器 $D_X, D_Y$。</p> <p>總目標函數包括：</p> <ol> <li><strong>對抗損失</strong>：$\\\\mathcal{L}<em>{\\\\text{GAN}}(G, D_Y, X, Y) + \\\\mathcal{L}</em>{\\\\text{GAN}}(F, D_X, Y, X)$</li> <li><strong>循環一致性損失 (Cycle Consistency Loss)</strong>：</li> </ol> <p>$$\\\\mathcal{L}<em>{\\\\text{cyc}}(G, F) = \\\\mathbb{E}</em>{\\\\boldsymbol{x} \\\\sim p_X}[|F(G(\\\\boldsymbol{x})) - \\\\boldsymbol{x}|<em>1] + \\\\mathbb{E}</em>{\\\\boldsymbol{y} \\\\sim p_Y}[|G(F(\\\\boldsymbol{y})) - \\\\boldsymbol{y}|_1]$$</p> <ol> <li><strong>Identity Loss（可選，保持色彩風格）</strong>：$|G(\\\\boldsymbol{y}) - \\\\boldsymbol{y}|_1$</li> </ol> <hr /> <h3>5. 程式實作細節與數據流變化</h3> <pre><code class=\"language-python\"># 1. 前向循環 Forward Cycle: x -&gt; fake_y -&gt; rec_x fake_y = G_X2Y(real_x) rec_x = F_Y2X(fake_y) loss_cycle_x = L1(rec_x, real_x)  # 2. 反向循環 Backward Cycle: y -&gt; fake_x -&gt; rec_y fake_x = F_Y2X(real_y) rec_y = G_X2Y(fake_x) loss_cycle_y = L1(rec_y, real_y)  loss_total = loss_GAN + 10.0 * (loss_cycle_x + loss_cycle_y) </code></pre> <hr /> <h3>6. 核心演算法流程</h3> <ol> <li>$X$ 域與 $Y$ 域雙向生成。</li> <li>兩域雙向還原並計算 L1 循環損失。</li> <li>聯合優化對抗損失與循環損失。</li> </ol> <hr /> <h3>7. 常見踩坑點與除錯實戰經驗</h3> <ul> <li><strong>坑點</strong>：CycleGAN 轉換後畫質尚可，但圖像中的物件形體發生了不必要的幾何形變。</li> <li><strong>除錯</strong>：增大循環一致性損失權重 $\\\\lambda_{\\\\text{cyc}}$（通常設為 10.0）！</li> </ul> <hr /> <h3>8. 前沿擴充與變體對比</h3> <ul> <li><strong>Pix2Pix</strong>：有配對 (Paired) 數據轉換。</li> <li><strong>CycleGAN</strong>：無配對 (Unpaired) 雙向轉換。</li> <li><strong>StarGAN</strong>：單一網絡實現多域 (Multi-domain) 風格轉換。</li> </ul> <hr /> <h3>9. 教授自我提問與反思</h3> <p><strong>Q：CycleGAN 為什麼選擇 L1 損失而非 L2 損失作為循環一致性？</strong><br /> A：L1 損失鼓勵稀疏性與清晰邊緣，比容易產生平均模糊的 L2 損失更能保留圖像的結構幾何細節。</p> <hr /> <h3>10. 觀念記憶口訣或一句話總結</h3> <blockquote> <p><strong>「雙向映射免成對，循環一致還原真；L1 範數保結構，風格轉換 CycleGAN。」</strong></p> </blockquote>"};
+
+function openGuideModal(kpId) {
+  var modal = document.getElementById('guide-modal');
+  var body = document.getElementById('modal-body');
+  var title = document.getElementById('modal-title');
+
+  if (GUIDES_DATA[kpId]) {
+    body.innerHTML = GUIDES_DATA[kpId];
+    title.textContent = '🎓 教授祕笈 (Professor Secret Guide) — KP-' + kpId;
+    modal.classList.add('open');
+
+    // Render KaTeX inside modal if available
+    if (window.renderMathInElement) {
+      window.renderMathInElement(body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ],
+        ignoredClasses: ['katex']
+      });
+    }
+  }
+}
+
+function closeGuideModal() {
+  var modal = document.getElementById('guide-modal');
+  modal.classList.remove('open');
+}
+
+// Close modal on click outside
+document.getElementById('guide-modal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeGuideModal();
+  }
+});
+</script>
+<!-- END Phase D Modal & Script -->
+
+</body>
+</html>

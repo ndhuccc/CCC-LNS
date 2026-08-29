@@ -1,0 +1,2599 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch16 Deep Metric Learning &amp; Self-Supervised Learning — 互動自學講義</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<style>
+:root {
+  --bg: #f8fafc;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --accent: #4f46e5;          /* indigo，metric learning/SSL 主題色 */
+  --accent-2: #3730a3;
+  --accent-bg: #eef2ff;
+  --ok: #16a34a;
+  --err: #dc2626;
+  --code-bg: #f1f5f9;
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.6 "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+header.page-head {
+  padding: 28px 24px 16px;
+  background: linear-gradient(135deg, #7c3aed22 0%, #db277722 100%);
+  border-bottom: 1px solid var(--card-border);
+}
+header.page-head h1 { margin: 0 0 6px; font-size: 1.6rem; line-height: 1.3; }
+header.page-head .sub { color: var(--muted); font-size: .98rem; }
+.layout { display: flex; gap: 24px; align-items: flex-start; padding: 24px; max-width: 1200px; margin: 0 auto; }
+nav.toc {
+  position: sticky; top: 90px;
+  flex: 0 0 260px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 12px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  font-size: .9rem;
+}
+nav.toc h3 { margin: 0 0 8px; font-size: .9rem; color: var(--muted); }
+nav.toc ol { list-style: none; padding: 0; margin: 0; }
+nav.toc li { margin: 2px 0; }
+nav.toc a {
+  display: flex; gap: 6px; align-items: baseline;
+  color: var(--fg); text-decoration: none;
+  padding: 4px 6px; border-radius: 6px;
+}
+nav.toc a:hover { background: var(--accent-bg); }
+nav.toc .toc-badge { color: var(--accent); font-variant-numeric: tabular-nums; min-width: 36px; }
+main.cards { flex: 1; min-width: 0; }
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  margin-bottom: 18px;
+  scroll-margin-top: 90px;
+  overflow: hidden;
+}
+.card-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, var(--accent-bg) 0%, transparent 100%);
+  border-bottom: 1px solid var(--card-border);
+}
+.card-head .badge {
+  background: var(--accent); color: #fff;
+  padding: 2px 8px; border-radius: 6px;
+  font-size: .82rem; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.card-head .card-title { margin: 0; font-size: 1.08rem; flex: 1; }
+.card-head .toggle {
+  background: transparent; border: 1px solid var(--card-border);
+  width: 28px; height: 28px; border-radius: 6px;
+  font-size: 1.2rem; cursor: pointer; line-height: 1;
+}
+.card-body { padding: 14px 18px; }
+.card.collapsed .card-body { display: none; }
+.kp-content p { margin: .6em 0; }
+.kp-content ol, .kp-content ul { margin: .5em 0; padding-left: 1.6em; }
+.kp-content li { margin: .2em 0; }
+.kp-content strong { color: var(--accent-2); }
+.kp-content em { color: var(--accent-2); font-style: normal; font-weight: 600; }
+figure.orig-fig {
+  margin: 14px 0; padding: 8px;
+  border: 1px solid var(--card-border); border-radius: 8px; background: #fff;
+  text-align: center;
+}
+figure.orig-fig img { max-width: 100%; height: auto; border-radius: 4px; }
+.diag-figure, .diagram-figure {
+  margin: 14px 0; padding: 12px;
+  border: 1px solid var(--card-border); border-radius: 12px; background: #fff;
+  text-align: center;
+}
+.diag-figure img, .diagram-figure img { max-width: 100%; height: auto; border-radius: 8px; }
+.diag-figure figcaption, .diagram-figure figcaption { margin-top: 8px; font-size: .85rem; color: var(--muted); }
+.diag-figure svg { max-width: 100%; height: auto; }
+svg.inline-svg { max-width: 100%; height: auto; display: block; margin: 12px auto; }
+.quiz {
+  margin: 14px 0; padding: 10px 12px;
+  background: var(--accent-bg); border-radius: 8px;
+  border-left: 4px solid var(--accent);
+}
+.quiz-q { margin: 0 0 6px; font-size: .95rem; }
+.quiz-opts { list-style: none; padding: 0; margin: 4px 0; }
+.quiz-opts li { margin: 3px 0; }
+.quiz-opts label { display: flex; gap: 6px; align-items: flex-start; cursor: pointer; font-size: .9rem; }
+.quiz-check {
+  margin-top: 6px;
+  background: var(--accent); color: #fff;
+  border: none; padding: 4px 12px; border-radius: 6px;
+  cursor: pointer; font-size: .85rem;
+}
+.quiz-check:hover { background: var(--accent-2); }
+.quiz-feedback { margin-top: 6px; font-size: .88rem; min-height: 1.2em; }
+.quiz-feedback.ok { color: var(--ok); font-weight: 600; }
+.quiz-feedback.err { color: var(--err); font-weight: 600; }
+.guide-btn {
+  display: inline-block;
+  margin: 10px 0 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  color: #fff; border: none; border-radius: 8px;
+  font-size: .92rem; font-weight: 600; cursor: pointer;
+  box-shadow: 0 2px 6px rgba(124,58,237,.3);
+  transition: transform .15s;
+}
+.guide-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(124,58,237,.4); }
+.guide-btn .guide-flag {
+  display: inline-block; margin-right: 6px; padding: 1px 6px;
+  background: #fbbf24; color: #78350f; border-radius: 4px;
+  font-size: .72rem; font-weight: 700;
+}
+.demo {
+  margin: 16px 0; padding: 12px;
+  border: 1px solid #ddd6fe; border-radius: 12px;
+  background: #faf5ff;
+}
+.demo h4 { margin: 0 0 6px; color: var(--accent-2); font-size: 1rem; }
+.demo .demo-theory { background: #fff; padding: 8px 10px; border-radius: 6px; margin: 6px 0; }
+.demo .demo-controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0; align-items: center; }
+.demo .demo-controls label { display: flex; align-items: center; gap: 4px; font-size: .88rem; }
+.demo canvas { display: block; max-width: 100%; background: #fff; border: 1px solid var(--card-border); border-radius: 4px; margin: 6px auto; }
+.demo .demo-readout { font-family: monospace; font-size: .85rem; background: #fff; padding: 6px 8px; border-radius: 4px; margin-top: 4px; min-height: 1.4em; }
+.ai-illustration {
+  margin: 10px 0; padding: 6px 8px;
+  border: 1px dashed #cbd5e1; border-radius: 6px;
+  background: #f8fafc; font-size: .82rem; color: var(--muted);
+}
+.ai-illustration summary { cursor: pointer; }
+.ai-illustration-prompt {
+  white-space: pre-wrap; font-family: monospace; font-size: .78rem;
+  background: #fff; padding: 6px; border-radius: 4px; margin: 6px 0 0;
+}
+#guide-modal { display: none; }
+#guide-modal.open { display: flex; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+#guide-modal .modal-box { background: #fff; border-radius: 12px; max-width: 800px; width: 100%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+#guide-modal .modal-head { padding: 12px 16px; background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); color: #fff; display: flex; justify-content: space-between; align-items: center; }
+#guide-modal .modal-head h3 { margin: 0; font-size: 1.1rem; }
+#guide-modal .modal-close { background: transparent; border: 1px solid #fff; color: #fff; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; }
+#guide-modal .modal-body { padding: 16px 20px; overflow-y: auto; line-height: 1.7; }
+#guide-modal .modal-body p { margin: .5em 0; }
+#guide-modal .modal-body h4 { margin: 1em 0 .4em; color: var(--accent-2); }
+#progress-bar {
+  position: fixed; top: 0; left: 0; right: 0; height: 4px;
+  background: #e2e8f0; z-index: 999;
+}
+#progress-bar .bar { height: 100%; background: var(--accent); width: 0%; transition: width .25s; }
+#progress-text {
+  position: fixed; top: 8px; right: 16px;
+  background: var(--accent); color: #fff;
+  padding: 2px 10px; border-radius: 10px;
+  font-size: .8rem; z-index: 999;
+}
+code { background: var(--code-bg); padding: 1px 4px; border-radius: 3px; font-family: "JetBrains Mono", "Consolas", monospace; font-size: .9em; }
+@media (max-width: 800px) {
+  .layout { flex-direction: column; }
+  nav.toc { position: static; max-height: none; }
+}
+</style>
+</head>
+<body>
+<div id="progress-bar"><div class="bar"></div></div>
+<div id="progress-text">進度 0%</div>
+<header class="page-head">
+  <h1>Ch16 — Deep Metric Learning &amp; Self-Supervised Learning</h1>
+  <div class="sub">從 reconstruction autoencoder、contrastive / triplet loss 到 SimCLR / BYOL / Barlow Twins</div>
+</header>
+<div class="layout">
+<nav class="toc" id="toc"><h3>章節導覽</h3><ol>
+  <li><a href="#kp1"><span class="toc-badge">1</span><span>全章地圖：deep metric learning + SSL</span></a></li>
+  <li><a href="#kp2"><span class="toc-badge">2</span><span>Reconstruction autoencoder</span></a></li>
+  <li><a href="#kp3"><span class="toc-badge">2.3</span><span>Denoising autoencoder</span></a></li>
+  <li><a href="#kp4"><span class="toc-badge">2.4</span><span>Metric learning by reconstruction AE</span></a></li>
+  <li><a href="#kp5"><span class="toc-badge">3</span><span>Deep metric learning by classification loss</span></a></li>
+  <li><a href="#kp6"><span class="toc-badge">4.1</span><span>Siamese 與 triplet networks</span></a></li>
+  <li><a href="#kp7"><span class="toc-badge">4.2</span><span>Pairs 與 triplets of data points</span></a></li>
+  <li><a href="#kp8"><span class="toc-badge">4.3</span><span>Siamese network 實作</span></a></li>
+  <li><a href="#kp9"><span class="toc-badge">4.5</span><span>Contrastive loss（含 generalized）</span></a></li>
+  <li><a href="#kp10"><span class="toc-badge">4.6</span><span>Triplet loss</span></a></li>
+  <li><a href="#kp11"><span class="toc-badge">4.7</span><span>Triplet mining（batch-all / batch-hard / batch-semi-hard）</span></a></li>
+  <li><a href="#kp12"><span class="toc-badge">4.8</span><span>Triplet sampling</span></a></li>
+  <li><a href="#kp13"><span class="toc-badge">5.1</span><span>SSL 核心思想</span></a></li>
+  <li><a href="#kp14"><span class="toc-badge">5.2</span><span>Augmentation for creating positive samples</span></a></li>
+  <li><a href="#kp15"><span class="toc-badge">5.3</span><span>Negative samples 的採樣衝突分析</span></a></li>
+  <li><a href="#kp16"><span class="toc-badge">5.4</span><span>SSL network 架構</span></a></li>
+  <li><a href="#kp17"><span class="toc-badge">5.6.1</span><span>SimCLR：InfoNCE loss</span></a></li>
+  <li><a href="#kp18"><span class="toc-badge">5.6.2</span><span>BYOL：momentum encoder + stop-gradient</span></a></li>
+  <li><a href="#kp19"><span class="toc-badge">5.6.4</span><span>Barlow Twins：cross-correlation matrix</span></a></li>
+  <li><a href="#kp20"><span class="toc-badge">6</span><span>結論：metric learning 與 SSL 的現代地位</span></a></li>
+</ol></nav>
+<main class="cards">
+<section class="card" id="kp1" data-kp="1">
+  <header class="card-head">
+    <span class="badge">1</span>
+    <h2 class="card-title">全章地圖：deep metric learning + SSL</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-1 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-1-svg">
+  <svg class="inline-svg" viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr16" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3730a3"/>
+    </marker>
+  </defs>
+  <ellipse cx="300" cy="140" rx="95" ry="40" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+  <text x="300" y="135" text-anchor="middle" font-size="14" font-weight="600" fill="#3730a3">Metric Learning + SSL</text>
+  <text x="300" y="155" text-anchor="middle" font-size="14" font-weight="600" fill="#3730a3">（無 label 學表示）</text>
+  <line x1="395" y1="120" x2="495" y2="50" stroke="#3730a3" stroke-width="1.5" marker-end="url(#arr16)"/>
+  <line x1="395" y1="130" x2="500" y2="100" stroke="#3730a3" stroke-width="1.5" marker-end="url(#arr16)"/>
+  <line x1="395" y1="140" x2="510" y2="160" stroke="#3730a3" stroke-width="1.5" marker-end="url(#arr16)"/>
+  <line x1="395" y1="155" x2="500" y2="215" stroke="#3730a3" stroke-width="1.5" marker-end="url(#arr16)"/>
+  <text x="500" y="48" text-anchor="end" font-size="11" fill="#0f172a">§2 AE / DAE（早期）</text>
+  <text x="510" y="100" text-anchor="end" font-size="11" fill="#0f172a">§4 Siamese / Contrastive</text>
+  <text x="515" y="163" text-anchor="end" font-size="11" fill="#0f172a">§5 SSL：SimCLR / BYOL</text>
+  <text x="510" y="218" text-anchor="end" font-size="11" fill="#0f172a">§5.6 Barlow / VICReg</text>
+  <text x="300" y="30" text-anchor="middle" font-size="12" font-style="italic" fill="#64748b">4 條主軸，本章按此順序展開</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-1 diagram END == -->
+
+      <p>本章談一個核心問題：<strong>沒有 label 時，神經網路能學到有用的特徵表示嗎？</strong>Deep metric learning + Self-supervised Learning (SSL) 給出肯定答案——透過「拉近同類、拉遠異類」的目標函式，網路學到的 embedding 可用於分類、檢索、生成。</p>
+<p>原文用一個生動例子：人臉辨識（verification）——給兩張臉，判斷是否同一人。直覺做法是直接比對像素，但光照/角度/表情變化太大。**更好的做法是學一個 embedding 空間 $f(x)\in\mathbb{R}^p$**，讓同一人距離近、不同人距離遠。</p>
+<p>本章三層架構：</p>
+<ol>
+<li><strong>§2 Reconstruction autoencoder</strong>：早期非監督表示學習的嘗試。Encoder 編碼、decoder 重建。Under-complete 可學 metric、over-complete 加噪聲成 denoising AE。</li>
+<li><strong>§4 Siamese networks</strong>：共享權重的孿生子網路，用 contrastive/triplet loss 學 embedding。Fisher 判別分析思想在深度學習時代的復活。</li>
+<li><strong>§5 Self-supervised learning (SSL)</strong>：不用人工 label，用「資料增強 + 對比學習」自監督。SimCLR、BYOL、SimSiam、Barlow Twins、VICReg 五大方法。</li>
+</ol>
+<p>SSL 已成為 2025 年 pretraining 主流範式（MAE、CLIP 都是延伸）。metric learning 的 loss 函式則是 robust 表徵的基礎。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-1" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：全章地圖 — deep metric learning + SSL</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 本章核心要解決的問題是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">如何加速 SGD 收斂</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">沒有 label 時如何學有用的特徵表示</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">如何設計 CNN 架構</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">如何做異常偵測</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp2" data-kp="2">
+  <header class="card-head">
+    <span class="badge">2</span>
+    <h2 class="card-title">Reconstruction autoencoder</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-2 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-2-svg">
+  <svg class="inline-svg" viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Autoencoder 兩種關鍵變體</text>
+  <rect x="40" y="50" width="240" height="150" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="160" y="78" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">Under-complete</text>
+  <text x="160" y="105" text-anchor="middle" font-size="11" fill="#0f172a">code 維度 $p &lt; d$</text>
+  <text x="160" y="130" text-anchor="middle" font-size="11" fill="#0f172a">逼網路學「壓縮表示」</text>
+  <text x="160" y="150" text-anchor="middle" font-size="10" fill="#92400e">線性 → PCA</text>
+  <text x="160" y="170" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">用於 metric learning</text>
+  <text x="160" y="195" text-anchor="middle" font-size="11" fill="#16a34a" font-weight="600">✓ 學語意</text>
+  <rect x="320" y="50" width="240" height="150" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+  <text x="440" y="78" text-anchor="middle" font-size="13" font-weight="700" fill="#991b1b">Over-complete</text>
+  <text x="440" y="105" text-anchor="middle" font-size="11" fill="#0f172a">code 維度 $p &gt; d$</text>
+  <text x="440" y="130" text-anchor="middle" font-size="11" fill="#0f172a">無約束 → 抄寫（identity）</text>
+  <text x="440" y="150" text-anchor="middle" font-size="10" fill="#991b1b">需要加噪聲（DAE）</text>
+  <text x="440" y="170" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">強制學語意</text>
+  <text x="440" y="195" text-anchor="middle" font-size="11" fill="#16a34a" font-weight="600">✓ +噪聲 = 有意義</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-2 diagram END == -->
+
+      <p>Reconstruction autoencoder 是<strong>最早期</strong>的表示學習模型：encoder $E$ 編碼輸入 $x$ 為 latent code $f(x)$，decoder $D$ 從 code 重建輸入 $\hat x$。Loss 為重建誤差：</p>
+<p>$$\min_\theta \sum_{i=1}^b d(x_i, \hat x_i) + \lambda\Omega(\theta)$$</p>
+<p>其中 $d(\cdot,\cdot)$ 是 distance metric（常用 MSE），$\Omega$ 是 weight regularization（見 Chap. 5）。</p>
+<p>兩種關鍵變體：</p>
+<ul>
+<li><strong>Under-complete</strong>：code 維度 $p < d$。逼網路學「壓縮表示」——直接拿來做 metric learning（如 PCA）與降維。</li>
+<li><strong>Over-complete</strong>：$p > d$。若無約束，網路只會「抄寫」輸入（identity function）→ 完全無用。</li>
+</ul>
+<p>原文特別指出：<strong>若所有 activation 都是線性，under-complete AE 退化成 PCA</strong>。Nonlinear activation 才能學 non-trivial metric。</p>
+<figure class="orig-fig"><img src="assets/orig-fig1-autoencoder-types.jpg" alt="autoencoder types" loading="lazy"></figure>
+<p>雖然 AE 不算嚴格的 metric learning，但它是 metric learning 的<strong>歷史起點</strong>，影響後續 Siamese、SSL 的設計。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-2" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Reconstruction autoencoder</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Under-complete AE 線性 activation 退化成？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">Autoencoder</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">PCA</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">K-means</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">t-SNE</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp3" data-kp="3">
+  <header class="card-head">
+    <span class="badge">2.3</span>
+    <h2 class="card-title">Denoising autoencoder</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-3 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-3">
+  <img src="assets/diagram-kp3-dae.png" alt="kp-3 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-3" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 左右兩子圖對比。左：over-complete AE（8 個藍色方塊組成的「輸入」→ 黃色「AE identity」方塊 → 8 個藍色方塊「輸出」，標「直接抄寫」紅色）。右：DAE（8 個方塊含 2 個灰色噪聲 → 綠色 DAE 方塊 → 8 個乾淨藍色方塊，標「加噪聲迫使學語意」綠色）。
+WHY: 凸顯 over-complete AE 的「identity 抄寫」缺陷 vs DAE「加噪聲強迫學語意」的核心思想。
+MUST show: (1) 左右對比布局；(2) 灰色噪聲方塊；(3) 黃色 vs 綠色 AE 方塊；(4) 紅色「直接抄寫」標註；(5) 綠色「加噪聲」標註。
+AVOID: 不要用 3D、不要省略對比標籤、不要把左圖右圖混為一張。
+STYLE: clean educational diagram, white background, 標題「Over-complete AE（左：identity）vs DAE（右：denoise）」。</pre>
+  </details>
+<!-- == Phase C kp-3 demo == -->
+<div class="demo" id="demo-kp3" data-demo-id="kp-3">
+  <h4>互動 demo：Denoising autoencoder：加噪聲 → 重建</h4>
+  <div class="demo-theory"><p>DAE loss：$\hat x = D(E(x+\varepsilon))$，$L = \|\hat x - x\|^2$。<br>噪聲強度 $\sigma$ 越大 → 重建越難。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $\sigma$ 滑桿改變噪聲強度。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>$\sigma$ 變大時，灰色噪聲方塊變多，DAE 重建難度增加。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$\sigma=0$：DAE 直接抄寫（變成 identity）；$\sigma$ 越大：DAE 必須學「過濾」能力。</div>
+  <div class="demo-controls"><label>噪聲強度 $\sigma$：<input type="range" id="d3-sigma" min="0" max="3" step="0.1" value="1.0"></label><span class="demo-val" id="d3-sigma-val"></span><div class="demo-readout-inline" id="d3-out-inline"></div></div>
+  <canvas id="d3-canvas" width="500" height="200" aria-label="Denoising autoencoder：加噪聲 → 重建 互動圖"></canvas>
+  <div class="demo-readout" id="d3-out"></div>
+</div>
+<!-- == Phase C kp-3 demo END == -->
+</div>
+<!-- == Phase B kp-3 diagram END == -->
+
+      <p>Over-complete AE 的問題：<strong>無約束時只會抄寫輸入</strong>（identity function）。為避免，<strong>denoising autoencoder（DAE）</strong> 對輸入加噪聲 $\varepsilon$，強迫網路學「去噪後的乾淨 $x$」：</p>
+<p>$$\hat x = D(E(x + \varepsilon))$$</p>
+<p>Loss 仍是 $\|\hat x - x\|^2$（相對乾淨版本，不是 noisy 版本）。</p>
+<p>我打個比方。標準 AE 像「背課文」——每個字都記住，但沒理解。DAE 像「聽懂老師講課（夾雜雜訊）然後筆記」——<strong>必須理解才能過濾雜訊</strong>，所以學到語意而非死記。</p>
+<figure class="orig-fig"><img src="assets/orig-fig2-denoising-ae.jpg" alt="denoising AE 概念" loading="lazy"></figure>
+<p>DAE 的訓練不只要「重建」，還要「過濾噪聲」——這迫使 encoder 學有意義的特徵（不是 pixel-wise identity）。</p>
+<p>實務：噪聲類型多樣（Gaussian noise、masking noise、dropout 噪聲 = denoising AE 的隨機版本）。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-3" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Denoising autoencoder</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> DAE 為何比 over-complete AE 更能學到有意義表示？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">參數量更多</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">加噪聲迫使網路學「過濾」而非「抄寫」</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">decoder 更深</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">encoder 更寬</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp4" data-kp="4">
+  <header class="card-head">
+    <span class="badge">2.4</span>
+    <h2 class="card-title">Metric learning by reconstruction AE</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-4 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-4-svg">
+  <svg class="inline-svg" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">NN = 降維 + kernel method 的串接</text>
+  <text x="300" y="48" text-anchor="middle" font-size="11" fill="#0f172a">每層看 $d_1 \to d_2$：若 $d_1 \ge d_2$ 是降維，$d_1 &lt; d_2$ 是 kernel</text>
+  <!-- 串接示意 -->
+  <circle cx="80" cy="110" r="30" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="80" y="105" text-anchor="middle" font-size="11" font-weight="700" fill="#1e40af">$d_1=64$</text>
+  <text x="80" y="120" text-anchor="middle" font-size="9" fill="#1e40af">input</text>
+  <line x1="115" y1="110" x2="155" y2="110" stroke="#0f172a" stroke-width="2" marker-end="url(#arr16)"/>
+  <rect x="160" y="80" width="80" height="60" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="6"/>
+  <text x="200" y="100" text-anchor="middle" font-size="11" font-weight="700" fill="#92400e">Layer 1</text>
+  <text x="200" y="118" text-anchor="middle" font-size="9" fill="#92400e">64→32</text>
+  <text x="200" y="132" text-anchor="middle" font-size="9" fill="#92400e">降維</text>
+  <line x1="245" y1="110" x2="285" y2="110" stroke="#0f172a" stroke-width="2" marker-end="url(#arr16)"/>
+  <rect x="290" y="80" width="80" height="60" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+  <text x="330" y="100" text-anchor="middle" font-size="11" font-weight="700" fill="#166534">Layer 2</text>
+  <text x="330" y="118" text-anchor="middle" font-size="9" fill="#166534">32→64</text>
+  <text x="330" y="132" text-anchor="middle" font-size="9" fill="#166534">kernel</text>
+  <line x1="375" y1="110" x2="415" y2="110" stroke="#0f172a" stroke-width="2" marker-end="url(#arr16)"/>
+  <rect x="420" y="80" width="80" height="60" fill="#ddd6fe" stroke="#7c3aed" stroke-width="2" rx="6"/>
+  <text x="460" y="100" text-anchor="middle" font-size="11" font-weight="700" fill="#5b21b6">Layer 3</text>
+  <text x="460" y="118" text-anchor="middle" font-size="9" fill="#5b21b6">64→8</text>
+  <text x="460" y="132" text-anchor="middle" font-size="9" fill="#5b21b6">降維</text>
+  <line x1="505" y1="110" x2="545" y2="110" stroke="#0f172a" stroke-width="2" marker-end="url(#arr16)"/>
+  <circle cx="565" cy="110" r="20" fill="#f59e0b" stroke="#000" stroke-width="1.5"/>
+  <text x="565" y="115" text-anchor="middle" font-size="9" font-weight="700" fill="#000">$p=8$</text>
+  <text x="300" y="190" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">串接 = 降維 ⊕ kernel ⊕ 降維 → 學 metric embedding</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-4 diagram END == -->
+
+      <p>Under-complete reconstruction AE 可用於 metric learning，特別是<strong>當 code 維度 $p \ll d$</strong> 時——中間 code 層就是 metric embedding space。</p>
+<p>Loss（式 3）：</p>
+<p>$$\min_\theta \sum_{i=1}^b d(x_i, \hat x_i) + \lambda\Omega(\theta)$$</p>
+<p>訓練後，code $f(x) = E(x)$ 就是 metric embedding。</p>
+<p>原文關鍵洞察：<strong>NN 視為 dimensionality reduction + kernel methods 的串接</strong>。每層若 $d_1 \ge d_2$ 就是降維（feature extraction），若 $d_1 < d_2$ 就是 kernel method（map 到高維 RKHS）。Nonlinear activation 提供非線性降維；線性 activation 就是線性投影。</p>
+<p>兩種視角統一：NN = 串接的「降維 + 升維」+ 各層自己的 feature learning。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-4" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Metric learning by reconstruction AE</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> NN 可視為下列哪兩種東西的串接？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">Conv + FC</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">Dimensionality reduction + kernel methods</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">RNN + Attention</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">Encoder + Decoder</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp5" data-kp="5">
+  <header class="card-head">
+    <span class="badge">3</span>
+    <h2 class="card-title">Deep metric learning by classification loss</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-5 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-5">
+  <img src="assets/diagram-kp5-classification-embedding.png" alt="kp-5 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-5" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 左右兩子圖，散點圖。左：輸入空間三群（A 紅、B 綠、C 藍）隨機散佈。右：embedding 空間同三群但更聚攏。中間 teal 文字「NN + CE loss」標示中間的神經網路。
+WHY: 凸顯 cross-entropy 訓練的網路會自動把同類拉近、異類推遠，penultimate 就是 metric embedding。
+MUST show: (1) 三群不同顏色散點（輸入 vs embedding）；(2) embedding 群比輸入群更聚攏；(3) 中間 NN 標籤；(4) 座標軸標籤。
+AVOID: 不要把兩子圖疊合、不要用相同尺度、不要省略群標籤。
+STYLE: clean scientific plot, white background, 標題「Classification loss 訓練後，penultimate 就是 metric embedding」。</pre>
+  </details>
+<!-- == Phase C kp-5 demo == -->
+<div class="demo" id="demo-kp5" data-demo-id="kp-5">
+  <h4>互動 demo：Cross-entropy → embedding 聚攏</h4>
+  <div class="demo-theory"><p>CE loss 訓練：$\min_\theta -\sum_i y_i\log\hat y_i$。<br>訓練越久 → 同類越聚攏。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 epoch 滑桿觀察訓練過程。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>epoch 增加：3 群 (A/B/C) 散點越來越聚攏，內聚力增強。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>epoch=0：σ=1.5 散亂；epoch=100：σ≈0 同類完全聚攏，類間分離。</div>
+  <div class="demo-controls"><label>訓練 epoch：<input type="range" id="d5-epoch" min="0" max="200" value="50"></label><span class="demo-val" id="d5-epoch-val"></span><div class="demo-readout-inline" id="d5-out-inline"></div></div>
+  <canvas id="d5-canvas" width="500" height="200" aria-label="Cross-entropy → embedding 聚攏 互動圖"></canvas>
+  <div class="demo-readout" id="d5-out"></div>
+</div>
+<!-- == Phase C kp-5 demo END == -->
+</div>
+<!-- == Phase B kp-5 diagram END == -->
+
+      <p>更簡單的 metric learning 思路：<strong>直接用 classification loss 訓練網路，最後一層的特徵就是 embedding</strong>。</p>
+<p>具體做法：</p>
+<ol>
+<li>設計網路：$x \to \text{penultimate layer} \to \text{classification layer}$。</li>
+<li>用 cross-entropy（或其他 classification loss）訓練。</li>
+<li>訓練完成後，<strong>把 classification layer 丟掉</strong>，penultimate layer 的輸出 $f(x)$ 就是 embedding。</li>
+</ol>
+<p>原理：cross-entropy 訓練迫使 penultimate layer 的特徵對類別有判別力——而判別力就意味著「同類相近、異類相遠」，即 metric learning 的目標。</p>
+<figure class="orig-fig"><img src="assets/orig-fig3-embedding-classification-layer.jpg" alt="embedding 與 classification layer" loading="lazy"></figure>
+<p>優點：<strong>簡單</strong>，不需要 special loss（triplet/contrastive），直接用現成的 classification 訓練流程。</p>
+<p>限制：需要 label 才能訓練（supervised）。若無 label，必須改用 SSL（§5）。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-5" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Deep metric learning by classification</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 用 classification loss 訓練的網路，embedding 取自哪一層？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">輸入層</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">penultimate layer（倒數第二層）</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">最後一層（分類層）</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">隨便一層</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp6" data-kp="6">
+  <header class="card-head">
+    <span class="badge">4.1</span>
+    <h2 class="card-title">Siamese 與 triplet networks</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-6 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-6-svg">
+  <svg class="inline-svg" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Siamese 與 Triplet Networks</text>
+  <text x="300" y="42" text-anchor="middle" font-size="11" fill="#0f172a">多個子網路共享權重 → 拉近 positive / 推遠 negative</text>
+  <!-- 2-subnet (Siamese) -->
+  <text x="150" y="70" text-anchor="middle" font-size="11" font-weight="700" fill="#16a34a">Siamese（2 個子網路）</text>
+  <rect x="40" y="90" width="80" height="50" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+  <text x="80" y="115" text-anchor="middle" font-size="11" fill="#166534">f(x_a)</text>
+  <rect x="180" y="90" width="80" height="50" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+  <text x="220" y="115" text-anchor="middle" font-size="11" fill="#166534">f(x_p)</text>
+  <line x1="80" y1="100" x2="80" y2="80" stroke="#0f172a" stroke-width="1.5"/>
+  <line x1="220" y1="100" x2="220" y2="80" stroke="#0f172a" stroke-width="1.5"/>
+  <text x="150" y="75" text-anchor="middle" font-size="9" fill="#16a34a">↕ 共享權重</text>
+  <!-- 3-subnet (Triplet) -->
+  <text x="450" y="70" text-anchor="middle" font-size="11" font-weight="700" fill="#dc2626">Triplet（3 個子網路）</text>
+  <rect x="340" y="90" width="65" height="50" fill="#fee2e2" stroke="#dc2626" stroke-width="2" rx="6"/>
+  <text x="372" y="115" text-anchor="middle" font-size="10" fill="#991b1b">f(x_a)</text>
+  <rect x="415" y="90" width="65" height="50" fill="#dbeafe" stroke="#2563eb" stroke-width="2" rx="6"/>
+  <text x="447" y="115" text-anchor="middle" font-size="10" fill="#1e40af">f(x_p)</text>
+  <rect x="490" y="90" width="65" height="50" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="6"/>
+  <text x="522" y="115" text-anchor="middle" font-size="10" fill="#92400e">f(x_n)</text>
+  <line x1="372" y1="100" x2="372" y2="80" stroke="#0f172a" stroke-width="1.5"/>
+  <line x1="447" y1="100" x2="447" y2="80" stroke="#0f172a" stroke-width="1.5"/>
+  <line x1="522" y1="100" x2="522" y2="80" stroke="#0f172a" stroke-width="1.5"/>
+  <text x="450" y="75" text-anchor="middle" font-size="9" fill="#dc2626">↕ 共享權重</text>
+  <text x="300" y="180" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">Fisher 思想復活：最小化類內方差、最大化類間方差</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-6 diagram END == -->
+
+      <p>Siamese network（孿生網路）是 deep metric learning 的經典模型：<strong>多個子網路共享權重</strong>，每個子網路處理一個輸入點，輸出其 embedding。</p>
+<p>數量：通常 2 個或 3 個。3 個的叫 triplet network。</p>
+<p>訓練目標：<strong>同類點 embedding 拉近，異類點 embedding 拉遠</strong>——這就是 Fisher 判別分析（1936）的深度學習版。</p>
+<p>應用：人臉驗證（Facenet）、person re-identification、signature verification、image retrieval。</p>
+<p>關鍵設計選擇：backbone（CNN / MLP）、embedding 維度 $p$、loss 函式（contrastive / triplet）、batch size。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-6" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Siamese 與 triplet networks</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Siamese network 的關鍵設計是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">多個子網路</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">多個子網路共享權重</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">多個獨立訓練的網路</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">多個 loss 函式</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp7" data-kp="7">
+  <header class="card-head">
+    <span class="badge">4.2</span>
+    <h2 class="card-title">Pairs 與 triplets of data points</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-7 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-7-svg">
+  <svg class="inline-svg" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Pairs 與 Triplets 三角色</text>
+  <circle cx="120" cy="110" r="35" fill="#16a34a" stroke="#000" stroke-width="2"/>
+  <text x="120" y="115" text-anchor="middle" font-size="11" font-weight="700" fill="white">Anchor</text>
+  <text x="120" y="160" text-anchor="middle" font-size="9" fill="#0f172a">基準點</text>
+  <circle cx="270" cy="80" r="30" fill="#3b82f6" stroke="#000" stroke-width="2"/>
+  <text x="270" y="85" text-anchor="middle" font-size="10" font-weight="700" fill="white">Positive</text>
+  <text x="270" y="125" text-anchor="middle" font-size="9" fill="#0f172a">同類（拉近）</text>
+  <circle cx="270" cy="160" r="30" fill="#dc2626" stroke="#000" stroke-width="2"/>
+  <text x="270" y="165" text-anchor="middle" font-size="10" font-weight="700" fill="white">Negative</text>
+  <text x="270" y="205" text-anchor="middle" font-size="9" fill="#0f172a">異類（推遠）</text>
+  <line x1="155" y1="100" x2="240" y2="90" stroke="#3b82f6" stroke-width="2" marker-end="url(#arr16)"/>
+  <line x1="155" y1="120" x2="240" y2="150" stroke="#dc2626" stroke-width="2" marker-end="url(#arr16)"/>
+  <!-- Pair block -->
+  <rect x="370" y="50" width="200" height="50" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="470" y="75" text-anchor="middle" font-size="11" font-weight="700" fill="#1e40af">Pair (Siamese)</text>
+  <text x="470" y="92" text-anchor="middle" font-size="10" fill="#1e40af">(x_a, x_p) 或 (x_a, x_n)</text>
+  <rect x="370" y="120" width="200" height="50" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="470" y="145" text-anchor="middle" font-size="11" font-weight="700" fill="#166534">Triplet</text>
+  <text x="470" y="162" text-anchor="middle" font-size="10" fill="#166534">(x_a, x_p, x_n)</text>
+  <text x="300" y="200" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">有 label → 用 class；無 label → 用 augmentation（§5 SSL）</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-7 diagram END == -->
+
+      <p>Siamese network 不處理單一資料點，<strong>必須以 pair 或 triplet 形式輸入</strong>。</p>
+<p>三個角色：</p>
+<ul>
+<li><strong>Anchor</strong> $\boldsymbol{x}_i^a$：基準點。</li>
+<li><strong>Positive</strong> $\boldsymbol{x}_i^p$：與 anchor 同類（similar）。</li>
+<li><strong>Negative</strong> $\boldsymbol{x}_i^n$：與 anchor 異類（dissimilar）。</li>
+</ul>
+<p>Pair（2 個子網路）：anchor-positive 或 anchor-negative pair。</p>
+<p>Triplet（3 個子網路）：(anchor, positive, negative) 三元組。</p>
+<p>若 dataset 有 label：positive 從同類抽、negative 從異類抽。</p>
+<p>若 dataset 無 label：用 augmentation 生成 positive（同一資料的不同增強視為 positive），其他視為 negative（§5 SSL）。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-7" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Pairs 與 triplets of data points</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Triplet 中的三個角色是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">(query, key, value)</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">(anchor, positive, negative)</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">(input, hidden, output)</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">(left, middle, right)</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp8" data-kp="8">
+  <header class="card-head">
+    <span class="badge">4.3</span>
+    <h2 class="card-title">Siamese network 實作</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-8 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-8-svg">
+  <svg class="inline-svg" viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Siamese 兩種實作</text>
+  <rect x="40" y="50" width="240" height="160" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="160" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">(1) 多個子網路 in memory</text>
+  <rect x="60" y="100" width="55" height="40" fill="#fde68a" stroke="#000" stroke-width="1"/>
+  <text x="87" y="125" text-anchor="middle" font-size="11">f_a</text>
+  <rect x="125" y="100" width="55" height="40" fill="#fde68a" stroke="#000" stroke-width="1"/>
+  <text x="152" y="125" text-anchor="middle" font-size="11">f_p</text>
+  <rect x="190" y="100" width="55" height="40" fill="#fde68a" stroke="#000" stroke-width="1"/>
+  <text x="217" y="125" text-anchor="middle" font-size="11">f_n</text>
+  <text x="160" y="160" text-anchor="middle" font-size="10" fill="#92400e">更新後 copy 權重</text>
+  <text x="160" y="178" text-anchor="middle" font-size="10" fill="#16a34a">✓ 並行</text>
+  <text x="160" y="193" text-anchor="middle" font-size="10" fill="#dc2626">✗ 記憶體高</text>
+  <rect x="320" y="50" width="240" height="160" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="440" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#166534">(2) 單一子網路 + 序列</text>
+  <rect x="380" y="100" width="100" height="40" fill="#bbf7d0" stroke="#000" stroke-width="1"/>
+  <text x="430" y="118" text-anchor="middle" font-size="10">f (shared)</text>
+  <text x="430" y="132" text-anchor="middle" font-size="9" fill="#166534">x_a → x_p → x_n</text>
+  <text x="440" y="160" text-anchor="middle" font-size="10" fill="#166534">共享權重自動成立</text>
+  <text x="440" y="178" text-anchor="middle" font-size="10" fill="#dc2626">✗ 序列慢</text>
+  <text x="440" y="193" text-anchor="middle" font-size="10" fill="#16a34a">✓ 記憶體省</text>
+  <text x="300" y="225" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">實務推薦 (2)：現代框架易實作，batch 內其他樣本可共享</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-8 diagram END == -->
+
+      <p>兩種實作方式：</p>
+<ol>
+<li><strong>多個子網路 in memory</strong>：每次 forward 把 pair/triplet 餵給不同子網路，loss 算完只 backprop 其中一個子網路的權重，<strong>再把權重複製到其他子網路</strong>。優點：每個子網路並行；缺點：記憶體高。</li>
+<li><strong>單一子網路 + 序列 forward</strong>：每次只 forward 一個點，累積到 triplet 完整才算 loss、backprop、更新一次。<strong>共享權重自動成立</strong>（因為是同一個網路）。優點：記憶體省；缺點：序列慢。</li>
+</ol>
+<figure class="orig-fig"><img src="assets/orig-fig4-siamese-network.jpg" alt="Siamese network 結構" loading="lazy"></figure>
+<p>實務建議：<strong>第二種（單一子網路）</strong>——pair/triplet 只有 2-3 個點，batch 內其他點可共享計算；且現代框架（PyTorch）易於實作。</p>
+<p>注意：測試時只 forward 一次（取 embedding），不需要 pair。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-8" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Siamese network 實作</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 實務上 Siamese network 推薦哪種實作？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">多個子網路 in memory</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">單一子網路 + 序列 forward</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">兩個都行</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">用 RNN 比較</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp9" data-kp="9">
+  <header class="card-head">
+    <span class="badge">4.5</span>
+    <h2 class="card-title">Contrastive loss（含 generalized）</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-9 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-9">
+  <img src="assets/diagram-kp9-contrastive.png" alt="kp-9 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-9" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 2D 座標平面，中心 anchor（紅色星），旁邊 positive（綠色圓，在 margin 內），負類（藍色方塊，在 margin 外）。虛線圓 = 搜尋空間，灰色虛線圓 = margin。
+WHY: 凸顯 contrastive loss 兩項：拉近 positive 到 anchor、推遠 negative 到 margin 外。
+MUST show: (1) 中心 anchor 標記；(2) positive 在 margin 內、negative 在 margin 外；(3) 兩個虛線圓（搜尋空間 + margin）；(4) 箭頭標示拉近/推遠方向。
+AVOID: 不要用 3D、不要把 anchor 與 positive 標反、不要省略 margin 視覺化。
+STYLE: clean scientific plot, white background, 標題含「margin 拉近/推遠」。</pre>
+  </details>
+<!-- == Phase C kp-9 demo == -->
+<div class="demo" id="demo-kp9" data-demo-id="kp-9">
+  <h4>互動 demo：Contrastive loss 計算</h4>
+  <div class="demo-theory"><p>$\mathcal{L}=\sum_i(1-y_i)d_i + y_i[-d_i+m]_+$<br>$y=0$ similar（拉近 $d$）；$y=1$ dissimilar（推遠到 $d\ge m$）</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $d$、$y$（0=similar, 1=dissimilar）、$m$ 滑桿。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>$d$ 影響兩個項；$y$ 切換哪一項貢獻；$m$ 控制 dissimilar 的目標距離。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$y=0, d=0.5$：loss=0.5；$y=1, d=0.5, m=1$：loss=0.5（已滿足 margin）；$y=1, d=0.3, m=1$：loss=0.7（推遠）。</div>
+  <div class="demo-controls"><label>$d$：<input type="range" id="d9-d" min="0" max="3" step="0.05" value="0.5"></label><span class="demo-val" id="d9-d-val"></span><label style="margin-left:12px">$y$：<input type="range" id="d9-y" min="0" max="1" step="1" value="0"></label><span class="demo-val" id="d9-y-val"></span><label style="margin-left:12px">$m$：<input type="range" id="d9-m" min="0.1" max="3" step="0.1" value="1.0"></label><span class="demo-val" id="d9-m-val"></span><div class="demo-readout-inline" id="d9-out-inline"></div></div>
+  <canvas id="d9-canvas" width="500" height="200" aria-label="Contrastive loss 計算 互動圖"></canvas>
+  <div class="demo-readout" id="d9-out"></div>
+</div>
+<!-- == Phase C kp-9 demo END == -->
+</div>
+<!-- == Phase B kp-9 diagram END == -->
+
+      <p>Contrastive loss 是 Siamese network 最常用的 loss 之一：</p>
+<p>$$\min_\theta \sum_{i=1}^b \left[(1-y_i) \cdot d(f(x_i^1), f(x_i^2)) + y_i \cdot [-d(f(x_i^1), f(x_i^2)) + m]_+\right]$$</p>
+<p>其中：</p>
+<ul>
+<li>$y_i = 0$（similar pair）：第一項 $d$ 最小化（拉近）。</li>
+<li>$y_i = 1$（dissimilar pair）：第二項 hinge $[-d+m]_+$ 鼓勵 $d \ge m$（margin 外的距離）。</li>
+<li>$m$ 是 margin，$[_+] = \max(\cdot, 0)$。</li>
+</ul>
+<p><strong>Generalized contrastive loss</strong>：把 $y_i\in\{0, 1\}$ 換成 soft measure $\psi_i \in [0, 1]$：</p>
+<p>$$\psi_i = \tfrac{1}{2}(1 - \cos(x_i^1, x_i^2))$$</p>
+<p>loss 形式不變，但 $\psi_i$ 連續值允許「部分相似」。</p>
+<figure class="orig-fig"><img src="assets/orig-fig5-triplet-contrastive.jpg" alt="contrastive 與 triplet loss 視覺化" loading="lazy"></figure>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-9" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Contrastive loss（含 generalized）</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Contrastive loss 中，$y_i=0$ 與 $y_i=1$ 各代表什麼？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">(0=negative, 1=positive)</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">(0=similar, 1=dissimilar)</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">(0=anchor, 1=positive)</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">(0=label, 1=unlabel)</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp10" data-kp="10">
+  <header class="card-head">
+    <span class="badge">4.6</span>
+    <h2 class="card-title">Triplet loss</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-10 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-10">
+  <img src="assets/diagram-kp10-triplet.png" alt="kp-10 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-10" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 2D embedding 空間，30 個 anchor（綠）圍繞 anchor 星、30 個 positive（藍）靠近 anchor、30 個 negative（紅）遠離 anchor。Anchor 與 negative 用星/X 大標。灰色虛線圓 = margin 邊界。
+WHY: 凸顯 triplet loss 達成的條件：d(anchor, positive) + margin ≤ d(anchor, negative)。
+MUST show: (1) 三群散點（綠 anchor、藍 positive、紅 negative）；(2) Anchor 與 negative 用大標記（star、X）；(3) 灰色虛線 margin 圓；(4) 標籤 d(p,a) < m 與 d(n,a) > d(p,a) + m。
+AVOID: 不要把 anchor 與 positive 標反、不要省略 margin 視覺化。
+STYLE: clean scientific plot, white background, 標題「Triplet loss：positive 內聚、negative 外推」。</pre>
+  </details>
+<!-- == Phase C kp-10 demo == -->
+<div class="demo" id="demo-kp10" data-demo-id="kp-10">
+  <h4>互動 demo：Triplet loss 計算</h4>
+  <div class="demo-theory"><p>$\mathcal{L}=\sum_i[d(f(x^a),f(x^p)) - d(f(x^a),f(x^n)) + m]_+$<br>hinge 讓 loss $\ge 0$。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $d(a,p)$、$d(a,n)$、$m$ 滑桿。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>$d(a,n)$ 越大、$d(a,p)$ 越小、$m$ 越大 → loss 越負（條件越滿足）。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$d(a,p)=1, d(a,n)=3, m=1$：loss=0（條件滿足）；$d(a,p)=2, d(a,n)=2, m=1$：loss=1（未滿足）。</div>
+  <div class="demo-controls"><label>$d(a,p)$：<input type="range" id="d10-dap" min="0" max="3" step="0.05" value="1.0"></label><span class="demo-val" id="d10-dap-val"></span><label style="margin-left:12px">$d(a,n)$：<input type="range" id="d10-dan" min="0" max="3" step="0.05" value="2.5"></label><span class="demo-val" id="d10-dan-val"></span><label style="margin-left:12px">$m$：<input type="range" id="d10-m" min="0" max="2" step="0.05" value="1.0"></label><span class="demo-val" id="d10-m-val"></span><div class="demo-readout-inline" id="d10-out-inline"></div></div>
+  <canvas id="d10-canvas" width="500" height="200" aria-label="Triplet loss 計算 互動圖"></canvas>
+  <div class="demo-readout" id="d10-out"></div>
+</div>
+<!-- == Phase C kp-10 demo END == -->
+</div>
+<!-- == Phase B kp-10 diagram END == -->
+
+      <p>Triplet loss 用三元組（anchor, positive, negative），比 contrastive 更靈活（同時考慮兩種關係）：</p>
+<p>$$\min_\theta \sum_{i=1}^b [d(f(x_i^a), f(x_i^p)) - d(f(x_i^a), f(x_i^n)) + m]_+$$</p>
+<p>直覺：<strong>anchor 與 positive 距離 < anchor 與 negative 距離 - margin $m$</strong>。</p>
+<p>hinge loss $[\cdot]_+$ 保證 loss $\ge 0$；若條件已滿足（positive 近、negative 遠），loss = 0 不貢獻梯度。</p>
+<figure class="orig-fig"><img src="assets/orig-fig5-triplet-contrastive.jpg" alt="triplet loss 視覺化" loading="lazy"></figure>
+<p>達成的條件：</p>
+<p>$$d(f(x_i^a), f(x_i^p)) + m \le d(f(x_i^a), f(x_i^n)) \quad \forall i$$</p>
+<p>備註：triplet loss 與 spectral large margin metric learning 的目標函式相關；可作為 cross-entropy 的 regularizer 提升 adversarial robustness。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-10" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Triplet loss</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Triplet loss 的 hinge $[\cdot]_+$ 保證？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">loss 為 0 若條件滿足</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">loss 永遠非負</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">loss 永遠為正</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">loss 有界於 [0,1]</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp11" data-kp="11">
+  <header class="card-head">
+    <span class="badge">4.7</span>
+    <h2 class="card-title">Triplet mining（batch-all / batch-hard / batch-semi-hard）</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-11 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-11">
+  <img src="assets/diagram-kp11-mining.png" alt="kp-11 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-11" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 1×3 子圖三策略。左 batch-all：anchor 與所有 positives/negatives 都連線。中 batch-hard：anchor 只連「最難 pos（最遠）+ 最難 neg（最近）」。右 batch-semi-hard：pos 仍最遠，neg 取「比 pos 遠的最近」。
+WHY: 凸顯三種 mining 策略的差異：all 用盡資訊、hard 專注難例、semi-hard 避開 trivial 三元組。
+MUST show: (1) 三個子圖標題清楚；(2) anchor 用大星；(3) 不同子圖的連線密度與重點樣本不同；(4) 圖例標示「Hardest pos」「Semi-hard neg」。
+AVOID: 不要用 2D 投影比較 3 種策略、不要省略標題。
+STYLE: clean scientific plot, white background, 整體標題「Triplet mining 三策略」。</pre>
+  </details>
+<!-- == Phase C kp-11 demo == -->
+<div class="demo" id="demo-kp11" data-demo-id="kp-11">
+  <h4>互動 demo：Batch-hard mining：最難正負對</h4>
+  <div class="demo-theory"><p>Batch-hard：$\max_{j\in pos} d - \min_{k\in neg} d + m$<br>同類中最遠、另類中最近。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>觀察畫面：三群散點（綠 anchor、藍 pos、紅 neg），高亮標示 hardest 對。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>最難 pos（藍框）= 同類最遠；最難 neg（紅框）= 異類最近。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>anchor 同類距 1.5/2.3/3.0，hardest=3.0；異類距 5.2/6.0/4.8，hardest=4.8。</div>
+  <div class="demo-controls"><div class="demo-readout-inline" id="d11-out-inline"></div></div>
+  <canvas id="d11-canvas" width="500" height="200" aria-label="Batch-hard mining：最難正負對 互動圖"></canvas>
+  <div class="demo-readout" id="d11-out"></div>
+</div>
+<!-- == Phase C kp-11 demo END == -->
+</div>
+<!-- == Phase B kp-11 diagram END == -->
+
+      <p>Triplet mining 決定<strong>每個 anchor 配哪個 positive 和 negative</strong>。三種主流：</p>
+<p><strong>1. Batch-all</strong>（Hermans et al. 2017）：mini-batch 中所有同類點都當 positive、所有異類都當 negative：</p>
+<p>$$\min_\theta \sum_{i=1}^b \sum_{x_j \in \mathcal{X}_{c(x_i)}} \sum_{x_k \in \mathcal{X} \setminus \mathcal{X}_{c(x_i)}} [d(f(x_i), f(x_j)) - d(f(x_i), f(x_k)) + m]_+$$</p>
+<p>優點：用盡所有資訊；缺點：很多三元組 loss = 0，浪費計算。</p>
+<p><strong>2. Batch-hard</strong>（Hermans et al. 2017）：每個 anchor 配<strong>最難的 positive</strong>（同類中最遠）+ <strong>最難的 negative</strong>（異類中最近）：</p>
+<p>$$\min_\theta \sum_{i=1}^b [\max_{x_j \in \mathcal{X}_{c(x_i)}} d(f(x_i), f(x_j)) - \min_{x_k \in \mathcal{X} \setminus \mathcal{X}_{c(x_i)}} d(f(x_i), f(x_k)) + m]_+$$</p>
+<p>優點：專注難例、訓練訊號強；缺點：outlier 影響大。</p>
+<p><strong>3. Batch-semi-hard</strong>（Schroff et al. 2015）：positive 仍取所有同類，negative 取「<strong>比 positive 遠</strong>的最近異類」：</p>
+<p>$$\min_\theta \sum_i \sum_{x_j \in \mathcal{X}_{c(x_i)}} [d(f(x_i), f(x_j)) - \min_{x_k: d(f(x_i), x_k) > d(f(x_i), x_j)} d(f(x_i), f(x_k)) + m]_+$$</p>
+<p>優點：避開 trivially satisfied 的三元組（positive 已經比 negative 近太多），又有資訊梯度。</p>
+<p>實務：<strong>Batch-semi-hard 與 batch-hard 是常用 default</strong>（Facenet 用 semi-hard）。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-11" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Triplet mining（batch-all / batch-hard / batch-semi-hard）</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Batch-hard mining 為何用「同類中最遠」+「異類中最近」？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">容易訓練</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">強制學最難的 case，泛化更穩</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">降低計算量</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">避免 outlier</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp12" data-kp="12">
+  <header class="card-head">
+    <span class="badge">4.8</span>
+    <h2 class="card-title">Triplet sampling</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-12 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-12-svg">
+  <svg class="inline-svg" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Triplet Sampling 三策略</text>
+  <rect x="40" y="55" width="160" height="140" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="120" y="80" text-anchor="middle" font-size="12" font-weight="700" fill="#92400e">① 隨機抽類別</text>
+  <text x="120" y="110" text-anchor="middle" font-size="10" fill="#0f172a">每 batch 隨機選 $c$ 個類</text>
+  <text x="120" y="130" text-anchor="middle" font-size="10" fill="#0f172a">各抽若干樣本</text>
+  <text x="120" y="160" text-anchor="middle" font-size="9" font-style="italic" fill="#64748b">保證類別多樣</text>
+  <text x="120" y="180" text-anchor="middle" font-size="10" fill="#16a34a">✓ 簡單、常用</text>
+  <rect x="220" y="55" width="160" height="140" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="300" y="80" text-anchor="middle" font-size="12" font-weight="700" fill="#1e40af">② 極端距離</text>
+  <text x="300" y="110" text-anchor="middle" font-size="10" fill="#0f172a">先 forward 找 embedding</text>
+  <text x="300" y="130" text-anchor="middle" font-size="10" fill="#0f172a">刻意選極端 anchor/pos/neg</text>
+  <text x="300" y="160" text-anchor="middle" font-size="9" font-style="italic" fill="#64748b">distance-weighted</text>
+  <text x="300" y="180" text-anchor="middle" font-size="10" fill="#16a34a">✓ 難例優先</text>
+  <rect x="400" y="55" width="160" height="140" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="480" y="80" text-anchor="middle" font-size="12" font-weight="700" fill="#166534">③ 機率分佈</text>
+  <text x="480" y="110" text-anchor="middle" font-size="10" fill="#0f172a">依預定義分佈抽</text>
+  <text x="480" y="130" text-anchor="middle" font-size="10" fill="#0f172a">如 Bayesian updating</text>
+  <text x="480" y="160" text-anchor="middle" font-size="9" font-style="italic" fill="#64748b">stochastic</text>
+  <text x="480" y="180" text-anchor="middle" font-size="10" fill="#16a34a">✓ 多樣性</text>
+  <text x="300" y="210" text-anchor="middle" font-size="11" fill="#64748b">先 sampling 構成 batch，再 mining 從 batch 內選 triplet</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-12 diagram END == -->
+
+      <p>Triplet mining 從「<strong>已選的 batch</strong>」中決定如何取三元組；triplet sampling 則決定<strong>如何構成 batch</strong> 本身。兩者正交：mining 決定 batch 內的配對、sampling 決定 batch 怎麼抽。</p>
+<p>三類 sampling 策略：</p>
+<ol>
+<li><strong>隨機抽類別</strong>：每個 batch 從隨機選的 $c$ 個類別各抽若干樣本（PK 採樣）。保證 batch 內類別多樣。</li>
+<li><strong>極端距離採樣</strong>：先 forward 所有樣本找 embedding，再刻意選「距離極端」的 anchor/positive/negative。</li>
+<li><strong>分佈採樣</strong>：按預定義分佈（如距離加權）採樣——distance weighted sampling、Bayesian triplet sampling。</li>
+</ol>
+<p>與 mining 互補：先 sampling 構成 batch、再 mining 從 batch 內選 triplet。</p>
+<p>實務：Facenet 結合 PK sampling + semi-hard mining = 經典組合。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-12" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Triplet sampling</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Triplet mining 與 triplet sampling 的差別？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">完全一樣</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">mining 從 batch 內選 triplet、sampling 決定 batch 怎麼抽</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">mining 訓練、sampling 測試</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">mining supervised、sampling unsupervised</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp13" data-kp="13">
+  <header class="card-head">
+    <span class="badge">5.1</span>
+    <h2 class="card-title">SSL 核心思想</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-13 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-13-svg">
+  <svg class="inline-svg" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">SSL 核心思想：自己生 label</text>
+  <text x="300" y="46" text-anchor="middle" font-size="11" fill="#0f172a">同類相近、異類相遠（Fisher） + augmentation 生 positive pair</text>
+  <!-- Three boxes -->
+  <rect x="40" y="70" width="160" height="120" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="120" y="95" text-anchor="middle" font-size="12" font-weight="700" fill="#1e40af">1. 同類相近</text>
+  <text x="120" y="120" text-anchor="middle" font-size="10" fill="#0f172a">目標：</text>
+  <text x="120" y="140" text-anchor="middle" font-size="10" fill="#0f172a">拉近 positive、</text>
+  <text x="120" y="160" text-anchor="middle" font-size="10" fill="#0f172a">推遠 negative</text>
+  <rect x="220" y="70" width="160" height="120" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="300" y="95" text-anchor="middle" font-size="12" font-weight="700" fill="#92400e">2. 增強生 label</text>
+  <text x="300" y="120" text-anchor="middle" font-size="10" fill="#0f172a">同資料：</text>
+  <text x="300" y="140" text-anchor="middle" font-size="10" fill="#0f172a">rotate / crop / blur</text>
+  <text x="300" y="160" text-anchor="middle" font-size="10" fill="#0f172a">視為 positive</text>
+  <rect x="400" y="70" width="160" height="120" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="480" y="95" text-anchor="middle" font-size="12" font-weight="700" fill="#166534">3. 不用 label</text>
+  <text x="480" y="120" text-anchor="middle" font-size="10" fill="#0f172a">無人工標註：</text>
+  <text x="480" y="140" text-anchor="middle" font-size="10" fill="#0f172a">從資料自己</text>
+  <text x="480" y="160" text-anchor="middle" font-size="10" fill="#0f172a">學 embedding</text>
+  <text x="300" y="210" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">SSL 三大支柱：loss 函式（Siamese）+ 架構（NN）+ label 來源（aug）</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-13 diagram END == -->
+
+      <p>Self-supervised learning (SSL) 的核心想法：<strong>不用人工 label，自己產生 label</strong>。</p>
+<p>三個關鍵：</p>
+<ol>
+<li><strong>同類相近、異類相遠</strong> 仍是 metric learning 目標（kp 6–10 的精神）。</li>
+<li><strong>Label 從何來？</strong> 從「同一資料的不同增強」生成 positive pair——「同一張狗照片，旋轉後仍是狗」。</li>
+<li><strong>Negative pair 從何來？</strong> 其他資料（或 batch 內其他樣本）視為 negative。</li>
+</ol>
+<p>SSL 與 Siamese 的關係：<strong>Siamese 是 SSL 的網路架構，contrastive/triplet loss 是 SSL 的 loss 函式</strong>。SSL 加上「augmentation 生成 label」這步就形成完整系統。</p>
+<p>驚人事實：<strong>SSL 很多時候能超越 supervised</strong>（SimCLR 2020）——原因：data augmentation 教授網路學「不變性」，泛化更好。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-13" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：SSL 核心思想</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> SSL 與 Siamese 的關係？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">完全無關</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">Siamese 是 SSL 的網路架構，SSL 用 augmentation 生 label</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">SSL 是 supervised 的子集</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">SSL 只用於 NLP</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp14" data-kp="14">
+  <header class="card-head">
+    <span class="badge">5.2</span>
+    <h2 class="card-title">Augmentation for creating positive samples</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-14 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-14">
+  <img src="assets/diagram-kp14-augmentation.png" alt="kp-14 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-14" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 2D embedding 空間，中央 anchor x（紅色大圓），周圍兩個 augmentation 後的向量（綠 Aug1、藍 Aug2），遠方另一個完全不同的紫色 X。三組之間用箭頭連線，標 cosine similarity 值。
+WHY: 凸顯 SSL 核心機制：augmentation 後的向量 cosine 接近 0.99（positive），不同類別的 cosine 接近 -0.1（negative）。
+MUST show: (1) 3 個 augmentation 後向量 + 1 個 other class；(2) cosine 相似度標籤（≈0.99 vs ≈-0.1）；(3) 顏色區分（紅/綠/藍/紫）。
+AVOID: 不要把 anchor 與其他類混淆、不要省略相似度標籤。
+STYLE: clean scientific plot, white background, 標題「Augmentation 視為 positive pair」。</pre>
+  </details>
+<!-- == Phase C kp-14 demo == -->
+<div class="demo" id="demo-kp14" data-demo-id="kp-14">
+  <h4>互動 demo：Augmentation 的 cosine similarity</h4>
+  <div class="demo-theory"><p>同資料的兩個 augmentation：$\cos(z_1, z_2)$<br>旋轉角度小 → 相似度高。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動旋轉角度滑桿。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>角度變大 → 兩個 augmentation 的 cosine similarity 下降。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>角度 0.2：cos≈0.99（strong positive）；角度 1.5：cos≈0.07（弱正相關）。</div>
+  <div class="demo-controls"><label>旋轉角度：<input type="range" id="d14-rot" min="0" max="3" step="0.05" value="0.5"></label><span class="demo-val" id="d14-rot-val"></span><div class="demo-readout-inline" id="d14-out-inline"></div></div>
+  <canvas id="d14-canvas" width="500" height="200" aria-label="Augmentation 的 cosine similarity 互動圖"></canvas>
+  <div class="demo-readout" id="d14-out"></div>
+</div>
+<!-- == Phase C kp-14 demo END == -->
+</div>
+<!-- == Phase B kp-14 diagram END == -->
+
+      <p>SSL 不用 label，但<strong>用 augmentation 自己生 label</strong>：</p>
+<p>$$x_i = \mathcal{A}(x_\ell), \quad x_i' = \mathcal{A}'(x_\ell)$$</p>
+<p>其中 $\mathcal{A}$、$\mathcal{A}'$ 是兩種 augmentation（rotation、crop、scale、color jitter 等），$x_\ell$ 是同一原始資料的兩個不同增強視為 positive pair。</p>
+<p>常用 augmentation（視資料類型）：</p>
+<ul>
+<li><strong>影像</strong>：random crop、color jitter、Gaussian blur、rotation、horizontal flip、solarization。</li>
+<li><strong>文字</strong>：word deletion、synonym replacement、back-translation。</li>
+<li><strong>音訊</strong>：pitch shift、time stretch、additive noise。</li>
+</ul>
+<p>設計原則：<strong>augmentation 要保留語意、改變表面</strong>（旋轉同張狗仍是狗、不是另一張）。</p>
+<p>原文關鍵洞察：<strong>data augmentation 教授網路學「不變性」</strong>——所以 SSL 泛化有時甚至超過 supervised。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-14" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Augmentation for creating positive samples</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> SSL 中 positive pair 從何而來？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">人工標註</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">同一資料的兩個不同 augmentation</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">同類的兩個不同資料</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">隨機抽樣</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp15" data-kp="15">
+  <header class="card-head">
+    <span class="badge">5.3</span>
+    <h2 class="card-title">Negative samples 的採樣衝突分析</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-15 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-15">
+  <img src="assets/diagram-kp15-collision.png" alt="kp-15 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-15" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 對數刻度 x 軸（類別數 c 從 10 到 1000）、對數刻度 y 軸（撞同類的機率）。5 個 indigo 圓點，隨 c 增加指數衰減。1% 紅色水平參考線。
+WHY: 凸顯「大 c 時負類假設安全」的事實：c=1000 時 P < 0.01，幾乎可忽略 false negative。
+MUST show: (1) 對數 x 軸、對數 y 軸；(2) 5 個 c 點（10, 50, 100, 500, 1000）；(3) 1% 紅色參考線；(4) 機率數值標註。
+AVOID: 不要用線性 x 軸、不要省略 1% threshold。
+STYLE: clean scientific plot, white background, 標題「同 batch 撞同類的機率」。</pre>
+  </details>
+<!-- == Phase C kp-15 demo == -->
+<div class="demo" id="demo-kp15" data-demo-id="kp-15">
+  <h4>互動 demo：Batch 撞同類的機率</h4>
+  <div class="demo-theory"><p>$\mathbb{P}(\text{≥2 同類})=\sum_{i=2}^b\binom{b}{i}(1/c)^i(1-1/c)^{b-i}$<br>隨 $c$ 變大指數衰減。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動類別數 $c$、batch size $b$ 滑桿。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>$c$ 大、$b$ 小 → 同類撞到的機率低 → 負類假設安全。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$c=100, b=256$：$P\approx 0.10$；$c=1000, b=256$：$P\approx 0.003$。</div>
+  <div class="demo-controls"><label>類別數 $c$：<input type="range" id="d15-c" min="10" max="2000" value="500"></label><span class="demo-val" id="d15-c-val"></span><label style="margin-left:12px">batch $b$：<input type="range" id="d15-b" min="32" max="1024" value="256"></label><span class="demo-val" id="d15-b-val"></span><div class="demo-readout-inline" id="d15-out-inline"></div></div>
+  <canvas id="d15-canvas" width="500" height="200" aria-label="Batch 撞同類的機率 互動圖"></canvas>
+  <div class="demo-readout" id="d15-out"></div>
+</div>
+<!-- == Phase C kp-15 demo END == -->
+</div>
+<!-- == Phase B kp-15 diagram END == -->
+
+      <p>SSL 假設 batch 內不同 index 的樣本「<strong>大概率屬於不同類別</strong>」，可以當 negative。這在大類別數 $c$ 資料集上成立：</p>
+<p>$$\mathbb{P}(\text{同 batch 至少 $k$ 個同類}) = \sum_{i=k}^b \binom{b}{i}(1/c)^i(1-1/c)^{b-i}$$</p>
+<p>其中 $c$ 是類別總數。當 $c \gg b$（batch size 遠小於類別數）時，此概率<strong>指數衰減</strong>，可忽略。</p>
+<p>但 $c$ 小時，風險變大：batch 內可能抽到多個同類樣本，卻被當 negative 互推——稱為 <strong>false negative</strong>，會傷害表示品質。</p>
+<p>例外策略：</p>
+<ol>
+<li><strong>BYOL、SimSiam 不需 negative</strong>（避免此問題）。</li>
+<li><strong>Few-shot learning</strong>（$c$ 很小）常用 prototype-based method。</li>
+<li><strong>MoCo / memory bank</strong>：擴大 negative pool 涵蓋更多類別。</li>
+</ol>
+<p>實務：$c$ 大（ImageNet 1000 類）+ 合理 batch size（256–4096）→ 假設成立。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-15" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Negative samples（採樣衝突分析）</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> 為什麼 $c$ 大時 SSL 的 negative 假設安全？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">資料多</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">Batch 內同類的機率指數衰減，可忽略</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">網路深度夠</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">Loss 對稱</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp16" data-kp="16">
+  <header class="card-head">
+    <span class="badge">5.4</span>
+    <h2 class="card-title">SSL network 架構</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-16 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-16-svg">
+  <svg class="inline-svg" viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr16e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0f172a"/>
+    </marker>
+  </defs>
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">SSL 典型架構：encoder + projector</text>
+  <text x="300" y="44" text-anchor="middle" font-size="10" fill="#0f172a">測試時 projector 丟掉，只用 encoder 輸出作為 embedding</text>
+  <!-- x -->
+  <rect x="50" y="100" width="40" height="40" fill="#dbeafe" stroke="#2563eb" stroke-width="2" rx="4"/>
+  <text x="70" y="125" text-anchor="middle" font-size="11" font-weight="700" fill="#1e40af">x</text>
+  <text x="70" y="160" text-anchor="middle" font-size="9" fill="#1e40af">資料</text>
+  <!-- encoder f_theta -->
+  <rect x="110" y="100" width="80" height="40" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="4"/>
+  <text x="150" y="118" text-anchor="middle" font-size="10" font-weight="700" fill="#92400e">encoder $f_\theta$</text>
+  <text x="150" y="132" text-anchor="middle" font-size="9" fill="#92400e">→ y ∈ ℝ^q</text>
+  <!-- projector h_phi -->
+  <rect x="210" y="100" width="80" height="40" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="4"/>
+  <text x="250" y="118" text-anchor="middle" font-size="10" font-weight="700" fill="#166534">projector $h_\phi$</text>
+  <text x="250" y="132" text-anchor="middle" font-size="9" fill="#166534">→ z ∈ ℝ^p</text>
+  <!-- loss -->
+  <rect x="310" y="100" width="80" height="40" fill="#fee2e2" stroke="#dc2626" stroke-width="2" rx="4"/>
+  <text x="350" y="125" text-anchor="middle" font-size="11" font-weight="700" fill="#991b1b">Loss</text>
+  <!-- 測試時 projector 丟掉 -->
+  <line x1="190" y1="100" x2="190" y2="80" stroke="#0f172a" stroke-width="1.5" marker-end="url(#arr16e)"/>
+  <text x="220" y="75" text-anchor="middle" font-size="9" fill="#7c3aed">測試丟</text>
+  <text x="70" y="190" text-anchor="middle" font-size="10" fill="#0f172a">ℝ^d</text>
+  <text x="150" y="190" text-anchor="middle" font-size="10" fill="#0f172a">ℝ^q</text>
+  <text x="250" y="190" text-anchor="middle" font-size="10" fill="#0f172a">ℝ^p</text>
+  <text x="350" y="190" text-anchor="middle" font-size="10" fill="#0f172a">loss</text>
+  <!-- expander vs reducer -->
+  <text x="300" y="220" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">projector 可 expander（p≫q，kernel 化）或 reducer（p&lt;q，壓縮）</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-16 diagram END == -->
+
+      <p>典型 SSL pipeline：</p>
+<p>$$\text{encoder: } f_\theta: \mathbb{R}^d \to \mathbb{R}^q, \quad y = f_\theta(x)$$</p>
+<p>$$\text{projector: } h_\phi: \mathbb{R}^q \to \mathbb{R}^p, \quad z = h_\phi(y)$$</p>
+<p>兩種 projector 設計：</p>
+<ul>
+<li><strong>Expander</strong>：$p \gg q$。如 kernel method，把編碼映到高維 RKHS 讓非線性結構更線性。</li>
+<li><strong>Reducer</strong>：$p < q$。如降維，做 feature compression。</li>
+</ul>
+<p>Loss 函式用 $z$（已 normalization），但<strong>測試時 projector 丟掉，只用 encoder 輸出 $y$ 作為最終 embedding</strong>——這是 SSL 的關鍵設計（projector 是訓練輔具，不是產品）。</p>
+<p>Normalization 兩種：</p>
+<ul>
+<li><strong>Feature-wise</strong>：每個 embedding 向量 normalize 到單位長度（SimCLR、BYOL）。</li>
+<li><strong>Batch-wise</strong>：整個 batch 統計 normalize（Barlow Twins）。</li>
+</ul>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-16" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：SSL network 架構</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> SSL 測試時 projector 怎麼處理？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">保留</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">丟掉，只用 encoder 輸出</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">重新訓練</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">換成線性</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp17" data-kp="17">
+  <header class="card-head">
+    <span class="badge">5.6.1</span>
+    <h2 class="card-title">SimCLR：InfoNCE loss</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-17 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-17">
+  <img src="assets/diagram-kp17-simclr.png" alt="kp-17 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-17" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 2D 圖，x 軸 temperature τ（0.05–1.0），y 軸 InfoNCE loss。teal 曲線隨 τ 增加而下降。4 個紅色圓點標示常用 τ（0.07, 0.1, 0.2, 0.5）。
+WHY: 凸顯 temperature 對 InfoNCE loss 的影響：τ 小對 hard negative 敏感（loss 大梯度大），τ 大則 loss 平緩。
+MUST show: (1) τ 從小到大的 loss 曲線；(2) 4 個常用 τ 標記點；(3) 標題說明 τ 與 loss 的關係。
+AVOID: 不要用對數 y 軸、不要省略 τ 標籤。
+STYLE: clean scientific plot, white background, 標題「InfoNCE loss vs τ」。</pre>
+  </details>
+<!-- == Phase C kp-17 demo == -->
+<div class="demo" id="demo-kp17" data-demo-id="kp-17">
+  <h4>互動 demo：InfoNCE loss vs temperature</h4>
+  <div class="demo-theory"><p>$\mathcal{L}=-\sum_i\log\frac{e^{\cos(z_i,z_i')/\tau}}{\sum_j e^{\cos(z_i,z_j')/\tau}}$<br>$\tau$ 小 → hard negative 敏感。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $\tau$ 滑桿。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>$\tau$ 變大 → loss 變平緩、梯度變小；$\tau$ 變小 → loss 變陡、梯度大。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$\tau=0.07$：loss 大（~3.0）；$\tau=0.5$：loss 小（~0.5）；$\tau=1.0$：loss 接近 $\log(1+N)$。</div>
+  <div class="demo-controls"><label>temperature $\tau$：<input type="range" id="d17-tau" min="0.05" max="1" step="0.05" value="0.1"></label><span class="demo-val" id="d17-tau-val"></span><div class="demo-readout-inline" id="d17-out-inline"></div></div>
+  <canvas id="d17-canvas" width="500" height="200" aria-label="InfoNCE loss vs temperature 互動圖"></canvas>
+  <div class="demo-readout" id="d17-out"></div>
+</div>
+<!-- == Phase C kp-17 demo END == -->
+</div>
+<!-- == Phase B kp-17 diagram END == -->
+
+      <p>SimCLR（2020）用 <strong>InfoNCE loss</strong> 訓練 contrastive SSL：</p>
+<p>$$\min_{\theta,\phi} \mathcal{L}(z, z') = -\sum_{i=1}^b \log \frac{\exp(\cos(z_i, z_i')/\tau)}{\sum_{j=1, j \neq i}^{b} \exp(\cos(z_i, z_j')/\tau)}$$</p>
+<p>其中：</p>
+<ul>
+<li>$\cos(u, v) = u^\top v / (\|u\|_2 \|v\|_2)$ 是 cosine similarity。</li>
+<li>$\tau$ 是 temperature（越小對 hard negative 越敏感）。</li>
+<li>$z_i, z_i'$ 是同一資料的兩個 augmentation 投影。</li>
+<li>分母對所有 $b-1$ 個其他樣本（不論同類異類）取 softmax——所以 InfoNCE 是 NT-XEnt 損失的歸一化對比形式。</li>
+</ul>
+<p>關鍵設計：<strong>batch size 要大</strong>（如 4096），才有足夠 negative 提供對比訊號。</p>
+<p>直覺：分子 $\cos(z_i, z_i')$ 鼓勵 positive 對靠近；分母 $\sum_j \exp(\cos(z_i, z_j')/\tau)$ 鼓勵 negative 對遠離。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-17" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：SimCLR：InfoNCE loss</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> SimCLR InfoNCE loss 的 temperature $\tau$ 作用？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">控制學習率</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">越小對 hard negative 越敏感</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">控制 batch size</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">控制維度</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp18" data-kp="18">
+  <header class="card-head">
+    <span class="badge">5.6.2</span>
+    <h2 class="card-title">BYOL：momentum encoder + stop-gradient</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-18 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-18">
+  <img src="assets/diagram-kp18-byol.png" alt="kp-18 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-18" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: x 軸是 training step（0–100），y 軸是參數值。兩條曲線：online（藍）從 0 指數上升到接近 1，target（紅）以 EMA 慢慢追上。兩者間灰色填色區。
+WHY: 凸顯 BYOL 的 target network EMA 更新機制：target 緩慢跟隨 online，避免 collapse。
+MUST show: (1) 兩條曲線（online 藍、target 紅）；(2) 灰色差距填色；(3) 圖例標示兩條曲線；(4) 標題含 τ=0.99。
+AVOID: 不要把 online 與 target 標反、不要省略 EMA 標籤。
+STYLE: clean scientific plot, white background, 標題「BYOL EMA 更新」。</pre>
+  </details>
+<!-- == Phase C kp-18 demo == -->
+<div class="demo" id="demo-kp18" data-demo-id="kp-18">
+  <h4>互動 demo：BYOL EMA 更新曲線</h4>
+  <div class="demo-theory"><p>$\theta_m^{(t)}\leftarrow\tau\theta_m^{(t-1)}+(1-\tau)\theta^{(t)}$<br>target 緩慢跟隨 online。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動 $\tau$ 滑桿觀察 EMA 速度。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>$\tau$ 接近 1 → target 跟得慢（穩定）；$\tau$ 小 → target 跟得快（不穩定）。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>$\tau=0.99, 100$ step 後 target = 86% of online；$\tau=0.9$：target = 99.9%。</div>
+  <div class="demo-controls"><label>$\tau$：<input type="range" id="d18-tau" min="0.9" max="0.999" step="0.005" value="0.99"></label><span class="demo-val" id="d18-tau-val"></span><div class="demo-readout-inline" id="d18-out-inline"></div></div>
+  <canvas id="d18-canvas" width="500" height="200" aria-label="BYOL EMA 更新曲線 互動圖"></canvas>
+  <div class="demo-readout" id="d18-out"></div>
+</div>
+<!-- == Phase C kp-18 demo END == -->
+</div>
+<!-- == Phase B kp-18 diagram END == -->
+
+      <p>BYOL（2020）<strong>不用 negative</strong>，靠「asymmetry + momentum encoder + stop-gradient」避免 collapse。</p>
+<p>兩個分支：<strong>online network</strong>（encoder $f_\theta$ + projector $h_\phi$ + predictor $g_\psi$）和 <strong>target network</strong>（encoder $f_{\theta_m}$ + projector $h_{\phi_m}$，沒有 predictor）。</p>
+<p>Loss（cosine similarity 形式）：</p>
+<p>$$\min_{\theta,\phi,\psi} \mathcal{L}(p, p', z, z') = \sum_{i=1}^b [\mathcal{D}(p_i, \text{stopgrad}(z_i')) + \mathcal{D}(p_i', \text{stopgrad}(z_i))]$$</p>
+<p>其中 $\mathcal{D}(u, v) = \|u/\|u\|_2 - v/\|v\|_2\|_2^2 = 2 - 2\cos(u, v)$。</p>
+<p>Target network 權重<strong>用 momentum（EMA）更新</strong>，不靠 backprop：</p>
+<p>$$\theta_m \leftarrow \tau\theta_m + (1-\tau)\theta, \quad \phi_m \leftarrow \tau\phi_m + (1-\tau)\phi$$</p>
+<p>$\tau$ 通常接近 1（如 0.99），target 緩慢跟隨 online。</p>
+<p>三個避免 collapse 的機制（缺一不可）：<strong>stop-gradient + momentum（更新速度差異） + predictor（不對稱架構）</strong>。</p>
+<figure class="orig-fig"><img src="assets/orig-fig6-ssl-architectures.jpg" alt="SimCLR / BYOL / SimSiam / Barlow Twins 架構" loading="lazy"></figure>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-18" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：BYOL：momentum encoder + stop-gradient</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> BYOL 不用 negative，如何避免 collapse？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">更大的 batch</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">asymmetry + momentum encoder + stop-gradient</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">更深的網路</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">不同的 loss 函式</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp19" data-kp="19">
+  <header class="card-head">
+    <span class="badge">5.6.4</span>
+    <h2 class="card-title">Barlow Twins：cross-correlation matrix</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-19 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-19">
+  <img src="assets/diagram-kp19-barlow.png" alt="kp-19 示意圖解" loading="lazy">
+  <figcaption>示意圖解：請對照 B0 準則（遮住文字仍能看出因果/反直覺）。</figcaption>
+</figure>
+<div class="ai-illustration" data-diagram-id="kp-19" data-status="pending">
+  <details><summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+  <pre class="ai-illustration-prompt">WHAT: 1×2 子圖，皆 8×8 矩陣。左「Barlow Twins 目標」：對角線 1.0、非對角線接近 0（decorrelate 成功）。右「decorrelate 失敗」：對角線 1.0、非對角線較大。紅藍色階 colormap。
+WHY: 凸顯 Barlow Twins loss 兩項的目標：對角線 = 1（positive pair 同維度強相關）、非對角線 = 0（不同維度 decorrelate）。
+MUST show: (1) 兩個 8×8 矩陣；(2) 紅藍 colormap（-1 到 1）；(3) 顯著的數值標註；(4) 標題對比。
+AVOID: 不要用 jet colormap、不要省略數值標註。
+STYLE: clean scientific plot, white background, 整體標題「Barlow Twins：cross-correlation 矩陣」。</pre>
+  </details>
+<!-- == Phase C kp-19 demo == -->
+<div class="demo" id="demo-kp19" data-demo-id="kp-19">
+  <h4>互動 demo：Barlow Twins：cross-correlation 對角/非對角</h4>
+  <div class="demo-theory"><p>$\mathcal{L}=\sum_j(1-c_{jj})^2+\lambda\sum_{j\neq k}c_{jk}^2$<br>對角 → 1；非對角 → 0（decorrelate）。</p></div>
+  <div class="demo-how"><strong>怎麼操作：</strong>拖動噪聲滑桿（模擬訓練時的隨機性）。</div>
+  <div class="demo-observe"><strong>觀察什麼：</strong>噪聲小 → 對角接近 1、非對角接近 0（decorrelate 成功）；噪聲大 → 反之。</div>
+  <div class="demo-criteria"><strong>正確基準：</strong>噪聲=0.1：對角=0.995、非對角=0.005、loss 極小；噪聲=0.5：對角=0.875、非對角=0.125。</div>
+  <div class="demo-controls"><label>噪聲：<input type="range" id="d19-noise" min="0" max="1" step="0.05" value="0.1"></label><span class="demo-val" id="d19-noise-val"></span><div class="demo-readout-inline" id="d19-out-inline"></div></div>
+  <canvas id="d19-canvas" width="500" height="200" aria-label="Barlow Twins：cross-correlation 對角/非對角 互動圖"></canvas>
+  <div class="demo-readout" id="d19-out"></div>
+</div>
+<!-- == Phase C kp-19 demo END == -->
+</div>
+<!-- == Phase B kp-19 diagram END == -->
+
+      <p>Barlow Twins（2021）用 <strong>cross-correlation matrix</strong> 學 embedding：</p>
+<p>Cross-correlation（batch 內 $b$ 個 normalized positive pair）：</p>
+<p>$$c_{jk} = \frac{\sum_{i=1}^b z_{i,j} z_{i,k}'}{\sqrt{\sum_{i=1}^b (z_{i,j})^2} \sqrt{\sum_{i=1}^b (z_{i,k}')^2}}$$</p>
+<p>Loss 兩項：</p>
+<p>$$\min_{\theta,\phi} \mathcal{L} = \sum_{j=1}^p (1 - c_{jj})^2 + \lambda \sum_{j=1}^p \sum_{k \neq j} c_{jk}^2$$</p>
+<p>第一項<strong>最大化對角線</strong>（$c_{jj}=1$，positive pair 同維度特徵完全相關）。</p>
+<p>第二項<strong>最小化非對角線</strong>（$c_{jk}=0$，不同維度特徵不相關 → <strong>decorrelation</strong>）。</p>
+<p>直覺：「同一資料的兩個 augmentation 應該在每個維度都強相關，但不同維度之間不應冗餘」。這個 <strong>decorrelation 機制</strong>避免 collapse，不需要 negative 也不需要 momentum。</p>
+<figure class="orig-fig"><img src="assets/orig-fig6-ssl-architectures.jpg" alt="Barlow Twins 架構" loading="lazy"></figure>
+<p>Loss 與 Pearson correlation 關係：$\text{Cor}(X, Y) = \text{Cov}(X, Y) / \sqrt{\text{Var}(X)\text{Var}(Y)}$，所以最小化非對角即最小化 covariance / decorrelate。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-19" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Barlow Twins：cross-correlation matrix</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> Barlow Twins loss 第二項 $\lambda \sum_{j\neq k} c_{jk}^2$ 作用？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">增加同類距離</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">decorrelate 不同維度特徵，避免 collapse</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">對齊 loss</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">正則化</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+<section class="card" id="kp20" data-kp="20">
+  <header class="card-head">
+    <span class="badge">6</span>
+    <h2 class="card-title">結論：metric learning 與 SSL 的現代地位</h2>
+    <button class="toggle" type="button" aria-label="展開/收合" aria-expanded="true">−</button>
+  </header>
+  <div class="card-body">
+    <div class="kp-content">
+<!-- == Phase B kp-20 diagram == -->
+<figure class="diagram-figure" data-diagram-id="kp-20-svg">
+  <svg class="inline-svg" viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">Metric Learning 與 SSL 的現代地位</text>
+  <text x="300" y="42" text-anchor="middle" font-size="11" font-style="italic" fill="#64748b">從監督到無監督表示學習的橋樑</text>
+  <!-- 三大里程碑 -->
+  <rect x="40" y="60" width="160" height="80" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="120" y="80" text-anchor="middle" font-size="12" font-weight="700" fill="#92400e">AE (1980s–2010s)</text>
+  <text x="120" y="105" text-anchor="middle" font-size="10" fill="#0f172a">重建損失學表示</text>
+  <text x="120" y="125" text-anchor="middle" font-size="9" font-style="italic" fill="#64748b">線性 → PCA</text>
+  <rect x="220" y="60" width="160" height="80" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="300" y="80" text-anchor="middle" font-size="12" font-weight="700" fill="#1e40af">Siamese (2005–2015)</text>
+  <text x="300" y="105" text-anchor="middle" font-size="10" fill="#0f172a">pair/triplet loss</text>
+  <text x="300" y="125" text-anchor="middle" font-size="9" font-style="italic" fill="#64748b">Fisher 復活</text>
+  <rect x="400" y="60" width="160" height="80" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="480" y="80" text-anchor="middle" font-size="12" font-weight="700" fill="#166534">SSL (2018–now)</text>
+  <text x="480" y="105" text-anchor="middle" font-size="10" fill="#0f172a">SimCLR / BYOL /</text>
+  <text x="480" y="125" text-anchor="middle" font-size="10" fill="#0f172a">Barlow / VICReg</text>
+  <text x="300" y="160" text-anchor="middle" font-size="12" font-weight="700" fill="#4f46e5">現代應用：pretraining 主流（MAE、CLIP）</text>
+  <text x="300" y="180" text-anchor="middle" font-size="11" fill="#0f172a">SSL 是 pretraining 預訓練的基礎方法學</text>
+  <text x="300" y="195" text-anchor="middle" font-size="11" fill="#0f172a">metric learning 提供 robust 表徵</text>
+  <text x="300" y="220" text-anchor="middle" font-size="10" font-style="italic" fill="#64748b">AE → Siamese → SSL → GNN/multimodal/generative 的演進路徑</text>
+</svg>
+  <figcaption>示意圖解（inline SVG）。</figcaption>
+</figure>
+<!-- == Phase B kp-20 diagram END == -->
+
+      <p>Deep metric learning + SSL 是<strong>從監督式到無監督表示學習的橋樑</strong>。從 autoencoder 到 contrastive 方法到現代 SSL 框架，這些方法重塑了「<strong>無 label 如何學 embedding</strong>」的解法。</p>
+<p>三大里程碑：</p>
+<ol>
+<li><strong>Autoencoders (1980s–2010s)</strong>：重建損失學表示。線性 activation 退化成 PCA；nonlinear 學更強表示。</li>
+<li><strong>Siamese + contrastive (2005–2015)</strong>：pair/triplet loss 推 anchor-positive 近、anchor-negative 遠。Fisher 思想復活。</li>
+<li><strong>SSL (2018–至今)</strong>：SimCLR、BYOL、SimSiam、Barlow Twins、VICReg。2020 年起成為 pretraining 主流。</li>
+</ol>
+<p><strong>現代地位 (2025)</strong>：</p>
+<ul>
+<li><strong>Pretraining 主流</strong>：MAE (Masked Autoencoders)、CLIP (vision-language) 都延伸 SSL 思想。</li>
+<li><strong>Robust 表徵</strong>：metric learning loss 提供對抗擾動、domain shift 的穩定性。</li>
+<li><strong>Graph、序列資料</strong>：下一章 (GNN) 用 graph metric learning；CLIP 把 metric 推到多模態。</li>
+</ul>
+<p>SSL 與 metric learning 不再是單一領域的技巧，而是<strong>現代表示學習的基礎</strong>——設定了後續 GNN、multimodal、generative model 的舞台。</p>
+    </div>
+    <!-- GUIDE_BUTTON_SLOT -->
+    <button class="guide-btn" data-guide="kp-20" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：結論：metric learning 與 SSL 的現代地位</button>
+    <div class="quiz" data-qi="0">
+<p class="quiz-q"><strong>Q1.</strong> SSL 在 2025 年的主要應用是？</p>
+<ol class="quiz-opts">
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">影像分類</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="1"> <span class="opt-text">Pretraining（MAE、CLIP 等）</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">資料壓縮</span></label></li>
+<li><label><input type="radio" name="q0" data-correct="0"> <span class="opt-text">異常偵測</span></label></li>
+</ol>
+<button class="quiz-check" type="button">檢查答案</button>
+<div class="quiz-feedback" aria-live="polite"></div>
+</div>
+  </div>
+</section>
+</main>
+</div>
+<div id="guide-modal" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="guide-title">教授祕笈</h3>
+      <button class="modal-close" type="button" aria-label="關閉">×</button>
+    </div>
+    <div class="modal-body"></div>
+  </div>
+</div>
+<!-- __GUIDES__ -->
+<script>
+
+(function(){
+  // Render math (idempotent thanks to ignoredClasses)
+  window.renderMath = function(){
+    if (window.renderMathInElement) {
+      try { renderMathInElement(document.body, {ignoredClasses:['katex'], delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]}); } catch(e){ console.error('renderMath err', e); }
+    }
+  };
+
+  // Card collapse toggle
+  document.querySelectorAll('.card-head .toggle').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const card = e.target.closest('.card');
+      card.classList.toggle('collapsed');
+      btn.textContent = card.classList.contains('collapsed') ? '+' : '−';
+      btn.setAttribute('aria-expanded', String(!card.classList.contains('collapsed')));
+      // Re-render math in case newly visible
+      if (!card.classList.contains('collapsed')) window.renderMath();
+    });
+  });
+
+  // Quiz check
+  document.querySelectorAll('.quiz').forEach(quiz=>{
+    const btn = quiz.querySelector('.quiz-check');
+    const fb = quiz.querySelector('.quiz-feedback');
+    btn.addEventListener('click', ()=>{
+      const checked = quiz.querySelector('input[type=radio]:checked');
+      if (!checked) { fb.textContent = '請先選一個選項。'; fb.className='quiz-feedback err'; return; }
+      const correct = checked.dataset.correct === '1';
+      fb.textContent = correct ? '✅ 答對了！' : '❌ 再想想，繼續看下一個知識點。';
+      fb.className = 'quiz-feedback ' + (correct ? 'ok' : 'err');
+      if (correct) updateProgress();
+    });
+  });
+
+  // Progress (any quiz answered = "completed")
+  function updateProgress(){
+    const total = document.querySelectorAll('.quiz').length;
+    const done = Array.from(document.querySelectorAll('.quiz-feedback.ok')).length;
+    const pct = total ? Math.round(done*100/total) : 0;
+    const bar = document.querySelector('#progress-bar .bar');
+    const txt = document.querySelector('#progress-text');
+    if (bar) bar.style.width = pct+'%';
+    if (txt) txt.textContent = '進度 '+pct+'%';
+  }
+  // expose for demo/guide integration
+  window.updateProgress = updateProgress;
+  updateProgress();
+
+  // Guide modal open/close (Phase D will populate content)
+  document.addEventListener('click', e=>{
+    const btn = e.target.closest('.guide-btn');
+    if (btn) { openGuide(btn.dataset.guide); return; }
+    if (e.target.id === 'guide-modal' || e.target.classList.contains('modal-close')) {
+      closeGuide();
+    }
+  });
+  document.addEventListener('keydown', e=>{ if (e.key === 'Escape') closeGuide(); });
+
+  function openGuide(kpId){
+    const modal = document.getElementById('guide-modal');
+    const body = modal.querySelector('.modal-body');
+    const head = modal.querySelector('.modal-head h3');
+    const src = document.getElementById('guide-content-'+kpId);
+    if (!src) { console.warn('No guide for', kpId); return; }
+    head.textContent = src.dataset.title || ('教授祕笈：kp-'+kpId);
+    body.innerHTML = src.innerHTML;
+    modal.classList.add('open');
+    if (window.renderMathInElement) {
+      try { renderMathInElement(body, {ignoredClasses:['katex'], delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]}); } catch(e){}
+    }
+  }
+  function closeGuide(){
+    const modal = document.getElementById('guide-modal');
+    if (modal) modal.classList.remove('open');
+  }
+  window.openGuide = openGuide;
+  window.closeGuide = closeGuide;
+
+  // Initial render
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.renderMath);
+  } else {
+    window.renderMath();
+  }
+})();
+
+</script>
+<!-- __DEMOS_JS__ -->
+<script>
+/*
+IDL_115 Ch16 — Phase C 互動 demo 集合（10 個）。
+每個 demo 為 initXxx() 函式，掛在 initDemos() 下。
+所有 demo 用 vanilla JS + canvas/SVG，零外部依賴。
+公式採閉式（含 KaTeX 渲染於靜態面板）。
+Canvas 文字用 Unicode（μ, σ, ε, ², ₁, ε ...）。
+JS 字串中的 LaTeX 反斜線一律雙寫（\\）。
+*/
+(function(){
+  function $(s, root=document){ return root.querySelector(s); }
+  function $$(s, root=document){ return Array.from(root.querySelectorAll(s)); }
+  function txt(el, s){ if (el) el.textContent = s; }
+  function clearCanvas(c){ if (!c) return; const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); }
+
+  // ============================================================
+  // kp 3 — Denoising autoencoder：x → 加噪 → DAE → x_hat
+  // ============================================================
+  window.initDemoKp3 = function(){
+    const root = $('#demo-kp3'); if (!root) return;
+    const sigmaSlider = $('#d3-sigma', root);
+    const sigmaVal = $('#d3-sigma-val', root);
+    const canvas = $('#d3-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d3-out', root);
+    function draw(){
+      const sigma = parseFloat(sigmaSlider.value);
+      txt(sigmaVal, sigma.toFixed(2));
+      clearCanvas(canvas); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      const x0=30, y0=30;
+      // x（原始）
+      ctx.fillStyle = '#3b82f6';
+      for (let i=0;i<8;i++) ctx.fillRect(x0+20, y0+10+i*12, 30, 8);
+      ctx.fillStyle = '#000'; ctx.font = '10px sans-serif';
+      ctx.fillText('x', x0+30, y0+8);
+      // + noise
+      ctx.fillStyle = '#94a3b8';
+      for (let i=0;i<8;i++) {
+        const v = Math.exp(-0.5*Math.pow(sigma*1.5, 2));
+        if (Math.random() < v) ctx.fillRect(x0+90, y0+10+i*12, 30, 8);
+        else ctx.fillRect(x0+90, y0+10+i*12, 30, 8);  // keep all but color gray
+      }
+      ctx.fillStyle = '#000'; ctx.fillText('x+ε', x0+95, y0+8);
+      // DAE box
+      ctx.fillStyle = '#dcfce7'; ctx.strokeStyle = '#16a34a'; ctx.lineWidth=2;
+      ctx.fillRect(x0+165, y0+30, 60, 80);
+      ctx.strokeRect(x0+165, y0+30, 60, 80);
+      ctx.fillStyle = '#166534'; ctx.font = 'bold 11px sans-serif';
+      ctx.fillText('DAE', x0+195, y0+75);
+      // x_hat
+      ctx.fillStyle = '#3b82f6';
+      for (let i=0;i<8;i++) ctx.fillRect(x0+270, y0+10+i*12, 30, 8);
+      ctx.fillStyle = '#000'; ctx.fillText('x_hat', x0+275, y0+8);
+      // 箭頭
+      ctx.strokeStyle='#0f172a'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(x0+55, y0+70); ctx.lineTo(x0+85, y0+70); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x0+125, y0+70); ctx.lineTo(x0+162, y0+70); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x0+228, y0+70); ctx.lineTo(x0+267, y0+70); ctx.stroke();
+      // 計算 MSE
+      const noiseLevel = sigma * 0.5;
+      const mse = noiseLevel * noiseLevel;
+      txt(out, `σ=${sigma.toFixed(2)}：噪聲強度 ${(sigma*50).toFixed(0)}% → MSE ≈ ${mse.toFixed(3)}（噪聲越大重建越難）`);
+    }
+    sigmaSlider.addEventListener('input', draw);
+    draw();
+  };
+
+  // ============================================================
+  // kp 5 — Cross-entropy → embedding 聚攏
+  // ============================================================
+  window.initDemoKp5 = function(){
+    const root = $('#demo-kp5'); if (!root) return;
+    const epochSlider = $('#d5-epoch', root);
+    const epochVal = $('#d5-epoch-val', root);
+    const canvas = $('#d5-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d5-out', root);
+    function draw(){
+      const epoch = parseInt(epochSlider.value,10);
+      txt(epochVal, epoch);
+      clearCanvas(canvas); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      // 顯示三群隨 epoch 收緊
+      const centers = {'A':[-2,1], 'B':[2,1], 'C':[0,-1.5]};
+      const sigma = 1.5 * Math.exp(-epoch/30);
+      const colors = {'A':'#dc2626', 'B':'#16a34a', 'C':'#3b82f6'};
+      const col = colors;
+      // 簡化：直接用 Object.keys
+      for (const k of Object.keys(centers)) {
+        const [cx, cy] = centers[k];
+        for (let i=0;i<10;i++) {
+          const seedX = (k.charCodeAt(0) * 7 + i * 13) % 100 / 100;
+          const seedY = (k.charCodeAt(0) * 11 + i * 17) % 100 / 100;
+          const x = 250 + cx * 50 + (seedX - 0.5) * sigma * 80;
+          const y = 110 + cy * 40 + (seedY - 0.5) * sigma * 60;
+          ctx.fillStyle = col[k];
+          ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
+        }
+      }
+      txt(out, `Epoch ${epoch}：embedding 聚攏程度 σ=${sigma.toFixed(2)}（越小 → 越好分類）`);
+    }
+    epochSlider.addEventListener('input', draw);
+    draw();
+  };
+
+  // ============================================================
+  // kp 9 — Contrastive loss 計算
+  // ============================================================
+  window.initDemoKp9 = function(){
+    const root = $('#demo-kp9'); if (!root) return;
+    const dSlider = $('#d9-d', root);
+    const ySlider = $('#d9-y', root);
+    const mSlider = $('#d9-m', root);
+    const dVal=$('#d9-d-val',root), yVal=$('#d9-y-val',root), mVal=$('#d9-m-val',root);
+    const out = $('#d9-out', root);
+    function draw(){
+      const d = parseFloat(dSlider.value);
+      const y = parseInt(ySlider.value,10);
+      const m = parseFloat(mSlider.value);
+      txt(dVal, d.toFixed(2)); txt(yVal, y); txt(mVal, m.toFixed(2));
+      // (1-y)*d + y*max(0, -d+m)
+      const l1 = (1-y) * d;
+      const l2 = y * Math.max(0, -d + m);
+      const total = l1 + l2;
+      txt(out, `d=${d.toFixed(2)}, y=${y} (${y===0?'similar':'dissimilar'}), m=${m.toFixed(2)}：loss = ${total.toFixed(3)}`);
+    }
+    [dSlider, ySlider, mSlider].forEach(s=>s.addEventListener('input', draw));
+    draw();
+  };
+
+  // ============================================================
+  // kp 10 — Triplet loss 計算
+  // ============================================================
+  window.initDemoKp10 = function(){
+    const root = $('#demo-kp10'); if (!root) return;
+    const dapSlider = $('#d10-dap', root);
+    const danSlider = $('#d10-dan', root);
+    const mSlider = $('#d10-m', root);
+    const dapVal=$('#d10-dap-val',root), danVal=$('#d10-dan-val',root), mVal=$('#d10-m-val',root);
+    const out = $('#d10-out', root);
+    function draw(){
+      const dap = parseFloat(dapSlider.value);
+      const dan = parseFloat(danSlider.value);
+      const m = parseFloat(mSlider.value);
+      txt(dapVal, dap.toFixed(2)); txt(danVal, dan.toFixed(2)); txt(mVal, m.toFixed(2));
+      const loss = Math.max(0, dap - dan + m);
+      txt(out, `d(a,p)=${dap.toFixed(2)}, d(a,n)=${dan.toFixed(2)}, m=${m.toFixed(2)}：loss = max(0, ${dap.toFixed(2)} - ${dan.toFixed(2)} + ${m.toFixed(2)}) = ${loss.toFixed(3)} ${loss===0?'✓ 條件滿足':'✗ 仍需訓練'}`);
+    }
+    [dapSlider, danSlider, mSlider].forEach(s=>s.addEventListener('input', draw));
+    draw();
+  };
+
+  // ============================================================
+  // kp 11 — Triplet mining：batch-hard
+  // ============================================================
+  window.initDemoKp11 = function(){
+    const root = $('#demo-kp11'); if (!root) return;
+    const seed = 11;
+    const canvas = $('#d11-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d11-out', root);
+    function draw(){
+      clearCanvas(canvas); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      // 一個 anchor + 3 個 positives（不同距離）+ 3 個 negatives
+      const ax = 250, ay = 130;
+      const pos = [[280, 110], [300, 90], [260, 150]];
+      const neg = [[340, 80], [380, 140], [320, 200]];
+      // anchor
+      ctx.fillStyle = '#16a34a'; ctx.beginPath(); ctx.arc(ax, ay, 12, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#000'; ctx.font='bold 11px sans-serif'; ctx.fillText('A', ax-4, ay+4);
+      // positives
+      ctx.fillStyle = '#3b82f6';
+      pos.forEach(([x,y],i)=>{ ctx.beginPath(); ctx.arc(x,y, 6, 0, Math.PI*2); ctx.fill(); });
+      // negatives
+      ctx.fillStyle = '#dc2626';
+      neg.forEach(([x,y],i)=>{ ctx.beginPath(); ctx.arc(x,y, 6, 0, Math.PI*2); ctx.fill(); });
+      // 計算距離
+      const distPos = pos.map(([x,y]) => Math.sqrt((x-ax)**2+(y-ay)**2));
+      const distNeg = neg.map(([x,y]) => Math.sqrt((x-ax)**2+(y-ay)**2));
+      const farPos = pos[distPos.indexOf(Math.max(...distPos))];
+      const nearNeg = neg[distNeg.indexOf(Math.min(...distNeg))];
+      // 標 hardest
+      ctx.fillStyle = '#3b82f6';
+      ctx.beginPath(); ctx.arc(farPos[0], farPos[1], 12, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font='bold 11px sans-serif'; ctx.fillText('H', farPos[0]-4, farPos[1]+4);
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath(); ctx.arc(nearNeg[0], nearNeg[1], 12, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.fillText('H', nearNeg[0]-4, nearNeg[1]+4);
+      // 連線
+      ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.setLineDash([4,3]);
+      pos.forEach(([x,y])=>{ ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(x,y); ctx.stroke(); });
+      ctx.strokeStyle = '#dc2626';
+      neg.forEach(([x,y])=>{ ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(x,y); ctx.stroke(); });
+      ctx.setLineDash([]);
+      // 標 d
+      distPos.forEach((d,i)=>{
+        if (i===0) ctx.fillText(`d=${d.toFixed(1)}`, (ax+pos[i][0])/2-10, (ay+pos[i][1])/2);
+      });
+      distNeg.forEach((d,i)=>{
+        ctx.fillStyle = '#dc2626';
+        ctx.fillText(`d=${d.toFixed(1)}`, (ax+neg[i][0])/2-15, (ay+neg[i][1])/2);
+      });
+      ctx.fillStyle = '#000';
+      const farDist = Math.max(...distPos).toFixed(1);
+      const nearDist = Math.min(...distNeg).toFixed(1);
+      txt(out, `Batch-hard：最難 pos 距 ${farDist} + m > 最難 neg 距 ${nearDist}？${parseFloat(farDist)+1 > parseFloat(nearDist) ? '✓ 需訓練' : '✗ 已滿足'}`);
+    }
+    draw();
+  };
+
+  // ============================================================
+  // kp 14 — Augmentation cosine similarity
+  // ============================================================
+  window.initDemoKp14 = function(){
+    const root = $('#demo-kp14'); if (!root) return;
+    const rotSlider = $('#d14-rot', root);
+    const rotVal = $('#d14-rot-val', root);
+    const canvas = $('#d14-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d14-out', root);
+    function draw(){
+      const rot = parseFloat(rotSlider.value);
+      txt(rotVal, rot.toFixed(2));
+      clearCanvas(canvas); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      // anchor + 2 aug
+      const ax = 150, ay = 130;
+      const cos_aug1 = Math.cos(rot * 0.5);
+      const cos_aug2 = Math.cos(rot * 0.8);
+      // anchor
+      ctx.fillStyle='#dc2626'; ctx.beginPath(); ctx.arc(ax,ay,10,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font='bold 10px sans-serif'; ctx.fillText('A', ax-4, ay+4);
+      // aug1
+      ctx.fillStyle='#16a34a'; ctx.beginPath(); ctx.arc(ax+30*cos_aug1, ay+30*Math.sin(rot*0.5),8,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#000'; ctx.fillText('cos='+cos_aug1.toFixed(2), ax+25*cos_aug1+5, ay+25*Math.sin(rot*0.5)-5);
+      // aug2
+      ctx.fillStyle='#3b82f6'; ctx.beginPath(); ctx.arc(ax+30*cos_aug2, ay-30*Math.sin(rot*0.8),8,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#000'; ctx.fillText('cos='+cos_aug2.toFixed(2), ax+25*cos_aug2+5, ay-25*Math.sin(rot*0.8)-5);
+      // line between them
+      ctx.strokeStyle='#16a34a'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(ax+30*cos_aug1, ay+30*Math.sin(rot*0.5)); ctx.lineTo(ax+30*cos_aug2, ay-30*Math.sin(rot*0.8)); ctx.stroke();
+      ctx.setLineDash([]);
+      // mean cosine
+      const meanCos = (cos_aug1 + cos_aug2) / 2;
+      txt(out, `旋轉角度 ${rot.toFixed(2)}：兩 augmentation 平均 cos = ${meanCos.toFixed(2)} ${meanCos>0.9?'→ strong positive':meanCos>0.7?'→ moderate':meanCos>0.3?'→ weak positive':'→ negative'}`);
+    }
+    rotSlider.addEventListener('input', draw);
+    draw();
+  };
+
+  // ============================================================
+  // kp 15 — Batch 撞同類機率
+  // ============================================================
+  window.initDemoKp15 = function(){
+    const root = $('#demo-kp15'); if (!root) return;
+    const cSlider = $('#d15-c', root);
+    const bSlider = $('#d15-b', root);
+    const cVal=$('#d15-c-val',root), bVal=$('#d15-b-val',root);
+    const out = $('#d15-out', root);
+    function draw(){
+      const c = parseInt(cSlider.value,10);
+      const b = parseInt(bSlider.value,10);
+      txt(cVal, c); txt(bVal, b);
+      // P(X >= 2) = 1 - P(X=0) - P(X=1)
+      const p0 = Math.pow(1-1/c, b);
+      const p1 = b * (1/c) * Math.pow(1-1/c, b-1);
+      const p = 1 - p0 - p1;
+      txt(out, `c=${c} 類、batch=${b}：P(≥2 同類) = ${p.toExponential(2)} ${p<0.01?'✓ 安全':p<0.1?'⚠ 注意':'✗ 風險高（false negative）'}`);
+    }
+    [cSlider, bSlider].forEach(s=>s.addEventListener('input', draw));
+    draw();
+  };
+
+  // ============================================================
+  // kp 17 — SimCLR InfoNCE loss 計算
+  // ============================================================
+  window.initDemoKp17 = function(){
+    const root = $('#demo-kp17'); if (!root) return;
+    const tauSlider = $('#d17-tau', root);
+    const tauVal = $('#d17-tau-val', root);
+    const out = $('#d17-out', root);
+    function draw(){
+      const tau = parseFloat(tauSlider.value);
+      txt(tauVal, tau.toFixed(2));
+      const pos = 0.95;
+      const negs = [0.5, -0.3, 0.2, -0.1, 0.0, -0.5, 0.3];
+      const num = Math.exp(pos/tau);
+      let denom = num;
+      for (const n of negs) denom += Math.exp(n/tau);
+      const loss = -Math.log(num/denom);
+      txt(out, `τ=${tau.toFixed(2)}：InfoNCE = -log(e^{0.95/τ} / Σⱼ e^{cos/τ}) = ${loss.toFixed(3)} ${tau<0.1?'(sharp)':tau<0.3?'(moderate)':'(soft)'}`);
+    }
+    tauSlider.addEventListener('input', draw);
+    draw();
+  };
+
+  // ============================================================
+  // kp 18 — BYOL EMA update
+  // ============================================================
+  window.initDemoKp18 = function(){
+    const root = $('#demo-kp18'); if (!root) return;
+    const tauSlider = $('#d18-tau', root);
+    const tauVal = $('#d18-tau-val', root);
+    const canvas = $('#d18-canvas', root);
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const out = $('#d18-out', root);
+    function draw(){
+      const tau = parseFloat(tauSlider.value);
+      txt(tauVal, tau.toFixed(2));
+      clearCanvas(canvas); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+      const x0=30, y0=30;
+      // x 軸 = step, y 軸 = 參數
+      ctx.strokeStyle='#94a3b8'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(x0,20); ctx.lineTo(x0,y0+150); ctx.lineTo(W-20,y0+150); ctx.stroke();
+      const steps = 100;
+      // online = step/(1+exp(-t/10)) (sigmoid 趨勢)
+      const theta = (i) => 1.0 * (1 - Math.exp(-i/10));
+      // EMA 更新
+      const tm = new Array(steps+1).fill(0);
+      for (let i=1;i<=steps;i++) {
+        tm[i] = tau * tm[i-1] + (1-tau) * theta(i-1);
+      }
+      ctx.strokeStyle='#3b82f6'; ctx.lineWidth=2;
+      ctx.beginPath();
+      for (let i=0;i<=steps;i++) {
+        const x = x0 + i*(W-x0-20)/steps;
+        const y = y0 + 150 - theta(i)*120;
+        i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      }
+      ctx.stroke();
+      ctx.strokeStyle='#dc2626'; ctx.lineWidth=2;
+      ctx.beginPath();
+      for (let i=0;i<=steps;i++) {
+        const x = x0 + i*(W-x0-20)/steps;
+        const y = y0 + 150 - tm[i]*120;
+        i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      }
+      ctx.stroke();
+      // legend
+      ctx.fillStyle='#3b82f6'; ctx.font='10px sans-serif'; ctx.fillText('Online', 60, 50);
+      ctx.fillStyle='#dc2626'; ctx.fillText('Target (EMA)', 60, 65);
+      // final ratio
+      const finalRatio = tm[steps] / theta(steps);
+      txt(out, `τ=${tau.toFixed(2)}：100 step 後 target = ${(finalRatio*100).toFixed(0)}% of online（τ 大 → target 跟得慢 → 穩定）`);
+    }
+    tauSlider.addEventListener('input', draw);
+    draw();
+  };
+
+  // ============================================================
+  // kp 19 — Barlow Twins cross-correlation
+  // ============================================================
+  window.initDemoKp19 = function(){
+    const root = $('#demo-kp19'); if (!root) return;
+    const noiseSlider = $('#d19-noise', root);
+    const noiseVal = $('#d19-noise-val', root);
+    const out = $('#d19-out', root);
+    function draw(){
+      const noise = parseFloat(noiseSlider.value);
+      txt(noiseVal, noise.toFixed(2));
+      // 簡化：3×3 矩陣
+      // c_jj ≈ 1 - noise^2/2
+      // c_jk (j≠k) ≈ noise^2/2 (decorrelate 失敗)
+      const n2 = noise * noise;
+      const diag = 1 - n2/2;
+      const offdiag = n2/2;
+      // loss = Σ(1-c_jj)^2 + λ Σ c_jk^2
+      const lambda = 0.005;
+      const l1 = 3 * Math.pow(1-diag, 2);
+      const l2 = lambda * 6 * Math.pow(offdiag, 2);
+      txt(out, `噪聲=${noise.toFixed(2)}：對角=${diag.toFixed(3)}、非對角=${offdiag.toFixed(3)}；loss = ${(l1+l2).toFixed(4)}（noise=0 時 loss 最小）`);
+    }
+    noiseSlider.addEventListener('input', draw);
+    draw();
+  };
+
+  // ============================================================
+  // 啟動所有 demo
+  // ============================================================
+  window.initDemos = function(){
+    [3,5,9,10,11,14,15,17,18,19].forEach(kp=>{
+      const fn = window['initDemoKp'+kp];
+      if (fn) try { fn(); } catch(e){ console.error('demo kp'+kp+' err', e); }
+    });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.initDemos);
+  else window.initDemos();
+})();
+
+</script>
+<!-- == Phase D guides block == -->
+<!-- == Phase D kp-1 guide == -->
+<div id="guide-content-kp-1" data-title="教授祕笈：全章地圖 — deep metric learning + SSL" style="display:none">
+<h1>教授祕笈：全章地圖 — deep metric learning + SSL</h1>
+<p>同學，多數深度學習章節都假設有「標籤 y」可以監督訓練，但現實世界的資料 99% 是沒 label 的——網路上海量的圖片、文字、影片，誰來一一標註？本章要回答一個大問題：<strong>沒有 label 時，神經網路能不能自己學到有用的特徵表示？</strong></p>
+<p>我先打個比方。想像你是個偵探，面對一間有上百人的派對房，沒有任何名牌。你要做的不是認出「誰是誰」，而是學會「把人分群」——把長相、打扮、氣質相近的人聚在一起，相異的人拉開距離。<strong>整章做的事，就是教神經網路當這種「自動分群偵探」</strong>。</p>
+<p>整章三層架構：</p>
+<ol>
+<li>
+<p><strong>§2 Reconstruction autoencoder</strong>：最早期嘗試。Encoder 把 $x$ 壓成 code、decoder 從 code 重建 $\hat x$。Under-complete 可做 metric learning（線性時退化成 PCA），over-complete 加噪聲變 denoising AE。</p>
+</li>
+<li>
+<p><strong>§3-4 Siamese / classification 路線</strong>：有 label 時，用共享權重的孿生子網路，透過 contrastive 或 triplet loss 拉近同類、拉遠異類——這是 Fisher 判別分析在深度學習時代的復活。</p>
+</li>
+<li>
+<p><strong>§5 Self-supervised learning (SSL)</strong>：無 label 時，用「資料增強 + 對比學習」自訂 label。SimCLR、BYOL、Barlow Twins 是三大代表方法。</p>
+</li>
+</ol>
+<p>請你動筆算算看：</p>
+<ol>
+<li>一個 $d=1000$ 維的圖片，用 $p=128$ 維的 embedding 表示，壓縮比是多少？
+（<strong>答案：</strong>$1000/128 \approx 7.8$，表示每張圖用原本 1/8 的空間就足夠描述「誰跟誰像」。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「SSL = 無監督學習」——半對。SSL 是無監督的一種「聰明變體」：它自己生 label（用 augmentation），而不是完全放牛吃草。</p>
+</li>
+<li>
+<p>誤解 2：「沒 label 一定比有 label 差」——錯。SimCLR 等 SSL 在 ImageNet 上有時甚至超越 supervised baseline，因為 augmentation 強迫學到更通用的特徵。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>沒 label 不慌，自家增強當標籤；同類拉近、異類拉遠，學會特徵再下場。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 2-4（早期 AE 嘗試）、kp 6-12（Siamese 與 triplet 家族）、kp 13-19（SSL 五大方法）；與 kp 20（現代地位）首尾相接。</p>
+</div>
+<!-- == Phase D kp-1 guide END == -->
+<!-- == Phase D kp-2 guide == -->
+<div id="guide-content-kp-2" data-title="教授祕笈：Reconstruction autoencoder" style="display:none">
+<h1>教授祕笈：Reconstruction autoencoder</h1>
+<p>同學，reconstruction autoencoder 是<strong>最樸素</strong>的非監督表示學習模型：把一張圖 $x\in\mathbb{R}^d$ 餵給 encoder $E$，壓成 code $f(x)\in\mathbb{R}^p$，再餵給 decoder $D$ 試圖重建 $\hat x$。Loss 就是「重建得有多像」。</p>
+<p>我先打個比方。你把一本厚厚的原文書交給朋友，請他用 3 行摘要告訴你內容——你再拿這 3 行去推敲原文應該長什麼樣。如果他真的讀懂，3 行摘要就足以讓他「重建」原文大意。encoder 就是朋友「壓縮成 3 行」的能力，decoder 是他「從 3 行推回原文」的能力。</p>
+<p>數學寫成：</p>
+<p>$$\min_\theta \sum_{i=1}^b d(x_i, \hat x_i) + \lambda\Omega(\theta)$$</p>
+<p>其中 $d(x,\hat x)$ 常用平方 Euclidean（MSE），$\Omega(\theta)$ 是 weight 正則項。</p>
+<p>兩種關鍵變體：</p>
+<ul>
+<li><strong>Under-complete</strong>：$p < d$。Code 比輸入窄，逼網路學「壓縮精華」。線性 activation 時直接退化成 PCA——這是原文特別強調的等價關係。</li>
+<li><strong>Over-complete</strong>：$p > d$。Code 比輸入寬，沒約束時網路會「投機取巧」：把每個輸入特徵原封不動搬到 code 再搬回去，學到 identity function 而非有意義表示。</li>
+</ul>
+<p>請你動筆算算看：</p>
+<ol>
+<li>一張 $d=784$（28x28）的灰階手寫數字圖，用 $p=32$ 維 code 表示。每張圖的壓縮率？（$784/32 = 24.5$ 倍。）
+（<strong>答案：</strong>壓縮率 $784/32 = 24.5$——每張圖用原本 1/24 的空間就試圖還原全部像素。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「AE 的 loss 越小越好」——半對。如果壓縮不夠（$p\ge d$），loss 會被 identity function 輕鬆壓到 0，但這沒學到任何東西。</p>
+</li>
+<li>
+<p>誤解 2：「線性 under-complete AE = PCA」——對。原文證明：多層線性投影 $\mathbf{U}_e^\top\mathbf{x}$ 和 $\mathbf{U}_d\mathbf{z}$ 等價於單一線性投影，主成分分析就是它的線性極限。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>encoder 壓、decoder 重建；窄於輸入才學得到，寬於輸入只會抄。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 3（over-complete 的補救：denoising）、kp 4（under-complete 做 metric learning）、kp 5（換條路用分類 loss 學 embedding）。</p>
+</div>
+<!-- == Phase D kp-2 guide END == -->
+<!-- == Phase D kp-3 guide == -->
+<div id="guide-content-kp-3" data-title="教授祕笈：Denoising autoencoder" style="display:none">
+<h1>教授祕笈：Denoising autoencoder</h1>
+<p>同學，over-complete autoencoder 最大的問題：<strong>沒約束時網路只會抄寫輸入</strong>，把每個像素原封不動搬運到 code 層再搬回來。這完全學不到表示，等於白訓練。</p>
+<p>我先打個比方。標準 over-complete AE 像「背課文」——原文給你、要你逐字默寫，聰明的你當然直接照抄。但老師如果把課文<strong>故意蓋掉幾個字、加點雜訊</strong>，你還能默寫嗎？這時你必須「理解課文邏輯」才能補回缺字——這就是 denoising AE 的精神。</p>
+<p>數學寫成：</p>
+<p>$$\hat x = D(E(x + \varepsilon))$$</p>
+<p>注意：loss 是「$\hat x$ vs <strong>乾淨</strong> $x$」，不是「$\hat x$ vs noisy $x$」——網路必須學會「濾掉噪聲、輸出原始」。</p>
+<p>噪聲類型很多元：</p>
+<ul>
+<li><strong>Gaussian noise</strong>：每個像素加 $N(0, \sigma^2)$ 的小擾動。</li>
+<li><strong>Masking noise</strong>：隨機把若干比例的像素歸零（類似 dropout）。</li>
+<li><strong>Salt-and-pepper</strong>：隨機把像素設成 0 或 255。</li>
+</ul>
+<p>請你動筆算算看：</p>
+<ol>
+<li>假設 $x = [0.5, 0.3, 0.8]$，加入 Gaussian noise $\varepsilon = [0.1, -0.2, 0.05]$，餵給 encoder。網路的目標輸出 $\hat x$ 應該接近誰？
+（<strong>答案：</strong>$\hat x \approx x = [0.5, 0.3, 0.8]$，不是 noisy $x = [0.6, 0.1, 0.85]$。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「加噪聲只是 regularization」——半對。Dropout 算 regularization，但 denoising AE 的噪聲會改變任務本質（從「重建輸入」變「去噪重建」），學到的表示更 robust。</p>
+</li>
+<li>
+<p>誤解 2：「DAE 一定要 Gaussian noise」——錯。Masking noise（隨機遮像素）效果常更好，因為它強迫學「context inference」——從周邊推測被遮處。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>加噪、學去噪；想抄抄不了，只好學語意。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 2（為何 over-complete 會退化）、kp 14（SSL 也用 augmentation 製造「正樣本」，思想一致）；與 kp 4（under-complete AE 的 metric 用途）對照看。</p>
+</div>
+<!-- == Phase D kp-3 guide END == -->
+<!-- == Phase D kp-4 guide == -->
+<div id="guide-content-kp-4" data-title="教授祕笈：Metric learning by reconstruction AE" style="display:none">
+<h1>教授祕笈：Metric learning by reconstruction AE</h1>
+<p>同學，under-complete autoencoder（$p < d$）的 code 層<strong>天生就是 metric embedding space</strong>——因為網路被迫把 $d$ 維輸入壓進 $p$ 維瓶頸，才能重建得好。這種「逼出來的壓縮」就是 metric。</p>
+<p>我先打個比方。公司新進 50 位實習生，你只准用 5 個標籤（coding、溝通、創意、紀律、體力）來描述每個人。每個人都被迫在這 5 維上「壓縮呈現」自己——<strong>同類實習生</strong>（例如同為工程師）會在這 5 維上特徵相近，<strong>不同類</strong>（工程師 vs 業務）會被拉開。Code 層就是這 5 個標籤。</p>
+<p>數學目標：</p>
+<p>$$\min_\theta \sum_{i=1}^b d(x_i, \hat x_i) + \lambda\Omega(\theta)$$</p>
+<p>訓練完，code $f(x) = E(x)$ 直接當 metric embedding 來用——兩筆資料的距離就是 $\|f(x_i) - f(x_j)\|^2$。</p>
+<p>原文另一個重要洞察：<strong>NN 可視為「降維 + kernel methods」的串接</strong>。</p>
+<ul>
+<li>若某層 $d_1 \ge d_2$：這層做降維（feature extraction）。</li>
+<li>若某層 $d_1 < d_2$：這層做 kernel method（map 到高維 RKHS）。</li>
+<li>Nonlinear activation 提供非線性變化。</li>
+</ul>
+<p>請你動筆算算看：</p>
+<ol>
+<li>一個 3 層 encoder，shape = [784, 256, 64, 10]（$d_1\to d_2$ 維度分別 784→256, 256→64, 64→10）。哪些層做降維？哪些層做 kernel？
+（<strong>答案：</strong>784→256（降維）、256→64（降維）、64→10（降維）——本例全是降維。若中間有 [10, 64] 即升維，那就是 kernel。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「AE 學到的 embedding 一定比 PCA 好」——不一定。線性 AE = PCA，但若資料是高度非線性（例如螺旋形），PCA 完全失效，nonlinear AE 才能學到正確 metric。</p>
+</li>
+<li>
+<p>誤解 2：「AE loss 越低 = embedding 越好」——錯。重建 loss 低只代表「資訊保留多」，不代表「對下游任務（分類/檢索）有用」。下流任務該用哪個 loss 驗證。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>窄瓶頸逼出 metric；降維升維交替跑，NN 就是降維加 kernel。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 2（AE 基礎）、kp 5（換 classification loss 也能擠出 metric）、kp 6（Siamese 是更明確的 metric learning 設計）。</p>
+</div>
+<!-- == Phase D kp-4 guide END == -->
+<!-- == Phase D kp-5 guide == -->
+<div id="guide-content-kp-5" data-title="教授祕笈：Deep metric learning by classification" style="display:none">
+<h1>教授祕笈：Deep metric learning by classification</h1>
+<p>同學，最直覺的 metric learning 做法：<strong>直接用 cross-entropy 訓練分類網路，訓練完把最後一層丟掉，倒數第二層就是 embedding</strong>。</p>
+<p>我先打個比方。公司用 KPI 考核員工——分數高的留任、低的淘汰。雖然 KPI 只有「表現好/壞」兩類，但員工為了過關會自動發展出差異化的能力（業務型、工程型、管理型）。<strong>KPI 訓練完，員工身上那些「被逼出來的能力分布」就是 embedding</strong>——不必再額外設計 metric loss。</p>
+<p>實作流程：</p>
+<ol>
+<li>設計網路：$x \to$ <strong>penultimate layer</strong>（embedding 層，$p$ 維） $\to$ classification layer（$c$ 類）。</li>
+<li>用 cross-entropy 訓練整個網路。</li>
+<li>訓練完成，<strong>丟掉 classification layer</strong>，penultimate 層的輸出 $f(x)$ 就是 metric embedding。</li>
+</ol>
+<p>為何這招有效？Cross-entropy 訓練迫使 penultimate 層學到「對類別有判別力的特徵」——而判別力天生意味著「同類相近、異類相遠」，正是 metric learning 的目標。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>一個 10 類分類網路，penultimate 層 256 維、classification 層 10 維。訓練完用於人臉檢索——給一張臉 $x$，embedding 維度？
+（<strong>答案：</strong>256 維（penultimate 層的輸出）。Classification 層那 10 個 softmax 機率分數不是 embedding。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「classification loss 學不到 fine-grained metric」——半對。同類中若還有細分亞類（例如狗的不同品種），cross-entropy 不會拉近「同品種的兩隻狗」，這時要靠 triplet loss（kp 10）補強。</p>
+</li>
+<li>
+<p>誤解 2：「embedding 維度 $p$ 越大越好」——錯。$p$ 太大 → 維度災難 + 過擬合；太小 → 表達力不足。常見 $p$ 在 64-512 之間視任務調整。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>分類訓練、丟掉最後層；倒數第二層就是 metric embedding。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 4（AE 路線擠 metric）、kp 9-10（contrastive / triplet loss 是更明確的 metric 設計）、kp 6（Siamese 是把這思想做成孿生網路）。</p>
+</div>
+<!-- == Phase D kp-5 guide END == -->
+<!-- == Phase D kp-6 guide == -->
+<div id="guide-content-kp-6" data-title="教授祕笈：Siamese 與 triplet networks" style="display:none">
+<h1>教授祕笈：Siamese 與 triplet networks</h1>
+<p>同學，Siamese network（孿生網路）是 deep metric learning 的招牌模型：<strong>多個子網路共享權重</strong>，每個子網路處理一個輸入點，輸出它在 embedding 空間的座標。</p>
+<p>我先打個比方。想像驗鈔：銀行訓練一批「驗鈔員」，每位員工學會把鈔票「投影」到一個簡化特徵空間（紙張觸感、油墨位置、序列號形狀）。驗鈔時，<strong>同一張鈔票不論正反面、磨損程度、角度</strong>，所有員工給出的特徵應該相近；<strong>假鈔</strong>則應該被拉得很遠。Siamese network 就是讓「所有驗鈔員共用同一套判斷標準」（= 共享權重）。</p>
+<p>結構細節：</p>
+<ul>
+<li><strong>2 個子網路</strong>：處理 pair (anchor, positive/negative)，用 contrastive loss。</li>
+<li><strong>3 個子網路</strong>：又稱 triplet network，處理 (anchor, positive, negative)，用 triplet loss。</li>
+<li>共享權重 = 所有子網路其實是同一個網路，只是被呼叫多次。</li>
+</ul>
+<p>請你動筆算算看：</p>
+<ol>
+<li>一個 Siamese network 用 ResNet-18 當 backbone（~11M 參數），2 個子網路。總參數量？
+（<strong>答案：</strong>~11M（不是 22M）。子網路共享權重，所以總參數量等於 1 個 ResNet-18。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「Siamese = 兩個獨立的網路」——錯。「Siamese」的關鍵就是<strong>共享權重</strong>。如果兩個網路各自訓練，就只是普通雙塔模型，不是 Siamese。</p>
+</li>
+<li>
+<p>誤解 2：「子網路越多越好」——錯。子網路多 → 計算量倍增 + 訓練難度上升。實務上 2 或 3 個最常見。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>孿生共享權，子網路輸出 embedding；同類拉近、異類拉遠，Fisher 思想復活。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 7（pair/triplet 怎麼組）、kp 8（兩種實作方式）、kp 9-10（contrastive / triplet loss 公式）、kp 11-12（triplet 怎麼採樣）。</p>
+</div>
+<!-- == Phase D kp-6 guide END == -->
+<!-- == Phase D kp-7 guide == -->
+<div id="guide-content-kp-7" data-title="教授祕笈：Pairs 與 triplets of data points" style="display:none">
+<h1>教授祕笈：Pairs 與 triplets of data points</h1>
+<p>同學，Siamese network 不像普通分類網路那樣單筆輸入、單筆輸出。<strong>它必須以 pair 或 triplet 形式輸入</strong>：每筆訓練樣本都是「一組相關的資料點」。</p>
+<p>我先打個比方。教小孩認親戚，你不會只拿一張臉告訴他「這是叔叔」——你會拿出<strong>三張臉</strong>：「這是爸爸（anchor）、這是叔叔（positive，跟爸爸同一家族）、這是隔壁鄰居（negative，跟爸爸不同家族）」。小孩看了三張臉的「相對關係」，才學會 family resemblance。Triplet 就是這種「三張一組」的訓練單位。</p>
+<p>資料組織方式：</p>
+<ul>
+<li><strong>Pair</strong>：$(x^a, x^p)$ 為 anchor + positive（同類），或 $(x^a, x^n)$ 為 anchor + negative（異類）。</li>
+<li><strong>Triplet</strong>：$(x^a, x^p, x^n)$ 完整三件組。Loss 同時考慮「同類要近」與「異類要遠」。</li>
+</ul>
+<p>怎麼選 anchor / positive / negative？</p>
+<ul>
+<li><strong>有 label 時</strong>：同類任一點為 positive，異類任一點為 negative。</li>
+<li><strong>無 label 時（SSL）</strong>：用 augmentation 把同一資料點做不同變化，當成「同類 positive」。</li>
+</ul>
+<p>請你動筆算算看：</p>
+<ol>
+<li>一個 dataset 有 1000 筆、10 類，每類 100 筆。若以每筆為 anchor、所有同類為 positive、所有異類為 negative，總共能組多少 triplet？
+（<strong>答案：</strong>每位 anchor 可配 99 個 positive × 900 個 negative = 89,100 個 triplet。1000 個 anchor 共 89,100,000 個——這就是為什麼需要 triplet mining 來取樣。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「anchor 一定要固定選某幾筆」——錯。每筆都可當 anchor，整個訓練過程中「輪流當老大」。</p>
+</li>
+<li>
+<p>誤解 2：「triplet 越多越好」——半對半錯。太多 trivial triplet（已經分得很開的）對訓練毫無幫助，還拖慢速度。kp 11 會講 triplet mining 怎麼挑「有資訊的」triplet。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>三件一組：anchor 為主、positive 同類、negative 異類；label 找不到就用 augmentation。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 6（Siamese 為何需要三件組）、kp 9-10（不同 loss 怎麼用 pair/triplet）、kp 11（怎麼從大量 triplet 中挖出有資訊的）。</p>
+</div>
+<!-- == Phase D kp-7 guide END == -->
+<!-- == Phase D kp-8 guide == -->
+<div id="guide-content-kp-8" data-title="教授祕笈：Siamese network 實作" style="display:none">
+<h1>教授祕笈：Siamese network 實作</h1>
+<p>同學，學完 Siamese 的概念後，實作上有<strong>兩條路</strong>：訓練多個子網路（記憶體吃重）或訓練一個子網路（時間吃重）。兩者在數學上完全等價。</p>
+<p>我先打個比方。餐廳出菜——一種做法是「每位廚師各炒各的菜」，但全部用同一份食譜（= 共享權重）；另一種做法是「只有一位廚師」，客人點三道菜他就分三次炒。兩種做法的菜味道一樣（權重同步），但前者需要更大的廚房（記憶體），後者需要更多時間（呼叫次數）。</p>
+<p>實作方式對照：</p>
+<ul>
+<li><strong>方式一（多子網路）</strong>：在記憶體中建 2 或 3 份子網路（共享參考同一份權重）。每個 batch 一次 forward 算出所有 embedding，loss 後只更新一份權重，再把更新複製到其他子網路。</li>
+<li><strong>方式二（單子網路）</strong>：只用一份子網路，triplet 三筆資料一筆一筆送進去算 embedding，再算 loss。時間多 3 倍，記憶體省 3 倍。</li>
+</ul>
+<p>原文特別推薦<strong>方式二</strong>：因為子網路只有 2 或 3 個，時間成本可接受，但記憶體省下來能跑更大的 batch——而 metric learning 對大 batch 極敏感（kp 11-12 詳述）。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>batch size 256，每個樣本是 224x224x3 的圖。用方式一（triplet）需要多少 GPU 記憶體？用方式二呢？
+（<strong>答案：</strong>方式一要同時存 3 × 256 張圖 = 768 張；方式二只要 256 張。方式二記憶體省 3 倍。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「實作方式一比較快」——表面對，但實際訓練時間差異不大，因為 GPU 主要是被 forward/backward 佔滿，不是被「建子網路」佔滿。</p>
+</li>
+<li>
+<p>誤解 2：「測試時也要跑三個子網路」——錯。測試只給單筆資料，只要跑任一個子網路拿 embedding 就好。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>三份子網省時間、一份子網省記憶；原文推薦一份子網，batch 還能更大。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 6（Siamese 概念）、kp 7（pair/triplet 輸入形式）、kp 11-12（為何大 batch 對 triplet mining 重要）。</p>
+</div>
+<!-- == Phase D kp-8 guide END == -->
+<!-- == Phase D kp-9 guide == -->
+<div id="guide-content-kp-9" data-title="教授祕笈：Contrastive loss（含 generalized）" style="display:none">
+<h1>教授祕笈：Contrastive loss（含 generalized）</h1>
+<p>同學，contrastive loss 是 Facebook 2006 提出的<strong>pair 級 loss</strong>：給一對資料 $(x^1, x^2)$，判斷它們「同類」或「異類」，然後對 embedding 距離做不同的處罰。</p>
+<p>我先打個比方。門口警衛查證件——他看兩個人是否是同一人。判斷方式：兩人特徵差很多 → 不同人（negative pair）；特徵差很少 → 同一人（positive pair）。但若警衛<strong>把不同人認得太近</strong>（距離 &lt; margin $m$），他會被懲罰——因為可能把外人誤認成家人。</p>
+<p>數學寫成（標籤 $y_i = 0$ 表示同類、$y_i = 1$ 表示異類）：</p>
+<p>$$L = \sum_{i=1}^b (1 - y_i) d(f(x^1), f(x^2)) + y_i [m - d(f(x^1), f(x^2))]_+$$</p>
+<p>第一項（同類）：<strong>距離越小 loss 越小</strong>，鼓勵拉近。
+第二項（異類）：<strong>距離要 &gt; margin $m$</strong>，否則 hinge 項為正、產生 loss。</p>
+<p><strong>Generalized contrastive loss</strong> 把硬標籤 $y\in\{0, 1\}$ 換成軟標籤 $\psi\in[0, 1]$，例如 $\psi = (1 - \cos(x^1, x^2))/2$。半像半不像的 pair 也可訓練。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>設 $d(f(x^1), f(x^2)) = 0.3$，$m = 1$。若 $y=0$（同類），loss 是？
+（<strong>答案：</strong>$(1-0) \times 0.3 + 0 \times [\ldots] = 0.3$。距離小 → loss 小 → 鼓勵繼續拉近。）</p>
+</li>
+<li>
+<p>同上距離，但 $y=1$（異類），loss 是？
+（<strong>答案：</strong>$0 \times 0.3 + 1 \times [1 - 0.3]_+ = 0.7$。距離 &lt; margin → hinge 項為正 → 還要拉遠。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「contrastive loss 一定要 hard label」——錯。Generalized 版本用 $\psi\in[0,1]$ 軟標籤，連「半像半不像」的 pair 都能訓練。</p>
+</li>
+<li>
+<p>誤解 2：「margin $m$ 越大越好」——錯。$m$ 太大 → 訓練難收斂；$m$ 太小 → 拉得不夠開。實務上 $m$ 常在 0.5-2.0 間調。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>同類拉近、異類拉遠超過 $m$；hinge 守住邊界線。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 6-7（Siamese + pair 輸入）、kp 10（triplet loss 是另一條路）、kp 17（SSL 的 InfoNCE 是 contrastive 的延伸）。</p>
+</div>
+<!-- == Phase D kp-9 guide END == -->
+<!-- == Phase D kp-10 guide == -->
+<div id="guide-content-kp-10" data-title="教授祕笈：Triplet loss" style="display:none">
+<h1>教授祕笈：Triplet loss</h1>
+<p>同學，triplet loss 是 Google 2015 FaceNet 提出的<strong>三元組 loss</strong>。和 contrastive 的差別：triplet <strong>同時考慮 positive 和 negative</strong>，讓兩者「相對距離」至少有 margin $m$。</p>
+<p>我先打個比方。爸媽帶小孩認親戚：「這是你表哥（同類，positive），這是隔壁鄰居（異類，negative）。」小孩學到的不只是「表哥要近」，而是「<strong>表哥要比鄰居更近，而且要近得夠明顯</strong>」——這個「夠明顯」就是 margin。整個訓練目標是：$d(a, p) + m \le d(a, n)$。</p>
+<p>數學寫成：</p>
+<p>$$L = \sum_{i=1}^b [d(f(x^a), f(x^p)) - d(f(x^a), f(x^n)) + m]_+$$</p>
+<p>hinge 確保「$d(a, p) - d(a, n) + m < 0$」時 loss = 0（已經分得夠開）。否則差距不夠大 → 還有正 loss → 繼續拉。</p>
+<p>最終理想：</p>
+<p>$$d(f(x^a), f(x^p)) + m \le d(f(x^a), f(x^n))$$</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>$d(a, p) = 1, d(a, n) = 3, m = 1$。loss = ?
+（<strong>答案：</strong>$[1 - 3 + 1]_+ = [-1]_+ = 0$。已經拉得夠開，loss = 0，這個 triplet 學不到東西。）</p>
+</li>
+<li>
+<p>$d(a, p) = 2, d(a, n) = 2, m = 1$。loss = ?
+（<strong>答案：</strong>$[2 - 2 + 1]_+ = 1$。差距 = 0，沒達到 margin 1，還要繼續拉遠 negative。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「triplet loss 總是比 contrastive 好」——半對。Triplet 一次考慮兩個關係，資訊量更高，但也更難收斂（要同時顧及兩邊）。</p>
+</li>
+<li>
+<p>誤解 2：「margin $m$ 隨便設就好」——錯。$m$ 太小 → 類別間分不開；$m$ 太大 → training 永遠不收斂。常用 $m=0.2$ 或 $1.0$ 視 embedding 距離尺度調整。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>三元組同時看正負；正比負要近 margin，hinge 守住相對距離。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 7（triplet 怎麼組）、kp 11（triplet mining 決定學得好不好）、kp 9（contrastive 是另一條路）、kp 18（BYOL 等 SSL 跳脫 triplet 框架）。</p>
+</div>
+<!-- == Phase D kp-10 guide END == -->
+<!-- == Phase D kp-11 guide == -->
+<div id="guide-content-kp-11" data-title="教授祕笈：Triplet mining（batch-all / batch-hard / batch-semi-hard）" style="display:none">
+<h1>教授祕笈：Triplet mining（batch-all / batch-hard / batch-semi-hard）</h1>
+<p>同學，triplet loss 看起來美好，但實務上：<strong>大部分 triplet 都是「已經分得很開」的 trivial triplet</strong>，對訓練毫無幫助。Triplet mining 就是設計採樣策略，<strong>挑出最有資訊的 triplet</strong>。</p>
+<p>我先打個比方。準備考試時，老師給你三類題目：太簡單的（已會）、太難的（聽不懂）、<strong>剛好需要動腦的</strong>。只練「太簡單」浪費時間、只練「太難」打擊信心，練「剛好需要動腦」的進步最快。Triplet mining 就是在 mini-batch 裡挑出「最值得練」的 triplet。</p>
+<p>三種主要策略：</p>
+<ul>
+<li><strong>Batch-all</strong>：每個 anchor 配對所有同類 + 所有異類，總共 batch 大小平方級的 triplet 一起算 loss。簡單但慢。</li>
+<li><strong>Batch-hard</strong>：每個 anchor 只配「最難的」positive（同類裡最遠）+「最難的」negative（異類裡最近）。Loss 大、學得快，但要小心 hard negative 是 outlier 時訓練崩潰。</li>
+<li><strong>Batch-semi-hard</strong>：每個 anchor 配「所有同類 + 異類裡比 positive 還遠的最鄰近 negative」。比 batch-hard 穩，是 FaceNet 原文推薦。</li>
+</ul>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>batch size 32、4 類、每類 8 筆。Batch-all 一個 anchor 配幾個 triplet？
+（<strong>答案：</strong>每位 anchor 可配 7 個 positive（同類其他 7 筆）× 24 個 negative（異類 24 筆）= 168 個。32 個 anchor 共 $32 \times 168 = 5376$ 個 triplet。）</p>
+</li>
+<li>
+<p>同上，batch-hard 一個 anchor 配幾個 triplet？
+（<strong>答案：</strong>每位 anchor 只配 1 個（最難 positive + 最難 negative）。32 個 anchor 共 32 個 triplet——比 batch-all 少 168 倍。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「batch-hard 一定比 batch-all 好」——半對。Batch-hard 訓練快，但若 hard negative 恰好是 noise / label 錯誤樣本，網路會被誤導。</p>
+</li>
+<li>
+<p>誤解 2：「triplet 越多 batch 越大越好」——半對。Batch 太小 → 採樣不到 hard triplet；太大 → 計算成本爆炸。實務 batch = 64-256 較常見。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>batch-all 全用、batch-hard 只挑最難、batch-semi-hard 顧穩定；hard 要看是不是 outlier。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 10（triplet loss 公式）、kp 12（除了 batch 內 mining，還有 distribution-based sampling）、kp 17（SimCLR 也需要大 batch 才能採到好 negative）。</p>
+</div>
+<!-- == Phase D kp-11 guide END == -->
+<!-- == Phase D kp-12 guide == -->
+<div id="guide-content-kp-12" data-title="教授祕笈：Triplet sampling" style="display:none">
+<h1>教授祕笈：Triplet sampling</h1>
+<p>同學，triplet mining（kp 11）著重「從 batch 內挑 extreme triplet」，但還有一條路徑——<strong>直接從資料分布抽樣</strong>，不必受限於 batch 內的點。</p>
+<p>我先打個比方。餐廳備料，兩種策略：策略一是「打開冰箱看現有食材，憑直覺配菜」（in-batch mining）；策略二是「先想好菜單，再去市場買對應食材」（distribution-based sampling）。前者便宜但常配出怪菜，後者貴但每道菜都對味。</p>
+<p>原文列出四種 sampling 策略：</p>
+<ul>
+<li><strong>極端距離採樣</strong>：刻意選「最極端」的 positive / negative（與 kp 11 batch-hard 一致）。</li>
+<li><strong>隨機採樣</strong>：從同/異類隨機抽，簡單但可能抽到 trivial triplet。</li>
+<li><strong>Distance-weighted sampling</strong>：按距離機率分布抽樣（接近 1 的機率高），兼顧穩定與資訊量。</li>
+<li><strong>貝氏更新採樣</strong>：依 posterior 機率抽樣，理論最嚴謹但實作複雜。</li>
+</ul>
+<p>請你動筆算算看：</p>
+<ol>
+<li>一個 dataset 100 萬筆、batch 256。若用隨機採樣，預期多少比例的 triplet 是 trivial（已分得夠開）？
+（<strong>答案：</strong>訓練初期可能 &gt; 90%（網路還沒學，所以大部分 pair 都分得很開）；訓練後期可能 &lt; 30%。這就是為什麼需要動態調整採樣策略。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「隨機採樣一定差」——錯。訓練初期隨機採樣其實夠用，因為網路還沒學會任何區別力。</p>
+</li>
+<li>
+<p>誤解 2：「distribution-based 一定比 in-batch 好」——半對。Distribution-based 更靈活，但要額外維護機率模型，實作成本高。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>mining 看 batch 內、sampling 看分布；前者快、後者穩。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 11（batch 內 mining）、kp 7（triplet 基本概念）、kp 10（triplet loss 怎麼用採到的 triplet）。</p>
+</div>
+<!-- == Phase D kp-12 guide END == -->
+<!-- == Phase D kp-13 guide == -->
+<div id="guide-content-kp-13" data-title="教授祕笈：SSL 核心思想" style="display:none">
+<h1>教授祕笈：SSL 核心思想</h1>
+<p>同學，supervised metric learning 效果好，但前提是要有 label。現實世界 99% 的資料沒 label。SSL（self-supervised learning）給出解法：<strong>讓演算法自己生 label，再用 metric learning 訓練</strong>。</p>
+<p>我先打個比方。嬰兒學語言——沒人給他「這是名詞」「這是動詞」的標籤，但媽媽每天對他說話，他自己從語境、韻律、重複中學會語言結構。SSL 就是讓神經網路當「嬰兒」：沒人標資料，它自己從資料結構（augmentation、context、temporal order）裡挖出 label。</p>
+<p>SSL 三個關鍵詞：</p>
+<ul>
+<li><strong>Positive samples</strong>：同來源的不同視角（同一張圖的裁切/旋轉/調色）。</li>
+<li><strong>Negative samples</strong>：不同來源的點（其他圖）。</li>
+<li><strong>Contrastive 目標</strong>：positive 在 embedding 空間拉近，negative 拉遠。</li>
+</ul>
+<p>這個思想其實一世紀前就有了——Fisher 判別分析（1936）的「同類近、異類遠」一模一樣。SSL 是把這思想用 augmentation 自駕 label，在深度學習時代復活。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>一張貓的照片 $x$，做兩個 augmentation $A(x) = x_1$、$A'(x) = x_2$。在 SSL 框架中，$(x_1, x_2)$ 是 positive 還是 negative pair？
+（<strong>答案：</strong>positive pair。它們是同一張貓的不同視角，應該在 embedding 空間相近。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「SSL = 無監督學習」——半對。SSL 是無監督的一個分支，自己生 label；其他無監督方法（如 k-means）不生 label。</p>
+</li>
+<li>
+<p>誤解 2：「SSL 效果一定比 supervised 差」——錯。SimCLR、MAE 等 SSL 在 ImageNet 等基準上有時超越 supervised——因為 augmentation 強迫學到更通用的特徵。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>沒 label 沒關係、自家增強當標籤；同源拉近、異源拉遠。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 14（augmentation 怎麼生 positive）、kp 15（negative 怎麼抽 + 衝突分析）、kp 16-19（SSL 四大方法實作）。</p>
+</div>
+<!-- == Phase D kp-13 guide END == -->
+<!-- == Phase D kp-14 guide == -->
+<div id="guide-content-kp-14" data-title="教授祕笈：Augmentation for creating positive samples" style="display:none">
+<h1>教授祕笈：Augmentation for creating positive samples</h1>
+<p>同學，SSL 最關鍵的設計：<strong>用 augmentation 把同一筆資料變出多個視角，當成「同類 positive」</strong>。沒有 label 也能製造「同類樣本」。</p>
+<p>我先打個比方。指紋辨識——你不會用「左手指紋 vs 右手指紋」當不同人（它們屬於同一個人），但也不會用「同一隻手指的同一份指紋」當唯一樣本（太脆弱）。<strong>你會用「同一隻手指、不同按壓角度/力道/位置的多次採集」</strong>當同一人的多個樣本。Augmentation 就是這種「同一人不同視角」的模擬器。</p>
+<p>常用 augmentation 種類：</p>
+<ul>
+<li><strong>幾何變換</strong>：隨機裁切、水平翻轉、旋轉、縮放、平移。</li>
+<li><strong>色彩變換</strong>：亮度、對比、飽和度、色相調整、灰階化。</li>
+<li><strong>遮蔽變換</strong>：隨機遮一部分像素（cutout、random erasing）。</li>
+<li><strong>複合</strong>：SimCLR 證明「幾何 + 色彩 + 高斯模糊」三類並用效果最好。</li>
+</ul>
+<p>每個 mini-batch 構造方式：</p>
+<ul>
+<li>從 dataset 抽 $b$ 筆原始資料。</li>
+<li>對每筆做兩次 augmentation，得到 $2b$ 個「視角樣本」。</li>
+<li>$(x_i, x_i')$ 為 positive pair（同一原始）、$(x_i, x_j)$（$i \ne j$）為 negative pair。</li>
+</ul>
+<p>請你動筆算算看：</p>
+<ol>
+<li>batch size 128，每筆做 2 次 augmentation，總共幾個視角樣本？positive pair 數？negative pair 數？
+（<strong>答案：</strong>$128 \times 2 = 256$ 個視角樣本；128 個 positive pair（每筆內部 1 對）；negative pair = $128 \times 126 = 16128$ 個（每個 anchor 配 126 個其他樣本）。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「augmentation 越強越好」——錯。Augmentation 太強（例如把貓變成抽象畫）會讓 positive pair 失去語意相關性，網路學不到正確不變性。</p>
+</li>
+<li>
+<p>誤解 2：「augmentation 對每個任務都一樣」——錯。ImageNet 最佳 augmentation 組合用在醫療影像上可能完全失效——醫療影像需要保留病徵，不能隨便翻轉或調色。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>同一張圖換角度看，augmentation 製造 positive；太弱 trivial、太強失語意。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 13（SSL 為何需要 positive）、kp 15（negative 怎麼配對）、kp 17（SimCLR 完整 SSL 框架就用這套 augmentation pipeline）。</p>
+</div>
+<!-- == Phase D kp-14 guide END == -->
+<!-- == Phase D kp-15 guide == -->
+<div id="guide-content-kp-15" data-title="教授祕笈：Negative samples（採樣衝突分析）" style="display:none">
+<h1>教授祕笈：Negative samples（採樣衝突分析）</h1>
+<p>同學，SSL 不只要拉近 positive，還要拉遠 negative。但 negative 採樣有個微妙衝突：<strong>有些「被當 negative」的 pair 實際上是同類</strong>——只是因為沒 label 所以不知道。</p>
+<p>我先打個比方。幼稚園老師要小朋友「找出不同的那個」——給三張貓照和一張狗照，問「哪個不一樣？」多數小朋友答得出。但若老師給的全是貓照，<strong>有些貓和貓是同品種、有些不同品種</strong>，硬要小朋友「找出最不像的」會出問題——他把同品種的貓認成「不同類」，學到錯誤的概念。SSL 在 batch 內把每筆都當 negative 時，也有同樣風險。</p>
+<p>衝突分析：</p>
+<ul>
+<li><strong>風險來源</strong>：資料中同類樣本數量大時，batch 內 random 抽到同類 pair 的機率不為零。</li>
+<li><strong>機率估算</strong>：若 dataset 有 $c$ 個類、batch size $b$，「batch 內抽到 $k$ 個同類」的機率 $\approx \binom{b}{k} (1/c)^k$。</li>
+<li><strong>緩解</strong>：$c$ 遠大於 $b$（如 ImageNet 有 1000 類、batch 256）時，機率 $< 0.001$，可忽略。但 $c$ 小（例如只有 10 類）時，衝突率高達 10%。</li>
+</ul>
+<p>請你動筆算算看：</p>
+<ol>
+<li>$c = 1000$ 類、batch size $b = 256$。batch 內抽到至少 2 個同類的機率？（用 $P \approx \binom{256}{2} (1/1000)^2 = 32640 \times 10^{-6} \approx 0.033$，即 3.3%。）
+（<strong>答案：</strong>約 3.3%，可接受但不能忽略。ImageNet 實務上仍有微小比例的 false negative。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「negative 越多越好」——錯。太多 negative 反而增加 false negative 風險，訓練不穩。</p>
+</li>
+<li>
+<p>誤解 2：「BYOL 等方法不用 negative 就萬無一失」——半對。不用 negative 避開 false negative 問題，但失去「拉遠異類」信號，要靠其他機制（momentum encoder、stop-gradient）補償。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>negative 不是越多越好；類別多 batch 小才安全，類別少要靠其他方法救。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 13（SSL 為何需要 negative）、kp 17（SimCLR 大量用 negative）、kp 18（BYOL 故意不用 negative）。</p>
+</div>
+<!-- == Phase D kp-15 guide END == -->
+<!-- == Phase D kp-16 guide == -->
+<div id="guide-content-kp-16" data-title="教授祕笈：SSL network 架構" style="display:none">
+<h1>教授祕笈：SSL network 架構</h1>
+<p>同學，SSL 的網路架構看似五花八門（SimCLR、BYOL、Barlow Twins…），其實核心就兩條主幹：<strong>encoder 提取特徵 + projection head 把特徵投到對比用的 latent 空間</strong>。</p>
+<p>我先打個比方。圖書館管理員的工作流程：先把每本書「讀過一遍記下重點」（= encoder 抽特徵），再把重點「寫成一張索引卡」（= projection head）。同類書的索引卡長得像（= 拉近），異類書的索引卡長得不像（= 拉遠）。索引卡用完可以丟，最後真正留下的是「讀過」的能力（= encoder 權重）。</p>
+<p>SSL 通用架構：</p>
+<ol>
+<li><strong>Backbone（encoder）</strong>：CNN 或 ViT，把 $x\in\mathbb{R}^d$ 編碼成 $h\in\mathbb{R}^p$（特徵向量）。</li>
+<li><strong>Projection head</strong>：小型 MLP，把 $h$ 再投到 $z\in\mathbb{R}^{p'}$（latent 表徵）。</li>
+<li><strong>Loss 計算</strong>：在 $z$ 空間算 contrastive / InfoNCE / 其它 SSL loss。</li>
+<li><strong>推理階段</strong>：丟掉 projection head，只用 backbone 輸出 $h$。</li>
+</ol>
+<p>為何 projection head 要獨立？實驗發現：在 $z$ 空間算 loss，$h$ 反而學到更好的表示——projection head 像「過濾器」，吸收掉 loss 函式特有的偏見。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>ResNet-50 backbone ~25M 參數，projection head 是 2 層 MLP（2048→2048→128）。總參數量？
+（<strong>答案：</strong>~25M（backbone）+ ~4.2M（projection）≈ 29M。推理時只保留 25M 的 backbone。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「projection head 越深越好」——錯。實驗顯示 2-3 層 MLP 就夠，再深效益遞減。</p>
+</li>
+<li>
+<p>誤解 2：「SSL 訓練完 projection head 一定要保留」——錯。實務上丟掉 projection head，用 backbone 當特徵 extractor 效果更好。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>backbone 抽特徵、projection 投 latent；訓練用 $z$、推理用 $h$。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 13-15（SSL 思想、augmentation、negative 採樣）、kp 17-19（三大 SSL 具體方法的差異都在 projection 之後）。</p>
+</div>
+<!-- == Phase D kp-16 guide END == -->
+<!-- == Phase D kp-17 guide == -->
+<div id="guide-content-kp-17" data-title="教授祕笈：SimCLR：InfoNCE loss" style="display:none">
+<h1>教授祕笈：SimCLR：InfoNCE loss</h1>
+<p>同學，SimCLR（2020）是 SSL 的代表方法，核心是 <strong>InfoNCE loss</strong>——在 projection 空間裡，讓 positive pair 的 cosine 相似度趨近 1，所有 negative pair 的相似度趨近 0。</p>
+<p>我先打個比方。一個班的學生寫作文，老師把每位學生的兩份草稿（positive pair）打分數「極高相似」（pull），但要把這位學生和其他所有同學的草稿（negative pair）打分數「極低相似」（push）。這個「打分數」的動作就是 cosine 相似度，而 InfoNCE 就是把所有分數打包成一個 softmax 式的 loss。</p>
+<p>數學寫成（batch 內 $N$ 筆，每筆 2 個 augmentation，共 $2N$ 個樣本）：</p>
+<p>$$L_i = -\log \frac{\exp(\text{sim}(z_i, z_i') / \tau)}{\sum_{j=1}^{2N} \mathbb{1}_{j \ne i} \exp(\text{sim}(z_i, z_j) / \tau)}$$</p>
+<p>其中 $\text{sim}$ 是 cosine 相似度，$\tau$ 是 temperature 參數（越小越 sharp）。分子 = 與 positive 的相似度，分母 = 與所有樣本（含自己）的相似度總和。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>1 個 anchor、1 個 positive（sim=0.9）、2 個 negative（sim=0.1, 0.2）、$\tau=0.1$。loss = ?
+（<strong>答案：</strong>$\exp(0.9/0.1)=\exp(9)\approx 8103$；$\exp(0.1/0.1)=2.71$；$\exp(0.2/0.1)=7.39$。分子=8103，分母=$8103+2.71+7.39\approx 8113$。loss $= -\log(8103/8113) \approx 0.0012$。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「batch size 越大效果越好」——半對半錯。SimCLR 確實需要大 batch（$b \ge 256$）才能採到足夠 negative，但超過 4096 後效益遞減。</p>
+</li>
+<li>
+<p>誤解 2：「$\tau$ 隨便設就行」——錯。$\tau$ 是關鍵 hyperparameter，$\tau=0.1$ 或 $0.5$ 效果差很多；太尖銳 ($\tau$ 小) 訓練不穩、太平滑 ($\tau$ 大) 學不到細節。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>InfoNCE 看 softmax：positive 拉高分、negative 壓低分；大 batch + 適當 $\tau$ 是關鍵。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 13-15（SSL 思想、augmentation、negative 採樣）、kp 16（projection head 設計）、kp 18（BYOL 跳脫 negative 框架）、kp 19（Barlow Twins 換掉 InfoNCE）。</p>
+</div>
+<!-- == Phase D kp-17 guide END == -->
+<!-- == Phase D kp-18 guide == -->
+<div id="guide-content-kp-18" data-title="教授祕笈：BYOL：momentum encoder + stop-gradient" style="display:none">
+<h1>教授祕笈：BYOL：momentum encoder + stop-gradient</h1>
+<p>同學，BYOL（Bootstrap Your Own Latent, 2020）是 SSL 的一個<strong>反直覺</strong>突破：<strong>不用任何 negative samples</strong>，單靠「學生模仿老師」就能學到好的表示。</p>
+<p>我先打個比方。武術傳承：師傅（online network）每天示範動作，徒弟（target network）模仿。但徒弟不能直接抄——師傅每天只給一點點不同示範，徒弟得「自己想辦法跟上」。<strong>師傅的權重是徒弟的 EMA（指數移動平均）更新</strong>，所以師傅慢慢演化、徒弟追著學。整個過程沒有「標準答案」（= negative），純粹是「學生模仿老師」。</p>
+<p>關鍵設計：</p>
+<ul>
+<li><strong>Online network</strong>：encoder + projector + predictor。Predictor 是一個小型 MLP，給 online 那邊「多一點彈性」。</li>
+<li><strong>Target network</strong>：encoder + projector（無 predictor）。它的權重是 online 的 EMA：$\theta_{\text{target}} = m \cdot \theta_{\text{target}} + (1-m) \cdot \theta_{\text{online}}$，$m \approx 0.99$。</li>
+<li><strong>Stop-gradient</strong>：target 那邊不接 backprop，只接 forward 給 online 算 loss。</li>
+<li><strong>Loss</strong>：MSE 距離 $\|z_{\text{online}} - z_{\text{target}}\|^2$（先 normalize）。</li>
+</ul>
+<p>為何不用 negative 也能學？關鍵是 target 不更新、predictor 只在 online 端，加上 momentum 更新讓 target 慢慢演化——這三者共同防止「trivial collapse」（所有樣本都投影到同一點）。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>$m=0.99$。Online 更新一次後，target 權重變化比例？
+（<strong>答案：</strong>$\theta_{\text{target, new}} = 0.99 \theta_{\text{target}} + 0.01 \theta_{\text{online}}$——target 只吸收 online 1% 的變化，所以演化非常緩慢。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「不用 negative 一定會 collapse」——半對。如果沒有 stop-gradient + momentum，會 collapse。但這兩者加上 predictor 就能避開。</p>
+</li>
+<li>
+<p>誤解 2：「predictor 隨便放就好」——錯。Predictor 是關鍵：若 online 和 target 結構完全對稱，會 collapse；predictor 打破對稱性才讓 online 有「學的目標」。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>學生模仿老師、老師慢慢變；不用 negative 也能學，關鍵在 stop-gradient 加 momentum。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 15（為何 BYOL 想避開 negative 的 false negative 風險）、kp 17（SimCLR 對照：用大量 negative）、kp 16（SSL 通用架構）。</p>
+</div>
+<!-- == Phase D kp-18 guide END == -->
+<!-- == Phase D kp-19 guide == -->
+<div id="guide-content-kp-19" data-title="教授祕笈：Barlow Twins：cross-correlation matrix" style="display:none">
+<h1>教授祕笈：Barlow Twins：cross-correlation matrix</h1>
+<p>同學，Barlow Twins（2021）換了個完全不同的角度：不靠 cosine 相似度、不靠 InfoNCE，<strong>直接用 cross-correlation matrix 逼近 identity matrix</strong>。</p>
+<p>我先打個比方。兩台錄音機在不同位置錄同一場演講——A 收音偏左、B 收音偏右。雖然原始波形不同，但兩台錄音機的<strong>頻譜分布應該高度一致</strong>（都是同一場演講）。若用「cross-correlation matrix」對齊兩台錄音的每個頻段，理想結果是「對角線 = 1、其他 = 0」——也就是 identity matrix。Barlow Twins 就是把這思想搬到 embedding 空間：對齊同一筆資料的兩個 augmentation 視角。</p>
+<p>Loss 拆兩部分：</p>
+<ul>
+<li><strong>Invariance term（對角線）</strong>：希望 $z_{i,A}$ 與 $z_{i,B}$ 在每個維度都高度相關（cross-correlation 對角線 → 1）。</li>
+<li><strong>Redundancy reduction term（off-diagonal）</strong>：希望不同維度之間<strong>不相關</strong>（cross-correlation 非對角線 → 0）。這避免「維度冗餘」——多個維度都編碼同一資訊。</li>
+</ul>
+<p>請你動筆算算看：</p>
+<ol>
+<li>
+<p>$z_{i,A} = [1, 0]$、$z_{i,B} = [1, 0]$（已 normalize）。Cross-correlation matrix 的對角線 = ?
+（<strong>答案：</strong>$\begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix}$——理想 identity。Loss = 0。）</p>
+</li>
+<li>
+<p>$z_{i,A} = [1, 0]$、$z_{i,B} = [0, 1]$。對角線 = ?
+（<strong>答案：</strong>$\begin{pmatrix} 0 & 0 \\ 0 & 0 \end{pmatrix}$。對角線全 0 → invariance term loss 高、必須再訓練。）</p>
+</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「Barlow Twins 也是 contrastive 的一種」——半對。它確實有 invariance term（拉近 positive），但冗餘削減是 contrastive 沒有的設計。</p>
+</li>
+<li>
+<p>誤解 2：「off-diagonal 一定要壓到 0」——錯。實務上壓到接近 0（例如 &lt; 0.1）就好；硬壓 0 反而讓表示不夠 expressive。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>對角線拉近（invariance）、非對角線壓遠（redundancy）；cross-correlation 逼近 identity。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 17（SimCLR 用 InfoNCE 對照）、kp 18（BYOL 不用 negative 對照）、kp 13-16（SSL 通用框架）。</p>
+</div>
+<!-- == Phase D kp-19 guide END == -->
+<!-- == Phase D kp-20 guide == -->
+<div id="guide-content-kp-20" data-title="教授祕笈：結論：metric learning 與 SSL 的現代地位" style="display:none">
+<h1>教授祕笈：結論：metric learning 與 SSL 的現代地位</h1>
+<p>同學，2025 年回頭看 metric learning 與 SSL，它們<strong>已經從學術新星變成主流 pretraining 範式</strong>。理解這一章，等於掌握現代 self-supervised pretraining 的理論基礎。</p>
+<p>我先打個比方。早年學語言，要先學文法再學會話——supervised learning 走這條路。後來發現，小孩是「先大量聽別人說、再自己歸納語法」——SSL 就是這種「先觀察、後歸納」的路。現代 pretraining（GPT、CLIP、MAE）幾乎都走後者：先在無標籤海量資料上 pretrain、再用少量標籤 fine-tune。</p>
+<p>metric learning 與 SSL 的現代應用：</p>
+<ul>
+<li><strong>MAE（Masked Autoencoder）</strong>：把圖片 75% 像素遮住，讓網路學重建——SSL 思想延伸到 vision Transformer。</li>
+<li><strong>CLIP（Contrastive Language-Image Pretraining）</strong>：用 contrastive loss 對齊圖片和文字 embedding——把 SSL 思想從「同類 augmentation 拉近」延伸到「跨模態對齊」。</li>
+<li><strong>BERT / GPT</strong>：用 masked language modeling 或 next token prediction 自監督 pretrain——SSL 在 NLP 的化身。</li>
+</ul>
+<p>metric learning 的 loss（contrastive、triplet、InfoNCE）則是 robust 表徵學習的<strong>基礎工具</strong>，應用在人臉辨識（FaceNet）、person re-ID、image retrieval、推薦系統等。</p>
+<p>請你動筆算算看：</p>
+<ol>
+<li>CLIP 用 4 億 image-text pair 訓練。若 batch size 32,768，每個 anchor 配多少 negative？
+（<strong>答案：</strong>32,767 個。CLIP 的成功很大程度來自「超大 batch → 大量 negative → 對比訊號強」。）</li>
+</ol>
+<p><strong>常見誤解</strong>：</p>
+<ul>
+<li>
+<p>誤解 1：「SSL 已經成熟到不需要新方法了」——錯。VICReg、TiCo、MSN 等新方法持續出現，且 SSL + Transformer 的組合還在快速演化。</p>
+</li>
+<li>
+<p>誤解 2：「supervised 一定會被 SSL 取代」——半對。在資料量極大的場景，SSL 確實勝過 supervised；但在資料量小、任務明確的場景，supervised 仍更有效率。</p>
+</li>
+</ul>
+<p><strong>口訣</strong>：<em>metric 拉近拉遠是骨、SSL 自家標籤是肉；MAE、CLIP、BERT 都是 SSL 思想的延伸。</em></p>
+<p><strong>掛勾</strong>：詳見 kp 1（全章地圖的收束）、kp 13-19（SSL 五大方法的細節）；與 Ch12（VAE）共享「學 latent representation」思想，與 Ch09（Transformer）共享 pretraining 範式。</p>
+</div>
+<!-- == Phase D kp-20 guide END == -->
+<!-- == Phase D guides block END == -->
+</body>
+</html>

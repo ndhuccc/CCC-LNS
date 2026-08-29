@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generative Moment Matching Networks</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="setTimeout(function(){if(window.renderMath)renderMath();},200);"></script>
+<style>
+:root{--accent:#4f46e5;--accent2:#3730a3;--bg:#f5f4ff;--card:#fff;--ink:#1f2430;--muted:#6b7280;--line:#e5e7eb;}
+*{box-sizing:border-box;}
+body{margin:0;font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.75;}
+header{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:30px 20px;text-align:center;}
+header h1{margin:0 0 8px;font-size:1.55rem;}header p{margin:0;opacity:.92;font-size:.92rem;}
+.wrap{max-width:1120px;margin:0 auto;display:flex;gap:24px;padding:22px;}
+nav{width:280px;position:sticky;top:16px;align-self:flex-start;max-height:90vh;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;}
+nav h2{font-size:.8rem;color:var(--muted);margin:0 0 10px;text-transform:uppercase;letter-spacing:.5px;}
+nav .toc-item{display:block;padding:6px 10px;border-radius:8px;color:var(--ink);text-decoration:none;font-size:.84rem;}nav .toc-item:hover{background:#eeecff;color:var(--accent);}
+main{flex:1;min-width:0;}
+.progress{position:sticky;top:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:18px;display:flex;align-items:center;gap:12px;z-index:10;}
+.progress .bar{flex:1;height:8px;background:#eee;border-radius:99px;overflow:hidden;}.progress .fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s;}.progress .txt{font-size:.85rem;color:var(--muted);white-space:nowrap;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:18px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);scroll-margin-top:90px;}
+.card-head{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;background:#f4f3ff;border-bottom:1px solid var(--line);}.card-head:hover{background:#eae8ff;}
+.card-head .badge{background:var(--accent);color:#fff;font-size:.75rem;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap;}
+.card-head h3{margin:0;font-size:1.05rem;flex:1;}.card-head .toggle{transition:transform .2s;color:var(--muted);}
+.card.collapsed .toggle{transform:rotate(-90deg);}.card-body{padding:16px 18px;}.card.collapsed .card-body{display:none;}
+.card-body h4{margin:.9em 0 .4em;color:var(--accent2);}.card-body p{margin:.6em 0;}.card-body strong{color:var(--accent2);}.card-body ul,.card-body ol{margin:.6em 0;padding-left:1.5em;}.card-body li{margin:.3em 0;}
+.card-body table{border-collapse:collapse;width:100%;font-size:.9rem;margin:.8em 0;}.card-body th,.card-body td{border:1px solid var(--line);padding:6px 10px;text-align:left;}.card-body th{background:#f4f3ff;}
+.diagram-figure{margin:18px 0;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;text-align:center;}.diagram-figure img{max-width:100%;height:auto;border-radius:8px;}.diagram-figure figcaption{margin-top:8px;font-size:.85rem;color:#6b7280;}
+.orig-fig{margin:18px 0;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;text-align:center;}.orig-fig img{max-width:100%;height:auto;border-radius:8px;}.orig-fig figcaption{margin-top:8px;font-size:.85rem;color:#6b7280;}
+.quiz{margin-top:18px;border:1px dashed var(--line);border-radius:12px;padding:14px;background:#fbfdfd;}.quiz .q{font-weight:600;margin-bottom:10px;}.quiz .opts{display:grid;gap:8px;margin-bottom:10px;}.quiz .opt{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;cursor:pointer;background:#fff;}.quiz .opt:hover{border-color:var(--accent);}.quiz .check{background:var(--accent);color:#fff;border:none;padding:7px 16px;border-radius:8px;cursor:pointer;font-weight:600;}.quiz .check:hover{background:var(--accent2);}.quiz .fb{margin-top:8px;font-size:.9rem;display:none;}.quiz .fb.ok{display:block;color:#059669;}.quiz .fb.wrong{display:block;color:#dc2626;}
+footer{text-align:center;color:var(--muted);font-size:.8rem;padding:24px;}
+@media(max-width:760px){.wrap{flex-direction:column;}nav{width:auto;position:static;max-height:none;}}
+
+.demo{margin:16px 0;}
+.demo-readout{white-space:pre-wrap;}
+
+/* phase-d-guides */
+.guide-btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;padding:10px 18px;border-radius:10px;cursor:pointer;font-weight:700;font-size:.95rem;margin:0 0 14px;box-shadow:0 4px 14px rgba(124,58,237,.35);}
+.guide-btn:hover{transform:scale(1.03);background:linear-gradient(135deg,#6d28d9,#4c1d95);}
+.guide-btn .guide-flag{background:#fde68a;color:#78350f;font-size:.72rem;padding:2px 7px;border-radius:99px;font-weight:800;}
+#guide-modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:200;padding:20px;}
+#guide-modal.open{display:flex;}
+#guide-modal .modal-box{background:#fff;max-width:760px;width:100%;max-height:86vh;overflow:auto;border-radius:14px;padding:22px 26px;box-shadow:0 20px 50px rgba(0,0,0,.25);position:relative;}
+#guide-modal .modal-box h1{font-size:1.3rem;color:#4c1d95;margin:0 0 12px;padding-right:30px;}
+#guide-modal .close{position:absolute;top:14px;right:18px;background:none;border:none;font-size:26px;cursor:pointer;color:#6b7280;line-height:1;}
+#guide-modal .modal-body{line-height:1.8;}
+#guide-modal .modal-body h2{font-size:1.05rem;color:#1e3a8a;border-bottom:1px solid #e5e7eb;padding-bottom:4px;margin:18px 0 8px;}
+#guide-modal .modal-body ul,#guide-modal .modal-body ol{margin:.6em 0;padding-left:1.4em;}
+#guide-modal .modal-body table{border-collapse:collapse;width:100%;font-size:.9rem;margin:.6em 0;}
+#guide-modal .modal-body th,#guide-modal .modal-body td{border:1px solid #e5e7eb;padding:4px 8px;}
+/* /phase-d-guides */
+
+</style>
+</head>
+<body>
+<header><h1>Generative Moment Matching Networks</h1><p>Chapter 13 · IDL 115 · 互動式自學講義</p></header>
+<div class="wrap"><nav><h2>目錄</h2><a class="toc-item" href="#kp1">1 導論：怎麼量測「兩包資料像不像」</a><a class="toc-item" href="#kp2">2.1 MMD 的直覺：只比平均值不夠，要比到「所有動差」</a><a class="toc-item" href="#kp3">2.2.1 MMD 的正式定義：對函數類別取上界</a><a class="toc-item" href="#kp4">2.2.2 把 MMD 具體化：RKHS 均值嵌入與核技巧</a><a class="toc-item" href="#kp5">2.2.3 MMD 什麼時候才算「真正的距離」：universal kernel</a><a class="toc-item" href="#kp6">3 GMMN：用 MMD 當損失函數的生成模型</a><a class="toc-item" href="#kp7">4 條件式 GMMN：讓生成器聽指令生成</a><a class="toc-item" href="#kp8">5 MMD GAN：把「選核函數」也變成可學習、可對抗的</a><a class="toc-item" href="#kp9">6 結論：GMMN 過時了，但 MMD 這個工具留下來了</a></nav><main><div class="progress"><div class="bar"><div class="fill" id="pf"></div></div><div class="txt" id="ptxt"></div></div><section id="kp1" class="card" data-kp="1"><div class="card-head"><span class="badge">1</span><h3>導論：怎麼量測「兩包資料像不像」</h3><span class="toggle">▼</span></div><div class="card-body"><button class="guide-btn" type="button" data-kp="1" data-guide="kp-1" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：導論——兩包咖啡豆，怎麼確定是不是同一個產地</button><h4>這一章要解決的問題：怎麼比較兩個分布</h4>
+<p>想像你手上有兩包資料——一包是真實資料，一包是模型生成的資料。你怎麼知道這兩包資料「夠像」？這正是本章要解決的核心問題：<strong>量測兩個機率分布之間的差異</strong>。</p>
+<p>這個問題應用很廣：可以拿來當生成模型的訓練目標（讓生成分布逼近真實分布）、可以拿來做領域轉換（domain adaptation）、也可以拿來做統計檢定（兩包資料是不是來自同一個母體）。量測分布差異的方法有很多種：KL 散度（Kullback-Leibler divergence）、JS 散度（Jensen-Shannon divergence）、HSIC（Hilbert-Schmidt Independence Criterion）、Q-Q plot、Sinkhorn divergence……本章聚焦在其中一種特別重要的方法：<strong>最大平均差異（Maximum Mean Discrepancy, MMD）</strong>，也叫<strong>核二樣本檢定（kernel two-sample test）</strong>。</p>
+<h4>MMD 的核心想法（先劇透，kp2 會展開講）</h4>
+<p>MMD 的邏輯很直覺：<strong>如果兩個分布完全相同，它們的所有動差（moment）——平均值、變異數、偏度……都必須相同</strong>。反過來說，只要有任何一個動差不一樣，兩個分布就不可能完全相同。但動差有無限多階，全部算一遍不可行。MMD 聰明的地方在於：<strong>把資料映射到一個特殊空間（RKHS）之後，只需要比較「第一動差」（也就是平均值），就等價於比較了輸入空間裡的所有動差</strong>。這讓「比較兩個分布」這件事從「算無限多個數字」變成「算一個平均值的差異」——這是本章最重要的一次概念跳躍，kp2–kp4 會逐步拆解。</p>
+<h4>生成模型如何用上 MMD：GMMN</h4>
+<p><strong>生成動差匹配網路（Generative Moment Matching Network, GMMN）</strong> 是 2015 年提出的生成模型，它的想法是：讓一個神經網路生成器輸出的資料分布，跟訓練資料的分布之間的 MMD 越小越好——直接把 MMD 當成訓練用的損失函數。</p>
+<p>跟同一時期崛起的 <strong>GAN（生成對抗網路）</strong> 相比，GMMN 的關鍵差異在於：<strong>GAN 用一個判別器（discriminator）去區分真假資料，訓練上是一個對抗式的極大極小賽局；GMMN 完全不需要判別器，直接用 MMD 這個核方法算出的距離當損失函數，是非對抗式的訓練</strong>。這個差異會在 kp6 具體展開。</p>
+<h4>這條技術線後來怎麼了</h4>
+<p>GMMN 概念優雅，但生成品質與可擴展性都比不上 GAN，後來又被 VAE（變分自編碼器）、自回歸 Transformer、擴散模型（diffusion model）等方法超越。今天 GMMN 本身已經很少被直接使用，<strong>但 MMD 這個度量方法本身活得很好</strong>——它仍然廣泛用在領域轉換與統計檢定等任務上。這是本章反覆會呼應的主線：<strong>GMMN 這個模型過時了，但 MMD 這個工具沒有過時</strong>。</p>
+<h4>本章路線圖</h4>
+<p>跟著這張地圖走：</p>
+<ol>
+<li><strong>§2 MMD 的直覺與公式</strong>（kp2–kp5）：從「為什麼只看平均值不夠」出發，一路推到 RKHS 裡的核技巧公式，以及 MMD 何時能當作真正的距離度量。</li>
+<li><strong>§3 GMMN</strong>（kp6）：MMD 當損失函數，訓練一個生成器。</li>
+<li><strong>§4 條件式 GMMN</strong>（kp7）：讓生成器可以指定「生成什麼類型」的資料。</li>
+<li><strong>§5 找最好的核函數</strong>（kp8）：MMD GAN——把「選核函數」這件事也變成可學習、可對抗訓練的。</li>
+<li><strong>§6 結論</strong>（kp9）：GMMN 的歷史定位。</li>
+</ol>
+<p>口語小結：<strong>兩個分布像不像，理論上要比對所有動差；MMD 用「映射到 RKHS 後只比平均值」這招把不可行的問題變可行；GMMN 把 MMD 直接當生成模型的訓練損失，是 GAN 之外一條非對抗式的生成模型路線，雖然後來被更強的方法取代，但它背後的 MMD 工具至今仍在使用。</strong></p><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="m1a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#4f46e5"/>
+    </marker>
+    <marker id="m1g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="720" height="380" fill="#ffffff"/>
+  <text x="360" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#3730a3">比較兩個分布：從「無窮多項」的死路，到「一個均值」的活路</text>
+
+  <!-- LEFT: infinite moments, stuck -->
+  <rect x="14" y="46" width="290" height="190" rx="10" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.4"/>
+  <text x="159" y="66" text-anchor="middle" font-size="12" font-weight="bold" fill="#b91c1c">輸入空間：要比到無窮多項</text>
+  <circle cx="45" cy="110" r="12" fill="#e53e3e"/><text x="45" y="114" text-anchor="middle" font-size="9" fill="#fff">1</text>
+  <circle cx="85" cy="110" r="12" fill="#e53e3e"/><text x="85" y="114" text-anchor="middle" font-size="9" fill="#fff">2</text>
+  <circle cx="125" cy="110" r="12" fill="#e53e3e"/><text x="125" y="114" text-anchor="middle" font-size="9" fill="#fff">3</text>
+  <circle cx="165" cy="110" r="12" fill="#e53e3e"/><text x="165" y="114" text-anchor="middle" font-size="9" fill="#fff">4</text>
+  <text x="195" y="115" font-size="16" fill="#b91c1c">…</text>
+  <circle cx="240" cy="110" r="14" fill="#7f1d1d"/><text x="240" y="115" text-anchor="middle" font-size="11" fill="#fff">∞</text>
+  <text x="159" y="145" text-anchor="middle" font-size="9" fill="#7f1d1d">E[x], E[x²], E[x³], … 每一階都要比對</text>
+  <!-- chains/lock icon -->
+  <g transform="translate(120,168)">
+    <rect x="0" y="0" width="26" height="20" rx="4" fill="none" stroke="#b91c1c" stroke-width="3"/>
+    <path d="M6 0 V-10 A7 7 0 0 1 20 -10 V0" fill="none" stroke="#b91c1c" stroke-width="3"/>
+  </g>
+  <text x="159" y="215" text-anchor="middle" font-size="11" font-weight="bold" fill="#b91c1c">不可行：算不完</text>
+
+  <!-- middle arrow -->
+  <path d="M308 130 L400 130" stroke="#4f46e5" stroke-width="4" marker-end="url(#m1a)"/>
+  <text x="354" y="118" text-anchor="middle" font-size="10" fill="#3730a3">映射到 RKHS</text>
+
+  <!-- RIGHT: one mean in RKHS -->
+  <rect x="410" y="46" width="296" height="190" rx="10" fill="#eeecff" stroke="#a5a1f5" stroke-width="1.4"/>
+  <text x="558" y="66" text-anchor="middle" font-size="12" font-weight="bold" fill="#3730a3">RKHS：只需比一個均值</text>
+  <!-- scatter x cloud -->
+  <circle cx="460" cy="110" r="4" fill="#60a5fa"/><circle cx="472" cy="122" r="4" fill="#60a5fa"/>
+  <circle cx="450" cy="128" r="4" fill="#60a5fa"/><circle cx="466" cy="140" r="4" fill="#60a5fa"/>
+  <circle cx="480" cy="112" r="4" fill="#60a5fa"/>
+  <circle cx="465" cy="122" r="9" fill="none" stroke="#1e3a8a" stroke-width="2" stroke-dasharray="3,2"/>
+  <circle cx="465" cy="122" r="5" fill="#1e3a8a"/>
+  <text x="465" y="160" text-anchor="middle" font-size="9" fill="#1e3a8a">μφ(x)</text>
+  <!-- scatter y cloud -->
+  <circle cx="620" cy="150" r="4" fill="#fb923c"/><circle cx="632" cy="162" r="4" fill="#fb923c"/>
+  <circle cx="610" cy="168" r="4" fill="#fb923c"/><circle cx="626" cy="178" r="4" fill="#fb923c"/>
+  <circle cx="640" cy="152" r="4" fill="#fb923c"/>
+  <circle cx="625" cy="163" r="9" fill="none" stroke="#9a3412" stroke-width="2" stroke-dasharray="3,2"/>
+  <circle cx="625" cy="163" r="5" fill="#9a3412"/>
+  <text x="625" y="200" text-anchor="middle" font-size="9" fill="#9a3412">μφ(y)</text>
+  <path d="M465 122 L625 163" stroke="#16a34a" stroke-width="2.4" stroke-dasharray="5,3"/>
+  <text x="545" y="132" text-anchor="middle" font-size="9" fill="#15803d" font-weight="bold">MMD² = 這條距離²</text>
+  <text x="558" y="222" text-anchor="middle" font-size="11" font-weight="bold" fill="#15803d">可行：一個均值就夠</text>
+
+  <!-- bottom timeline: GMMN fades, MMD persists -->
+  <rect x="14" y="252" width="692" height="112" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+  <text x="360" y="272" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155">2015 之後：模型 vs. 工具的不同命運</text>
+  <circle cx="70" cy="300" r="6" fill="#4f46e5"/><text x="70" y="296" text-anchor="middle" font-size="9" fill="#3730a3">GMMN 提出</text>
+  <path d="M76 300 C 200 300, 260 320, 340 336" fill="none" stroke="#94a3b8" stroke-width="2.6" stroke-dasharray="6,4"/>
+  <text x="360" y="352" text-anchor="middle" font-size="10" fill="#94a3b8">GMMN：漸漸淡出，今日少用</text>
+  <path d="M76 300 C 220 292, 400 288, 660 288" fill="none" stroke="#16a34a" stroke-width="3" marker-end="url(#m1g)"/>
+  <text x="480" y="278" text-anchor="middle" font-size="10" font-weight="bold" fill="#15803d">MMD 工具：持續延伸，至今活躍</text>
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-1" data-status="pending"><details><summary>🤖 AI 生圖提示詞</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 左中右三段式因果鏈。左：一串遞增到 ∞ 的圓圈（標 E[x],E[x²],E[x³],…,∞）加一個鎖頭圖示，代表「要比到無窮多動差」。中：一個粗箭頭標「映射到 RKHS」。右：RKHS 空間裡兩堆散點（藍/橘）各自被虛線圈出重心（均值嵌入 μφ(x)、μφ(y)），中間一條虛線標「MMD²＝這條距離的平方」。底部一條時間軸：GMMN 提出後分岔成兩條路徑——灰色虛線路徑淡出標「GMMN 漸漸少用」，綠色實線路徑持續延伸標「MMD 工具至今活躍」。
+
+WHY（因果或反直覺）: 理論上要比較兩個分布的所有動差（無窮多項）才能確定它們相同，這在計算上不可行；MMD 的洞見是把資料映射到 RKHS 後，只需比較一個均值嵌入的距離，就等價於比較了輸入空間的所有動差——把「算不完」的死路變成「算得完」的活路。反直覺點：模型（GMMN）會隨時代淡出，但背後的度量工具（MMD）可以比模型本身活得更久。
+
+MUST show（必備要素）: ① 左側無窮多動差鏈+鎖頭（不可行）；② 中間「映射到 RKHS」箭頭；③ 右側兩堆散點各自的均值嵌入點與距離線（MMD²）；④ 底部 GMMN 淡出 vs MMD 持續的分岔時間軸。
+
+AVOID（禁止）: 不要放完整 LaTeX 算式字串；不要讓左右兩側視覺份量失衡（死路要看起來卡住、活路要看起來簡潔可行）；不要省略底部的「模型淡出 vs 工具持續」分岔。
+
+STYLE: flat vector, viewBox 720×380, 靛紫主題（主 #4f46e5、深 #3730a3、淺底 #eeecff/#f5f4ff），白底，Arial，紅 #e53e3e（不可行）、綠 #16a34a（可行/持續）、灰 #94a3b8（淡出），圓角、粗線條、無陰影無漸層。</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">比無限多動差是死路；映射到 RKHS 只比一個均值是活路；模型會淡出，工具留下</figcaption></figure></div>
+<div class="quiz" data-ans="B"><p class="q"><p>本章要解決的核心問題是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q1-0" value="A"><span>A. <p>如何設計神經網路架構</p></span></label><label class="opt"><input type="radio" name="q1-0" value="B"><span>B. <p>如何量測兩個機率分布之間的差異</p></span></label><label class="opt"><input type="radio" name="q1-0" value="C"><span>C. <p>如何加速梯度下降</p></span></label><label class="opt"><input type="radio" name="q1-0" value="D"><span>D. <p>如何做資料增強</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="本章聚焦 MMD 這個量測分布差異的工具，並介紹以它為訓練損失的 GMMN 生成模型。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>GMMN 與 GAN 最關鍵的訓練方式差異是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q1-1" value="A"><span>A. <p>GMMN 用判別器、GAN 不用</p></span></label><label class="opt"><input type="radio" name="q1-1" value="B"><span>B. <p>GMMN 用 MMD 損失取代判別器，是非對抗式訓練；GAN 是對抗式極大極小賽局</p></span></label><label class="opt"><input type="radio" name="q1-1" value="C"><span>C. <p>兩者訓練方式完全相同</p></span></label><label class="opt"><input type="radio" name="q1-1" value="D"><span>D. <p>GAN 不需要生成器</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="GMMN 直接用 MMD 度量真實與生成分布的差異當損失，不需要判別器做對抗訓練；GAN 則是生成器與判別器互相對抗。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>MMD 讓「比較所有動差」這件不可行的事變可行，關鍵招數是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q1-2" value="A"><span>A. <p>只看眾數（mode）</p></span></label><label class="opt"><input type="radio" name="q1-2" value="B"><span>B. <p>把資料映射到 RKHS，只比較第一動差（平均值）即等價於比較輸入空間所有動差</p></span></label><label class="opt"><input type="radio" name="q1-2" value="C"><span>C. <p>隨機抽樣一個動差比較</p></span></label><label class="opt"><input type="radio" name="q1-2" value="D"><span>D. <p>用神經網路直接學習動差</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="理論上輸入空間中所有動差相等 ⟺ RKHS 中第一動差（均值嵌入）相等，這把無限維的比較問題化簡成比較一個平均值。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>關於 GMMN 與 MMD 今天的地位，文中的描述是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q1-3" value="A"><span>A. <p>兩者都已完全被淘汰、沒有應用價值</p></span></label><label class="opt"><input type="radio" name="q1-3" value="B"><span>B. <p>GMMN 這個模型較少被直接使用，但 MMD 這個度量工具仍廣泛用於領域轉換與統計檢定</p></span></label><label class="opt"><input type="radio" name="q1-3" value="C"><span>C. <p>GMMN 比 GAN 更常用</p></span></label><label class="opt"><input type="radio" name="q1-3" value="D"><span>D. <p>MMD 已被證明是錯誤的度量方法</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="文中明確指出 GMMN 主要具歷史/概念意義，但 MMD 本身仍是有持續影響力的工具，這是全章反覆呼應的主線。"></div></div></div></section>
+<section id="kp2" class="card" data-kp="2"><div class="card-head"><span class="badge">2.1</span><h3>MMD 的直覺：只比平均值不夠，要比到「所有動差」</h3><span class="toggle">▼</span></div><div class="card-body"><h4>從「比平均值」開始，但很快就不夠用</h4>
+<p>假設你有兩包樣本 $\{x_i\}_{i=1}^n\sim P_x$ 與 $\{y_j\}_{j=1}^m\sim P_y$，想知道 $P_x$ 跟 $P_y$ 是不是同一個分布。最直覺的做法：算兩包樣本的平均值差 $\mathbb{E}[x]-\mathbb{E}[y]$。</p>
+<p>但這樣不夠——<strong>兩個分布可能平均值完全相同，變異數卻差很多</strong>（見原文 Fig. 1a：一個分布集中、一個分布分散，但中心點一樣）。變異數跟<strong>第二動差</strong> $\mathbb{E}[x^2]$ 有關（變異數 $=\mathbb{E}[x^2]-(\mathbb{E}[x])^2$），所以要多比一項：把樣本也做個變換 $x\mapsto[x,x^2]^\top$，同時比較 $\mathbb{E}[x]-\mathbb{E}[y]$ 和 $\mathbb{E}[x^2]-\mathbb{E}[y^2]$。</p>
+<p>但這樣<strong>還是</strong>不夠——兩個分布可能平均值、變異數都一樣，但<strong>偏度（skewness，跟第三動差有關）</strong> 不同（原文 Fig. 1b：一個分布左偏、一個右偏，但中心與離散程度看起來一樣）。</p>
+<h4>動差要比到無窮多階，理論上才算「完全比較」</h4>
+<p>這個邏輯可以一直往下推：均值不夠比變異數、變異數不夠比偏度、偏度不夠比峰度……理論上要比到所有動差才能保證兩個分布完全相同。這就是 <strong>Proposition 1</strong>：</p>
+<p>$$
+P_x=P_y \Longleftrightarrow \mathbb{E}[x^i]=\mathbb{E}[y^i],\ \forall i\in\{1,2,\ldots,\infty\}. \tag{1}
+$$</p>
+<p>問題來了：動差有無限多階（$\mathbb{E}[x],\mathbb{E}[x^2],\mathbb{E}[x^3],\ldots$），全部算一遍<strong>不可行</strong>。</p>
+<h4>解法：映射到 RKHS，只比第一動差</h4>
+<p>MMD 的核心洞見是：把資料從輸入空間映射到一個叫做<strong>再生核希爾伯特空間（Reproducing Kernel Hilbert Space, RKHS）</strong>的特殊空間，在那個空間裡，只需要比較<strong>第一動差（也就是平均值）</strong>，理論上就等價於比較了輸入空間裡的<strong>所有</strong>動差。這就是 <strong>Proposition 2</strong>：</p>
+<p>$$
+P_x=P_y \Longleftrightarrow \mathbb{E}[f(x)]=\mathbb{E}[f(y)],\ \forall f\in C(\mathcal{X}), \tag{2}
+$$</p>
+<p>其中 $C(\mathcal{X})$ 是輸入空間 $\mathcal{X}$ 上所有有界連續函數構成的集合。這句話的白話翻譯：<strong>如果對「所有」可能的連續函數 $f$ 來說，$f(x)$ 的平均值都跟 $f(y)$ 的平均值相等，那 $x$ 跟 $y$ 的分布就一定相同</strong>（反之亦然）。而 RKHS 均值嵌入的差異，正好就是在檢查這件事——這就是 MMD（最大平均差異，也叫核二樣本檢定）的定義基礎，kp3 會給出正式定義。</p>
+<h4>數值示範：一個玩具例子看動差怎麼「騙過」平均值比較</h4>
+<p>考慮兩組樣本：$X=\{1,3\}$（平均值 2）、$Y=\{0,4\}$（平均值 2）。兩組平均值完全相同（$\mathbb{E}[x]-\mathbb{E}[y]=0$），如果只看平均值會誤判「兩者相同」。但看第二動差：$\mathbb{E}[x^2]=\frac{1^2+3^2}{2}=5$，$\mathbb{E}[y^2]=\frac{0^2+4^2}{2}=8$，差了 3——這就抓出了兩組樣本「離散程度不同」（$Y$ 的兩點離中心更遠）。這正是原文 Fig. 1a 想傳達的現象：<strong>均值相同不代表分布相同</strong>，必須繼續往高階動差查。</p>
+<h4>口語小結</h4>
+<table>
+<thead>
+<tr>
+<th>只比較到第幾階動差</th>
+<th>能分辨出什麼</th>
+<th>分辨不出什麼</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第 1 階（均值）</td>
+<td>中心位置不同</td>
+<td>離散程度、形狀</td>
+</tr>
+<tr>
+<td>第 1–2 階（均值+變異數）</td>
+<td>中心位置、離散程度不同</td>
+<td>偏度、更高階形狀</td>
+</tr>
+<tr>
+<td>第 1–3 階</td>
+<td>加上偏度不同</td>
+<td>峰度以上</td>
+</tr>
+<tr>
+<td>全部無限階（Proposition 1）</td>
+<td>完全判定分布是否相同</td>
+<td>（理論保證，但算不出來）</td>
+</tr>
+<tr>
+<td>RKHS 第一動差（Proposition 2）</td>
+<td><strong>等價於</strong>全部無限階，且<strong>算得出來</strong></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>一句話收尾：均值一樣不代表分布一樣，理論上要比到所有動差才算數；MMD 的聰明之處，是把「比無限多階動差」換成「在 RKHS 裡比一個均值」，難題就此變得可算。</strong></p><figure class="orig-fig"><img src="assets/orig-kp2-fig1.jpg" alt="圖 1 (a) 均值相同但變異數不同，(b) 均值變異數相同但偏度不同"><figcaption>圖 1 (a) 均值相同但變異數不同，(b) 均值變異數相同但偏度不同</figcaption></figure>
+
+<div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380" font-family="Arial, Helvetica, sans-serif">
+  <rect x="0" y="0" width="720" height="380" fill="#ffffff"/>
+  <text x="360" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#3730a3">「像不像」要一層一層查：均值 → 變異數 → 偏度</text>
+
+  <!-- TOP row: same mean, different variance -->
+  <rect x="14" y="42" width="692" height="150" rx="10" fill="#eeecff" stroke="#a5a1f5" stroke-width="1.4"/>
+  <text x="360" y="62" text-anchor="middle" font-size="12" font-weight="bold" fill="#3730a3">同樣的中心點，藏著不同的離散程度</text>
+  <!-- tall narrow bell -->
+  <path d="M120 170 C 140 170, 150 60, 200 60 C 250 60, 260 170, 280 170" fill="none" stroke="#4f46e5" stroke-width="3"/>
+  <line x1="200" y1="170" x2="200" y2="182" stroke="#4f46e5" stroke-width="1.4" stroke-dasharray="3,2"/>
+  <text x="200" y="196" text-anchor="middle" font-size="9" fill="#3730a3">分布 A：瘦高</text>
+  <!-- short wide bell, same center -->
+  <path d="M80 172 C 130 172, 160 100, 200 100 C 240 100, 270 172, 320 172" fill="none" stroke="#ea580c" stroke-width="3" stroke-dasharray="7,4"/>
+  <line x1="200" y1="172" x2="200" y2="184" stroke="#ea580c" stroke-width="1.4" stroke-dasharray="3,2"/>
+  <text x="260" y="196" text-anchor="middle" font-size="9" fill="#9a3412">分布 B：矮胖</text>
+  <circle cx="200" cy="172" r="4" fill="#16a34a"/>
+  <text x="200" y="150" text-anchor="middle" font-size="9" font-weight="bold" fill="#15803d">同一個均值 ↓</text>
+  <text x="500" y="80" font-size="12" font-weight="bold" fill="#b91c1c">均值相同 ≠ 分布相同</text>
+  <text x="500" y="100" font-size="10" fill="#7f1d1d">（要繼續看第二動差／變異數）</text>
+  <path d="M420 90 L480 90" stroke="#b91c1c" stroke-width="2" marker-end="url(#m2r)"/>
+
+  <!-- BOTTOM row: same mean+var, different skew -->
+  <rect x="14" y="204" width="692" height="150" rx="10" fill="#fff7ed" stroke="#fdba74" stroke-width="1.4"/>
+  <text x="360" y="224" text-anchor="middle" font-size="12" font-weight="bold" fill="#c2410c">均值＋離散程度都一樣，仍可能藏著不對稱</text>
+  <path d="M100 332 C 115 332, 125 260, 150 250 C 175 245, 190 280, 210 320 C 225 340, 250 334, 280 334" fill="none" stroke="#4f46e5" stroke-width="3"/>
+  <text x="150" y="350" text-anchor="middle" font-size="9" fill="#3730a3">分布 C：左偏</text>
+  <path d="M320 334 C 350 334, 375 340, 390 320 C 410 280, 425 245, 450 250 C 475 260, 485 332, 500 332" fill="none" stroke="#ea580c" stroke-width="3" stroke-dasharray="7,4"/>
+  <text x="450" y="350" text-anchor="middle" font-size="9" fill="#9a3412">分布 D：右偏</text>
+  <circle cx="300" cy="333" r="4" fill="#16a34a"/>
+  <text x="300" y="310" text-anchor="middle" font-size="9" font-weight="bold" fill="#15803d">中心、寬度都相同 ↓</text>
+  <text x="580" y="250" font-size="12" font-weight="bold" fill="#c2410c">仍然不同！</text>
+  <text x="580" y="270" font-size="10" fill="#7c2d12">（要繼續看第三動差／偏度）</text>
+  <path d="M540 260 L600 260" stroke="#c2410c" stroke-width="2" marker-end="url(#m2o)"/>
+  <defs>
+    <marker id="m2r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#b91c1c"/></marker>
+    <marker id="m2o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#c2410c"/></marker>
+  </defs>
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-2" data-status="pending"><details><summary>🤖 AI 生圖提示詞</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 上下兩排對比。上排：兩條鐘形曲線共用同一個中心點（均值相同），一條瘦高、一條矮胖（變異數不同），旁邊標「均值相同 ≠ 分布相同」。下排：兩條鐘形曲線中心與寬度都對齊，但一條左偏、一條右偏（偏度不同），旁邊標「仍然不同！要看第三動差」。
+
+WHY（因果或反直覺）: 只比較均值無法判斷兩分布是否相同——上排展示均值相同但變異數不同的陷阱；下排進一步展示均值和變異數都相同、但偏度不同的更隱蔽陷阱。反直覺點：分布可以在多個層次上「表面相同」，卻在更細節的層次上完全不同，必須逐層往上比對動差才能真正判定。
+
+MUST show（必備要素）: ① 上排兩條共中心但胖瘦不同的鐘形曲線，標示共同均值點；② 「均值相同 ≠ 分布相同」文字與警示箭頭；③ 下排兩條共中心共寬但左右偏斜方向相反的曲線；④ 「仍然不同！要看第三動差」文字與警示箭頭。
+
+AVOID（禁止）: 不要放完整 LaTeX 算式；不要把兩排畫成一模一樣只是換色；曲線必須是平滑手繪的鐘形/偏態形狀，不能用簡單幾何圖形代替。
+
+STYLE: flat vector, viewBox 720×380, 靛紫主題（主 #4f46e5、深 #3730a3、淺底 #eeecff/#fff7ed），白底，Arial，紅/橘警示色（#b91c1c、#c2410c）、綠色標示共同點（#16a34a），圓角、粗線條、無陰影無漸層。</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">均值相同仍可能變異數不同；均值變異數都相同仍可能偏度不同——層層遞進的陷阱</figcaption></figure></div>
+<div class="demo" data-demo-id="kp2">
+  <style>
+    [data-demo-id="kp2"] { border: 1px solid #c7d2fe; border-radius: 14px; overflow: hidden; background: #fff; }
+    [data-demo-id="kp2"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#4f46e5,#3730a3); color: #fff; font-weight: 700; }
+    [data-demo-id="kp2"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #f5f4ff; }
+    [data-demo-id="kp2"] .demo-controls { flex: 1 1 320px; display: flex; flex-direction: column; gap: 8px; }
+    [data-demo-id="kp2"] .demo-canvas { flex: 1 1 380px; }
+    [data-demo-id="kp2"] canvas { border: 1px solid #c7d2fe; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp2"] .row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+    [data-demo-id="kp2"] .row label { min-width: 46px; font-weight: 600; }
+    [data-demo-id="kp2"] input[type="range"] { flex: 1; }
+    [data-demo-id="kp2"] .btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+    [data-demo-id="kp2"] button.pre { background: #4f46e5; color: #fff; border: none; padding: 7px 12px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: .78rem; }
+    [data-demo-id="kp2"] button.pre:hover { background: #3730a3; }
+    [data-demo-id="kp2"] .demo-readout { min-height: 9em; padding: 10px 12px; border: 1px solid #c7d2fe; border-radius: 8px; background: #fff; font-family: ui-monospace, Consolas, monospace; font-size: 0.76rem; line-height: 1.55; white-space: pre-wrap; }
+    [data-demo-id="kp2"] .demo-theory, [data-demo-id="kp2"] .demo-instruction { padding: 10px 18px; font-size: 0.85rem; line-height: 1.7; }
+    [data-demo-id="kp2"] .demo-theory { background: #eeecff; border-top: 1px solid #c7d2fe; }
+    [data-demo-id="kp2"] .grp-label { font-weight: 700; font-size: .78rem; margin-top: 4px; }
+  </style>
+  <div class="demo-head">🧪 Demo：均值不夠比 — 逐階動差差異 $\Delta_1,\Delta_2,\Delta_3$</div>
+  <div class="demo-body">
+    <div class="demo-controls">
+      <div class="btnrow">
+        <button class="pre" id="kp2-A" type="button">載入範例 A（均值同、變異數不同）</button>
+        <button class="pre" id="kp2-B" type="button">載入範例 B（均值變異數同、偏度不同）</button>
+      </div>
+      <div class="grp-label">X（藍）</div>
+      <div class="row"><label>x1</label><input type="range" id="kp2-x0" min="-5" max="5" step="0.05" value="-1.5"><span id="kp2-x0-v"></span></div>
+      <div class="row"><label>x2</label><input type="range" id="kp2-x1" min="-5" max="5" step="0.05" value="-0.5"><span id="kp2-x1-v"></span></div>
+      <div class="row"><label>x3</label><input type="range" id="kp2-x2" min="-5" max="5" step="0.05" value="0.5"><span id="kp2-x2-v"></span></div>
+      <div class="row"><label>x4</label><input type="range" id="kp2-x3" min="-5" max="5" step="0.05" value="1.5"><span id="kp2-x3-v"></span></div>
+      <div class="grp-label">Y（橘）</div>
+      <div class="row"><label>y1</label><input type="range" id="kp2-y0" min="-5" max="5" step="0.05" value="-3"><span id="kp2-y0-v"></span></div>
+      <div class="row"><label>y2</label><input type="range" id="kp2-y1" min="-5" max="5" step="0.05" value="0"><span id="kp2-y1-v"></span></div>
+      <div class="row"><label>y3</label><input type="range" id="kp2-y2" min="-5" max="5" step="0.05" value="0"><span id="kp2-y2-v"></span></div>
+      <div class="row"><label>y4</label><input type="range" id="kp2-y3" min="-5" max="5" step="0.05" value="3"><span id="kp2-y3-v"></span></div>
+      <div class="demo-readout" id="kp2-ro"></div>
+    </div>
+    <div class="demo-canvas"><canvas id="kp2-cv" width="420" height="220"></canvas></div>
+  </div>
+  <div class="demo-theory">
+    <strong>原理：</strong>兩分布相同 $\Rightarrow$ 各階動差都相同（Proposition 1）。定義 $\Delta_1=\bar X-\bar Y$（一階，均值）、$\Delta_2=\overline{X^2}-\overline{Y^2}$（二階，跟變異數有關）、$\Delta_3=\overline{X^3}-\overline{Y^3}$（三階，跟偏度有關）。若只看 $\Delta_1\approx0$ 就判定「兩組資料相同」，可能是誤判——變異數或偏度的差異只有查看更高階動差才看得出來。
+  </div>
+  <div class="demo-instruction">
+    <strong>這在做什麼：</strong>用兩組各 4 個點的樣本，具體算出逐階動差差異，體會「均值一樣不代表分布一樣」。
+    <strong>怎麼操作：</strong>
+    <ul>
+      <li>拉動 8 根滑桿自由調整 X、Y 各 4 個點的位置。</li>
+      <li>按「載入範例 A」看均值相同但變異數不同的情形；按「載入範例 B」看均值變異數都相同、只有偏度不同的情形。</li>
+    </ul>
+    <strong>觀察什麼：</strong>範例 A 下 $\Delta_1\approx0$ 但 $\Delta_2$ 明顯不為 0；範例 B 下 $\Delta_1\approx0,\Delta_2\approx0$ 但 $\Delta_3$ 明顯不為 0。
+    <strong>正確結果基準：</strong>範例 A：$\Delta_1\approx0$、$\Delta_2\approx-5.33$。範例 B：$\Delta_1\approx0$、$\Delta_2\approx0$、$\Delta_3\approx-1.61$。
+  </div>
+  <script>
+  (function(){
+    var ids=['kp2-x0','kp2-x1','kp2-x2','kp2-x3','kp2-y0','kp2-y1','kp2-y2','kp2-y3'];
+    var cv=document.getElementById('kp2-cv'), ctx=cv.getContext('2d');
+    var ro=document.getElementById('kp2-ro');
+    function fmt(v){ return (Math.round(v*1000)/1000).toFixed(3); }
+    function vals(){
+      return ids.map(function(id){ return parseFloat(document.getElementById(id).value); });
+    }
+    function moment(arr,p){
+      var s=0; for(var i=0;i<arr.length;i++) s+=Math.pow(arr[i],p);
+      return s/arr.length;
+    }
+    function draw(X,Y){
+      var W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      var midY1=80, midY2=150, x0=30, x1=W-30, scale=(x1-x0)/12;
+      function toPx(v){ return x0+(v+6)*scale; }
+      ctx.strokeStyle='#cbd5e1'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(x0,midY1); ctx.lineTo(x1,midY1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x0,midY2); ctx.lineTo(x1,midY2); ctx.stroke();
+      ctx.fillStyle='#1e293b'; ctx.font='11px sans-serif'; ctx.textAlign='left';
+      ctx.fillText('X', 4, midY1+4); ctx.fillText('Y', 4, midY2+4);
+      X.forEach(function(v){ ctx.fillStyle='#2563eb'; ctx.beginPath(); ctx.arc(toPx(v),midY1,6,0,6.283); ctx.fill(); });
+      Y.forEach(function(v){ ctx.fillStyle='#ea580c'; ctx.beginPath(); ctx.arc(toPx(v),midY2,6,0,6.283); ctx.fill(); });
+      ctx.textAlign='center'; ctx.fillStyle='#94a3b8'; ctx.font='10px sans-serif';
+      for(var t=-6;t<=6;t+=2){ ctx.fillText(String(t), toPx(t), 195); }
+    }
+    function sync(){
+      var v=vals();
+      var X=v.slice(0,4), Y=v.slice(4,8);
+      ids.forEach(function(id){ document.getElementById(id+'-v').textContent=fmt(parseFloat(document.getElementById(id).value)); });
+      var d1=moment(X,1)-moment(Y,1);
+      var d2=moment(X,2)-moment(Y,2);
+      var d3=moment(X,3)-moment(Y,3);
+      draw(X,Y);
+      var warn = Math.abs(d1)<0.05 ? (Math.abs(d2)<0.05 ? '⚠ Δ1≈0 且 Δ2≈0，若只看到這裡會誤判「完全相同」——請看 Δ3。' : '⚠ Δ1≈0，若只看均值會誤判「相同」，但 Δ2 揭露了差異。') : '目前 Δ1 已明顯不為 0，均值本身就能看出差異。';
+      ro.textContent =
+        'X = ['+X.map(fmt).join(', ')+']    X̄='+fmt(moment(X,1))+'\n'+
+        'Y = ['+Y.map(fmt).join(', ')+']    Ȳ='+fmt(moment(Y,1))+'\n\n'+
+        'Δ1 = X̄ − Ȳ            = '+fmt(d1)+'\n'+
+        'Δ2 = mean(X²) − mean(Y²) = '+fmt(d2)+'\n'+
+        'Δ3 = mean(X³) − mean(Y³) = '+fmt(d3)+'\n\n'+warn;
+    }
+    ids.forEach(function(id){ document.getElementById(id).addEventListener('input', sync); });
+    document.getElementById('kp2-A').addEventListener('click', function(){
+      var preset=[-1,0,1,1,-3,0,0,3]; // x0..x3 then override; use symmetric 4-pt sets
+      var xs=[-1.5,-0.5,0.5,1.5], ys=[-3,-1,1,3];
+      ids.slice(0,4).forEach(function(id,i){ document.getElementById(id).value=xs[i]; });
+      ids.slice(4,8).forEach(function(id,i){ document.getElementById(id).value=ys[i]; });
+      sync();
+    });
+    document.getElementById('kp2-B').addEventListener('click', function(){
+      var xs=[-1.5,-0.5,0.5,1.5], ys=[-1.9365,0.6455,0.6455,0.6455];
+      ids.slice(0,4).forEach(function(id,i){ document.getElementById(id).value=xs[i]; });
+      ids.slice(4,8).forEach(function(id,i){ document.getElementById(id).value=ys[i]; });
+      sync();
+    });
+    sync();
+  })();
+  </script>
+</div>
+<button class="guide-btn" type="button" data-kp="2" data-guide="kp-2" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：MMD 的直覺——兩班平均分數一樣，但成績單完全不同</button><div class="quiz" data-ans="B"><p class="q"><p>原文 Fig. 1a 展示的現象是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q2-0" value="A"><span>A. <p>兩分布均值不同但變異數相同</p></span></label><label class="opt"><input type="radio" name="q2-0" value="B"><span>B. <p>兩分布均值相同但變異數不同</p></span></label><label class="opt"><input type="radio" name="q2-0" value="C"><span>C. <p>兩分布完全相同</p></span></label><label class="opt"><input type="radio" name="q2-0" value="D"><span>D. <p>兩分布均值與變異數都不同</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Fig. 1a 展示均值相同、但離散程度（變異數，第二動差）不同的兩個分布，說明只比均值不足以判斷分布是否相同。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>Proposition 1 的內容是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q2-1" value="A"><span>A. <p>兩分布均值相同即代表分布相同</p></span></label><label class="opt"><input type="radio" name="q2-1" value="B"><span>B. <p>兩分布相同若且唯若所有階的動差都相同</p></span></label><label class="opt"><input type="radio" name="q2-1" value="C"><span>C. <p>兩分布的變異數決定一切</p></span></label><label class="opt"><input type="radio" name="q2-1" value="D"><span>D. <p>動差只需比較到第二階</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="$P_x=P_y \Leftrightarrow \mathbb{E}[x^i]=\mathbb{E}[y^i],\forall i\in\{1,\ldots,\infty\}$——理論上要所有動差都相等才能保證分布相同。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>為什麼「比較所有動差」在實務上不可行？</p></p><div class="opts"><label class="opt"><input type="radio" name="q2-2" value="A"><span>A. <p>動差沒有明確定義</p></span></label><label class="opt"><input type="radio" name="q2-2" value="B"><span>B. <p>動差的數量是無限多（1 階到無窮階），逐一計算不可行</p></span></label><label class="opt"><input type="radio" name="q2-2" value="C"><span>C. <p>動差只能用於離散分布</p></span></label><label class="opt"><input type="radio" name="q2-2" value="D"><span>D. <p>動差計算需要知道分布的解析式</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="動差 $\mathbb{E}[x],\mathbb{E}[x^2],\mathbb{E}[x^3],\ldots$ 有無限多階，逐一計算並比較是不可行的，這正是 MMD 要解決的問題。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>Proposition 2 說「RKHS 中第一動差相等」等價於什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q2-3" value="A"><span>A. <p>只等價於輸入空間中均值相等</p></span></label><label class="opt"><input type="radio" name="q2-3" value="B"><span>B. <p>等價於輸入空間中所有動差都相等（也就是分布相同）</p></span></label><label class="opt"><input type="radio" name="q2-3" value="C"><span>C. <p>等價於變異數相同</p></span></label><label class="opt"><input type="radio" name="q2-3" value="D"><span>D. <p>與輸入空間的動差無關</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Proposition 2 是全章最重要的跳躍：RKHS 中均值嵌入相等 ⟺ 對所有連續函數 $f$，$\mathbb{E}[f(x)]=\mathbb{E}[f(y)]$ ⟺ 輸入空間分布相同。"></div></div></div></section>
+<section id="kp3" class="card" data-kp="3"><div class="card-head"><span class="badge">2.2.1</span><h3>MMD 的正式定義：對函數類別取上界</h3><span class="toggle">▼</span></div><div class="card-body"><h4>從直覺到正式定義</h4>
+<p>kp2 講完了「為什麼要比較所有動差、又為什麼可以用 RKHS 均值代替」的直覺，這裡給出正式的數學定義。</p>
+<p><strong>定義 1（MMD）</strong>：令 $\mathcal{F}$ 是一群把輸入映射到純量輸出的函數集合。兩個分布 $P_x$ 與 $P_y$ 之間的最大平均差異定義為：</p>
+<p>$$
+\operatorname{MMD}(P_x,P_y):=\sup_{f\in\mathcal{F}}\bigl(\mathbb{E}[f(\boldsymbol{x})]-\mathbb{E}[f(\boldsymbol{y})]\bigr). \tag{3}
+$$</p>
+<p>白話翻譯：<strong>在函數類別 $\mathcal{F}$ 裡，找出那個「最能把兩個分布的期望值拉開」的函數 $f$，用它拉開的差距當作這兩個分布的距離</strong>。如果不管挑哪個函數 $f\in\mathcal{F}$，$f(x)$ 跟 $f(y)$ 的期望值都很接近，那 MMD 就會很小——直覺上代表兩個分布很像。</p>
+<h4>為什麼要「取上界（sup）」而不是隨便挑一個 $f$</h4>
+<p>如果隨便挑一個函數 $f$，比如 $f(x)=x$（就是普通的均值比較），可能剛好挑到一個「看不出差異」的函數，就像 kp2 提到的「均值一樣但變異數不同」的陷阱。取上界的用意是：<strong>在整個函數類別裡窮舉，找出最會挑毛病、最能凸顯差異的那個函數</strong>——只要有任何一個函數能看出差異，MMD 就不會是 0。這保證了 MMD 是一個「不放過任何差異」的量測方式（前提是 $\mathcal{F}$ 夠豐富，kp5 會講到這個「夠豐富」的條件叫做<strong>universal kernel</strong>）。</p>
+<h4>實務上：用樣本平均近似期望值</h4>
+<p>式 (3) 裡的期望值 $\mathbb{E}[f(x)]$ 需要知道 $P_x$ 的完整分布才能算，但實務上我們通常只有樣本。用蒙地卡羅近似（Monte Carlo approximation），把期望值換成樣本平均，就得到<strong>有偏經驗 MMD（biased empirical MMD）</strong>：</p>
+<p>$$
+\operatorname{MMD}(P_x,P_y)\approx\sup_{f\in\mathcal{F}}\left(\frac{1}{n}\sum_{i=1}^n f(\boldsymbol{x}_i)-\frac{1}{m}\sum_{j=1}^m f(\boldsymbol{y}_j)\right). \tag{4}
+$$</p>
+<p>之所以叫「有偏」，是因為用有限樣本的平均去近似真實期望值本身就帶有統計偏誤（樣本數越多，偏誤越小）。</p>
+<h4>數值示範：小樣本手算一次</h4>
+<p>假設 $f(x)=x$（最簡單的恆等函數），樣本 $X=\{2,4,6\}$（$n=3$）、$Y=\{1,3\}$（$m=2$）：</p>
+<p>$$
+\frac{1}{3}(2+4+6)-\frac{1}{2}(1+3)=4-2=2.
+$$</p>
+<p>如果換一個函數 $f(x)=x^2$：</p>
+<p>$$
+\frac{1}{3}(4+16+36)-\frac{1}{2}(1+9)=\frac{56}{3}-5\approx13.67.
+$$</p>
+<p>同一組資料、換一個 $f$，算出的差距完全不同——這正是式 (4) 要對 $f\in\mathcal{F}$ 取上界的原因：<strong>不同的 $f$ 能看出不同層面的差異，取上界就是要找出「最能看出差異」的那一個</strong>。</p>
+<h4>口語小結</h4>
+<p><strong>MMD 的正式定義，就是在一群函數裡找出最會挑毛病的那個函數，用它拉開的期望值差距當距離；實務上用樣本平均近似期望值，就是有偏經驗 MMD。這個定義本身還很抽象（$\mathcal{F}$ 是什麼、sup 怎麼算），kp4 會把它具體化成 RKHS 裡可以真正算出數字的公式。</strong></p><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, Helvetica, sans-serif">
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#3730a3">MMD 的定義：在整個函數家族裡，挑出最會抓差異的那一個</text>
+
+  <rect x="20" y="46" width="680" height="270" rx="10" fill="#f5f4ff" stroke="#c7c2fb" stroke-width="1.2"/>
+  <text x="360" y="68" text-anchor="middle" font-size="11" fill="#4338ca">函數類別 𝓕：每條曲線代表一個候選函數 f，旁邊的長條＝它拉開兩分布期望值的差距</text>
+
+  <!-- candidate function 1 -->
+  <path d="M60 220 C 90 210, 110 230, 140 190" fill="none" stroke="#94a3b8" stroke-width="2.6"/>
+  <rect x="150" y="205" width="18" height="10" fill="#94a3b8"/>
+  <text x="100" y="245" text-anchor="middle" font-size="9" fill="#64748b">f₁：差距小</text>
+
+  <!-- candidate function 2 -->
+  <path d="M60 260 C 100 230, 130 280, 170 240" fill="none" stroke="#818cf8" stroke-width="2.6"/>
+  <rect x="180" y="235" width="32" height="10" fill="#818cf8"/>
+  <text x="115" y="288" text-anchor="middle" font-size="9" fill="#4f46e5">f₂：差距中等</text>
+
+  <!-- candidate function 3 (winner) -->
+  <path d="M240 130 C 300 90, 340 160, 400 100" fill="none" stroke="#16a34a" stroke-width="4"/>
+  <rect x="410" y="70" width="70" height="16" fill="#16a34a"/>
+  <circle cx="320" cy="118" r="6" fill="#16a34a"/>
+  <text x="320" y="155" text-anchor="middle" font-size="10" font-weight="bold" fill="#15803d">f* ：差距最大 → 被 sup 選中</text>
+
+  <!-- candidate function 4 -->
+  <path d="M480 250 C 520 260, 550 220, 600 250" fill="none" stroke="#c4b5fd" stroke-width="2.6"/>
+  <rect x="610" y="240" width="22" height="10" fill="#c4b5fd"/>
+  <text x="545" y="278" text-anchor="middle" font-size="9" fill="#6d28d9">f₃：差距小</text>
+
+  <!-- candidate function 5 -->
+  <path d="M480 190 C 530 170, 560 210, 610 175" fill="none" stroke="#a5b4fc" stroke-width="2.6"/>
+  <rect x="620" y="165" width="40" height="10" fill="#a5b4fc"/>
+  <text x="545" y="140" text-anchor="middle" font-size="9" fill="#4f46e5">f₄：差距中</text>
+
+  <text x="360" y="300" text-anchor="middle" font-size="11" fill="#3730a3">sup 不是隨便選一個函數，而是窮舉整個 𝓕，挑出「最會挑毛病」的那條</text>
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-3" data-status="pending"><details><summary>🤖 AI 生圖提示詞</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 一個函數集合 𝓕 的示意框，裡面畫 5 條不同形狀、不同顏色的抽象曲線代表候選函數 f₁…f₅，每條曲線旁配一個長條圖標示它「拉開兩分布期望值」的差距大小。其中一條（f*）用放大、加粗、綠色高亮，長條也最長，標示「被 sup 選中」。
+
+WHY（因果或反直覺）: MMD 定義中的 sup_{f∈F} 不是隨機挑一個函數來比較，而是在整個函數家族裡窮舉，找出「最能拉開兩分布期望值差距」的那一個。反直覺點：多數候選函數其實看不太出差異（差距小），只有極少數函數能真正暴露分布間的不同——sup 保證我們用的是「最挑剔」的判準，而不是隨便一個可能失效的判準。
+
+MUST show（必備要素）: ① 至少 5 條不同形狀曲線代表函數集合裡的候選；② 每條曲線旁的差距長條，長度不一；③ 其中一條被明確高亮標示「差距最大→被 sup 選中」；④ 底部一句話點出 sup 是窮舉挑選、不是隨機選擇。
+
+AVOID（禁止）: 不要用完全相同形狀只是換色的曲線（要看起來真的是不同函數）；不要放完整 LaTeX 算式字串；不要讓被選中的函數不明顯（必須一眼看出誰是贏家）。
+
+STYLE: flat vector, viewBox 720×360, 靛紫主題（主 #4f46e5、深 #3730a3、淺底 #f5f4ff），白底，Arial，灰/淡紫表示普通候選（#94a3b8、#818cf8、#c4b5fd、#a5b4fc），綠色 #16a34a 標示勝出者，圓角、粗線條、無陰影無漸層。</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">sup 不是隨便選一個函數，是在整個函數家族裡挑出「最會抓差異」的那個</figcaption></figure></div>
+<div class="demo" data-demo-id="kp3">
+  <style>
+    [data-demo-id="kp3"] { border: 1px solid #c7d2fe; border-radius: 14px; overflow: hidden; background: #fff; }
+    [data-demo-id="kp3"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#4f46e5,#3730a3); color: #fff; font-weight: 700; }
+    [data-demo-id="kp3"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #f5f4ff; }
+    [data-demo-id="kp3"] .demo-controls { flex: 1 1 320px; display: flex; flex-direction: column; gap: 8px; }
+    [data-demo-id="kp3"] .demo-canvas { flex: 1 1 380px; }
+    [data-demo-id="kp3"] canvas { border: 1px solid #c7d2fe; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp3"] .row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+    [data-demo-id="kp3"] .row label { min-width: 40px; font-weight: 600; }
+    [data-demo-id="kp3"] input[type="range"] { flex: 1; }
+    [data-demo-id="kp3"] .demo-readout { min-height: 9em; padding: 10px 12px; border: 1px solid #c7d2fe; border-radius: 8px; background: #fff; font-family: ui-monospace, Consolas, monospace; font-size: 0.76rem; line-height: 1.55; white-space: pre-wrap; }
+    [data-demo-id="kp3"] .demo-theory, [data-demo-id="kp3"] .demo-instruction { padding: 10px 18px; font-size: 0.85rem; line-height: 1.7; }
+    [data-demo-id="kp3"] .demo-theory { background: #eeecff; border-top: 1px solid #c7d2fe; }
+  </style>
+  <div class="demo-head">🧪 Demo：MMD 定義 — 在候選函數中找「最會挑毛病」的 $f$</div>
+  <div class="demo-body">
+    <div class="demo-controls">
+      <div class="row"><label>x1</label><input type="range" id="kp3-x0" min="-3" max="3" step="0.05" value="1"><span id="kp3-x0-v"></span></div>
+      <div class="row"><label>x2</label><input type="range" id="kp3-x1" min="-3" max="3" step="0.05" value="2"><span id="kp3-x1-v"></span></div>
+      <div class="row"><label>x3</label><input type="range" id="kp3-x2" min="-3" max="3" step="0.05" value="2.5"><span id="kp3-x2-v"></span></div>
+      <div class="row"><label>y1</label><input type="range" id="kp3-y0" min="-3" max="3" step="0.05" value="0.5"><span id="kp3-y0-v"></span></div>
+      <div class="row"><label>y2</label><input type="range" id="kp3-y1" min="-3" max="3" step="0.05" value="1.5"><span id="kp3-y1-v"></span></div>
+      <div class="row"><label>y3</label><input type="range" id="kp3-y2" min="-3" max="3" step="0.05" value="-1"><span id="kp3-y2-v"></span></div>
+      <div class="demo-readout" id="kp3-ro"></div>
+    </div>
+    <div class="demo-canvas"><canvas id="kp3-cv" width="420" height="220"></canvas></div>
+  </div>
+  <div class="demo-theory">
+    <strong>原理（式3-4）：</strong>$\operatorname{MMD}(P_x,P_y):=\sup_{f\in\mathcal{F}}\bigl(\mathbb{E}[f(x)]-\mathbb{E}[f(y)]\bigr)\approx\sup_{f\in\mathcal{F}}\Bigl(\frac1n\sum_i f(x_i)-\frac1m\sum_j f(y_j)\Bigr)$。本 demo 只在 4 個候選函數 $f\in\{x,\,x^2,\,\sin x,\,|x|\}$ 中示範「找出最能拉開差距者」的精神——真正的 MMD 是在整個（可能無限維的）RKHS 單位球中取 sup，比這裡豐富得多。
+  </div>
+  <div class="demo-instruction">
+    <strong>這在做什麼：</strong>用 4 個候選函數具體示範式(3)(4)裡「取 sup」在做什麼：不同函數看出的差距不同，要挑出差距最大的那個。
+    <strong>怎麼操作：</strong>
+    <ul>
+      <li>拉動 6 根滑桿改變 $X,Y$ 各 3 個樣本點。</li>
+      <li>觀察 readout 中 4 個候選函數各自算出的差距，被高亮的是目前最大值（最接近 sup 的候選）。</li>
+    </ul>
+    <strong>觀察什麼：</strong>候選函數換了，「贏家」也可能跟著換——這正是取 sup 要窮舉整個函數類別的原因。
+    <strong>正確結果基準：</strong>每個候選值都應等於 $\frac13\sum f(x_i)-\frac13\sum f(y_j)$ 的精確代入結果，高亮者必為 4 個值中的最大值（非絕對值最大，是有號最大）。
+  </div>
+  <script>
+  (function(){
+    var ids=['kp3-x0','kp3-x1','kp3-x2','kp3-y0','kp3-y1','kp3-y2'];
+    var cv=document.getElementById('kp3-cv'), ctx=cv.getContext('2d');
+    var ro=document.getElementById('kp3-ro');
+    function fmt(v){ return (Math.round(v*1000)/1000).toFixed(3); }
+    var fs=[
+      {name:'f(x)=x', fn:function(x){return x;}},
+      {name:'f(x)=x²', fn:function(x){return x*x;}},
+      {name:'f(x)=sin(x)', fn:function(x){return Math.sin(x);}},
+      {name:'f(x)=|x|', fn:function(x){return Math.abs(x);}}
+    ];
+    function vals(){ return ids.map(function(id){ return parseFloat(document.getElementById(id).value); }); }
+    function draw(X,Y){
+      var W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      var midY1=80, midY2=150, x0=30, x1=W-30, scale=(x1-x0)/8;
+      function toPx(v){ return x0+(v+4)*scale; }
+      ctx.strokeStyle='#cbd5e1';
+      ctx.beginPath(); ctx.moveTo(x0,midY1); ctx.lineTo(x1,midY1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x0,midY2); ctx.lineTo(x1,midY2); ctx.stroke();
+      ctx.fillStyle='#1e293b'; ctx.font='11px sans-serif'; ctx.textAlign='left';
+      ctx.fillText('X', 4, midY1+4); ctx.fillText('Y', 4, midY2+4);
+      X.forEach(function(v){ ctx.fillStyle='#2563eb'; ctx.beginPath(); ctx.arc(toPx(v),midY1,6,0,6.283); ctx.fill(); });
+      Y.forEach(function(v){ ctx.fillStyle='#ea580c'; ctx.beginPath(); ctx.arc(toPx(v),midY2,6,0,6.283); ctx.fill(); });
+    }
+    function sync(){
+      var v=vals();
+      var X=v.slice(0,3), Y=v.slice(3,6);
+      ids.forEach(function(id){ document.getElementById(id+'-v').textContent=fmt(parseFloat(document.getElementById(id).value)); });
+      draw(X,Y);
+      var results=fs.map(function(f){
+        var ex=X.reduce(function(a,b){return a+f.fn(b);},0)/X.length;
+        var ey=Y.reduce(function(a,b){return a+f.fn(b);},0)/Y.length;
+        return {name:f.name, val:ex-ey};
+      });
+      var maxVal=Math.max.apply(null, results.map(function(r){return r.val;}));
+      var lines=results.map(function(r){
+        var mark = Math.abs(r.val-maxVal)<1e-9 ? '  ← 目前最大（最接近 sup）' : '';
+        return '  '+r.name+' :  '+fmt(r.val)+mark;
+      });
+      ro.textContent =
+        'X = ['+X.map(fmt).join(', ')+']\n'+
+        'Y = ['+Y.map(fmt).join(', ')+']\n\n'+
+        '各候選函數的 (1/n)Σf(xᵢ) − (1/m)Σf(yⱼ)：\n'+lines.join('\n')+
+        '\n\n（sup 是取「有號最大值」，不是取絕對值最大）';
+    }
+    ids.forEach(function(id){ document.getElementById(id).addEventListener('input', sync); });
+    sync();
+  })();
+  </script>
+</div>
+<button class="guide-btn" type="button" data-kp="3" data-guide="kp-3" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：MMD 正式定義——找全校最挑剔的老師來改考卷</button><div class="quiz" data-ans="B"><p class="q"><p>MMD 的定義式 (3) 中，取 $\sup_{f\in\mathcal{F}}$ 的用意是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q3-0" value="A"><span>A. <p>隨機選一個函數以節省計算</p></span></label><label class="opt"><input type="radio" name="q3-0" value="B"><span>B. <p>在函數類別中找出最能拉開兩分布期望值差距的函數，確保不放過任何差異</p></span></label><label class="opt"><input type="radio" name="q3-0" value="C"><span>C. <p>求函數的平均值</p></span></label><label class="opt"><input type="radio" name="q3-0" value="D"><span>D. <p>限制函數的定義域</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="取上界是為了在整個函數類別裡窮舉，找出最能凸顯兩分布差異的函數，避免像只用均值比較那樣可能漏掉某些差異。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>式 (4) 為什麼稱為「有偏經驗 MMD」？</p></p><div class="opts"><label class="opt"><input type="radio" name="q3-1" value="A"><span>A. <p>因為函數 $f$ 選錯了</p></span></label><label class="opt"><input type="radio" name="q3-1" value="B"><span>B. <p>因為用有限樣本的平均近似真實期望值，本身帶有統計偏誤</p></span></label><label class="opt"><input type="radio" name="q3-1" value="C"><span>C. <p>因為 $n$ 一定要等於 $m$</p></span></label><label class="opt"><input type="radio" name="q3-1" value="D"><span>D. <p>因為只能用於高斯分布</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="式 (4) 用蒙地卡羅近似把期望值換成樣本平均，這種有限樣本估計存在統計偏誤，故稱有偏（biased）。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>若用不同的 $f$ 計算式 (4)，可能得到不同的差距數值，這說明了什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q3-2" value="A"><span>A. <p>MMD 的定義有誤</p></span></label><label class="opt"><input type="radio" name="q3-2" value="B"><span>B. <p>不同函數能捕捉分布差異的不同層面，這正是取 sup 窮舉找出「最會挑毛病」函數的原因</p></span></label><label class="opt"><input type="radio" name="q3-2" value="C"><span>C. <p>樣本數不夠多</p></span></label><label class="opt"><input type="radio" name="q3-2" value="D"><span>D. <p>應該只用線性函數</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="數值示範中 $f(x)=x$ 與 $f(x)=x^2$ 算出差距不同，說明不同函數能看出不同層面的分布差異，這正是式(3)要取上界的原因。"></div></div></div></section>
+<section id="kp4" class="card" data-kp="4"><div class="card-head"><span class="badge">2.2.2</span><h3>把 MMD 具體化：RKHS 均值嵌入與核技巧</h3><span class="toggle">▼</span></div><div class="card-body"><h4>讓函數類別 $\mathcal{F}$ 有具體形狀：RKHS 的單位球</h4>
+<p>kp3 定義的 MMD 還很抽象——函數類別 $\mathcal{F}$ 到底是什麼？這裡把 $\mathcal{F}$ 具體設成 <strong>RKHS 裡的單位球</strong>，這樣 $f\in\mathcal{F}$ 就對應到一個映射函數 $\phi:\boldsymbol{x}\mapsto\phi(\boldsymbol{x})$，把資料從輸入空間映射到 RKHS。</p>
+<p>資料映射後：$\{\boldsymbol{x}_i\}_{i=1}^n\mapsto\{\phi(\boldsymbol{x}_i)\}_{i=1}^n$，$\{\boldsymbol{y}_j\}_{j=1}^m\mapsto\{\phi(\boldsymbol{y}_j)\}_{j=1}^m$。把這代入式 (4)，並定義 RKHS 裡的<strong>均值嵌入（mean embedding）</strong>：</p>
+<p>$$
+\mu_{\phi(\boldsymbol{x})}:=\frac{1}{n}\sum_{i=1}^n\phi(\boldsymbol{x}_i),\qquad \mu_{\phi(\boldsymbol{y})}:=\frac{1}{m}\sum_{j=1}^m\phi(\boldsymbol{y}_j). \tag{6,7}
+$$</p>
+<p>在 RKHS 這個特殊空間的性質下（sup 被均值嵌入本身吸收，細節超出本章範圍），MMD 的平方可以直接寫成兩個均值嵌入的<strong>歐式距離平方</strong>：</p>
+<p>$$
+\operatorname{MMD}^2(P_x,P_y)\approx\|\mu_{\phi(\boldsymbol{x})}-\mu_{\phi(\boldsymbol{y})}\|_2^2. \tag{8}
+$$</p>
+<p>這就是 kp2 提到的「比較 RKHS 裡的第一動差」的具體算式：<strong>兩包資料映射到 RKHS 後，各自取平均，量兩個平均點之間的距離</strong>。</p>
+<h4>核技巧：不用真的算出 $\phi(x)$，直接算內積</h4>
+<p>把式 (8) 展開（利用內積的雙線性）：</p>
+<p>$$
+\operatorname{MMD}^2(P_x,P_y)\approx\frac{1}{n^2}\sum_{i,j}\phi(\boldsymbol{x}_i)^\top\phi(\boldsymbol{x}_j)+\frac{1}{m^2}\sum_{i,j}\phi(\boldsymbol{y}_i)^\top\phi(\boldsymbol{y}_j)-\frac{2}{nm}\sum_{i,j}\phi(\boldsymbol{x}_i)^\top\phi(\boldsymbol{y}_j). \tag{9}
+$$</p>
+<p>注意到整個式子裡，$\phi$ 永遠是<strong>成對出現、做內積</strong>（$\phi(\cdot)^\top\phi(\cdot)$）。這時候可以套用<strong>核函數的定義</strong>：$k(\boldsymbol{x},\boldsymbol{y}):=\phi(\boldsymbol{x})^\top\phi(\boldsymbol{y})$（式 10），也就是<strong>核技巧（kernel trick）</strong>——不需要真的把資料映射到（可能是無限維的）RKHS 再算內積，只要有一個核函數 $k(\cdot,\cdot)$，就能直接算出內積的值。代入後，式 (9) 化簡成<strong>完全可計算</strong>的形式：</p>
+<p>$$
+\operatorname{MMD}^2(P_x,P_y)\approx\frac{1}{n^2}\sum_{i,j}^n k(\boldsymbol{x}_i,\boldsymbol{x}_j)+\frac{1}{m^2}\sum_{i,j}^m k(\boldsymbol{y}_i,\boldsymbol{y}_j)-\frac{2}{nm}\sum_{i,j} k(\boldsymbol{x}_i,\boldsymbol{y}_j). \tag{11}
+$$</p>
+<p>這是<strong>有偏經驗 MMD</strong>。也有<strong>無偏版本</strong>（把 $\frac{1}{n^2}\sum_{i,j}^n$ 換成 $\frac{1}{n(n-1)}\sum_{i\neq j}^n$，扣掉 $i=j$ 的自己跟自己配對項）：</p>
+<p>$$
+\operatorname{MMD}^2(P_x,P_y)\approx\frac{1}{n(n-1)}\sum_{i\neq j}k(\boldsymbol{x}_i,\boldsymbol{x}_j)+\frac{1}{m(m-1)}\sum_{i\neq j}k(\boldsymbol{y}_i,\boldsymbol{y}_j)-\frac{2}{nm}\sum_{i,j}k(\boldsymbol{x}_i,\boldsymbol{y}_j). \tag{12}
+$$</p>
+<h4>數值示範：$X=\{1,2\}$，$Y=\{2,3\}$，RBF 核 $\sigma=1$</h4>
+<p>用高斯核 $k(a,b)=\exp\!\big(-\frac{(a-b)^2}{2\sigma^2}\big)$，$\sigma=1$：</p>
+<p>$k(1,1)=1$，$k(2,2)=1$，$k(1,2)=k(2,1)=\exp(-0.5)\approx0.6065$</p>
+<p>$k(2,2)=1$，$k(3,3)=1$，$k(2,3)=k(3,2)=\exp(-0.5)\approx0.6065$</p>
+<p>$k(1,2)=\exp(-0.5)\approx0.6065$，$k(1,3)=\exp(-2)\approx0.1353$，$k(2,2)=1$，$k(2,3)\approx0.6065$</p>
+<p>代入式 (11)（$n=m=2$）：</p>
+<p>$$
+\underbrace{\frac{1}{4}(1+0.6065+0.6065+1)}_{\text{XX 項}\approx0.8033}+\underbrace{\frac{1}{4}(1+0.6065+0.6065+1)}_{\text{YY 項}\approx0.8033}-\underbrace{\frac{2}{4}(0.6065+0.1353+1+0.6065)}_{\text{XY 項}\approx1.1742}
+$$</p>
+<p>$$
+\operatorname{MMD}^2\approx0.8033+0.8033-1.1742\approx0.4324.
+$$</p>
+<p>這組數字跟原文習題 1 完全對應——你可以自己動手代公式驗算一次。</p>
+<h4>口語小結</h4>
+<p><strong>式 (8) 把抽象的 MMD 具體化成「兩個均值嵌入的距離」；核技巧讓我們不用真的把資料映射到 RKHS，只要有核函數 $k$，直接代入兩兩樣本的核值就能算出 MMD²——這是 MMD 之所以「算得出來」的關鍵一步。</strong></p><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="m4a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#4f46e5"/>
+    </marker>
+    <marker id="m4g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="720" height="380" fill="#ffffff"/>
+  <text x="360" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#3730a3">核技巧：不用真的映射，直接算內積就等於算距離</text>
+
+  <!-- LEFT: original space -->
+  <rect x="16" y="46" width="280" height="220" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.3"/>
+  <text x="156" y="66" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">原始空間</text>
+  <circle cx="80" cy="120" r="5" fill="#60a5fa"/><circle cx="100" cy="140" r="5" fill="#60a5fa"/>
+  <circle cx="70" cy="150" r="5" fill="#60a5fa"/><circle cx="95" cy="105" r="5" fill="#60a5fa"/>
+  <text x="88" y="185" text-anchor="middle" font-size="9" fill="#1e40af">x 資料</text>
+  <circle cx="220" cy="180" r="5" fill="#fb923c"/><circle cx="240" cy="200" r="5" fill="#fb923c"/>
+  <circle cx="210" cy="210" r="5" fill="#fb923c"/><circle cx="235" cy="165" r="5" fill="#fb923c"/>
+  <text x="228" y="240" text-anchor="middle" font-size="9" fill="#9a3412">y 資料</text>
+
+  <!-- middle arrow: phi mapping -->
+  <path d="M304 130 L400 130" stroke="#4f46e5" stroke-width="4" marker-end="url(#m4a)"/>
+  <text x="352" y="118" text-anchor="middle" font-size="10" fill="#3730a3">映射 φ</text>
+
+  <!-- RIGHT: RKHS space -->
+  <rect x="410" y="46" width="296" height="220" rx="10" fill="#eeecff" stroke="#a5a1f5" stroke-width="1.3"/>
+  <text x="558" y="66" text-anchor="middle" font-size="11" font-weight="bold" fill="#3730a3">RKHS（特徵空間）</text>
+  <circle cx="470" cy="110" r="4" fill="#60a5fa"/><circle cx="482" cy="122" r="4" fill="#60a5fa"/>
+  <circle cx="460" cy="128" r="4" fill="#60a5fa"/><circle cx="476" cy="140" r="4" fill="#60a5fa"/>
+  <circle cx="475" cy="122" r="10" fill="none" stroke="#1e3a8a" stroke-width="2" stroke-dasharray="3,2"/>
+  <circle cx="475" cy="122" r="5" fill="#1e3a8a"/>
+  <text x="475" y="160" text-anchor="middle" font-size="9" fill="#1e3a8a">μφ(x)</text>
+  <circle cx="640" cy="170" r="4" fill="#fb923c"/><circle cx="652" cy="182" r="4" fill="#fb923c"/>
+  <circle cx="630" cy="188" r="4" fill="#fb923c"/><circle cx="646" cy="198" r="4" fill="#fb923c"/>
+  <circle cx="645" cy="183" r="10" fill="none" stroke="#9a3412" stroke-width="2" stroke-dasharray="3,2"/>
+  <circle cx="645" cy="183" r="5" fill="#9a3412"/>
+  <text x="645" y="220" text-anchor="middle" font-size="9" fill="#9a3412">μφ(y)</text>
+  <path d="M475 122 L645 183" stroke="#16a34a" stroke-width="2.6" stroke-dasharray="5,3"/>
+  <text x="560" y="140" text-anchor="middle" font-size="10" font-weight="bold" fill="#15803d">MMD² = 這條距離²</text>
+
+  <!-- shortcut arrow bypassing phi -->
+  <path d="M160 262 C 300 320, 500 320, 620 262" fill="none" stroke="#ea580c" stroke-width="3" stroke-dasharray="8,5" marker-end="url(#m4g)"/>
+  <text x="360" y="345" text-anchor="middle" font-size="12" font-weight="bold" fill="#c2410c">核技巧：k(x,y) = φ(x)ᵀφ(y) — 不用真的映射，直接算內積</text>
+  <text x="360" y="362" text-anchor="middle" font-size="9" fill="#7c2d12">繞過中間的 φ，一步到位算出結果</text>
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-4" data-status="pending"><details><summary>🤖 AI 生圖提示詞</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 左側原始空間兩堆散點（藍色 x 資料、橘色 y 資料）。中間箭頭標「映射 φ」。右側 RKHS 空間裡對應的兩堆點，各自用虛線圈標出均值嵌入 μφ(x)、μφ(y)，兩均值點間畫一條虛線標「MMD²＝這條距離²」。底部畫一條弧形捷徑箭頭，從原始空間兩堆點直接繞到右側，繞過中間的 φ 映射，標「核技巧：k(x,y)=φ(x)ᵀφ(y)，不用真的映射，直接算內積」。
+
+WHY（因果或反直覺）: MMD² 具體化成 RKHS 中兩個均值嵌入點的距離平方；核技巧的反直覺之處在於——我們不需要真的把資料映射到（可能是無限維的）RKHS 空間再算距離，只要有一個核函數 k，就能直接算出等價的內積結果，繞過中間映射這一步。
+
+MUST show（必備要素）: ① 左側兩堆不同顏色散點；② 中間「映射 φ」箭頭；③ 右側對應的兩堆點與各自的均值嵌入圈；④ 均值點之間的距離線標 MMD²；⑤ 底部繞過中間映射的捷徑弧形箭頭，標出核技巧公式的白話說明。
+
+AVOID（禁止）: 不要放完整 LaTeX 算式（核技巧那句用簡短符號 k(x,y)=φ(x)ᵀφ(y) 即可，不展開更多）；不要省略捷徑箭頭（這是本圖最重要的反直覺元素）；不要讓左右兩堆散點看起來像同一種顏色。
+
+STYLE: flat vector, viewBox 720×380, 靛紫主題（主 #4f46e5、深 #3730a3），藍色 #60a5fa／橘色 #fb923c 區分兩堆資料，綠色 #16a34a 標示距離，橘紅 #ea580c 標示捷徑箭頭，白底，Arial，圓角、粗線條、無陰影無漸層。</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">核技巧：不用真的映射到 RKHS，直接算 k(x,y) 就等於算出內積/距離</figcaption></figure></div>
+<div class="demo" data-demo-id="kp4">
+  <style>
+    [data-demo-id="kp4"] { border: 1px solid #c7d2fe; border-radius: 14px; overflow: hidden; background: #fff; }
+    [data-demo-id="kp4"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#4f46e5,#3730a3); color: #fff; font-weight: 700; }
+    [data-demo-id="kp4"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #f5f4ff; }
+    [data-demo-id="kp4"] .demo-controls { flex: 1 1 320px; display: flex; flex-direction: column; gap: 8px; }
+    [data-demo-id="kp4"] .demo-canvas { flex: 1 1 380px; }
+    [data-demo-id="kp4"] canvas { border: 1px solid #c7d2fe; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp4"] .row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+    [data-demo-id="kp4"] .row label { min-width: 46px; font-weight: 600; }
+    [data-demo-id="kp4"] input[type="range"] { flex: 1; }
+    [data-demo-id="kp4"] .toggles { display: flex; gap: 14px; align-items:center; font-size:.8rem; font-weight:600;}
+    [data-demo-id="kp4"] button.pre { background: #4f46e5; color: #fff; border: none; padding: 7px 12px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: .78rem; }
+    [data-demo-id="kp4"] button.pre:hover { background: #3730a3; }
+    [data-demo-id="kp4"] .demo-readout { min-height: 10em; padding: 10px 12px; border: 1px solid #c7d2fe; border-radius: 8px; background: #fff; font-family: ui-monospace, Consolas, monospace; font-size: 0.72rem; line-height: 1.5; white-space: pre-wrap; }
+    [data-demo-id="kp4"] .demo-theory, [data-demo-id="kp4"] .demo-instruction { padding: 10px 18px; font-size: 0.85rem; line-height: 1.7; }
+    [data-demo-id="kp4"] .demo-theory { background: #eeecff; border-top: 1px solid #c7d2fe; }
+  </style>
+  <div class="demo-head">🧪 Demo：核技巧算 MMD² — 不用映射到 RKHS，直接代核函數</div>
+  <div class="demo-body">
+    <div class="demo-controls">
+      <div class="row"><label>x1</label><input type="range" id="kp4-x0" min="-3" max="3" step="0.05" value="1"><span id="kp4-x0-v"></span></div>
+      <div class="row"><label>x2</label><input type="range" id="kp4-x1" min="-3" max="3" step="0.05" value="2"><span id="kp4-x1-v"></span></div>
+      <div class="row"><label>x3</label><input type="range" id="kp4-x2" min="-3" max="3" step="0.05" value="-0.5"><span id="kp4-x2-v"></span></div>
+      <div class="row"><label>y1</label><input type="range" id="kp4-y0" min="-3" max="3" step="0.05" value="2"><span id="kp4-y0-v"></span></div>
+      <div class="row"><label>y2</label><input type="range" id="kp4-y1" min="-3" max="3" step="0.05" value="3"><span id="kp4-y1-v"></span></div>
+      <div class="row"><label>y3</label><input type="range" id="kp4-y2" min="-3" max="3" step="0.05" value="0.5"><span id="kp4-y2-v"></span></div>
+      <div class="row"><label>σ</label><input type="range" id="kp4-sig" min="0.3" max="3" step="0.05" value="1"><span id="kp4-sig-v"></span></div>
+      <div class="toggles"><label><input type="checkbox" id="kp4-unbiased"> 用無偏版本（式12）</label></div>
+      <button class="pre" id="kp4-same" type="button">設 Y=X（驗證 MMD²≈0）</button>
+      <div class="demo-readout" id="kp4-ro"></div>
+    </div>
+    <div class="demo-canvas"><canvas id="kp4-cv" width="420" height="220"></canvas></div>
+  </div>
+  <div class="demo-theory">
+    <strong>原理（式8-12）：</strong>$\operatorname{MMD}^2(P_x,P_y)\approx\|\mu_{\phi(x)}-\mu_{\phi(y)}\|_2^2=\frac1{n^2}\sum_{i,j}k(x_i,x_j)+\frac1{m^2}\sum_{i,j}k(y_i,y_j)-\frac2{nm}\sum_{i,j}k(x_i,y_j)$，其中 RBF 核 $k(a,b)=\exp\!\bigl(-\frac{(a-b)^2}{2\sigma^2}\bigr)$（式13）。無偏版本把同組內的加總改成 $\frac1{n(n-1)}\sum_{i\neq j}$。
+  </div>
+  <div class="demo-instruction">
+    <strong>這在做什麼：</strong>具體算出 MMD² 的三項（XX、YY、XY），驗證核技巧公式。
+    <strong>怎麼操作：</strong>
+    <ul>
+      <li>拉動 6 個滑桿改變樣本、拉 σ 改變核頻寬。</li>
+      <li>按「設 Y=X」看兩組資料完全相同時的 MMD²。</li>
+      <li>勾選切換有偏/無偏版本比較差異。</li>
+    </ul>
+    <strong>觀察什麼：</strong>Y=X 時 MMD² 應趨近 0；拉開 Y 的位置，MMD² 應該增大。
+    <strong>正確結果基準：</strong>Y=X 時（有偏版本）MMD²≈0（無偏版本因排除自我配對，數值也應接近 0 但機制不同，可對照觀察）。
+  </div>
+  <script>
+  (function(){
+    var ids=['kp4-x0','kp4-x1','kp4-x2','kp4-y0','kp4-y1','kp4-y2'];
+    var cv=document.getElementById('kp4-cv'), ctx=cv.getContext('2d');
+    var ro=document.getElementById('kp4-ro');
+    function fmt(v){ return (Math.round(v*1000)/1000).toFixed(4); }
+    function rbf(a,b,sig){ var d=a-b; return Math.exp(-(d*d)/(2*sig*sig)); }
+    function vals(){ return ids.map(function(id){ return parseFloat(document.getElementById(id).value); }); }
+    function draw(X,Y){
+      var W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      var midY1=80, midY2=150, x0=30, x1=W-30, scale=(x1-x0)/8;
+      function toPx(v){ return x0+(v+4)*scale; }
+      ctx.strokeStyle='#cbd5e1';
+      ctx.beginPath(); ctx.moveTo(x0,midY1); ctx.lineTo(x1,midY1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x0,midY2); ctx.lineTo(x1,midY2); ctx.stroke();
+      ctx.fillStyle='#1e293b'; ctx.font='11px sans-serif'; ctx.textAlign='left';
+      ctx.fillText('X', 4, midY1+4); ctx.fillText('Y', 4, midY2+4);
+      X.forEach(function(v){ ctx.fillStyle='#2563eb'; ctx.beginPath(); ctx.arc(toPx(v),midY1,6,0,6.283); ctx.fill(); });
+      Y.forEach(function(v){ ctx.fillStyle='#ea580c'; ctx.beginPath(); ctx.arc(toPx(v),midY2,6,0,6.283); ctx.fill(); });
+    }
+    function sync(){
+      var v=vals();
+      var X=v.slice(0,3), Y=v.slice(3,6);
+      var sig=parseFloat(document.getElementById('kp4-sig').value);
+      var unbiased=document.getElementById('kp4-unbiased').checked;
+      ids.forEach(function(id){ document.getElementById(id+'-v').textContent=fmt(parseFloat(document.getElementById(id).value)); });
+      document.getElementById('kp4-sig-v').textContent=fmt(sig);
+      draw(X,Y);
+      var n=X.length, m=Y.length;
+      var sumXX=0, sumYY=0, sumXY=0;
+      var kxx=[],kyy=[];
+      for(var i=0;i<n;i++){ kxx.push([]); for(var j=0;j<n;j++){ var k=rbf(X[i],X[j],sig); kxx[i].push(k); if(unbiased){ if(i!==j) sumXX+=k; } else sumXX+=k; } }
+      for(i=0;i<m;i++){ kyy.push([]); for(j=0;j<m;j++){ var k2=rbf(Y[i],Y[j],sig); kyy[i].push(k2); if(unbiased){ if(i!==j) sumYY+=k2; } else sumYY+=k2; } }
+      for(i=0;i<n;i++) for(j=0;j<m;j++) sumXY+=rbf(X[i],Y[j],sig);
+      var termXX = unbiased ? sumXX/(n*(n-1)) : sumXX/(n*n);
+      var termYY = unbiased ? sumYY/(m*(m-1)) : sumYY/(m*m);
+      var termXY = 2*sumXY/(n*m);
+      var mmd2 = termXX+termYY-termXY;
+      var matStr = kxx.map(function(row){ return row.map(fmt).join(' '); }).join(' | ');
+      ro.textContent =
+        'X=['+X.map(fmt).join(', ')+']  Y=['+Y.map(fmt).join(', ')+']  σ='+fmt(sig)+(unbiased?'（無偏）':'（有偏）')+'\n\n'+
+        'k(X,X) 矩陣: '+matStr+'\n'+
+        'XX 項 = '+fmt(termXX)+'\n'+
+        'YY 項 = '+fmt(termYY)+'\n'+
+        'XY 交叉項（含係數2）= '+fmt(termXY)+'\n\n'+
+        'MMD² = XX + YY − XY = '+fmt(mmd2);
+    }
+    ids.forEach(function(id){ document.getElementById(id).addEventListener('input', sync); });
+    document.getElementById('kp4-sig').addEventListener('input', sync);
+    document.getElementById('kp4-unbiased').addEventListener('change', sync);
+    document.getElementById('kp4-same').addEventListener('click', function(){
+      var xs=ids.slice(0,3).map(function(id){ return document.getElementById(id).value; });
+      ids.slice(3,6).forEach(function(id,i){ document.getElementById(id).value=xs[i]; });
+      sync();
+    });
+    sync();
+  })();
+  </script>
+</div>
+<button class="guide-btn" type="button" data-kp="4" data-guide="kp-4" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：RKHS 均值嵌入與核技巧——不用真的飛到遠方拍照</button><div class="quiz" data-ans="B"><p class="q"><p>式 (8) 說明了 $\operatorname{MMD}^2(P_x,P_y)$ 近似等於什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q4-0" value="A"><span>A. <p>兩組樣本的均值之差</p></span></label><label class="opt"><input type="radio" name="q4-0" value="B"><span>B. <p>兩個 RKHS 均值嵌入 $\mu_{\phi(x)}$ 與 $\mu_{\phi(y)}$ 之間的歐式距離平方</p></span></label><label class="opt"><input type="radio" name="q4-0" value="C"><span>C. <p>兩個核函數值之差</p></span></label><label class="opt"><input type="radio" name="q4-0" value="D"><span>D. <p>兩組樣本的變異數之差</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="式(8)是 MMD 具體化的核心：把抽象定義轉成「RKHS 中兩個均值嵌入點之間的距離平方」，這就是可以實際計算的形式。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>核技巧（kernel trick）在這裡扮演的角色是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q4-1" value="A"><span>A. <p>把資料降維</p></span></label><label class="opt"><input type="radio" name="q4-1" value="B"><span>B. <p>讓我們不需要真的算出 $\phi(x)$，只要有核函數 $k(x,y)=\phi(x)^\top\phi(y)$ 就能直接算出內積</p></span></label><label class="opt"><input type="radio" name="q4-1" value="C"><span>C. <p>只能用於線性核</p></span></label><label class="opt"><input type="radio" name="q4-1" value="D"><span>D. <p>用來取代梯度下降</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="式(9)裡 $\phi$ 都是成對做內積出現，套用 $k(x,y):=\phi(x)^\top\phi(y)$ 後，不需要真的映射到（可能無限維的）RKHS，直接用核函數算內積即可。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>式 (11) 有偏版本與式 (12) 無偏版本的主要差異是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q4-2" value="A"><span>A. <p>無偏版本用不同的核函數</p></span></label><label class="opt"><input type="radio" name="q4-2" value="B"><span>B. <p>無偏版本在同分布內的加總排除了 $i=j$ 的自我配對項，分母改為 $n(n-1)$ 或 $m(m-1)$</p></span></label><label class="opt"><input type="radio" name="q4-2" value="C"><span>C. <p>有偏版本不能用於高斯核</p></span></label><label class="opt"><input type="radio" name="q4-2" value="D"><span>D. <p>兩者計算結果必然相同</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="無偏版本把 $\frac{1}{n^2}\sum_{i,j}^n$ 換成 $\frac{1}{n(n-1)}\sum_{i\neq j}^n$，排除自己跟自己配對的項，以消除統計偏誤。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>數值示範中，$X=\{1,2\}$、$Y=\{2,3\}$ 用 RBF 核（$\sigma=1$）算出的 $\operatorname{MMD}^2$ 約為？</p></p><div class="opts"><label class="opt"><input type="radio" name="q4-3" value="A"><span>A. <p>0</p></span></label><label class="opt"><input type="radio" name="q4-3" value="B"><span>B. <p>約 0.43</p></span></label><label class="opt"><input type="radio" name="q4-3" value="C"><span>C. <p>約 2.5</p></span></label><label class="opt"><input type="radio" name="q4-3" value="D"><span>D. <p>約 10</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="代入式(11)：XX 項與 YY 項各約 0.8033，XY 項約 1.1742，相加減得 $\operatorname{MMD}^2\approx0.4324$。"></div></div></div></section>
+<section id="kp5" class="card" data-kp="5"><div class="card-head"><span class="badge">2.2.3</span><h3>MMD 什麼時候才算「真正的距離」：universal kernel</h3><span class="toggle">▼</span></div><div class="card-body"><h4>不是隨便選個核函數都行</h4>
+<p>kp4 給出了可計算的 MMD² 公式，但這裡有個重要但容易被忽略的條件：<strong>MMD 要能拿來當作「距離度量」（也就是 MMD=0 若且唯若兩分布相同），核函數 $k$ 必須是 universal kernel（也叫 characteristic kernel）</strong>。如果選錯核函數，可能出現「兩個分布明明不同，MMD 卻算出 0」的假象——這就失去了度量的意義。</p>
+<h4>Universal kernel 的定義</h4>
+<p><strong>定義 2（Universal kernel）</strong>：令 $C(\mathcal{X})$ 是輸入空間 $\mathcal{X}$ 上所有連續函數的集合。一個連續核函數 $k$（定義在緊緻度量空間 $\mathcal{X}$ 上）稱為 universal，如果它對應的 RKHS $\mathcal{H}$ 在 $C(\mathcal{X})$ 中是稠密的——白話講：<strong>對任何連續函數 $f\in C(\mathcal{X})$、任何小誤差 $\epsilon\gt 0$，都能在 $\mathcal{H}$ 裡找到一個函數 $g$，使得 $\|f-g\|_\infty\leq\epsilon$</strong>（也就是說，$\mathcal{H}$ 這個空間「夠豐富」，能任意逼近任何連續函數）。</p>
+<p>根據 Stone-Weierstrass 定理，universal kernel 的泰勒展開式必須有<strong>無限多項</strong>。兩個常見例子：</p>
+<ul>
+<li><strong>RBF 核（高斯核）</strong>：$k(\boldsymbol{x},\boldsymbol{y}):=\exp\!\big(-\gamma\|\boldsymbol{x}-\boldsymbol{y}\|_2^2\big)$（式 13），其中 $\gamma:=1/\sigma^2$。</li>
+<li><strong>Laplacian 核</strong>：$k(\boldsymbol{x},\boldsymbol{y}):=\exp\!\big(-\gamma\|\boldsymbol{x}-\boldsymbol{y}\|_1\big)$（式 14），用曼哈頓距離。</li>
+</ul>
+<p>這兩個核都因為有指數運算，泰勒展開有無限多項，所以是 universal。<strong>反例：多項式核不是 universal</strong>——它的展開式項數有限。</p>
+<h4>Proposition 3：universal kernel 下，MMD=0 若且唯若分布相同</h4>
+<p>$$
+\operatorname{MMD}(P_x,P_y)=0 \Longleftrightarrow P_x=P_y. \tag{15}
+$$</p>
+<p><strong>證明的關鍵一步</strong>（往回推：假設 MMD=0，證明 $P_x=P_y$）：MMD=0 代表兩個均值嵌入相等 $\mu_{\phi(x)}=\mu_{\phi(y)}$（式16）。因為 $\mathcal{H}$ 是 universal（定義2），對任意連續函數 $f$，都能找到 $g\in\mathcal{H}$ 使 $\|f-g\|_\infty\leq\epsilon$。把 $|\mathbb{E}[f(x)]-\mathbb{E}[f(y)]|$ 拆成三段（式18）：</p>
+<p>$$
+|\mathbb{E}[f(x)]-\mathbb{E}[g(x)]|+|\mathbb{E}[g(x)]-\mathbb{E}[g(y)]|+|\mathbb{E}[g(y)]-\mathbb{E}[f(y)]|.
+$$</p>
+<p>第一、三項因為 $\|f-g\|_\infty\leq\epsilon$，各自 $\leq\epsilon$。第二項因為 $g\in\mathcal{H}$、且均值嵌入已相等（$\langle g,\mu_{\phi(x)}-\mu_{\phi(y)}\rangle_\mathcal{H}=0$），所以<strong>恰好等於 0</strong>。三項加總 $\leq 2\epsilon$，對<strong>任意小</strong>的 $\epsilon$ 都成立，代表 $|\mathbb{E}[f(x)]-\mathbb{E}[f(y)]|=0$ 對所有 $f\in C(\mathcal{X})$ 成立——根據 Proposition 2，這正是 $P_x=P_y$ 的定義。</p>
+<p><strong>MMD 的另一個性質</strong>：MMD 有下界（0）但沒有上界——分布相同時 MMD 是 0，分布差異越大，MMD 就越大，但沒有一個固定的最大值。</p>
+<h4>數值示範：兩個一維高斯分布的解析 MMD²</h4>
+<p>考慮 $P=\mathcal{N}(0,1)$、$Q=\mathcal{N}(1,2)$，高斯核 $\gamma=1$。有一個閉式公式可用：對 $\mathcal{N}(\mu,\sigma^2)$，$\mathbb{E}_{x,x'\sim\mathcal{N}(\mu,\sigma^2)}[k(x,x')]=\dfrac{1}{\sqrt{1+2\sigma^2/\gamma^2}}$。</p>
+<p>$X$ 項（$\sigma_P^2=1$）：$\dfrac{1}{\sqrt{1+2}}=\dfrac{1}{\sqrt3}\approx0.5774$</p>
+<p>$Y$ 項（$\sigma_Q^2=2$）：$\dfrac{1}{\sqrt{1+4}}=\dfrac{1}{\sqrt5}\approx0.4472$</p>
+<p>交叉項 $\mathbb{E}_{x\sim P,y\sim Q}[k(x,y)]$ 則用 $x-y\sim\mathcal{N}(\mu_P-\mu_Q,\sigma_P^2+\sigma_Q^2)=\mathcal{N}(-1,3)$ 的核期望公式：$\dfrac{1}{\sqrt{1+2\times3/1}}\exp\!\big(-\dfrac{(\mu_P-\mu_Q)^2}{2(\gamma^2+2\times3)}\big)$——原文習題 2 留給讀者自己代入算完整數字，這裡先建立「兩個高斯分布之間存在解析 MMD² 公式」這個直覺，不必每次都靠取樣近似。</p>
+<h4>口語小結</h4>
+<p><strong>MMD 要能當「真正的距離」，核函數必須是 universal（RBF、Laplacian 可以，多項式核不行）；在這個條件下，MMD=0 精確地等價於兩分布相同，證明的核心是把誤差拆三段、用 universal 的稠密性質把每段都壓到任意小。</strong></p><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, Helvetica, sans-serif">
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <text x="360" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#3730a3">核函數選得夠不夠「豐富」，決定 MMD 這把尺準不準</text>
+
+  <!-- LEFT: universal kernel, dense -->
+  <rect x="16" y="46" width="330" height="240" rx="10" fill="#eeecff" stroke="#a5a1f5" stroke-width="1.4"/>
+  <text x="181" y="66" text-anchor="middle" font-size="12" font-weight="bold" fill="#3730a3">Universal kernel（如 RBF）</text>
+  <path d="M40 200 C 70 140, 100 240, 130 160" fill="none" stroke="#818cf8" stroke-width="2"/>
+  <path d="M50 220 C 90 100, 130 260, 170 130" fill="none" stroke="#a5b4fc" stroke-width="2"/>
+  <path d="M60 240 C 110 90, 150 250, 200 110" fill="none" stroke="#6d28d9" stroke-width="2"/>
+  <path d="M70 210 C 130 130, 180 230, 230 150" fill="none" stroke="#c4b5fd" stroke-width="2"/>
+  <path d="M90 180 C 150 220, 200 100, 260 190" fill="none" stroke="#818cf8" stroke-width="2"/>
+  <path d="M110 230 C 170 150, 220 250, 280 170" fill="none" stroke="#4f46e5" stroke-width="2.4"/>
+  <path d="M130 190 C 190 100, 240 240, 300 130" fill="none" stroke="#a5b4fc" stroke-width="2"/>
+  <text x="181" y="212" text-anchor="middle" font-size="9" fill="#3730a3">層層疊疊，填滿整個區域</text>
+  <text x="181" y="255" text-anchor="middle" font-size="10" font-weight="bold" fill="#3730a3">夠豐富，能任意逼近任何連續函數</text>
+
+  <!-- RIGHT: non-universal, sparse -->
+  <rect x="374" y="46" width="330" height="240" rx="10" fill="#fff7ed" stroke="#fdba74" stroke-width="1.4"/>
+  <text x="539" y="66" text-anchor="middle" font-size="12" font-weight="bold" fill="#c2410c">非 Universal（如多項式核）</text>
+  <path d="M410 220 C 460 150, 510 150, 560 220" fill="none" stroke="#fb923c" stroke-width="2.6"/>
+  <path d="M420 180 L660 180" stroke="#fdba74" stroke-width="2.2" stroke-dasharray="6,4"/>
+  <path d="M420 240 C 500 200, 580 260, 660 210" fill="none" stroke="#f97316" stroke-width="2.4"/>
+  <text x="539" y="212" text-anchor="middle" font-size="9" fill="#9a3412">只有幾條簡單曲線，覆蓋不全</text>
+  <!-- warning icon -->
+  <circle cx="620" cy="90" r="16" fill="#ea580c"/>
+  <text x="620" y="96" text-anchor="middle" font-size="16" font-weight="bold" fill="#fff">!</text>
+  <text x="539" y="255" text-anchor="middle" font-size="10" font-weight="bold" fill="#c2410c">不夠豐富，MMD=0 不保證分布相同</text>
+
+  <text x="360" y="320" text-anchor="middle" font-size="11" fill="#334155">危險：用非 universal 核，可能把兩個明明不同的分布誤判成「相同」</text>
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-5" data-status="pending"><details><summary>🤖 AI 生圖提示詞</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 左右對比兩個方框。左「Universal kernel（如 RBF）」：7-8 條交錯重疊的曲線層層疊疊填滿整個區域，標「夠豐富，能任意逼近任何連續函數」。右「非 Universal（如多項式核）」：只有 2-3 條簡單曲線，明顯有大片空白覆蓋不到，標「不夠豐富，MMD=0 不保證分布相同」，並在右上角加一個橘色驚嘆號警示圖示。底部一行文字點出風險：用非 universal 核可能誤判不同分布為相同。
+
+WHY（因果或反直覺）: MMD 要能當作「真正的距離度量」（MMD=0 若且唯若分布相同），核函數必須是 universal（能任意逼近任何連續函數的豐富核）；若核函數不夠豐富（如多項式核），MMD 這把尺會失準——即使兩個分布明明不同，也可能被誤判為 MMD=0。反直覺點：不是隨便一個核函數都能拿來做分布比較，「夠不夠豐富」直接決定這把尺可不可信。
+
+MUST show（必備要素）: ① 左側密集交錯、填滿區域的曲線群；② 右側稀疏、明顯留白的曲線群；③ 右側的橘色警示圖示（驚嘆號）；④ 左右各自的判準文字（夠豐富 vs 不夠豐富）；⑤ 底部風險提示文字。
+
+AVOID（禁止）: 不要放完整 LaTeX 算式；不要讓左右兩側曲線密度看起來差不多（必須一眼看出「密 vs 疏」的對比）；不要省略警示圖示。
+
+STYLE: flat vector, viewBox 720×360, 靛紫主題（主 #4f46e5、深 #3730a3、淺底 #eeecff）對比警示橘色系（#ea580c、#fb923c、#fff7ed），白底，Arial，圓角、粗線條、無陰影無漸層。</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">universal 核（刻度密的尺）vs 非 universal 核（刻度疏的尺）：後者可能誤判不同為相同</figcaption></figure></div>
+<div class="demo" data-demo-id="kp5">
+  <style>
+    [data-demo-id="kp5"] { border: 1px solid #c7d2fe; border-radius: 14px; overflow: hidden; background: #fff; }
+    [data-demo-id="kp5"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#4f46e5,#3730a3); color: #fff; font-weight: 700; }
+    [data-demo-id="kp5"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #f5f4ff; }
+    [data-demo-id="kp5"] .demo-controls { flex: 1 1 300px; display: flex; flex-direction: column; gap: 8px; }
+    [data-demo-id="kp5"] .demo-canvas { flex: 1 1 420px; }
+    [data-demo-id="kp5"] canvas { border: 1px solid #c7d2fe; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp5"] .row { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+    [data-demo-id="kp5"] .row label { min-width: 90px; font-weight: 600; }
+    [data-demo-id="kp5"] input[type="range"] { flex: 1; }
+    [data-demo-id="kp5"] .demo-readout { min-height: 8em; padding: 10px 12px; border: 1px solid #c7d2fe; border-radius: 8px; background: #fff; font-family: ui-monospace, Consolas, monospace; font-size: 0.74rem; line-height: 1.5; white-space: pre-wrap; }
+    [data-demo-id="kp5"] .demo-theory, [data-demo-id="kp5"] .demo-instruction { padding: 10px 18px; font-size: 0.85rem; line-height: 1.7; }
+    [data-demo-id="kp5"] .demo-theory { background: #eeecff; border-top: 1px solid #c7d2fe; }
+    [data-demo-id="kp5"] .legend { font-size:.75rem; display:flex; gap:14px; margin-top:6px; }
+    [data-demo-id="kp5"] .legend span{display:flex;align-items:center;gap:4px;}
+    [data-demo-id="kp5"] .sw{width:14px;height:4px;display:inline-block;}
+  </style>
+  <div class="demo-head">🧪 Demo：Universal kernel（RBF/Laplacian）vs 多項式核 — MMD² 隨偏移的變化</div>
+  <div class="demo-body">
+    <div class="demo-controls">
+      <div class="row"><label>Y 第4點偏移 shift</label><input type="range" id="kp5-shift" min="-3" max="3" step="0.05" value="0"><span id="kp5-shift-v"></span></div>
+      <div class="row"><label>頻寬 σ</label><input type="range" id="kp5-sig" min="0.5" max="2.5" step="0.05" value="1.2"><span id="kp5-sig-v"></span></div>
+      <div class="legend">
+        <span><i class="sw" style="background:#2563eb"></i>RBF（universal）</span>
+        <span><i class="sw" style="background:#16a34a"></i>Laplacian（universal）</span>
+        <span><i class="sw" style="background:#ea580c"></i>多項式（非 universal）</span>
+      </div>
+      <div class="demo-readout" id="kp5-ro"></div>
+    </div>
+    <div class="demo-canvas"><canvas id="kp5-cv" width="440" height="260"></canvas></div>
+  </div>
+  <div class="demo-theory">
+    <strong>原理（式13-14 + Proposition 3）：</strong>RBF 核 $k(x,y)=\exp(-\frac{(x-y)^2}{2\sigma^2})$、Laplacian 核 $k(x,y)=\exp(-\frac{|x-y|}{\sigma^2})$ 都是 universal kernel（泰勒展開無限項）；多項式核 $k(x,y)=(xy+1)^2$ 不是 universal（展開項數有限）。只有用 universal kernel，MMD=0 才精確等價於分布相同（Proposition 3）。
+  </div>
+  <div class="demo-instruction">
+    <strong>這在做什麼：</strong>固定 $X=[-1.5,-0.5,0.5,1.5]$，讓 $Y$ 從等於 $X$ 開始，把最後一點逐漸偏移，比較三種核算出的 MMD² 曲線。
+    <strong>怎麼操作：</strong>
+    <ul>
+      <li>拉 shift 滑桿把 $Y$ 第4點從 $X$ 對應值往外移，觀察目前位置在三條曲線上的落點（垂直虛線）。</li>
+      <li>拉 σ 看頻寬如何影響曲線陡峭程度。</li>
+    </ul>
+    <strong>觀察什麼：</strong>RBF、Laplacian 曲線隨 |shift| 增加大致穩定上升；多項式核曲線形狀較不規則，凸顯「非 universal 核不保證能穩定反映分布差異」。
+    <strong>正確結果基準：</strong>shift=0（$Y=X$）時三條曲線的 MMD² 都應在 0 附近；此 demo 為簡化示範三核對比，非嚴謹反例證明（面板已誠實標註）。
+  </div>
+  <script>
+  (function(){
+    var X=[-1.5,-0.5,0.5,1.5];
+    var cv=document.getElementById('kp5-cv'), ctx=cv.getContext('2d');
+    var ro=document.getElementById('kp5-ro');
+    function fmt(v){ return (Math.round(v*1000)/1000).toFixed(4); }
+    function rbf(a,b,sig){ var d=a-b; return Math.exp(-(d*d)/(2*sig*sig)); }
+    function lap(a,b,sig){ return Math.exp(-Math.abs(a-b)/(sig*sig)); }
+    function poly(a,b){ var v=a*b+1; return v*v; }
+    function mmd2(Y, kfn){
+      var n=X.length, m=Y.length, sxx=0, syy=0, sxy=0;
+      for(var i=0;i<n;i++) for(var j=0;j<n;j++) sxx+=kfn(X[i],X[j]);
+      for(i=0;i<m;i++) for(j=0;j<m;j++) syy+=kfn(Y[i],Y[j]);
+      for(i=0;i<n;i++) for(j=0;j<m;j++) sxy+=kfn(X[i],Y[j]);
+      return sxx/(n*n)+syy/(m*m)-2*sxy/(n*m);
+    }
+    function buildY(shift){ return [X[0],X[1],X[2],X[3]+shift]; }
+    function draw(sig, curShift){
+      var W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      var x0=40,x1=W-14,y0=14,y1=H-30;
+      var shifts=[]; for(var s=-3;s<=3.0001;s+=0.1) shifts.push(Math.round(s*100)/100);
+      var kRbf=function(a,b){return rbf(a,b,sig);}, kLap=function(a,b){return lap(a,b,sig);}, kPoly=poly;
+      var curves={rbf:[],lap:[],poly:[]};
+      shifts.forEach(function(s){
+        var Y=buildY(s);
+        curves.rbf.push(mmd2(Y,kRbf));
+        curves.lap.push(mmd2(Y,kLap));
+        curves.poly.push(mmd2(Y,kPoly));
+      });
+      var allVals=curves.rbf.concat(curves.lap).concat(curves.poly);
+      var maxV=Math.max.apply(null,allVals), minV=Math.min(0,Math.min.apply(null,allVals));
+      if(maxV-minV<1e-6) maxV=minV+1;
+      function px(s){ return x0+((s+3)/6)*(x1-x0); }
+      function py(v){ return y1-((v-minV)/(maxV-minV))*(y1-y0); }
+      ctx.strokeStyle='#e2e8f0'; ctx.strokeRect(x0,y0,x1-x0,y1-y0);
+      function plot(arr,color){
+        ctx.strokeStyle=color; ctx.lineWidth=2; ctx.beginPath();
+        shifts.forEach(function(s,i){ var xx=px(s), yy=py(arr[i]); if(i===0) ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy); });
+        ctx.stroke();
+      }
+      plot(curves.rbf,'#2563eb'); plot(curves.lap,'#16a34a'); plot(curves.poly,'#ea580c');
+      ctx.strokeStyle='#94a3b8'; ctx.setLineDash([4,3]);
+      var curX=px(curShift); ctx.beginPath(); ctx.moveTo(curX,y0); ctx.lineTo(curX,y1); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle='#64748b'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('shift',(x0+x1)/2,H-8);
+      ctx.textAlign='left'; ctx.fillText('MMD²',4,20);
+    }
+    function sync(){
+      var shift=parseFloat(document.getElementById('kp5-shift').value);
+      var sig=parseFloat(document.getElementById('kp5-sig').value);
+      document.getElementById('kp5-shift-v').textContent=fmt(shift);
+      document.getElementById('kp5-sig-v').textContent=fmt(sig);
+      var Y=buildY(shift);
+      var vRbf=mmd2(Y,function(a,b){return rbf(a,b,sig);});
+      var vLap=mmd2(Y,function(a,b){return lap(a,b,sig);});
+      var vPoly=mmd2(Y,poly);
+      draw(sig,shift);
+      ro.textContent =
+        'X=['+X.map(fmt).join(', ')+']\n'+
+        'Y=['+Y.map(fmt).join(', ')+']（第4點偏移 '+fmt(shift)+'）\n\n'+
+        'MMD²_RBF        = '+fmt(vRbf)+'\n'+
+        'MMD²_Laplacian  = '+fmt(vLap)+'\n'+
+        'MMD²_多項式核    = '+fmt(vPoly)+'\n\n'+
+        '（本示範用有限樣本簡化對比，非嚴謹反例證明）';
+    }
+    document.getElementById('kp5-shift').addEventListener('input', sync);
+    document.getElementById('kp5-sig').addEventListener('input', sync);
+    sync();
+  })();
+  </script>
+</div>
+<button class="guide-btn" type="button" data-kp="5" data-guide="kp-5" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Universal Kernel——一把尺，刻度夠不夠密</button><div class="quiz" data-ans="B"><p class="q"><p>Universal kernel 的直覺定義是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q5-0" value="A"><span>A. <p>核函數值必須永遠是正數</p></span></label><label class="opt"><input type="radio" name="q5-0" value="B"><span>B. <p>對應的 RKHS 在所有連續函數空間中是稠密的，能任意逼近任何連續函數</p></span></label><label class="opt"><input type="radio" name="q5-0" value="C"><span>C. <p>核函數必須是線性的</p></span></label><label class="opt"><input type="radio" name="q5-0" value="D"><span>D. <p>核函數只能用於高維資料</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="定義2指出：對任何連續函數 $f$ 與任意小誤差 $\epsilon$，都能在 $\mathcal{H}$ 中找到函數 $g$ 使 $\|f-g\|_\infty\leq\epsilon$，代表 RKHS 夠「豐富」。"></div></div><div class="quiz" data-ans="C"><p class="q"><p>下列哪個核函數不是 universal kernel？</p></p><div class="opts"><label class="opt"><input type="radio" name="q5-1" value="A"><span>A. <p>RBF（高斯）核</p></span></label><label class="opt"><input type="radio" name="q5-1" value="B"><span>B. <p>Laplacian 核</p></span></label><label class="opt"><input type="radio" name="q5-1" value="C"><span>C. <p>多項式核</p></span></label><label class="opt"><input type="radio" name="q5-1" value="D"><span>D. <p>以上皆是 universal</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="多項式核的泰勒展開項數有限，不滿足 universal 的「無限多項展開」要求；RBF 與 Laplacian 核因指數運算而有無限多項，都是 universal。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>Proposition 3 的證明中，把 $|\mathbb{E}[f(x)]-\mathbb{E}[f(y)]|$ 拆成三項，其中「中間項」為什麼恰好等於 0？</p></p><div class="opts"><label class="opt"><input type="radio" name="q5-2" value="A"><span>A. <p>因為 $f=g$</p></span></label><label class="opt"><input type="radio" name="q5-2" value="B"><span>B. <p>因為 $g\in\mathcal{H}$ 且均值嵌入已假設相等，內積 $\langle g,\mu_{\phi(x)}-\mu_{\phi(y)}\rangle_\mathcal{H}=0$</p></span></label><label class="opt"><input type="radio" name="q5-2" value="C"><span>C. <p>因為 $\epsilon=0$</p></span></label><label class="opt"><input type="radio" name="q5-2" value="D"><span>D. <p>因為核函數是線性的</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="中間項 $\mathbb{E}[g(x)]-\mathbb{E}[g(y)]=\langle g,\mu_{\phi(x)}-\mu_{\phi(y)}\rangle_\mathcal{H}$，由假設 MMD=0 推出均值嵌入相等，此內積恰為 0。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>若選用非 universal 的核函數（如多項式核）計算 MMD，可能發生什麼問題？</p></p><div class="opts"><label class="opt"><input type="radio" name="q5-3" value="A"><span>A. <p>計算會出現除以零</p></span></label><label class="opt"><input type="radio" name="q5-3" value="B"><span>B. <p>即使兩分布不同，MMD 也可能算出 0，失去度量分布差異的意義</p></span></label><label class="opt"><input type="radio" name="q5-3" value="C"><span>C. <p>MMD 值會變成負數</p></span></label><label class="opt"><input type="radio" name="q5-3" value="D"><span>D. <p>無法計算 MMD</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="Proposition 3 的等價關係只在 universal kernel 下成立；若核函數不 universal，MMD=0 不再保證分布相同，度量會失效。"></div></div></div></section>
+<section id="kp6" class="card" data-kp="6"><div class="card-head"><span class="badge">3</span><h3>GMMN：用 MMD 當損失函數的生成模型</h3><span class="toggle">▼</span></div><div class="card-body"><h4>回顧 GAN，對照 GMMN</h4>
+<p><strong>生成對抗網路（GAN）</strong> 的結構（原文 Fig. 2a）：一個生成器（generator）吃隨機雜訊、輸出生成資料；一個判別器（discriminator）嘗試分辨資料是真是假；兩者在極大極小賽局裡同時訓練。</p>
+<p><strong>生成動差匹配網路（GMMN）</strong>（Fig. 2b）<strong>把判別器整個拿掉，換成 MMD 損失函數</strong>——直接量測「生成資料的分布」跟「真實資料的分布」之間的 MMD，把這個 MMD 當作訓練損失去最小化。沒有對抗、沒有判別器，是一個更直接的訓練方式。</p>
+<h4>GMMN 的輸入與輸出</h4>
+<p>GMMN 是一個神經網路生成器，輸入是隨機雜訊向量 $\boldsymbol{z}=[z_1,\ldots,z_p]^\top$，每個維度是<strong>獨立同分布（i.i.d.）的均勻分布</strong>：</p>
+<p>$$
+\mathbb{P}(\boldsymbol{z})=\prod_{j=1}^p U(z_j), \tag{19}
+$$</p>
+<p>其中 $\boldsymbol{z}\in[-1,1]^p$ 或 $\boldsymbol{z}\in[0,1]^p$（不同文獻用不同範圍），$p$ 是雜訊向量的維度（也就是輸入層神經元數）。網路吃進 $\boldsymbol{z}$，輸出生成資料 $\widehat{\boldsymbol{x}}\in\mathbb{R}^d$。</p>
+<h4>訓練損失：直接用 kp4 的 MMD² 公式</h4>
+<p>假設訓練資料集是 $\{\boldsymbol{x}_i\}_{i=1}^n$，GMMN 每輪生成 $m$ 筆資料 $\{\widehat{\boldsymbol{x}}_j\}_{j=1}^m$。GMMN 的損失函數就是 kp4 式 (11) 的 MMD²：</p>
+<p>$$
+\mathcal{L}:=\operatorname{MMD}^2(P_x,P_{\widehat{x}})\approx\frac{1}{n^2}\sum_{i,j}^n k(\boldsymbol{x}_i,\boldsymbol{x}_j)+\frac{1}{m^2}\sum_{i,j}^m k(\widehat{\boldsymbol{x}}_i,\widehat{\boldsymbol{x}}_j)-\frac{2}{nm}\sum_{i,j}k(\boldsymbol{x}_i,\widehat{\boldsymbol{x}}_j). \tag{20}
+$$</p>
+<p>這個損失可以用 mini-batch 訓練（每次生成 $m$ 筆）。最小化這個損失，會把 $\operatorname{MMD}(P_x,P_{\widehat{x}})$ 推向 0——而根據 kp5 的 Proposition 3，<strong>MMD 趨近 0 就代表生成分布 $P_{\widehat{x}}$ 趨近訓練資料分布 $P_x$</strong>。這正是「用 MMD 當損失函數能訓練出好生成器」的理論根據——kp2–kp5 鋪的路，到這裡收成果實。</p>
+<h4>一個變體：在自編碼器的潛在空間裡做 GMMN</h4>
+<p>還有一種做法（Fig. 2c）：先訓練一個重建自編碼器（用反向傳播、逐層貪婪訓練或信念傳播都可以），然後讓 GMMN 的輸出目標<strong>不是原始資料</strong>，而是<strong>自編碼器潛在層（code space）的分布</strong>。也就是說 GMMN 學會生成「看起來像潛在編碼」的向量，這些向量再交給解碼器還原成資料。</p>
+<h4>三個實務眉角</h4>
+<ol>
+<li><strong>核函數必須是 universal</strong>（呼應 kp5）——RBF、Laplacian 可以，多項式核不行，否則 MMD 不再是有效的距離度量。</li>
+<li><strong>經驗上用 $\sqrt{\operatorname{MMD}^2(P_x,P_{\widehat{x}})}$ 當損失，生成品質會更好</strong>（開根號後梯度的尺度更平順）。</li>
+<li><strong>隱藏層建議用 ReLU 激活函數，輸出層依生成資料範圍選（例如 sigmoid 讓輸出落在 $[0,1]$）</strong>。</li>
+</ol>
+<h4>數值示範：一個極小玩具訓練損失</h4>
+<p>假設真實資料 $X=\{1,2\}$、目前生成資料 $\widehat{X}=\{1.5,2.5\}$，用線性核 $k(a,b)=a\cdot b$。代入式 (20)：</p>
+<p>$$
+\text{XX 項}=\frac{1}{4}(1\cdot1+1\cdot2+2\cdot1+2\cdot2)=\frac{1}{4}(1+2+2+4)=\frac{9}{4}=2.25
+$$
+$$
+\widehat{X}\widehat{X}\text{ 項}=\frac{1}{4}(1.5\cdot1.5+1.5\cdot2.5+2.5\cdot1.5+2.5\cdot2.5)=\frac{1}{4}(2.25+3.75+3.75+6.25)=\frac{16}{4}=4
+$$
+$$
+\text{交叉項}=\frac{2}{4}(1\cdot1.5+1\cdot2.5+2\cdot1.5+2\cdot2.5)=\frac{2}{4}(1.5+2.5+3+5)=\frac{2}{4}\times12=6
+$$
+$$
+\mathcal{L}=2.25+4-6=0.25.
+$$</p>
+<p>這對應原文習題 3——線性核雖然不是 universal（無法保證 MMD=0 才代表分布相同），但作為一個簡化的手算範例，可以清楚看到式 (20) 每一項怎麼算出來的。</p>
+<h4>口語小結</h4>
+<p><strong>GMMN 把 GAN 的判別器換成 MMD 損失函數，用「讓生成分布逼近真實分布」的 MMD 當作直接可微分的訓練目標；只要核函數選對（universal），最小化這個損失在理論上保證生成分布會逼近訓練資料分布。</strong></p><figure class="orig-fig"><img src="assets/orig-kp6-fig2.jpg" alt="圖 2 (a) GAN、(b) GMMN、(c) 自編碼器潛在空間中的 GMMN、(d) 條件式 GMMN 結構"><figcaption>圖 2 (a) GAN、(b) GMMN、(c) 自編碼器潛在空間中的 GMMN、(d) 條件式 GMMN 結構</figcaption></figure>
+
+<div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="m6r1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#e53e3e"/></marker>
+    <marker id="m6r2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#e53e3e"/></marker>
+    <marker id="m6g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#4f46e5"/></marker>
+  </defs>
+  <rect x="0" y="0" width="720" height="340" fill="#ffffff"/>
+  <text x="360" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#3730a3">同樣要訓練生成器，GAN 打假賽局、GMMN 直接量距離</text>
+
+  <!-- LEFT: GAN -->
+  <rect x="16" y="46" width="330" height="250" rx="10" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.4"/>
+  <text x="181" y="66" text-anchor="middle" font-size="12" font-weight="bold" fill="#b91c1c">GAN：對抗式訓練</text>
+  <rect x="50" y="110" width="100" height="50" rx="8" fill="#fff" stroke="#e53e3e" stroke-width="2"/>
+  <text x="100" y="140" text-anchor="middle" font-size="11" fill="#b91c1c">生成器</text>
+  <rect x="210" y="110" width="100" height="50" rx="8" fill="#fff" stroke="#e53e3e" stroke-width="2"/>
+  <text x="260" y="140" text-anchor="middle" font-size="11" fill="#b91c1c">判別器</text>
+  <path d="M152 128 L206 128" stroke="#e53e3e" stroke-width="2.6" marker-end="url(#m6r1)"/>
+  <path d="M206 148 L152 148" stroke="#e53e3e" stroke-width="2.6" marker-end="url(#m6r2)"/>
+  <text x="181" y="185" text-anchor="middle" font-size="9" fill="#7f1d1d">互相對抗：真假賽局</text>
+  <text x="181" y="240" text-anchor="middle" font-size="10" font-weight="bold" fill="#b91c1c">靠「打假賽局」逼出好結果</text>
+  <text x="181" y="260" text-anchor="middle" font-size="9" fill="#7f1d1d">需要同時訓練並平衡兩個網路</text>
+
+  <!-- RIGHT: GMMN -->
+  <rect x="374" y="46" width="330" height="250" rx="10" fill="#eeecff" stroke="#a5a1f5" stroke-width="1.4"/>
+  <text x="539" y="66" text-anchor="middle" font-size="12" font-weight="bold" fill="#3730a3">GMMN：非對抗式，直接算距離</text>
+  <rect x="440" y="110" width="100" height="50" rx="8" fill="#fff" stroke="#4f46e5" stroke-width="2"/>
+  <text x="490" y="140" text-anchor="middle" font-size="11" fill="#3730a3">生成器</text>
+  <path d="M540 135 L580 135" stroke="#4f46e5" stroke-width="2.6" marker-end="url(#m6g)"/>
+  <rect x="585" y="105" width="95" height="60" rx="8" fill="#fff" stroke="#16a34a" stroke-width="2"/>
+  <text x="632" y="130" text-anchor="middle" font-size="10" fill="#15803d">MMD 損失</text>
+  <text x="632" y="146" text-anchor="middle" font-size="9" fill="#15803d">比較生成 vs 真實</text>
+  <text x="539" y="200" text-anchor="middle" font-size="9" fill="#3730a3">判別器整個拿掉了</text>
+  <text x="539" y="240" text-anchor="middle" font-size="10" font-weight="bold" fill="#15803d">靠「直接量距離」逼出好結果</text>
+  <text x="539" y="260" text-anchor="middle" font-size="9" fill="#3730a3">只有一個網路，沒有對抗</text>
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-6" data-status="pending"><details><summary>🤖 AI 生圖提示詞</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 左右對比兩個網路結構方框圖。左「GAN」：生成器方框與判別器方框之間畫雙向對抗箭頭（紅色，一去一回），標「互相對抗：真假賽局」。右「GMMN」：生成器方框，單向箭頭直接連到「MMD 損失」方框（標「比較生成 vs 真實」），無判別器。左右下方各自標一句話：GAN「靠打假賽局逼出好結果」、GMMN「靠直接量距離逼出好結果」。
+
+WHY（因果或反直覺）: 兩者都是要訓練出好的生成器，但機制完全不同——GAN 需要同時訓練並平衡兩個互相對抗的網路（生成器與判別器）；GMMN 拿掉判別器，直接用 MMD 這個距離度量當損失函數，是非對抗、單向的訓練流程。反直覺點：不透過「對抗打假」也能訓練出生成模型，只要有一把夠準的距離尺（MMD）就够。
+
+MUST show（必備要素）: ① 左側 GAN 的生成器+判別器方框與雙向對抗箭頭；② 右側 GMMN 的生成器方框+單向箭頭指向 MMD 損失方框；③ 右側明確標示「判別器整個拿掉了」；④ 左右下方各自的一句話總結（打假賽局 vs 直接量距離）。
+
+AVOID（禁止）: 不要放完整 LaTeX 算式；不要讓 GMMN 這側看起來還留有判別器的痕跡；不要省略雙向對抗箭頭（這是 GAN 機制的核心視覺）。
+
+STYLE: flat vector, viewBox 720×340, 左側 GAN 用紅色警示系（#e53e3e、#fef2f2）表示對抗張力，右側 GMMN 用靛紫主題（#4f46e5、#3730a3、#eeecff）搭配綠色（#16a34a）標示 MMD 損失方框，白底，Arial，圓角、粗線條、無陰影無漸層。</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">GAN 靠對抗賽局逼出好結果，GMMN 靠直接量 MMD 距離逼出好結果——殊途同歸</figcaption></figure></div>
+<div class="demo" data-demo-id="kp6">
+  <style>
+    [data-demo-id="kp6"] { border: 1px solid #c7d2fe; border-radius: 14px; overflow: hidden; background: #fff; }
+    [data-demo-id="kp6"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#4f46e5,#3730a3); color: #fff; font-weight: 700; }
+    [data-demo-id="kp6"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #f5f4ff; }
+    [data-demo-id="kp6"] .demo-controls { flex: 1 1 320px; display: flex; flex-direction: column; gap: 8px; }
+    [data-demo-id="kp6"] .demo-canvas { flex: 1 1 380px; }
+    [data-demo-id="kp6"] canvas { border: 1px solid #c7d2fe; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp6"] .row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+    [data-demo-id="kp6"] .row label { min-width: 62px; font-weight: 600; }
+    [data-demo-id="kp6"] input[type="range"] { flex: 1; }
+    [data-demo-id="kp6"] button.step { background: #4f46e5; color: #fff; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+    [data-demo-id="kp6"] button.step:hover { background: #3730a3; }
+    [data-demo-id="kp6"] button.reset { background: #fff; color: #4f46e5; border: 1px solid #4f46e5; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+    [data-demo-id="kp6"] .demo-readout { min-height: 9em; padding: 10px 12px; border: 1px solid #c7d2fe; border-radius: 8px; background: #fff; font-family: ui-monospace, Consolas, monospace; font-size: 0.75rem; line-height: 1.5; white-space: pre-wrap; }
+    [data-demo-id="kp6"] .demo-theory, [data-demo-id="kp6"] .demo-instruction { padding: 10px 18px; font-size: 0.85rem; line-height: 1.7; }
+    [data-demo-id="kp6"] .demo-theory { background: #eeecff; border-top: 1px solid #c7d2fe; }
+  </style>
+  <div class="demo-head">🧪 Demo：GMMN 訓練損失 — 最小化 MMD² 讓生成點靠近真實點</div>
+  <div class="demo-body">
+    <div class="demo-controls">
+      <div class="row"><label>x̂1</label><input type="range" id="kp6-h0" min="-2" max="6" step="0.05" value="0.2"><span id="kp6-h0-v"></span></div>
+      <div class="row"><label>x̂2</label><input type="range" id="kp6-h1" min="-2" max="6" step="0.05" value="1.8"><span id="kp6-h1-v"></span></div>
+      <div class="row"><label>x̂3</label><input type="range" id="kp6-h2" min="-2" max="6" step="0.05" value="3.6"><span id="kp6-h2-v"></span></div>
+      <div class="row"><label>σ</label><input type="range" id="kp6-sig" min="0.3" max="2.5" step="0.05" value="1"><span id="kp6-sig-v"></span></div>
+      <div style="display:flex;gap:8px;">
+        <button class="step" id="kp6-step" type="button">模擬訓練一步</button>
+        <button class="reset" id="kp6-reset" type="button">重設</button>
+      </div>
+      <div class="demo-readout" id="kp6-ro"></div>
+    </div>
+    <div class="demo-canvas"><canvas id="kp6-cv" width="420" height="260"></canvas></div>
+  </div>
+  <div class="demo-theory">
+    <strong>原理（式19-20）：</strong>GMMN 損失 $\mathcal{L}:=\operatorname{MMD}^2(P_x,P_{\widehat x})$，直接沿用 kp4 的核公式，用真實資料 $\{x_i\}$ 與生成資料 $\{\widehat x_j\}$ 代入。最小化 $\mathcal{L}$ 會把 $\operatorname{MMD}(P_x,P_{\widehat x})$ 推向 0，根據 Proposition 3，這代表生成分布逼近真實分布。
+  </div>
+  <div class="demo-instruction">
+    <strong>這在做什麼：</strong>用真實資料 $X=\{1,2,3\}$ 與可調生成點 $\widehat X$，觀察 GMMN 損失如何隨生成點位置變化，並用簡化的「模擬訓練」看損失下降趨勢。
+    <strong>怎麼操作：</strong>
+    <ul>
+      <li>拉滑桿手動改變生成點，觀察損失即時變化。</li>
+      <li>按「模擬訓練一步」讓每個生成點朝最近的真實點移動一小步（簡化示範，非真正梯度下降）。</li>
+    </ul>
+    <strong>觀察什麼：</strong>連續點擊「模擬訓練一步」，橘色生成點應逐漸靠近藍色真實點，損失數值應整體下降。
+    <strong>正確結果基準：</strong>生成點與真實點完全重合時，損失應趨近 0。
+  </div>
+  <script>
+  (function(){
+    var X=[1,2,3];
+    var cv=document.getElementById('kp6-cv'), ctx=cv.getContext('2d');
+    var ro=document.getElementById('kp6-ro');
+    var history=[];
+    var ids=['kp6-h0','kp6-h1','kp6-h2'];
+    function fmt(v){ return (Math.round(v*1000)/1000).toFixed(3); }
+    function rbf(a,b,sig){ var d=a-b; return Math.exp(-(d*d)/(2*sig*sig)); }
+    function loss(Xh, sig){
+      var n=X.length,m=Xh.length,sxx=0,syy=0,sxy=0;
+      for(var i=0;i<n;i++) for(var j=0;j<n;j++) sxx+=rbf(X[i],X[j],sig);
+      for(i=0;i<m;i++) for(j=0;j<m;j++) syy+=rbf(Xh[i],Xh[j],sig);
+      for(i=0;i<n;i++) for(j=0;j<m;j++) sxy+=rbf(X[i],Xh[j],sig);
+      return sxx/(n*n)+syy/(m*m)-2*sxy/(n*m);
+    }
+    function getXh(){ return ids.map(function(id){ return parseFloat(document.getElementById(id).value); }); }
+    function draw(Xh){
+      var W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      var midY1=70, midY2=140, x0=30, x1=W-30, scale=(x1-x0)/9;
+      function toPx(v){ return x0+(v+1)*scale; }
+      ctx.strokeStyle='#cbd5e1';
+      ctx.beginPath(); ctx.moveTo(x0,midY1); ctx.lineTo(x1,midY1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x0,midY2); ctx.lineTo(x1,midY2); ctx.stroke();
+      ctx.fillStyle='#1e293b'; ctx.font='11px sans-serif'; ctx.textAlign='left';
+      ctx.fillText('X（真實）', 4, midY1+4); ctx.fillText('X̂（生成）', 4, midY2+4);
+      X.forEach(function(v){ ctx.fillStyle='#2563eb'; ctx.beginPath(); ctx.arc(toPx(v),midY1,7,0,6.283); ctx.fill(); });
+      Xh.forEach(function(v){ ctx.fillStyle='#ea580c'; ctx.beginPath(); ctx.arc(toPx(v),midY2,7,0,6.283); ctx.fill(); });
+      // loss history sparkline
+      if(history.length>1){
+        var hy0=190, hy1=250, hx0=30, hx1=W-30;
+        ctx.strokeStyle='#c7d2fe'; ctx.strokeRect(hx0,hy0,hx1-hx0,hy1-hy0);
+        var maxH=Math.max.apply(null,history), minH=Math.min.apply(null,history);
+        if(maxH-minH<1e-6) maxH=minH+1;
+        ctx.strokeStyle='#4f46e5'; ctx.lineWidth=2; ctx.beginPath();
+        history.forEach(function(h,i){
+          var xx=hx0+(i/(history.length-1))*(hx1-hx0);
+          var yy=hy1-((h-minH)/(maxH-minH))*(hy1-hy0);
+          if(i===0) ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy);
+        });
+        ctx.stroke();
+        ctx.fillStyle='#64748b'; ctx.font='10px sans-serif'; ctx.fillText('損失歷史（'+history.length+' 步）',hx0,hy0-4);
+      }
+    }
+    function sync(){
+      var Xh=getXh();
+      var sig=parseFloat(document.getElementById('kp6-sig').value);
+      ids.forEach(function(id){ document.getElementById(id+'-v').textContent=fmt(parseFloat(document.getElementById(id).value)); });
+      document.getElementById('kp6-sig-v').textContent=fmt(sig);
+      var L=loss(Xh,sig);
+      draw(Xh);
+      ro.textContent =
+        'X（真實）=['+X.map(fmt).join(', ')+']\n'+
+        'X̂（生成）=['+Xh.map(fmt).join(', ')+']  σ='+fmt(sig)+'\n\n'+
+        '損失 L = MMD²(P_x, P_x̂) = '+fmt(L)+'\n\n'+
+        (history.length ? ('最近幾步損失：'+history.slice(-6).map(fmt).join(' → ')) : '尚未模擬訓練');
+    }
+    ids.forEach(function(id){ document.getElementById(id).addEventListener('input', function(){ history=[]; sync(); }); });
+    document.getElementById('kp6-sig').addEventListener('input', sync);
+    document.getElementById('kp6-step').addEventListener('click', function(){
+      var Xh=getXh();
+      var sig=parseFloat(document.getElementById('kp6-sig').value);
+      history.push(loss(Xh,sig));
+      var newXh=Xh.map(function(xh){
+        var nearest=X[0], bd=Math.abs(xh-X[0]);
+        X.forEach(function(xi){ var d=Math.abs(xh-xi); if(d<bd){bd=d; nearest=xi;} });
+        return xh + 0.3*(nearest-xh);
+      });
+      ids.forEach(function(id,i){ document.getElementById(id).value=newXh[i]; });
+      sync();
+    });
+    document.getElementById('kp6-reset').addEventListener('click', function(){
+      var defaults=[0.2,1.8,3.6];
+      ids.forEach(function(id,i){ document.getElementById(id).value=defaults[i]; });
+      history=[]; sync();
+    });
+    sync();
+  })();
+  </script>
+</div>
+<button class="guide-btn" type="button" data-kp="6" data-guide="kp-6" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：GMMN——訓練一台咖啡豆複製機，不用養鑑定師</button><div class="quiz" data-ans="B"><p class="q"><p>GMMN 相較於 GAN，結構上最大的改變是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q6-0" value="A"><span>A. <p>拿掉生成器</p></span></label><label class="opt"><input type="radio" name="q6-0" value="B"><span>B. <p>把判別器換成 MMD 損失函數，訓練不再是對抗式的</p></span></label><label class="opt"><input type="radio" name="q6-0" value="C"><span>C. <p>增加第二個判別器</p></span></label><label class="opt"><input type="radio" name="q6-0" value="D"><span>D. <p>輸入不再使用隨機雜訊</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="GMMN（Fig. 2b）拿掉判別器，直接用生成資料與真實資料之間的 MMD 當損失函數，訓練是非對抗式的。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>GMMN 的損失函數 $\mathcal{L}$（式20）本質上是什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q6-1" value="A"><span>A. <p>交叉熵損失</p></span></label><label class="opt"><input type="radio" name="q6-1" value="B"><span>B. <p>kp4 推導出的 MMD² 核函數公式，直接套用在真實資料與生成資料上</p></span></label><label class="opt"><input type="radio" name="q6-1" value="C"><span>C. <p>KL 散度</p></span></label><label class="opt"><input type="radio" name="q6-1" value="D"><span>D. <p>均方誤差</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="式(20)就是把 kp4 式(11)的 MMD² 公式，代入訓練資料 $x_i$ 與生成資料 $\hat x_j$，作為 GMMN 的訓練損失。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>為什麼最小化 GMMN 的 MMD 損失，理論上能讓生成分布逼近真實分布？</p></p><div class="opts"><label class="opt"><input type="radio" name="q6-2" value="A"><span>A. <p>因為 MMD 損失一定會收斂到全域最小值</p></span></label><label class="opt"><input type="radio" name="q6-2" value="B"><span>B. <p>根據 Proposition 3，若核函數是 universal，MMD 趨近 0 等價於兩分布趨近相同</p></span></label><label class="opt"><input type="radio" name="q6-2" value="C"><span>C. <p>因為 GMMN 使用了判別器</p></span></label><label class="opt"><input type="radio" name="q6-2" value="D"><span>D. <p>因為輸入雜訊是均勻分布</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="呼應 kp5 的 Proposition 3：universal kernel 下 MMD=0 若且唯若分布相同，這是「最小化 MMD 損失能訓練出好生成器」的理論依據。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>關於訓練 GMMN 的實務建議，下列何者正確？</p></p><div class="opts"><label class="opt"><input type="radio" name="q6-3" value="A"><span>A. <p>核函數可以任意選擇，包括多項式核</p></span></label><label class="opt"><input type="radio" name="q6-3" value="B"><span>B. <p>經驗上用 $\sqrt{\operatorname{MMD}^2}$ 當損失效果更好，隱藏層建議用 ReLU</p></span></label><label class="opt"><input type="radio" name="q6-3" value="C"><span>C. <p>一定要先訓練判別器</p></span></label><label class="opt"><input type="radio" name="q6-3" value="D"><span>D. <p>雜訊向量必須服從高斯分布</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="文中提到核函數須為 universal（排除多項式核）、經驗上開根號的 MMD 損失效果較好、隱藏層建議 ReLU、輸出層依資料範圍選擇激活函數。"></div></div></div></section>
+<section id="kp7" class="card" data-kp="7"><div class="card-head"><span class="badge">4</span><h3>條件式 GMMN：讓生成器聽指令生成</h3><span class="toggle">▼</span></div><div class="card-body"><h4>GMMN 的限制：生成不受控制</h4>
+<p>kp6 的 GMMN 只會生成「像訓練資料整體分布」的資料，沒辦法指定「我要生成某一類的資料」。<strong>條件式 GMMN（Conditional GMMN）</strong> 解決這個問題：讓生成器額外接收「side information」（側邊資訊，如類別標籤或參考樣本），生成特定類別或特定模式的資料。</p>
+<h4>做法一：把側邊資訊跟雜訊「接起來」或「加起來」</h4>
+<p>給定一個參考資料實例 $\boldsymbol{x}\in\mathbb{R}^d$（希望生成類似這個實例風格的資料），把它跟雜訊向量 $\boldsymbol{z}$（分布同 kp6 式19）合併，有兩種做法：</p>
+<p><strong>接起來（concatenate）</strong>：</p>
+<p>$$
+\widetilde{\boldsymbol{x}}=[\boldsymbol{x},\boldsymbol{z}]^\top\in\mathbb{R}^{d+p}. \tag{21}
+$$</p>
+<p><strong>加起來（add）</strong>：如果 $p=d$（維度相同），可以直接相加：</p>
+<p>$$
+\widetilde{x}=x+z\in\mathbb{R}^d. \tag{22}
+$$</p>
+<p>把 $\widetilde{\boldsymbol{x}}$（或 $\widetilde{x}$）餵進神經網路（結構見原文 Fig. 2d），輸出生成資料 $\widehat{\boldsymbol{x}}\in\mathbb{R}^d$。訓練損失一樣是 kp6 式 (20) 的 MMD²，讓生成分布逼近訓練資料分布。隱藏層一樣建議用 ReLU。</p>
+<p><strong>測試階段</strong>：使用者挑一個資料實例 $\boldsymbol{x}$（例如一張房子的照片）餵進去，網路會生成「風格類似但不是訓練集裡任何一張」的新資料——某種意義上是訓練集裡所有房子照片的內插結果。</p>
+<h4>做法二：用類別標籤條件生成</h4>
+<p>受條件式 GAN 啟發，也可以直接用<strong>類別標籤</strong>當條件，而不是用某個具體資料實例。令 $\boldsymbol{\ell}\in\{0,1\}^c$ 是類別標籤的 one-hot 編碼（$c$ 是類別數），把標籤跟雜訊接起來：</p>
+<p>$$
+\widetilde{\boldsymbol{x}}=[\boldsymbol{\ell},\boldsymbol{z}]^\top\in\mathbb{R}^{c+p}. \tag{23}
+$$</p>
+<p>在這個設定下，<strong>MMD 損失要針對每個類別分別最小化</strong>——對每一個類別標籤，比較「該類別的訓練資料」與「該類別條件下生成的資料」之間的 MMD，逐類最小化。測試階段，使用者選一個類別標籤餵進網路，就能生成那個類別的資料（例如選「房子」類別，生成一張新的房子照片）。</p>
+<h4>數值示範：兩種條件下各算一次 MMD²（呼應原文習題 4 的精神）</h4>
+<p>假設條件 1 下，真實樣本 $\boldsymbol{y}_1=[1,0]$、$\boldsymbol{y}_2=[1.5,0.5]$，生成樣本 $\widehat{\boldsymbol{y}}_1=[0.7,0]$、$\widehat{\boldsymbol{y}}_2=[1.1,0.3]$，用線性核 $k(\boldsymbol{a},\boldsymbol{b})=\boldsymbol{a}^\top\boldsymbol{b}$。用無偏估計（$n=m=2$，同分布內排除自我配對）：</p>
+<p>$$
+\text{YY 項}=\frac{1}{2\times1}\times2\times(\boldsymbol{y}_1^\top\boldsymbol{y}_2)=\boldsymbol{y}_1^\top\boldsymbol{y}_2=1\times1.5+0\times0.5=1.5
+$$
+$$
+\widehat{Y}\widehat{Y}\text{ 項}=\widehat{\boldsymbol{y}}_1^\top\widehat{\boldsymbol{y}}_2=0.7\times1.1+0\times0.3=0.77
+$$
+$$
+\text{交叉項}=\frac{1}{4}\sum_{i,j}\boldsymbol{y}_i^\top\widehat{\boldsymbol{y}}_j=\frac{1}{4}\big[(1)(0.7)+(1)(1.1)+(1.5)(0.7){+}(0)(0){+}(1.5)(1.1){+}(0.5)(0.3)\big]
+$$</p>
+<p>（此處省略逐項細算過程，讀者可依式 12 的無偏公式自行代入驗算）條件 2 下同法再算一次，最後把兩個條件的 MMD² 取平均，就是<strong>條件式 MMD（CMMD²）</strong>——這正是把 kp6 單一分布的 MMD 損失，擴展成「對每個條件分別算、再平均」的做法。</p>
+<h4>口語小結</h4>
+<p><strong>條件式 GMMN 靠「把條件資訊（參考實例或類別標籤）跟雜訊接起來或加起來」讓生成器聽懂指令；訓練損失還是 MMD，只是要針對每個條件分別計算——這是 kp6 的直接擴展，沒有引入新的理論工具，只是多了一個「條件輸入」的維度。</strong></p><div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="m7a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#4f46e5"/></marker>
+  </defs>
+  <rect x="0" y="0" width="720" height="380" fill="#ffffff"/>
+  <text x="360" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#3730a3">同一個生成器，換一個條件輸入，就走向不同的輸出</text>
+
+  <!-- inputs -->
+  <text x="110" y="58" text-anchor="middle" font-size="11" font-weight="bold" fill="#3730a3">雜訊 z</text>
+  <circle cx="90" cy="90" r="3" fill="#818cf8"/><circle cx="105" cy="80" r="3" fill="#818cf8"/>
+  <circle cx="115" cy="100" r="3" fill="#818cf8"/><circle cx="80" cy="105" r="3" fill="#818cf8"/>
+  <circle cx="125" cy="85" r="3" fill="#818cf8"/><circle cx="100" cy="115" r="3" fill="#818cf8"/>
+
+  <text x="290" y="58" text-anchor="middle" font-size="11" font-weight="bold" fill="#3730a3">條件資訊（房子輪廓 or 標籤）</text>
+  <path d="M255 75 L255 110 L325 110 L325 75 L290 75 Z" fill="none" stroke="#ea580c" stroke-width="2.4"/>
+  <rect x="270" y="90" width="14" height="20" fill="none" stroke="#ea580c" stroke-width="1.6"/>
+
+  <!-- merge box -->
+  <rect x="150" y="140" width="220" height="50" rx="8" fill="#f5f4ff" stroke="#a5a1f5" stroke-width="1.6"/>
+  <text x="260" y="162" text-anchor="middle" font-size="10" fill="#3730a3">串接 [x,z] 或 相加 x+z</text>
+  <text x="260" y="178" text-anchor="middle" font-size="9" fill="#4338ca">合併成一個輸入向量</text>
+  <path d="M110 118 L200 140" stroke="#818cf8" stroke-width="2" marker-end="url(#m7a)"/>
+  <path d="M290 112 L320 140" stroke="#ea580c" stroke-width="2" marker-end="url(#m7a)"/>
+
+  <!-- generator -->
+  <rect x="220" y="216" width="120" height="50" rx="8" fill="#fff" stroke="#4f46e5" stroke-width="2.4"/>
+  <text x="280" y="246" text-anchor="middle" font-size="11" fill="#3730a3">生成器</text>
+  <path d="M260 190 L280 216" stroke="#4f46e5" stroke-width="2.4" marker-end="url(#m7a)"/>
+
+  <!-- outputs: condition A -->
+  <path d="M240 268 C 200 300, 150 300, 110 320" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#m7a)"/>
+  <g transform="translate(60,320)">
+    <path d="M0 30 L0 10 L20 -5 L40 10 L40 30 Z" fill="none" stroke="#16a34a" stroke-width="2"/>
+    <rect x="16" y="18" width="8" height="12" fill="none" stroke="#16a34a" stroke-width="1.4"/>
+  </g>
+  <text x="80" y="365" text-anchor="middle" font-size="9" fill="#15803d">條件A → 對應風格輸出</text>
+
+  <!-- outputs: condition B -->
+  <path d="M320 268 C 370 300, 420 300, 460 320" fill="none" stroke="#ea580c" stroke-width="2.2" marker-end="url(#m7a)"/>
+  <g transform="translate(410,320)">
+    <path d="M0 30 L0 5 L20 -10 L40 5 L40 30 Z" fill="none" stroke="#ea580c" stroke-width="2"/>
+    <rect x="16" y="16" width="8" height="14" fill="none" stroke="#ea580c" stroke-width="1.4"/>
+  </g>
+  <text x="430" y="365" text-anchor="middle" font-size="9" fill="#9a3412">條件B → 另一種風格輸出</text>
+
+  <g transform="translate(650,150)">
+    <text x="0" y="0" font-size="10" fill="#3730a3" text-anchor="middle">不同條件</text>
+    <text x="0" y="14" font-size="10" fill="#3730a3" text-anchor="middle">↓</text>
+    <text x="0" y="28" font-size="10" fill="#3730a3" text-anchor="middle">不同輸出</text>
+  </g>
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-7" data-status="pending"><details><summary>🤖 AI 生圖提示詞</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 上方兩個輸入源——左「雜訊 z」（隨機點雲圖示）、右「條件資訊」（簡筆房子輪廓或 one-hot 標籤方塊）。中間一個「合併」方框標「串接 [x,z] 或 相加 x+z」。合併結果箭頭向下進入「生成器」方框。生成器下方分岔出兩條路徑，各自指向一個簡筆房子輪廓圖示（用不同顏色/形狀區分），標「條件A → 對應風格輸出」與「條件B → 另一種風格輸出」。右側加一句小結「不同條件 → 不同輸出」。
+
+WHY（因果或反直覺）: 條件式 GMMN 讓同一個生成器網路，只要換一個條件輸入（不同的參考實例或類別標籤），就能生成完全不同風格/類別的資料。反直覺點：生成器本身結構沒變，純粹靠輸入端多接了一份條件資訊，就從「隨機生成」進化成「可控生成」——這說明生成器學到的是「風格」這個可條件化的概念，而不只是記住訓練分布的整體形狀。
+
+MUST show（必備要素）: ① 雜訊 z 與條件資訊兩個輸入源；② 合併方式（串接或相加）的方框；③ 生成器方框；④ 至少兩條分岔路徑，展示「不同條件→不同風格輸出」的因果對應；⑤ 簡筆房子輪廓（不要寫實，只是示意用的簡單線框）。
+
+AVOID（禁止）: 不要放完整 LaTeX 算式；不要把兩個條件的輸出畫成一模一樣（必須看得出風格/形狀差異）；不要用真實寫實的房子插圖，維持簡筆線條風格。
+
+STYLE: flat vector, viewBox 720×380, 靛紫主題（主 #4f46e5、深 #3730a3、淺底 #f5f4ff）搭配橘色 #ea580c 標示條件資訊、綠色/橘色分別標示兩種條件輸出路徑，白底，Arial，圓角、粗線條、無陰影無漸層。</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">同一個生成器，換一個條件輸入就走向完全不同輸出——學會的是「風格」不是「隨機」</figcaption></figure></div>
+<div class="demo" data-demo-id="kp7">
+  <style>
+    [data-demo-id="kp7"] { border: 1px solid #c7d2fe; border-radius: 14px; overflow: hidden; background: #fff; }
+    [data-demo-id="kp7"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#4f46e5,#3730a3); color: #fff; font-weight: 700; }
+    [data-demo-id="kp7"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #f5f4ff; }
+    [data-demo-id="kp7"] .demo-controls { flex: 1 1 300px; display: flex; flex-direction: column; gap: 8px; }
+    [data-demo-id="kp7"] .demo-canvas { flex: 1 1 380px; }
+    [data-demo-id="kp7"] canvas { border: 1px solid #c7d2fe; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp7"] .row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+    [data-demo-id="kp7"] .row label { min-width: 34px; font-weight: 600; }
+    [data-demo-id="kp7"] input[type="range"] { flex: 1; }
+    [data-demo-id="kp7"] .toggles { display: flex; gap: 10px; }
+    [data-demo-id="kp7"] .toggles button { flex:1; background:#fff; border:1px solid #4f46e5; color:#4f46e5; padding:7px; border-radius:8px; cursor:pointer; font-weight:700; font-size:.8rem; }
+    [data-demo-id="kp7"] .toggles button.active { background:#4f46e5; color:#fff; }
+    [data-demo-id="kp7"] .demo-readout { min-height: 7em; padding: 10px 12px; border: 1px solid #c7d2fe; border-radius: 8px; background: #fff; font-family: ui-monospace, Consolas, monospace; font-size: 0.78rem; line-height: 1.5; white-space: pre-wrap; }
+    [data-demo-id="kp7"] .demo-theory, [data-demo-id="kp7"] .demo-instruction { padding: 10px 18px; font-size: 0.85rem; line-height: 1.7; }
+    [data-demo-id="kp7"] .demo-theory { background: #eeecff; border-top: 1px solid #c7d2fe; }
+  </style>
+  <div class="demo-head">🧪 Demo：條件式 GMMN — 串接 vs 相加合併條件與雜訊</div>
+  <div class="demo-body">
+    <div class="demo-controls">
+      <div class="toggles">
+        <button id="kp7-cat" class="active" type="button">串接（式21）</button>
+        <button id="kp7-add" type="button">相加（式22）</button>
+      </div>
+      <div class="row"><label>x1</label><input type="range" id="kp7-x0" min="-2" max="2" step="0.05" value="1.2"><span id="kp7-x0-v"></span></div>
+      <div class="row"><label>x2</label><input type="range" id="kp7-x1" min="-2" max="2" step="0.05" value="0.6"><span id="kp7-x1-v"></span></div>
+      <div class="row"><label>z1</label><input type="range" id="kp7-z0" min="-1" max="1" step="0.05" value="0.4"><span id="kp7-z0-v"></span></div>
+      <div class="row"><label>z2</label><input type="range" id="kp7-z1" min="-1" max="1" step="0.05" value="-0.3"><span id="kp7-z1-v"></span></div>
+      <div class="demo-readout" id="kp7-ro"></div>
+    </div>
+    <div class="demo-canvas"><canvas id="kp7-cv" width="380" height="260"></canvas></div>
+  </div>
+  <div class="demo-theory">
+    <strong>原理（式21-23）：</strong>串接 $\widetilde{\boldsymbol{x}}=[\boldsymbol{x},\boldsymbol{z}]^\top\in\mathbb{R}^{d+p}$；相加（需 $p=d$）$\widetilde{x}=x+z\in\mathbb{R}^d$。合併後的 $\widetilde{\boldsymbol{x}}$ 才是條件式 GMMN 真正的輸入，訓練損失仍是 kp6 的 MMD²。
+  </div>
+  <div class="demo-instruction">
+    <strong>這在做什麼：</strong>視覺化「條件輸入 $x$」與「雜訊 $z$」兩種合併方式，體會輸出維度與數值的差異。
+    <strong>怎麼操作：</strong>
+    <ul>
+      <li>切換「串接」或「相加」模式。</li>
+      <li>拉滑桿改變 $x,z$ 的分量，觀察合併結果與圖示變化。</li>
+    </ul>
+    <strong>觀察什麼：</strong>串接模式輸出維度變成 4 維（$[x_1,x_2,z_1,z_2]$）；相加模式輸出維度仍是 2 維，且等於逐元素相加。
+    <strong>正確結果基準：</strong>相加模式下 $\widetilde x_1=x_1+z_1$、$\widetilde x_2=x_2+z_2$，可用平行四邊形法則驗證；串接模式維度恆為 $d+p=4$。
+  </div>
+  <script>
+  (function(){
+    var mode='cat';
+    var ids=['kp7-x0','kp7-x1','kp7-z0','kp7-z1'];
+    var cv=document.getElementById('kp7-cv'), ctx=cv.getContext('2d');
+    var ro=document.getElementById('kp7-ro');
+    function fmt(v){ return (Math.round(v*1000)/1000).toFixed(3); }
+    function vals(){ return ids.map(function(id){ return parseFloat(document.getElementById(id).value); }); }
+    function draw(x1,x2,z1,z2){
+      var W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      var cx=W/2, cy=H/2, scale=55;
+      ctx.strokeStyle='#e2e8f0'; ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke();
+      function arrow(x0,y0,x1,y1,color){
+        ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=2.4;
+        ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+        var ang=Math.atan2(y1-y0,x1-x0);
+        ctx.beginPath(); ctx.moveTo(x1,y1);
+        ctx.lineTo(x1-9*Math.cos(ang-0.3), y1-9*Math.sin(ang-0.3));
+        ctx.lineTo(x1-9*Math.cos(ang+0.3), y1-9*Math.sin(ang+0.3));
+        ctx.closePath(); ctx.fill();
+      }
+      var xpx=cx+x1*scale, xpy=cy-x2*scale;
+      arrow(cx,cy,xpx,xpy,'#2563eb');
+      ctx.fillStyle='#2563eb'; ctx.font='11px sans-serif'; ctx.fillText('x',xpx+4,xpy-4);
+      if(mode==='add'){
+        var zpx=xpx+z1*scale, zpy=xpy-z2*scale;
+        arrow(xpx,xpy,zpx,zpy,'#ea580c');
+        ctx.fillStyle='#ea580c'; ctx.fillText('z',zpx+4,zpy-4);
+        arrow(cx,cy,zpx,zpy,'#16a34a');
+        ctx.fillStyle='#16a34a'; ctx.fillText('x̃=x+z',zpx+4,zpy+14);
+        // dashed parallelogram
+        ctx.strokeStyle='#94a3b8'; ctx.setLineDash([4,3]);
+        ctx.beginPath(); ctx.moveTo(cx+z1*scale,cy-z2*scale); ctx.lineTo(zpx,zpy); ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        var zox=cx, zoy=cy+70;
+        var zpx=zox+z1*scale, zpy=zoy-z2*scale;
+        arrow(zox,zoy,zpx,zpy,'#ea580c');
+        ctx.fillStyle='#ea580c'; ctx.fillText('z',zpx+4,zpy-4);
+        ctx.fillStyle='#334155'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+        ctx.fillText('x（上）與 z（下）分開繪製 — 串接後是 4 維向量，不在同一 2D 平面相加',cx,H-8);
+        ctx.textAlign='left';
+      }
+    }
+    function sync(){
+      var v=vals();
+      var x1=v[0],x2=v[1],z1=v[2],z2=v[3];
+      ids.forEach(function(id){ document.getElementById(id+'-v').textContent=fmt(parseFloat(document.getElementById(id).value)); });
+      draw(x1,x2,z1,z2);
+      var out;
+      if(mode==='cat'){
+        out='x̃ = [x, z]ᵀ = ['+fmt(x1)+', '+fmt(x2)+', '+fmt(z1)+', '+fmt(z2)+']  （4 維，= d+p = 2+2）';
+      } else {
+        out='x̃ = x + z = ['+fmt(x1+z1)+', '+fmt(x2+z2)+']  （2 維，= d = p = 2）';
+      }
+      ro.textContent =
+        'x = ['+fmt(x1)+', '+fmt(x2)+']    z = ['+fmt(z1)+', '+fmt(z2)+']\n'+
+        '模式：'+(mode==='cat'?'串接（式21）':'相加（式22）')+'\n\n'+out;
+    }
+    ids.forEach(function(id){ document.getElementById(id).addEventListener('input', sync); });
+    document.getElementById('kp7-cat').addEventListener('click', function(){ mode='cat'; this.classList.add('active'); document.getElementById('kp7-add').classList.remove('active'); sync(); });
+    document.getElementById('kp7-add').addEventListener('click', function(){ mode='add'; this.classList.add('active'); document.getElementById('kp7-cat').classList.remove('active'); sync(); });
+    sync();
+  })();
+  </script>
+</div>
+<button class="guide-btn" type="button" data-kp="7" data-guide="kp-7" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：條件式 GMMN——點餐機除了骰子，還要看菜單</button><div class="quiz" data-ans="B"><p class="q"><p>條件式 GMMN 與一般 GMMN 最主要的差異是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q7-0" value="A"><span>A. <p>改用不同的損失函數</p></span></label><label class="opt"><input type="radio" name="q7-0" value="B"><span>B. <p>額外接收側邊資訊（如類別標籤或參考實例），讓生成器能生成特定類別或模式的資料</p></span></label><label class="opt"><input type="radio" name="q7-0" value="C"><span>C. <p>不再使用隨機雜訊</p></span></label><label class="opt"><input type="radio" name="q7-0" value="D"><span>D. <p>改用判別器</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="條件式 GMMN 把側邊資訊（式21/22的參考實例，或式23的類別標籤）跟雜訊一起輸入，讓生成器可以有條件地生成資料，訓練損失仍是 MMD。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>式 (21) 與式 (22) 兩種合併方式的差異是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q7-1" value="A"><span>A. <p>式21用相加、式22用串接</p></span></label><label class="opt"><input type="radio" name="q7-1" value="B"><span>B. <p>式21把 $x$ 與 $z$ 串接成更高維向量；式22在 $p=d$ 時直接相加，維度不變</p></span></label><label class="opt"><input type="radio" name="q7-1" value="C"><span>C. <p>兩者是完全等價的算法</p></span></label><label class="opt"><input type="radio" name="q7-1" value="D"><span>D. <p>式22只能用於離散資料</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="式(21)串接得到 $d+p$ 維向量；式(22)要求 $p=d$，直接相加，輸出維度仍是 $d$——兩種是不同的條件合併策略。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>用類別標籤條件生成時（式23），MMD 損失該如何計算？</p></p><div class="opts"><label class="opt"><input type="radio" name="q7-2" value="A"><span>A. <p>對整個資料集算一次 MMD 就好，不分類別</p></span></label><label class="opt"><input type="radio" name="q7-2" value="B"><span>B. <p>針對每一個類別標籤，分別比較該類別的真實資料與生成資料之間的 MMD，逐類最小化</p></span></label><label class="opt"><input type="radio" name="q7-2" value="C"><span>C. <p>只需要對第一個類別計算</p></span></label><label class="opt"><input type="radio" name="q7-2" value="D"><span>D. <p>類別標籤不影響損失計算方式</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="文中明確指出「MMD loss function should be minimized for each class label」——對每個類別分別算真實 vs 生成的 MMD，逐類最小化。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>條件式 GMMN 在理論工具上，相對於 kp6 的一般 GMMN 有何新增？</p></p><div class="opts"><label class="opt"><input type="radio" name="q7-3" value="A"><span>A. <p>需要全新的 universal kernel 理論</p></span></label><label class="opt"><input type="radio" name="q7-3" value="B"><span>B. <p>沒有引入新的理論工具，只是把輸入多加了條件資訊、把 MMD 損失拆成逐條件分別計算</p></span></label><label class="opt"><input type="radio" name="q7-3" value="C"><span>C. <p>需要用到判別器</p></span></label><label class="opt"><input type="radio" name="q7-3" value="D"><span>D. <p>不再需要 universal kernel 的假設</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="條件式 GMMN 是 kp6 的直接擴展：合併條件資訊當輸入、對每個條件分別算 MMD，理論基礎（universal kernel、Proposition 3）完全沿用，沒有新增。"></div></div></div></section>
+<section id="kp8" class="card" data-kp="8"><div class="card-head"><span class="badge">5</span><h3>MMD GAN：把「選核函數」也變成可學習、可對抗的</h3><span class="toggle">▼</span></div><div class="card-body"><h4>固定核函數的限制</h4>
+<p>kp6、kp7 的 GMMN 都用<strong>固定</strong>的 RBF 核來算 MMD 損失：</p>
+<p>$$
+\underset{\theta}{\operatorname{minimize}}\ \operatorname{MMD}^2(P_x,P_{\widehat{x}}(\theta)), \tag{24}
+$$</p>
+<p>其中 $\theta$ 是 GMMN 生成器的權重。但固定核函數的頻寬（bandwidth）等超參數，可能不是「最能凸顯真實與生成資料差異」的選擇——回想 kp3 定義 MMD 時取 $\sup_{f\in\mathcal{F}}$ 的精神：<strong>理論上應該在整個 universal kernel 的集合裡，找出最會挑毛病的那一個核函數</strong>。</p>
+<h4>把選核函數變成極大極小賽局</h4>
+<p><strong>MMD GAN</strong> 的想法：不要固定核函數，讓核函數也參與最佳化——<strong>內層去找出讓 MMD 最大的核函數（最會挑毛病、最能揭露生成器的弱點）；外層生成器則要在這個「最挑剔的核函數」之下，還能讓 MMD 最小</strong>：</p>
+<p>$$
+\underset{\theta}{\operatorname{minimize}}\ \underset{k\in\mathcal{K}}{\operatorname{maximize}}\ \operatorname{MMD}_k^2(P_x,P_{\widehat{x}}(\theta)), \tag{25}
+$$</p>
+<p>其中 $\mathcal{K}$ 是一群 characteristic（universal）核函數的集合（例如不同頻寬的 RBF、Laplacian 核）。這正是<strong>把 GMMN 的思路跟 GAN 的對抗式訓練結合</strong>——生成器（$\theta$）想騙過最挑剔的核函數，核函數則想盡辦法揭穿生成器。</p>
+<h4>窮舉所有核函數不可行：改用神經網路建模</h4>
+<p>直接窮舉 $\mathcal{K}$ 裡所有可能的核函數不現實。這裡用一個數學性質：<strong>如果 $f$ 是單射（injective）函數，$k$ 是 characteristic 核函數，那麼複合函數 $\widetilde{k}=k\circ f$ 也是 characteristic</strong>。既然如此，可以用<strong>另一個神經網路</strong> $f_\phi$（權重 $\phi$）來建模這個 $f$，把式 (25) 改寫成：</p>
+<p>$$
+\underset{\theta}{\operatorname{minimize}}\ \underset{\phi}{\operatorname{maximize}}\ \operatorname{MMD}_{k\circ f_\phi}^2(P_x,P_{\widehat{x}}(\theta)). \tag{26}
+$$</p>
+<p>一個具體例子：把 RBF 核跟單射函數 $f_\phi$ 組合起來（式27）：</p>
+<p>$$
+\widetilde{k}(\boldsymbol{x},\boldsymbol{y}):=\exp\!\big(-\gamma\|f_\phi(\boldsymbol{x})-f_\phi(\boldsymbol{y})\|_2^2\big). \tag{27}
+$$</p>
+<p>白話講：<strong>不直接在原始資料空間算距離，而是先用神經網路 $f_\phi$ 把資料變換一次，再算變換後的距離</strong>——這個變換本身也是可學習、可優化的。</p>
+<h4>為什麼 $f_\phi$ 要是「單射」：用自編碼器保證</h4>
+<p>$f$ 要是單射，意味著它必須有反函數 $f^{-1}$，滿足 $f^{-1}(f(\boldsymbol{x}))=\boldsymbol{x}$（不會把不同的資料點映射到同一個地方，否則資訊會丟失、"挑毛病"的能力也會打折扣）。這可以用<strong>重建自編碼器</strong>來實現：編碼器 $f_{\phi_e}=f$、解碼器 $f_{\phi_d}\approx f^{-1}$。式 (26) 進一步改寫成：</p>
+<p>$$
+\underset{\theta}{\operatorname{minimize}}\ \underset{\phi:=\{\phi_e,\phi_d\}}{\operatorname{maximize}}\Big(\operatorname{MMD}_{k\circ f_{\phi_e}}^2(P_x,P_{\widehat{x}}(\theta))-\lambda\,\mathbb{E}\big[\|\boldsymbol{x}-f_{\phi_d}(f_{\phi_e}(\boldsymbol{x}))\|_2^2\big]\Big), \tag{28}
+$$</p>
+<p>其中 $\lambda\gt 0$ 是正則化係數。內層最大化同時做兩件事：<strong>① 找出最能揭露生成器弱點的編碼器變換、② 透過重建誤差項確保這個編碼器是可逆的（不會退化成沒意義的映射）</strong>。</p>
+<h4>整體架構：兩個神經網路同時訓練</h4>
+<p>MMD GAN 用<strong>兩個神經網路</strong>：一個是 GMMN 生成器（權重 $\theta$）、一個是重建自編碼器（權重 $\phi_e,\phi_d$），用式 (28) 同時訓練（結構見原文 Fig. 3）——外層生成器最小化、內層自編碼器最大化，跟 GAN 的訓練精神一致，但<strong>對抗的對象是「核函數該長什麼樣子」，而不是「這筆資料是真是假」</strong>。</p>
+<h4>口語小結</h4>
+<p><strong>MMD GAN 把 kp6/kp7 固定不變的核函數變成可學習、可對抗優化的——用一個神經網路（要求單射，靠自編碼器結構保證）把資料先變換過再算 RBF 核，內層對抗地找出最挑剔的變換，外層生成器要在這個最挑剔的標準下依然讓 MMD 最小；本質是把「選核函數」這件事也交給梯度下降去解決，而不是人工挑一個固定的核。</strong></p><figure class="orig-fig"><img src="assets/orig-kp8-fig3.jpg" alt="圖 3 MMD GAN 的結構"><figcaption>圖 3 MMD GAN 的結構</figcaption></figure>
+
+<div class="diagram-figure"><figure class="diagram-fig" style="margin:14px 0;text-align:center;"><svg style="max-width:88%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="m8d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#4f46e5"/></marker>
+    <marker id="m8u" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#ea580c"/></marker>
+  </defs>
+  <rect x="0" y="0" width="720" height="380" fill="#ffffff"/>
+  <text x="360" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#3730a3">MMD GAN：這次對抗的不是真假，是「核函數該長什麼樣」</text>
+
+  <!-- seesaw pivot -->
+  <line x1="360" y1="220" x2="360" y2="250" stroke="#64748b" stroke-width="4"/>
+  <polygon points="340,250 380,250 360,220" fill="#64748b"/>
+  <line x1="180" y1="180" x2="540" y2="150" stroke="#94a3b8" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- LEFT: generator, pulling MMD down -->
+  <rect x="120" y="90" width="140" height="60" rx="8" fill="#eeecff" stroke="#4f46e5" stroke-width="2.4"/>
+  <text x="190" y="115" text-anchor="middle" font-size="11" font-weight="bold" fill="#3730a3">生成器 θ</text>
+  <text x="190" y="132" text-anchor="middle" font-size="9" fill="#4338ca">想讓 MMD 越小越好</text>
+  <path d="M190 150 L182 178" stroke="#4f46e5" stroke-width="3" marker-end="url(#m8d)"/>
+
+  <!-- RIGHT: kernel transform, pulling MMD up -->
+  <rect x="460" y="90" width="150" height="60" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="2.4"/>
+  <text x="535" y="115" text-anchor="middle" font-size="11" font-weight="bold" fill="#c2410c">核變換 f_φ</text>
+  <text x="535" y="132" text-anchor="middle" font-size="9" fill="#9a3412">想讓 MMD 越大越好</text>
+  <path d="M535 150 L538 152" stroke="#ea580c" stroke-width="3" marker-end="url(#m8u)"/>
+
+  <text x="360" y="200" text-anchor="middle" font-size="10" font-weight="bold" fill="#334155">拔河：生成器 vs 核函數變換</text>
+
+  <!-- small autoencoder loop for invertibility -->
+  <rect x="230" y="270" width="260" height="90" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.3"/>
+  <text x="360" y="290" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155">f_φ 必須可逆（單射）</text>
+  <rect x="250" y="305" width="70" height="34" rx="6" fill="#fff" stroke="#ea580c" stroke-width="1.8"/>
+  <text x="285" y="326" text-anchor="middle" font-size="9" fill="#9a3412">編碼器</text>
+  <rect x="400" y="305" width="70" height="34" rx="6" fill="#fff" stroke="#ea580c" stroke-width="1.8"/>
+  <text x="435" y="326" text-anchor="middle" font-size="9" fill="#9a3412">解碼器</text>
+  <path d="M320 322 L400 322" stroke="#ea580c" stroke-width="2" marker-end="url(#m8u)"/>
+  <path d="M435 339 C 435 355, 285 355, 285 339" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-dasharray="4,3" marker-end="url(#m8u)"/>
+  <text x="360" y="350" text-anchor="middle" font-size="8" fill="#64748b">重建誤差確保不是亂變換</text>
+</svg>
+<div class="ai-illustration" data-diagram-id="kp-8" data-status="pending"><details><summary>🤖 AI 生圖提示詞</summary><pre class="ai-illustration-prompt">WHAT（骨架）: 上半部畫一個蹺蹺板/拔河意象——支點在中央，左端「生成器 θ」方框（標「想讓 MMD 越小越好」，箭頭向下），右端「核變換 f_φ」方框（標「想讓 MMD 越大越好」，箭頭向上），中間標「拔河：生成器 vs 核函數變換」。下半部畫一個小型自編碼器迴路——編碼器方框→解碼器方框→虛線回饋箭頭繞回編碼器，標「f_φ 必須可逆（單射）」與「重建誤差確保不是亂變換」。
+
+WHY（因果或反直覺）: MMD GAN 的對抗跟一般 GAN 不同——不是在「真假之爭」，而是在「核函數該長什麼樣子」上互相拉扯：生成器希望在目前的核函數下 MMD 越小越好，核函數變換則反過來想找出讓 MMD 最大（最能揭露生成器弱點）的變換方式。反直覺點：這個核變換不能亂來，必須靠自編碼器的重建誤差約束它保持可逆，否則失去意義的變換也能讓 MMD 無限變大，變成沒有意義的對抗。
+
+MUST show（必備要素）: ① 蹺蹺板/拔河視覺，左生成器（欲小）、右核變換（欲大）方向相反的箭頭；② 中央「拔河」標籤；③ 下方自編碼器迴路（編碼器→解碼器→虛線回饋）；④ 「f_φ 必須可逆」與「重建誤差確保不是亂變換」兩行說明文字。
+
+AVOID（禁止）: 不要放完整 LaTeX 算式；不要漏掉下方自編碼器迴路（這是「為什麼核變換不能亂來」的關鍵視覺解釋）；不要把生成器與核變換的箭頭方向畫成一致（必須明確相反，凸顯對抗）。
+
+STYLE: flat vector, viewBox 720×380, 靛紫（生成器，#4f46e5、#eeecff）對比橘色（核變換，#ea580c、#fff7ed），支點與蹺蹺板用灰色（#64748b、#94a3b8），白底，Arial，圓角、粗線條、無陰影無漸層。</pre></details></div><figcaption style="font-size:.8rem;color:#6b7280;margin-top:4px;">這次對抗的不是真假，是「核函數該長什麼樣子」；可逆變換靠自編碼器重建誤差把關</figcaption></figure></div>
+<div class="demo" data-demo-id="kp8">
+  <style>
+    [data-demo-id="kp8"] { border: 1px solid #c7d2fe; border-radius: 14px; overflow: hidden; background: #fff; }
+    [data-demo-id="kp8"] .demo-head { padding: 12px 18px; background: linear-gradient(135deg,#4f46e5,#3730a3); color: #fff; font-weight: 700; }
+    [data-demo-id="kp8"] .demo-body { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px 18px; background: #f5f4ff; }
+    [data-demo-id="kp8"] .demo-controls { flex: 1 1 340px; display: flex; flex-direction: column; gap: 6px; }
+    [data-demo-id="kp8"] .demo-canvas { flex: 1 1 340px; }
+    [data-demo-id="kp8"] canvas { border: 1px solid #c7d2fe; border-radius: 10px; background: #fff; max-width: 100%; }
+    [data-demo-id="kp8"] .row { display: flex; align-items: center; gap: 8px; font-size: 0.76rem; }
+    [data-demo-id="kp8"] .row label { min-width: 60px; font-weight: 600; }
+    [data-demo-id="kp8"] input[type="range"] { flex: 1; }
+    [data-demo-id="kp8"] .grp-label { font-weight: 700; font-size: .76rem; margin-top: 4px; color:#3730a3; }
+    [data-demo-id="kp8"] button.search { background: #4f46e5; color: #fff; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 700; margin-top:4px; }
+    [data-demo-id="kp8"] button.search:hover { background: #3730a3; }
+    [data-demo-id="kp8"] .demo-readout { min-height: 9em; padding: 10px 12px; border: 1px solid #c7d2fe; border-radius: 8px; background: #fff; font-family: ui-monospace, Consolas, monospace; font-size: 0.72rem; line-height: 1.5; white-space: pre-wrap; }
+    [data-demo-id="kp8"] .demo-theory, [data-demo-id="kp8"] .demo-instruction { padding: 10px 18px; font-size: 0.85rem; line-height: 1.7; }
+    [data-demo-id="kp8"] .demo-theory { background: #eeecff; border-top: 1px solid #c7d2fe; }
+  </style>
+  <div class="demo-head">🧪 Demo：MMD GAN — 對抗地找出最挑剔的核變換 $f_\phi$</div>
+  <div class="demo-body">
+    <div class="demo-controls">
+      <div class="grp-label">生成點 X̂（藍固定 X 對照，橘為可調 X̂，各 3 個 2D 點）</div>
+      <div class="row"><label>x̂1</label><input type="range" id="kp8-h0x" min="-2" max="2" step="0.05" value="0.3"><input type="range" id="kp8-h0y" min="-2" max="2" step="0.05" value="0.1"></div>
+      <div class="row"><label>x̂2</label><input type="range" id="kp8-h1x" min="-2" max="2" step="0.05" value="1.3"><input type="range" id="kp8-h1y" min="-2" max="2" step="0.05" value="0.3"></div>
+      <div class="row"><label>x̂3</label><input type="range" id="kp8-h2x" min="-2" max="2" step="0.05" value="0.3"><input type="range" id="kp8-h2y" min="-2" max="2" step="0.05" value="1.4"></div>
+      <div class="grp-label">變換 f_φ(v) = a⊙v + b</div>
+      <div class="row"><label>a1</label><input type="range" id="kp8-a1" min="0.3" max="3" step="0.05" value="1"><span id="kp8-a1-v"></span></div>
+      <div class="row"><label>a2</label><input type="range" id="kp8-a2" min="0.3" max="3" step="0.05" value="1"><span id="kp8-a2-v"></span></div>
+      <div class="row"><label>b1</label><input type="range" id="kp8-b1" min="-2" max="2" step="0.05" value="0"><span id="kp8-b1-v"></span></div>
+      <div class="row"><label>b2</label><input type="range" id="kp8-b2" min="-2" max="2" step="0.05" value="0"><span id="kp8-b2-v"></span></div>
+      <div class="row"><label>γ</label><input type="range" id="kp8-g" min="0.3" max="3" step="0.05" value="1"><span id="kp8-g-v"></span></div>
+      <button class="search" id="kp8-search" type="button">找出讓 MMD² 最大的縮放 (a1,a2)</button>
+      <div class="demo-readout" id="kp8-ro"></div>
+    </div>
+    <div class="demo-canvas"><canvas id="kp8-cv" width="360" height="300"></canvas></div>
+  </div>
+  <div class="demo-theory">
+    <strong>原理（式25-27）：</strong>$\underset{\theta}{\text{minimize}}\ \underset{k\in\mathcal{K}}{\text{maximize}}\ \operatorname{MMD}_k^2(P_x,P_{\widehat x}(\theta))$；用 $\widetilde k(x,y):=\exp(-\gamma\|f_\phi(x)-f_\phi(y)\|_2^2)$（式27），其中 $f_\phi(v)=\boldsymbol{a}\odot v+\boldsymbol{b}$ 是簡化的單射線性變換（$a_1,a_2\neq0$ 保證可逆）。
+  </div>
+  <div class="demo-instruction">
+    <strong>這在做什麼：</strong>用線性縮放+平移當簡化版 $f_\phi$，示範「調整核函數內部的變換」如何改變 MMD² 的大小。
+    <strong>怎麼操作：</strong>
+    <ul>
+      <li>拉動 $\widehat X$ 三點的滑桿模擬生成器輸出、拉動 $a,b,\gamma$ 改變變換。</li>
+      <li>按「找出讓 MMD² 最大的縮放」做網格搜尋，自動把 $a_1,a_2$ 設到搜尋到的最佳值。</li>
+    </ul>
+    <strong>觀察什麼：</strong>搜尋找到的 MMD² 應該大於等於「恆等變換（$a=1$）」的基準值，因為恆等變換本身就是搜尋網格裡的一個候選。
+    <strong>正確結果基準：</strong>readout 同時列出「恆等變換基準」與「搜尋後最大值」，後者必 ≥ 前者。
+  </div>
+  <script>
+  (function(){
+    var X=[[0,0],[1,0],[0,1]];
+    var hxids=['kp8-h0x','kp8-h1x','kp8-h2x'], hyids=['kp8-h0y','kp8-h1y','kp8-h2y'];
+    var cv=document.getElementById('kp8-cv'), ctx=cv.getContext('2d');
+    var ro=document.getElementById('kp8-ro');
+    function fmt(v){ return (Math.round(v*1000)/1000).toFixed(4); }
+    function getXhat(){
+      return hxids.map(function(id,i){ return [parseFloat(document.getElementById(id).value), parseFloat(document.getElementById(hyids[i]).value)]; });
+    }
+    function ktilde(p,q,a1,a2,b1,b2,gamma){
+      var fpx=a1*p[0]+b1, fpy=a2*p[1]+b2;
+      var fqx=a1*q[0]+b1, fqy=a2*q[1]+b2;
+      var dx=fpx-fqx, dy=fpy-fqy;
+      return Math.exp(-gamma*(dx*dx+dy*dy));
+    }
+    function mmd2(Xh,a1,a2,b1,b2,gamma){
+      var n=X.length,m=Xh.length,sxx=0,syy=0,sxy=0;
+      for(var i=0;i<n;i++) for(var j=0;j<n;j++) sxx+=ktilde(X[i],X[j],a1,a2,b1,b2,gamma);
+      for(i=0;i<m;i++) for(j=0;j<m;j++) syy+=ktilde(Xh[i],Xh[j],a1,a2,b1,b2,gamma);
+      for(i=0;i<n;i++) for(j=0;j<m;j++) sxy+=ktilde(X[i],Xh[j],a1,a2,b1,b2,gamma);
+      return sxx/(n*n)+syy/(m*m)-2*sxy/(n*m);
+    }
+    function draw(Xh){
+      var W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+      var cx=60, cy=H-40, scale=90;
+      function toPx(p){ return [cx+p[0]*scale, cy-p[1]*scale]; }
+      ctx.strokeStyle='#e2e8f0'; ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke();
+      X.forEach(function(p){ var px=toPx(p); ctx.fillStyle='#2563eb'; ctx.beginPath(); ctx.arc(px[0],px[1],7,0,6.283); ctx.fill(); });
+      Xh.forEach(function(p){ var px=toPx(p); ctx.fillStyle='#ea580c'; ctx.beginPath(); ctx.arc(px[0],px[1],7,0,6.283); ctx.fill(); });
+      ctx.fillStyle='#334155'; ctx.font='11px sans-serif'; ctx.textAlign='left';
+      ctx.fillText('藍：X（真實，固定）　橘：X̂（生成，可調）', 8, 16);
+    }
+    function computeBaselineAndCurrent(){
+      var Xh=getXhat();
+      var b1=parseFloat(document.getElementById('kp8-b1').value);
+      var b2=parseFloat(document.getElementById('kp8-b2').value);
+      var gamma=parseFloat(document.getElementById('kp8-g').value);
+      var a1=parseFloat(document.getElementById('kp8-a1').value);
+      var a2=parseFloat(document.getElementById('kp8-a2').value);
+      var baseline=mmd2(Xh,1,1,b1,b2,gamma);
+      var current=mmd2(Xh,a1,a2,b1,b2,gamma);
+      return {Xh:Xh,b1:b1,b2:b2,gamma:gamma,a1:a1,a2:a2,baseline:baseline,current:current};
+    }
+    function sync(){
+      var st=computeBaselineAndCurrent();
+      document.getElementById('kp8-a1-v').textContent=fmt(st.a1);
+      document.getElementById('kp8-a2-v').textContent=fmt(st.a2);
+      document.getElementById('kp8-b1-v').textContent=fmt(st.b1);
+      document.getElementById('kp8-b2-v').textContent=fmt(st.b2);
+      document.getElementById('kp8-g-v').textContent=fmt(st.gamma);
+      draw(st.Xh);
+      ro.textContent =
+        'X̂ = ['+st.Xh.map(function(p){return '('+fmt(p[0])+','+fmt(p[1])+')';}).join(', ')+']\n'+
+        'a=('+fmt(st.a1)+','+fmt(st.a2)+')  b=('+fmt(st.b1)+','+fmt(st.b2)+')  γ='+fmt(st.gamma)+'\n\n'+
+        '恆等變換基準 MMD²（a=1,1，同 b,γ） = '+fmt(st.baseline)+'\n'+
+        '目前變換 MMD²                     = '+fmt(st.current)+
+        (st.current>=st.baseline-1e-9 ? '\n\n✓ 目前 ≥ 基準' : '\n\n（可按下方按鈕搜尋更挑剔的變換）');
+    }
+    [hxids,hyids].forEach(function(arr){ arr.forEach(function(id){ document.getElementById(id).addEventListener('input', sync); }); });
+    ['kp8-a1','kp8-a2','kp8-b1','kp8-b2','kp8-g'].forEach(function(id){ document.getElementById(id).addEventListener('input', sync); });
+    document.getElementById('kp8-search').addEventListener('click', function(){
+      var Xh=getXhat();
+      var b1=parseFloat(document.getElementById('kp8-b1').value);
+      var b2=parseFloat(document.getElementById('kp8-b2').value);
+      var gamma=parseFloat(document.getElementById('kp8-g').value);
+      var candidates=[]; for(var v=0.3; v<=3.0001; v+=0.2077) candidates.push(Math.round(v*100)/100);
+      if(candidates.indexOf(1) === -1) candidates.push(1.0);
+      var best={val:-Infinity,a1:1,a2:1};
+      candidates.forEach(function(a1c){
+        candidates.forEach(function(a2c){
+          var v=mmd2(Xh,a1c,a2c,b1,b2,gamma);
+          if(v>best.val) best={val:v,a1:a1c,a2:a2c};
+        });
+      });
+      document.getElementById('kp8-a1').value=best.a1;
+      document.getElementById('kp8-a2').value=best.a2;
+      sync();
+    });
+    sync();
+  })();
+  </script>
+</div>
+<button class="guide-btn" type="button" data-kp="8" data-guide="kp-8" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：MMD GAN——量身高不能只用一把固定的尺</button><div class="quiz" data-ans="B"><p class="q"><p>MMD GAN 想解決 GMMN 的什麼限制？</p></p><div class="opts"><label class="opt"><input type="radio" name="q8-0" value="A"><span>A. <p>GMMN 訓練太快</p></span></label><label class="opt"><input type="radio" name="q8-0" value="B"><span>B. <p>GMMN 使用固定的核函數（如固定頻寬的 RBF），可能不是最能揭露真實與生成資料差異的選擇</p></span></label><label class="opt"><input type="radio" name="q8-0" value="C"><span>C. <p>GMMN 不能用於圖片資料</p></span></label><label class="opt"><input type="radio" name="q8-0" value="D"><span>D. <p>GMMN 沒有生成器</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="kp6/kp7 的 GMMN 都用固定核函數，MMD GAN 認為應該像 sup_f 的精神一樣，主動找出最挑剔、最能揭露差異的核函數。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>式 (25) 的極大極小結構代表什麼？</p></p><div class="opts"><label class="opt"><input type="radio" name="q8-1" value="A"><span>A. <p>生成器與核函數同時最小化損失</p></span></label><label class="opt"><input type="radio" name="q8-1" value="B"><span>B. <p>內層在核函數集合 $\mathcal{K}$ 中找出讓 MMD 最大的核（最挑剔），外層生成器要在這個最挑剔核之下讓 MMD 最小</p></span></label><label class="opt"><input type="radio" name="q8-1" value="C"><span>C. <p>核函數固定不變，只優化生成器</p></span></label><label class="opt"><input type="radio" name="q8-1" value="D"><span>D. <p>只優化核函數，不訓練生成器</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="式(25)是 minimize_θ maximize_k 的結構：內層對抗地找出最會揭穿生成器的核函數，外層生成器要能撐過最壞情況。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>為什麼要求 $f_\phi$（複合進核函數的變換）必須是單射（injective）？</p></p><div class="opts"><label class="opt"><input type="radio" name="q8-2" value="A"><span>A. <p>為了加速訓練</p></span></label><label class="opt"><input type="radio" name="q8-2" value="B"><span>B. <p>因為若非單射，會把不同資料點映射到同一點造成資訊遺失，複合而成的核也就不再保證是 characteristic</p></span></label><label class="opt"><input type="radio" name="q8-2" value="C"><span>C. <p>單射函數計算比較簡單</p></span></label><label class="opt"><input type="radio" name="q8-2" value="D"><span>D. <p>單射與核函數的選擇無關</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="文中引用「若 f 為單射、k 為 characteristic，則 k∘f 也是 characteristic」的性質；若 f 非單射會丟失資訊，這個保證就會失效。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>式 (28) 中重建誤差項 $-\lambda\mathbb{E}[\|x-f_{\phi_d}(f_{\phi_e}(x))\|_2^2]$ 的作用是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q8-3" value="A"><span>A. <p>取代 MMD 損失，成為主要訓練目標</p></span></label><label class="opt"><input type="radio" name="q8-3" value="B"><span>B. <p>確保編碼器 $f_{\phi_e}$ 大致上是可逆的（單射），同時被內層最大化這個目標一起優化</p></span></label><label class="opt"><input type="radio" name="q8-3" value="C"><span>C. <p>用來訓練生成器 $\theta$</p></span></label><label class="opt"><input type="radio" name="q8-3" value="D"><span>D. <p>與核函數的選擇完全無關，只是額外正則化</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="重建誤差項在內層最大化中一起被考慮，目的是讓編碼器維持接近可逆（單射）的性質，這正是式(27)複合核 k∘f_φ 仍是 characteristic 的前提。"></div></div></div></section>
+<section id="kp9" class="card" data-kp="9"><div class="card-head"><span class="badge">6</span><h3>結論：GMMN 過時了，但 MMD 這個工具留下來了</h3><span class="toggle">▼</span></div><div class="card-body"><button class="guide-btn" type="button" data-kp="9" data-guide="kp-9" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：結論——工具箱裡的老虎鉗可能被淘汰，但施力原理不會</button><h4>回顧全章走過的路</h4>
+<p>這一章從「怎麼比較兩個分布」這個看似簡單的問題出發：</p>
+<ol>
+<li><strong>kp2</strong>：只比均值不夠，理論上要比所有動差才能保證分布相同。</li>
+<li><strong>kp3–kp4</strong>：MMD 把「比所有動差」轉化成「在 RKHS 裡比一個均值」，再靠核技巧變成完全可計算的公式。</li>
+<li><strong>kp5</strong>：這個度量要能當「真正的距離」，核函數必須是 universal——MMD=0 才精確等價於分布相同。</li>
+<li><strong>kp6</strong>：GMMN 直接把 MMD 當生成模型的訓練損失，用非對抗的方式訓練生成器。</li>
+<li><strong>kp7</strong>：條件式 GMMN 讓生成器可以接收指令，生成特定類別或風格的資料。</li>
+<li><strong>kp8</strong>：MMD GAN 把「選核函數」這件事也變成可學習、可對抗優化的，讓 MMD 度量本身更強大。</li>
+</ol>
+<h4>GMMN 這個模型：歷史意義大於實用意義</h4>
+<p>GMMN 提出了一個優雅的核方法途徑來訓練生成模型，不需要對抗式訓練。但它的生成品質與可擴展性都比不上同時期崛起的 GAN，後來又陸續被 VAE、自回歸 Transformer、擴散模型超越。<strong>到今天，GMMN 主要是歷史與概念上的參考點</strong>——它示範了「除了對抗訓練，還有別的路可以走」，但作為一個實際拿來部署的生成模型，已經很少被使用。</p>
+<h4>MMD 這個工具：至今仍然活躍</h4>
+<p>雖然 GMMN 這個模型退場了，但<strong>它背後的度量工具 MMD 完全沒有退場</strong>。MMD 至今仍廣泛用在：</p>
+<ul>
+<li><strong>領域轉換（domain adaptation）</strong>：量測來源領域與目標領域的分布差異，並想辦法縮小它。</li>
+<li><strong>分布對齊（distribution alignment）</strong>：任何需要「讓兩包資料的分布變像」的場景。</li>
+<li><strong>統計檢定（statistical testing）</strong>：核二樣本檢定本身就是一個嚴謹的統計工具，用來檢定兩組樣本是否來自同一分布。</li>
+</ul>
+<p>這正是這一章想傳達的核心訊息：<strong>模型（GMMN）可能會被時代淘汰，但底層的數學工具（MMD）只要邏輯夠紮實、應用夠廣，就能在模型本身退場之後繼續發揮作用</strong>——這跟 Ch07 波茲曼機的故事（RBM/DBN 模型過時，但能量模型的思路留下來）有異曲同工之妙，都是「模型會過時，思路與工具未必」的例子。</p>
+<h4>口語小結</h4>
+<p><strong>GMMN 是生成模型發展史上一個重要但短暫的分支——用 MMD 取代判別器，走出一條非對抗訓練的路，但最終被更強大的方法超越；然而 MMD 這個核方法本身，作為量測分布差異的通用工具，至今仍在領域轉換、分布對齊、統計檢定等場景發光發熱。</strong></p>
+<p><strong>一句話收尾：模型會退場，但如果背後的數學夠硬，工具本身可以比模型活得更久——MMD 就是最好的例子。</strong></p><div class="quiz" data-ans="B"><p class="q"><p>根據本章結論，GMMN 這個生成模型今天的地位是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q9-0" value="A"><span>A. <p>仍是業界訓練生成模型的主流方法</p></span></label><label class="opt"><input type="radio" name="q9-0" value="B"><span>B. <p>主要具有歷史與概念上的參考意義，實務上已很少直接使用</p></span></label><label class="opt"><input type="radio" name="q9-0" value="C"><span>C. <p>已被證明數學上有誤</p></span></label><label class="opt"><input type="radio" name="q9-0" value="D"><span>D. <p>只能用於小型資料集，未來會被廣泛採用</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="文中明確指出 GMMN 生成品質與可擴展性不如 GAN，後又被 VAE、Transformer、擴散模型超越，今天主要是歷史與概念意義。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>相較於 GMMN 這個模型，MMD 這個度量工具今天的地位是？</p></p><div class="opts"><label class="opt"><input type="radio" name="q9-1" value="A"><span>A. <p>也已經被完全淘汰，沒有應用價值</p></span></label><label class="opt"><input type="radio" name="q9-1" value="B"><span>B. <p>仍廣泛應用於領域轉換、分布對齊、統計檢定等場景</p></span></label><label class="opt"><input type="radio" name="q9-1" value="C"><span>C. <p>只能用於訓練生成模型</p></span></label><label class="opt"><input type="radio" name="q9-1" value="D"><span>D. <p>已被 KL 散度完全取代</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="MMD 作為量測分布差異的通用工具，即使 GMMN 這個模型退場，MMD 本身仍在多個實務場景持續被使用。"></div></div><div class="quiz" data-ans="B"><p class="q"><p>本章結論想傳達的核心訊息，與哪個類比最貼切？</p></p><div class="opts"><label class="opt"><input type="radio" name="q9-2" value="A"><span>A. <p>所有數學工具都會隨模型一起被淘汰</p></span></label><label class="opt"><input type="radio" name="q9-2" value="B"><span>B. <p>模型可能被時代淘汰，但底層數學工具若夠紮實、應用夠廣，可以比模型活得更久</p></span></label><label class="opt"><input type="radio" name="q9-2" value="C"><span>C. <p>只有最新的模型才值得學習</p></span></label><label class="opt"><input type="radio" name="q9-2" value="D"><span>D. <p>GMMN 與 MMD 會同時被淘汰</p></span></label></div><button class="check" type="button">檢查</button><div class="fb" data-expl="文中把 GMMN（模型，過時）與 MMD（工具，仍活躍）分開評價，呼應「模型會過時、工具與思路未必」的主線，這與 Ch07 波茲曼機的歷史定位有相似邏輯。"></div></div></div></section></main></div>
+<footer>依 Elements of Deep Learning (Ghojogh &amp; Ghodsi) Ch13 改寫 · 自學用</footer>
+<script>
+(function(){
+function renderMath(){if(window.katex && window.renderMathInElement) window.renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"\\[",right:"\\]",display:true},{left:"\\(",right:"\\)",display:false},{left:"$",right:"$",display:false}],throwOnError:false,ignoredClasses:['katex']});}
+window.renderMath=renderMath;
+var cards=document.querySelectorAll('.card');
+function upd(){var n=cards.length,done=0;cards.forEach(function(c){if(c.classList.contains('done'))done++;});var pct=Math.round(done/n*100);document.getElementById('pf').style.width=pct+'%';document.getElementById('ptxt').textContent='已完成 '+done+' / '+n+'（'+pct+'%）';}
+cards.forEach(function(c){c.querySelector('.card-head').addEventListener('click',function(){c.classList.toggle('collapsed');});c.querySelectorAll('.quiz').forEach(function(qz){var btn=qz.querySelector('.check'),fb=qz.querySelector('.fb');btn.addEventListener('click',function(){var sel=qz.querySelector('input:checked');if(!sel){fb.className='fb wrong';fb.textContent='請先選擇答案。';return;}if(sel.value===qz.dataset.ans){fb.className='fb ok';fb.textContent='✓ 正確！';c.classList.add('done');} else {fb.className='fb wrong';fb.innerHTML='✗ 答錯：'+qz.querySelector('.fb').dataset.expl;if(window.renderMath)window.renderMath();}upd();});});});
+window.addEventListener('load',function(){setTimeout(renderMath,50);upd();});
+})();
+</script>
+<div id="guide-modal"><div class="modal-box"><button class="close" type="button" aria-label="關閉">×</button><h1 id="guide-title"></h1><div class="modal-body" id="guide-body"></div></div></div>
+<script data-phase-d="guides">
+window.__GUIDES__={"1": {"title": "教授祕笈：導論——兩包咖啡豆，怎麼確定是不是同一個產地", "body": "<p>同學，想像你面前擺著兩包咖啡豆。老闆說：「這兩包都是同一產地的哥倫比亞豆。」你怎麼驗證他沒騙你？秤重量？不夠——兩包都可能剛好一公斤，但一包顆粒飽滿均勻、一包大小參差不齊。聞香氣？看油脂分布？顏色深淺？理論上你得<strong>比對到所有能想到的特徵</strong>，才能真正確定「這兩包豆子像不像」。這正是本章要解決的問題，只是主角換成機率分布：<strong>怎麼量測兩個分布是不是同一個「產地」</strong>。</p> <h2>先把任務講成一句人話</h2> <p>一句話：<strong>理論上要比對兩個分布的所有動差才能確定它們相同；MMD 找到一個聰明方法，只需要在一個特殊空間裡比一項「均值」，就等價於比了所有動差。</strong></p> <h2>鷹架式：先直覺，再符號</h2> <p>量測分布差異的方法很多——KL 散度、JS 散度、HSIC、Q-Q plot、Sinkhorn divergence……本章只聚焦其中一個特別重要的：<strong>最大平均差異（Maximum Mean Discrepancy, MMD）</strong>，也叫<strong>核二樣本檢定（kernel two-sample test）</strong>。</p> <p>它的核心邏輯跟驗豆子一樣直覺：<strong>如果兩包豆子（兩個分布）真的一樣，那所有能測的特徵（動差）都該一樣</strong>。均值、變異數、偏度……理論上要比到無限多項才算「完全確定」，但這不可行。MMD 的聰明之處，是找到一個特殊空間（RKHS），在裡面只需要比「一項均值」，就<strong>等價於</strong>比了所有特徵——這是全章最關鍵的一次概念跳躍，kp2 到 kp4 會帶你一步步拆解這個跳躍是怎麼發生的。</p> <h2>符號逐個拆：GMMN 是什麼</h2> <p>MMD 是個「量測工具」，而 <strong>GMMN（Generative Moment Matching Network，生成動差匹配網路）</strong> 是把這個工具拿來用的其中一種「生成模型」——它讓一個神經網路輸出的資料，跟訓練資料之間的 MMD 越小越好，直接把 MMD 當成訓練損失。</p> <p>跟同時期崛起的 GAN 相比，關鍵差異在訓練方式：GAN 養了一個「鑑定師」（判別器）去對抗地分辨真假；GMMN 完全不養鑑定師，直接拿 MMD 這把尺去量「生成豆子」跟「真豆子」差多少，尺的讀數就是訓練訊號。這個對比，kp6 會具體展開。</p> <h2>真的算一遍：均值一樣、豆子卻不一樣</h2> <p>假設兩包豆子的「豆重」樣本：$X=\\{1,3\\}$，均值 $2$；$Y=\\{0,4\\}$，均值也是 $2$。如果只比均值，會誤判兩包一樣。但只要多看一項「豆重的平方」：$\\mathbb{E}[x^2]=\\frac{1+9}{2}=5$，$\\mathbb{E}[y^2]=\\frac{0+16}{2}=8$，一比就抓出差異（$Y$ 的兩顆豆子離中心更遠、離散程度更大）。這正是 kp2 會細講的「均值不夠、要比更多動差」現象，這裡先讓你摸到手感。</p> <h2>先留一個反轉</h2> <p>你可能會想：「那我就把所有動差都算一算不就好了？」——問題是動差有無限多階（$\\mathbb{E}[x],\\mathbb{E}[x^2],\\mathbb{E}[x^3],\\ldots$），永遠算不完。MMD 反轉的巧妙之處在於：它不是「算得更多」，而是換一個空間，讓「算一項」就等於「算了無限項」。這個空間是什麼、為什麼換了空間就能有這種魔法效果，留給 kp2、kp4 慢慢揭曉——你可以先猜猜看：如果要讓「一個數字」濃縮「無限多個數字」的資訊，這個數字所在的空間會需要什麼特殊性質？</p> <h2>換個場景，自己找出同一條路</h2> <p>把「比較咖啡豆」換成「比較兩班學生的考卷分數」。你會怎麼判斷兩班程度是不是一樣？只看平均分數夠嗎？想想看，如果不夠，你還會想多比什麼？（這其實就是 kp2 要講的東西。）</p> <h2>大家最容易在這裡搞混</h2> <p>第一，<strong>「MMD 跟 GMMN 是同一件事」</strong>。錯。MMD 是一個通用的度量工具，可以用在統計檢定、領域轉換等各種場景；GMMN 只是拿 MMD 當損失函數的其中一種生成模型，兩者不能劃等號。第二，<strong>「GMMN 跟 GAN 訓練方式一樣，只是換了個名字」</strong>。錯。GAN 是對抗式的極大極小賽局（需要判別器）；GMMN 是非對抗式的，直接用 MMD 當可微分損失，中間沒有博弈過程。第三，<strong>「本章講的都是過時的東西，沒必要學」</strong>。錯。GMMN 這個模型確實較少直接使用了，但 MMD 這個度量工具至今活躍在領域轉換與統計檢定裡——理解它的原理，價值遠超過「會不會拿去訓練一個生成模型」。</p> <h2>跨知識點掛勾</h2> <p><strong>KP-2</strong> 到 <strong>KP-5</strong> 會展開「動差比較→RKHS→核技巧→universal kernel」這一整條推導鏈；<strong>KP-6</strong> 會具體講 GMMN 怎麼把 MMD 當損失函數；<strong>KP-7</strong> 是條件式的擴展；<strong>KP-8</strong> 講如何連核函數本身都變成可學習的；<strong>KP-9</strong> 收尾呼應本篇開頭「模型會過時、工具不會」的主線。</p> <h2>換句話重述</h2> <p><strong>兩包資料像不像，理論上要比對所有特徵；MMD 用一個特殊空間裡的均值比較，等價地濃縮了所有特徵的比較；GMMN 拿這個工具當生成模型的訓練損失，是 GAN 之外一條非對抗的路，雖然模型本身後來被超越，背後的 MMD 工具卻留了下來。</strong></p> <p><strong>一句話收尾：</strong> <strong>驗豆子不能只秤重量，比分布不能只看均值——MMD 教我們怎麼一次比完所有特徵，而且是用一個算得出來的方法。</strong></p>"}, "2": {"title": "教授祕笈：MMD 的直覺——兩班平均分數一樣，但成績單完全不同", "body": "<p>同學，教務處常常有這種爭議：「A 班跟 B 班平均分數都是 75 分，代表兩班程度一樣嗎？」你心裡一定覺得哪裡不對——如果 A 班大家都考 70 到 80 分之間、B 班卻有人考滿分有人考不及格，兩班的「平均」一樣，但「像不像」完全是兩回事。這就是今天要拆解的核心問題：<strong>均值相同，不代表分布相同</strong>，那到底要比到什麼程度才算數？</p> <h2>先把任務講成一句人話</h2> <p>一句話：<strong>理論上要比對兩個分布「所有階」的動差才能保證它們完全相同（Proposition 1）；而 MMD 的洞見是：只要在 RKHS 這個特殊空間裡比一次均值，就等價於比了輸入空間裡所有階的動差（Proposition 2）。</strong></p> <h2>鷹架式：先直覺，再符號</h2> <h3>均值不夠，那比變異數呢？</h3> <p>A 班、B 班平均分都是 75，但離散程度（變異數）不同——變異數其實是<strong>第二動差</strong> $\\mathbb{E}[x^2]$ 的函數（$\\text{Var}=\\mathbb{E}[x^2]-(\\mathbb{E}[x])^2$）。所以我們可以把每個學生的分數 $x$ 變換成 $[x,x^2]^\\top$，同時比較 $\\mathbb{E}[x]-\\mathbb{E}[y]$ 和 $\\mathbb{E}[x^2]-\\mathbb{E}[y^2]$——這樣就能抓出「離散程度不同」這件事了。</p> <h3>那比到均值+變異數就夠了嗎？</h3> <p>還是不夠。兩班可能均值、變異數都一樣，但<strong>偏度</strong>（skewness，跟第三動差有關）不同——一班考卷是「多數人考不錯、少數人爆低分」（左偏），一班是「多數人普通、少數人超高分」（右偏），看起來離散程度差不多，但形狀完全不同。</p> <h3>邏輯往下推：要比到無窮多階</h3> <p>這個邏輯可以一直推下去：均值不夠比變異數，變異數不夠比偏度，偏度不夠比峰度……理論上要比到<strong>所有</strong>階的動差，才能保證兩個分布完全相同，這就是：</p> <p>$$ P_x=P_y \\Longleftrightarrow \\mathbb{E}[x^i]=\\mathbb{E}[y^i],\\ \\forall i\\in\\{1,2,\\ldots,\\infty\\}. \\tag{1} $$</p> <p>問題來了：$\\mathbb{E}[x],\\mathbb{E}[x^2],\\mathbb{E}[x^3],\\ldots$ 有<strong>無限多項</strong>，全部算一遍根本不可行——教務處總不能真的算到「180 次方的動差」才敢下結論吧？</p> <h2>真的算一遍：均值一樣、動差卻不一樣</h2> <p>考慮 $X=\\{1,3\\}$（均值 $2$）、$Y=\\{0,4\\}$（均值也是 $2$）。均值相同（$\\mathbb{E}[x]-\\mathbb{E}[y]=0$），如果只看均值會誤判兩者一樣。但看第二動差：</p> <p>$$ \\mathbb{E}[x^2]=\\frac{1^2+3^2}{2}=5,\\qquad \\mathbb{E}[y^2]=\\frac{0^2+4^2}{2}=8. $$</p> <p>差了整整 3——這抓出了 $Y$ 的兩個點離中心更遠、離散程度更大的事實。這正是原文 Fig. 1a 想傳達的現象：均值相同不代表分布相同，你必須往更高階動差查下去。</p> <h2>先留一個反轉</h2> <p>聽到這裡，你可能覺得「所以還是得算很多項才行嘛」——但這裡有個反轉：<strong>MMD 不是要你算更多項，而是換一個空間，讓「算一項」等於「算了所有項」</strong>。這個空間叫<strong>再生核希爾伯特空間（RKHS）</strong>，Proposition 2 是這麼說的：</p> <p>$$ P_x=P_y \\Longleftrightarrow \\mathbb{E}[f(x)]=\\mathbb{E}[f(y)],\\ \\forall f\\in C(\\mathcal{X}), \\tag{2} $$</p> <p>白話講：如果對「所有可能的連續函數 $f$」，$f(x)$ 跟 $f(y)$ 的期望值都相等，那 $x$ 跟 $y$ 的分布就一定相同。而在 RKHS 裡，「均值嵌入相等」正好就是在檢查這件事——這是不是很像變魔術？但它不是魔術，是嚴謹的數學定理，kp3、kp4 會告訴你這個「均值比較」到底怎麼具體算出來。留一個問題給你想：既然要涵蓋「所有連續函數 $f$」，這個 RKHS 空間得多「豐富」才夠？（提示：kp5 的 universal kernel 正是在回答這個問題。）</p> <h2>舉一反三</h2> <p>想想統計課學過的「動差生成函數」（moment generating function）——它的精神跟這裡很像：一個函數濃縮了分布的所有動差資訊。MMD 走的是類似的路，只是換了個空間（RKHS）、換了個工具（核函數）。</p> <h2>大家最容易在這裡搞混</h2> <p>第一，<strong>「均值一樣就代表分布一樣」</strong>。錯，這正是本篇要打破的迷思——A、B 兩班平均分一樣，程度可能天差地遠。第二，<strong>「Proposition 1 說要比無限多項動差，所以 MMD 也要算無限多項」</strong>。錯，Proposition 1 只是說明「理論上需要什麼才算完全確定」，MMD 真正用的是 Proposition 2 的 RKHS 均值比較，不需要真的算無限多項。第三，<strong>「比到均值+變異數兩項應該就夠精確了」</strong>。這在許多實務場合可能夠用，但理論上不保證——只要有更高階的動差不同，兩個分布仍可能被誤判為相同。</p> <h2>跨知識點掛勾</h2> <p><strong>KP-1</strong> 提過這是全章最重要的一次概念跳躍；<strong>KP-3</strong> 會給出 MMD 的正式數學定義（用 sup 取代 Proposition 2 裡的「對所有 $f$」）；<strong>KP-4</strong> 會把「RKHS 裡比均值」具體落地成可以真正計算的核函數公式；<strong>KP-5</strong> 會講清楚「universal kernel」這個讓 Proposition 2 真正成立的關鍵條件。</p> <h2>換句話重述</h2> <p><strong>均值相同不保證分布相同，理論上要比到所有階的動差才算數；但這不可行，MMD 的核心洞見是把「比無限多階動差」換成「在 RKHS 裡比一個均值」，讓不可行的問題變得可以算。</strong></p> <p><strong>一句話收尾：</strong> <strong>兩班平均分一樣，程度不一定一樣——要嘛比到天荒地老（無限多階動差），要嘛換個空間一次比完（RKHS 均值），MMD 選了後者。</strong></p>"}, "3": {"title": "教授祕笈：MMD 正式定義——找全校最挑剔的老師來改考卷", "body": "<p>同學，兩個班交上來的考卷，你想確定改卷標準有沒有落差。你可以隨便找一位老師改改看，但萬一這位老師剛好標準寬鬆、看不出兩班差異呢？聰明的做法是：<strong>找全校最挑剔的老師來改</strong>——只要有任何一位老師能挑出毛病，就代表兩班確實有差異。這正是 MMD 正式定義裡「取上界（sup）」的精神。</p> <h2>先把任務講成一句人話</h2> <p>一句話：<strong>MMD 的正式定義，就是在一群函數裡找出「最能拉開兩分布期望值差距」的那一個，用它拉開的差距當作距離；實務上用樣本平均近似期望值，就得到可以真正計算的「有偏經驗 MMD」。</strong></p> <h2>鷹架式：先直覺，再符號</h2> <p>kp2 給了直覺：RKHS 裡比均值，等價於比輸入空間裡所有動差。這裡把這個直覺寫成正式定義。</p> <p><strong>定義 1（MMD）</strong>：令 $\\mathcal{F}$ 是一群把輸入映射到純量輸出的函數集合（你可以先把它想成「所有可能拿來改卷的評分標準」）。兩個分布 $P_x$、$P_y$ 的 MMD 定義為：</p> <p>$$ \\operatorname{MMD}(P_x,P_y):=\\sup_{f\\in\\mathcal{F}}\\bigl(\\mathbb{E}[f(\\boldsymbol{x})]-\\mathbb{E}[f(\\boldsymbol{y})]\\bigr). \\tag{3} $$</p> <p>白話翻譯：<strong>在 $\\mathcal{F}$ 這個函數類別（改卷老師的集合）裡，找出那個最能把兩班分數期望值拉開的評分標準，用他拉開的差距當距離</strong>。</p> <h2>為什麼一定要「取上界」，不能隨便挑一個</h2> <p>如果隨便挑 $f(x)=x$（相當於最基本的均值比較），可能剛好挑到 kp2 提過的陷阱——均值一樣，看不出差異。取上界（$\\sup$）的用意是：<strong>在整個函數類別裡窮舉，找出最挑剔、最能揭露差異的那一個函數</strong>——只要有任何一個函數能看出兩分布不同，MMD 就不會是 0。這個「不放過任何差異」的保證，前提是 $\\mathcal{F}$ 這個函數類別要夠豐富（這個「夠豐富」的正式條件，叫 <strong>universal kernel</strong>，kp5 會細講）。</p> <h2>實務落地：用樣本平均近似期望值</h2> <p>式 (3) 需要知道 $P_x$ 的完整分布才能算期望值，但實務上通常只有樣本。用蒙地卡羅近似，把期望值換成樣本平均：</p> <p>$$ \\operatorname{MMD}(P_x,P_y)\\approx\\sup_{f\\in\\mathcal{F}}\\left(\\frac{1}{n}\\sum_{i=1}^n f(\\boldsymbol{x}_i)-\\frac{1}{m}\\sum_{j=1}^m f(\\boldsymbol{y}_j)\\right). \\tag{4} $$</p> <p>之所以叫「<strong>有偏</strong>經驗 MMD」，是因為有限樣本估計期望值本身帶有統計偏誤——樣本數越多，這個偏誤越小。</p> <h2>真的算一遍：換個老師（函數），改出不同分數</h2> <p>樣本 $X=\\{2,4,6\\}$（$n=3$）、$Y=\\{1,3\\}$（$m=2$）。用最簡單的評分標準 $f(x)=x$（恆等函數）：</p> <p>$$ \\frac{1}{3}(2+4+6)-\\frac{1}{2}(1+3)=4-2=2. $$</p> <p>換一個更嚴格的評分標準 $f(x)=x^2$（放大差異）：</p> <p>$$ \\frac{1}{3}(4+16+36)-\\frac{1}{2}(1+9)=\\frac{56}{3}-5\\approx13.67. $$</p> <p>同一組資料，換個「老師」（函數），改出來的分數差距完全不同——這正是式 (4) 要對所有 $f\\in\\mathcal{F}$ 取上界的理由：<strong>不同函數揭露不同層面的差異，取上界就是要找出「最會挑毛病」的那一位</strong>。</p> <h2>先留一個反轉</h2> <p>你可能覺得「那就用 $f(x)=x^{100}$ 這種超敏感的函數，不就能放大所有差異了嗎？」——先別急著下結論。函數類別 $\\mathcal{F}$ 不是隨便亂選的，kp4 會告訴你怎麼把 $\\mathcal{F}$ 具體化成一個叫 RKHS 單位球的東西，讓 $\\sup$ 這個看似難算的操作，變成一個乾淨的公式，不需要真的窮舉無限多個函數。你可以先想想：如果 $\\mathcal{F}$ 選得不好（比如太小、太貧乏），$\\sup$ 出來的 MMD 會有什麼問題？</p> <h2>舉一反三</h2> <p>這個「取最挑剔標準」的精神，跟統計學裡的<strong>假設檢定</strong>很像：檢定方法要能在「虛無假設為真」與「對立假設為真」兩種情況下都給出可靠結論，不能只挑一個容易通過的檢定方式。MMD 取 sup 也是同樣道理——要對所有可能的檢驗方式都經得起考驗。</p> <h2>大家最容易在這裡搞混</h2> <p>第一，<strong>「隨便選一個 $f$ 算出來的差距就是 MMD」</strong>。錯，那只是 $\\mathcal{F}$ 裡的一個下界估計，真正的 MMD 是對整個 $\\mathcal{F}$ 取上界。第二，<strong>「$\\mathcal{F}$ 可以是任何函數的集合，選越大越好」</strong>。不完全對——$\\mathcal{F}$ 需要有特定的數學結構（RKHS 單位球），才能讓 $\\sup$ 變成可計算的公式，這是 kp4 要解決的問題。第三，<strong>「有偏 MMD 是錯的、不能用」</strong>。錯，有偏只是代表存在有限樣本的統計偏誤，並不代表計算方法錯誤，樣本數夠大時偏誤會趨近於零。</p> <h2>跨知識點掛勾</h2> <p><strong>KP-2</strong> 給了直覺鋪墊；<strong>KP-4</strong> 會把 $\\mathcal{F}$ 具體化成 RKHS 單位球，讓式 (3) 的 sup 變成兩個「均值嵌入」的距離，完全可計算；<strong>KP-5</strong> 會講清楚什麼樣的核函數能讓這個 $\\mathcal{F}$ 夠「豐富」（universal kernel）。</p> <h2>換句話重述</h2> <p><strong>MMD 的正式定義是在一群函數裡找出最挑剔的那一個，用它拉開的期望值差距當距離；實務上用樣本平均近似期望值就得到有偏經驗 MMD。這個定義還很抽象，下一步要把它變成真正能算出數字的公式。</strong></p> <p><strong>一句話收尾：</strong> <strong>改卷不能隨便找個老師，要找全校最挑剔的那位——MMD 的 sup，就是在幫你找那位最挑剔的評分標準。</strong></p>"}, "4": {"title": "教授祕笈：RKHS 均值嵌入與核技巧——不用真的飛到遠方拍照", "body": "<p>同學，假設你想比較兩座城市的「天際線輪廓」，理論上你得搭空拍機飛到很遠很高的地方，拍一張完整的照片才能精準比較。但如果有一套「座標公式」，讓你不用真的飛過去，只要輸入兩個地面座標，就能直接算出「兩座天際線之間的距離」——這就是核技巧（kernel trick）在 MMD 這裡做的事：<strong>不用真的把資料送到那個遙遠（甚至無限維）的空間，直接用公式算出結果</strong>。</p> <h2>先把任務講成一句人話</h2> <p>一句話：<strong>MMD² 等於兩個 RKHS 均值嵌入的距離平方；核技巧讓我們完全不用真的把資料映射到 RKHS，只要有核函數 $k$，直接代入兩兩樣本的核值就能算出來。</strong></p> <h2>鷹架式：先直覺，再符號</h2> <h3>第一步：把函數類別 $\\mathcal{F}$ 具體化</h3> <p>kp3 定義的 MMD 還很抽象——$\\mathcal{F}$ 到底是什麼？這裡把它設成 <strong>RKHS 裡的單位球</strong>，這樣每個 $f\\in\\mathcal{F}$ 就對應到一個映射函數 $\\phi:\\boldsymbol{x}\\mapsto\\phi(\\boldsymbol{x})$，把資料從輸入空間送進 RKHS。</p> <p>資料映射後，各自取平均，得到<strong>均值嵌入（mean embedding）</strong>：</p> <p>$$ \\mu_{\\phi(\\boldsymbol{x})}:=\\frac{1}{n}\\sum_{i=1}^n\\phi(\\boldsymbol{x}_i),\\qquad \\mu_{\\phi(\\boldsymbol{y})}:=\\frac{1}{m}\\sum_{j=1}^m\\phi(\\boldsymbol{y}_j). \\tag{6,7} $$</p> <p>在 RKHS 這個空間的性質下（$\\sup$ 被均值嵌入本身吸收，細節超出本章範圍），MMD 的平方直接等於兩個均值嵌入的歐式距離平方：</p> <p>$$ \\operatorname{MMD}^2(P_x,P_y)\\approx\\|\\mu_{\\phi(\\boldsymbol{x})}-\\mu_{\\phi(\\boldsymbol{y})}\\|_2^2. \\tag{8} $$</p> <p>這就是「兩包資料各自送到 RKHS 取平均、量兩個平均點的距離」——kp2 說的「RKHS 裡比均值」，這裡終於有了具體的算式。</p> <h3>第二步：展開，發現 $\\phi$ 永遠成對出現</h3> <p>把式 (8) 展開（利用內積的雙線性）：</p> <p>$$ \\operatorname{MMD}^2(P_x,P_y)\\approx\\frac{1}{n^2}\\sum_{i,j}\\phi(\\boldsymbol{x}_i)^\\top\\phi(\\boldsymbol{x}_j)+\\frac{1}{m^2}\\sum_{i,j}\\phi(\\boldsymbol{y}_i)^\\top\\phi(\\boldsymbol{y}_j)-\\frac{2}{nm}\\sum_{i,j}\\phi(\\boldsymbol{x}_i)^\\top\\phi(\\boldsymbol{y}_j). \\tag{9} $$</p> <p>關鍵觀察：整個式子裡，$\\phi$ <strong>永遠成對出現、做內積</strong>（$\\phi(\\cdot)^\\top\\phi(\\cdot)$）。</p> <h3>第三步：核技巧登場——不用真的算出 $\\phi$</h3> <p>既然永遠是成對內積，我們可以直接定義<strong>核函數</strong>：</p> <p>$$ k(\\boldsymbol{x},\\boldsymbol{y}):=\\phi(\\boldsymbol{x})^\\top\\phi(\\boldsymbol{y}). \\tag{10} $$</p> <p>這就是空拍機比喻裡的「座標公式」——不用真的把資料送進（可能是無限維的）RKHS 再算內積，只要有核函數 $k(\\cdot,\\cdot)$，直接代入座標就能算出內積的值。代入後，式 (9) 化簡成完全可計算的形式：</p> <p>$$ \\operatorname{MMD}^2(P_x,P_y)\\approx\\frac{1}{n^2}\\sum_{i,j}^n k(\\boldsymbol{x}_i,\\boldsymbol{x}_j)+\\frac{1}{m^2}\\sum_{i,j}^m k(\\boldsymbol{y}_i,\\boldsymbol{y}_j)-\\frac{2}{nm}\\sum_{i,j} k(\\boldsymbol{x}_i,\\boldsymbol{y}_j). \\tag{11} $$</p> <p>這是<strong>有偏經驗 MMD</strong>。也有<strong>無偏版本</strong>，把同分布內的 $\\frac{1}{n^2}\\sum_{i,j}^n$ 換成 $\\frac{1}{n(n-1)}\\sum_{i\\neq j}^n$（扣掉自己跟自己配對那一項）：</p> <p>$$ \\operatorname{MMD}^2(P_x,P_y)\\approx\\frac{1}{n(n-1)}\\sum_{i\\neq j}k(\\boldsymbol{x}_i,\\boldsymbol{x}_j)+\\frac{1}{m(m-1)}\\sum_{i\\neq j}k(\\boldsymbol{y}_i,\\boldsymbol{y}_j)-\\frac{2}{nm}\\sum_{i,j}k(\\boldsymbol{x}_i,\\boldsymbol{y}_j). \\tag{12} $$</p> <h2>真的算一遍：$X=\\{1,2\\}$，$Y=\\{2,3\\}$，RBF 核 $\\sigma=1$</h2> <p>用高斯核 $k(a,b)=\\exp\\!\\big(-\\frac{(a-b)^2}{2\\sigma^2}\\big)$，$\\sigma=1$，先把所有需要的核值算出來：</p> <table> <thead> <tr> <th>配對</th> <th>核值</th> </tr> </thead> <tbody> <tr> <td>$k(1,1)$</td> <td>$1$</td> </tr> <tr> <td>$k(2,2)$</td> <td>$1$</td> </tr> <tr> <td>$k(1,2)=k(2,1)$</td> <td>$\\exp(-0.5)\\approx0.6065$</td> </tr> <tr> <td>$k(2,3)=k(3,2)$</td> <td>$\\exp(-0.5)\\approx0.6065$</td> </tr> <tr> <td>$k(3,3)$</td> <td>$1$</td> </tr> <tr> <td>$k(1,3)$</td> <td>$\\exp(-2)\\approx0.1353$</td> </tr> </tbody> </table> <p>代入式 (11)（$n=m=2$）：</p> <p>$$ \\text{XX 項}=\\frac{1}{4}(1+0.6065+0.6065+1)\\approx0.8033 $$ $$ \\text{YY 項}=\\frac{1}{4}(1+0.6065+0.6065+1)\\approx0.8033 $$ $$ \\text{XY 項}=\\frac{2}{4}(0.6065+0.1353+1+0.6065)\\approx1.1742 $$ $$ \\operatorname{MMD}^2\\approx0.8033+0.8033-1.1742\\approx0.4324. $$</p> <p>你可以自己拿計算機代一遍驗算——這正好對應原文的習題 1。</p> <h2>先留一個反轉</h2> <p>注意到了嗎？我們從頭到尾<strong>沒有真的寫出 $\\phi(x)$ 長什麼樣子</strong>！RBF 核背後對應的 $\\phi$ 其實是無限維的（把資料映射到一個無窮維空間），但我們完全不需要知道它具體的形式，只要有 $k(x,y)$ 這個「座標公式」就夠了。這就是核技巧最厲害的地方：<strong>繞過一個算不出來（甚至無限維）的中間步驟，直接得到最終答案</strong>。</p> <h2>舉一反三</h2> <p>如果你學過 SVM（支援向量機），核技巧的精神完全一樣——SVM 也是靠核函數在高維空間找分類邊界，卻不需要真的把資料映射過去。MMD 跟 SVM 用的是同一套數學工具，只是應用場景不同：一個拿來分類，一個拿來比較分布。</p> <h2>大家最容易在這裡搞混</h2> <p>第一，<strong>「要先算出 $\\phi(x)$ 才能算 MMD」</strong>。錯，核技巧的整個重點就是不需要算出 $\\phi(x)$，只要有核函數 $k$ 就夠了。第二，<strong>「式 (11) 跟式 (12) 算出來的數字應該一樣」</strong>。不一定——無偏版本排除了自我配對項，數值上通常會有些微差異，樣本數越大差異越小。第三，<strong>「任何函數都可以拿來當核函數」</strong>。不對，核函數必須滿足特定數學性質（對應某個 RKHS 的內積），kp5 會講到不是所有核都能讓 MMD 當作有效距離。</p> <h2>跨知識點掛勾</h2> <p><strong>KP-3</strong> 定義的抽象 $\\sup_{f\\in\\mathcal{F}}$，這裡具體化成式 (8) 的均值嵌入距離；<strong>KP-5</strong> 會講「什麼樣的核函數 $k$ 才能保證 MMD=0 精確等價於分布相同」；<strong>KP-6</strong> 的 GMMN 訓練損失，直接就是這裡的式 (11)。</p> <h2>換句話重述</h2> <p><strong>式 (8) 把抽象的 MMD 具體化成兩個均值嵌入的距離；核技巧讓我們完全不需要真的把資料映射到 RKHS，只要有核函數，直接代入兩兩樣本的核值，就能算出完全可計算的 MMD² 公式。</strong></p> <p><strong>一句話收尾：</strong> <strong>不用飛到遠方拍照，只要有座標公式——核技巧讓我們繞過看不見的 RKHS，直接算出答案。</strong></p>"}, "5": {"title": "教授祕笈：Universal Kernel——一把尺，刻度夠不夠密", "body": "<p>同學，量身高的時候，如果你手上那把尺刻度只有到「每 10 公分一格」，那 165 公分跟 168 公分的人，量出來可能都顯示「約 170」——尺不夠精細，量不出真正的差異。kp4 讓我們可以用任何核函數 $k$ 算出 MMD²，但這裡有個陷阱：<strong>如果核函數這把「尺」刻度不夠密，兩個明明不同的分布，MMD 可能會誤判成 0</strong>。這一節要講的，就是什麼樣的尺才算「夠密」。</p> <h2>先把任務講成一句人話</h2> <p>一句話：<strong>MMD 要能當「真正的距離」（MMD=0 精確等價於分布相同），核函數必須是 universal（也叫 characteristic）；RBF、Laplacian 核符合資格，多項式核不符合。</strong></p> <h2>鷹架式：先直覺，再符號</h2> <h3>Universal kernel 的定義</h3> <p><strong>定義 2</strong>：令 $C(\\mathcal{X})$ 是輸入空間 $\\mathcal{X}$ 上所有連續函數的集合。一個核函數 $k$ 稱為 universal，如果它對應的 RKHS $\\mathcal{H}$ 在 $C(\\mathcal{X})$ 中是<strong>稠密的</strong>——白話講：對任何連續函數 $f\\in C(\\mathcal{X})$、任何小誤差 $\\epsilon\\gt 0$，都能在 $\\mathcal{H}$ 裡找到一個函數 $g$，使得 $\\|f-g\\|_\\infty\\leq\\epsilon$。</p> <p>用尺的比喻理解：$\\mathcal{H}$ 就像「這把尺能量出來的所有讀數」，如果 $\\mathcal{H}$ 稠密在 $C(\\mathcal{X})$ 裡，代表無論你要量什麼形狀的東西（任何連續函數 $f$），這把尺都能量到「幾乎一樣精準」的程度——這正是 kp3 那個「函數類別 $\\mathcal{F}$ 要夠豐富」的正式數學條件。</p> <p>根據 Stone-Weierstrass 定理，universal kernel 的泰勒展開式必須有<strong>無限多項</strong>（尺的刻度要無限密）。兩個常見例子：</p> <ul> <li><strong>RBF（高斯）核</strong>：$k(\\boldsymbol{x},\\boldsymbol{y}):=\\exp\\!\\big(-\\gamma\\|\\boldsymbol{x}-\\boldsymbol{y}\\|_2^2\\big)$（式13）</li> <li><strong>Laplacian 核</strong>：$k(\\boldsymbol{x},\\boldsymbol{y}):=\\exp\\!\\big(-\\gamma\\|\\boldsymbol{x}-\\boldsymbol{y}\\|_1\\big)$（式14）</li> </ul> <p>這兩個核都因為有指數運算，泰勒展開有無限多項，所以是 universal。<strong>反例：多項式核不是 universal</strong>——它的展開式項數有限（就像刻度只有到十位數的粗尺）。</p> <h3>Proposition 3：夠密的尺，才能保證「量出來一樣才是真的一樣」</h3> <p>$$ \\operatorname{MMD}(P_x,P_y)=0 \\Longleftrightarrow P_x=P_y. \\tag{15} $$</p> <p><strong>證明的關鍵一步</strong>（反向：假設 MMD=0，證明分布相同）：MMD=0 代表均值嵌入相等 $\\mu_{\\phi(x)}=\\mu_{\\phi(y)}$（式16）。因為核是 universal，對任意連續函數 $f$，都能找到 $g\\in\\mathcal{H}$ 使 $\\|f-g\\|_\\infty\\leq\\epsilon$。把 $|\\mathbb{E}[f(x)]-\\mathbb{E}[f(y)]|$ 拆成三段：</p> <p>$$ \\underbrace{|\\mathbb{E}[f(x)]-\\mathbb{E}[g(x)]|}_{\\leq\\epsilon}+\\underbrace{|\\mathbb{E}[g(x)]-\\mathbb{E}[g(y)]|}_{=0}+\\underbrace{|\\mathbb{E}[g(y)]-\\mathbb{E}[f(y)]|}_{\\leq\\epsilon}. $$</p> <p>第一、三項因為 $g$ 逼近 $f$（$\\|f-g\\|_\\infty\\leq\\epsilon$）而各自 $\\leq\\epsilon$；中間項因為 $g\\in\\mathcal{H}$ 且均值嵌入已相等，內積 $\\langle g,\\mu_{\\phi(x)}-\\mu_{\\phi(y)}\\rangle_\\mathcal{H}=0$，<strong>恰好等於 0</strong>。三項加總 $\\leq2\\epsilon$，對<strong>任意小</strong>的 $\\epsilon$ 都成立，代表 $|\\mathbb{E}[f(x)]-\\mathbb{E}[f(y)]|=0$ 對所有 $f\\in C(\\mathcal{X})$ 成立——這正是 kp2 Proposition 2 定義的「分布相同」。</p> <p>MMD 還有個性質：<strong>有下界（0）但沒有上界</strong>——分布相同時是 0，差異越大 MMD 就越大，但沒有固定的最大值。</p> <h2>真的算一遍：兩個高斯分布的解析 MMD²</h2> <p>考慮 $P=\\mathcal{N}(0,1)$、$Q=\\mathcal{N}(1,2)$，高斯核 $\\gamma=1$。有一個現成的閉式公式：對 $X,X'\\sim\\mathcal{N}(\\mu,\\sigma^2)$，</p> <p>$$ \\mathbb{E}_{x,x'\\sim\\mathcal{N}(\\mu,\\sigma^2)}[k(x,x')]=\\frac{1}{\\sqrt{1+2\\sigma^2/\\gamma^2}}. $$</p> <p>$X$ 項（$\\sigma_P^2=1$）：$\\dfrac{1}{\\sqrt{1+2}}=\\dfrac{1}{\\sqrt3}\\approx0.5774$</p> <p>$Y$ 項（$\\sigma_Q^2=2$）：$\\dfrac{1}{\\sqrt{1+4}}=\\dfrac{1}{\\sqrt5}\\approx0.4472$</p> <p>看，即使不取樣，只要知道分布的解析形式，就能直接算出核期望值——這正是「MMD 可以有解析解」的一個具體例子，交叉項的完整計算留給你當練習（提示：$x-y\\sim\\mathcal{N}(\\mu_P-\\mu_Q,\\sigma_P^2+\\sigma_Q^2)$，套用同一個閉式公式）。</p> <h2>先留一個反轉</h2> <p>你可能會想：「那我乾脆都用 RBF 核就好了，何必管什麼 universal 不 universal？」——先別急。RBF 核確實是最常用的 universal kernel，但 kp8 會告訴你一個更聰明的想法：<strong>如果連核函數本身都能被學習、被優化，是不是能找到比固定 RBF 更會挑毛病的量法？</strong>——這正是 MMD GAN 要解決的問題。留一個問題給你想：如果核函數 $k$ 是 universal，把它跟一個單射函數 $f$ 複合起來 $\\widetilde{k}=k\\circ f$，這個新的複合核還會是 universal 嗎？</p> <h2>舉一反三</h2> <p>Universal kernel 的「稠密」概念，跟微積分裡「多項式可以任意逼近連續函數」（Weierstrass 逼近定理）是同一個數學家族——都是在問「用一組簡單的建構元件，能不能拼湊出任何複雜的形狀」。</p> <h2>大家最容易在這裡搞混</h2> <p>第一，<strong>「universal 只是『常見』的意思」</strong>。錯，它有嚴格的數學定義：RKHS 在連續函數空間中稠密，不是隨便一個常用的核就自動 universal。第二，<strong>「任何核函數都能讓 MMD 當作有效距離」</strong>。錯，只有 universal kernel 才能保證 Proposition 3 成立；用多項式核，MMD=0 不再保證分布相同。第三，<strong>「MMD 有上界，可以拿來算相似度百分比」</strong>。錯，MMD 只有下界（0），沒有固定上界，不能直接當作 0-100% 的相似度分數。</p> <h2>跨知識點掛勾</h2> <p><strong>KP-3</strong> 的函數類別 $\\mathcal{F}$「夠豐富」這個條件，在這裡有了嚴謹定義；<strong>KP-4</strong> 給出的可計算公式，只有搭配 universal 核才有理論保證；<strong>KP-6</strong> 的 GMMN 訓練損失，正因為要用到 Proposition 3 的等價關係，才必須選用 universal 核（不能用多項式核）；<strong>KP-8</strong> 的 MMD GAN 進一步把選核函數這件事變成可學習的。</p> <h2>換句話重述</h2> <p><strong>MMD 要能當真正的距離，核函數必須是 universal（RBF、Laplacian 可以，多項式核不行）；在這個條件下，MMD=0 精確地等價於兩分布相同，證明的核心是把誤差拆三段、用稠密性質把每段都壓到任意小。</strong></p> <p><strong>一句話收尾：</strong> <strong>尺的刻度不夠密，量出來一樣不代表真的一樣——universal kernel 就是那把刻度無限密、絕對可信賴的尺。</strong></p>"}, "6": {"title": "教授祕笈：GMMN——訓練一台咖啡豆複製機，不用養鑑定師", "body": "<p>同學，回到我們一開始「比較兩包咖啡豆」的比喻。現在任務升級：你要訓練一台<strong>複製機</strong>，讓它做出來的豆子跟真豆子越像越好。GAN 的做法是同時養一位<strong>鑑定師</strong>（判別器），複製機跟鑑定師互相較勁、你來我往地進步。GMMN 的做法完全不同：<strong>乾脆不養鑑定師，直接拿 kp4 那把「MMD 尺」去量複製品跟真品差多少，尺的讀數就是懲罰訊號，直接拿去調整複製機</strong>。今天我們就來看這台複製機具體怎麼運作。</p> <h2>先把任務講成一句人話</h2> <p>一句話：<strong>GMMN 是一個吃隨機雜訊、輸出生成資料的神經網路，訓練損失直接是 kp4 推出的 MMD² 公式——沒有判別器、沒有對抗訓練，最小化 MMD 就等於讓生成分布逼近真實分布。</strong></p> <h2>鷹架式：先直覺，再符號</h2> <h3>GAN vs GMMN：拿掉鑑定師</h3> <p>GAN（原文 Fig. 2a）：生成器吃隨機雜訊、輸出生成資料；判別器嘗試分辨真假；兩者在極大極小賽局裡同時訓練。</p> <p>GMMN（Fig. 2b）：<strong>把判別器整個拿掉，換成 MMD 損失函數</strong>——直接量測生成分布跟真實分布之間的 MMD，最小化它。沒有對抗、沒有博弈，是一個更直接的訓練方式。</p> <h3>複製機的輸入：一把隨機骰子</h3> <p>GMMN 的輸入是隨機雜訊向量 $\\boldsymbol{z}=[z_1,\\ldots,z_p]^\\top$，每個維度獨立同分布、服從均勻分布：</p> <p>$$ \\mathbb{P}(\\boldsymbol{z})=\\prod_{j=1}^p U(z_j), \\tag{19} $$</p> <p>其中 $\\boldsymbol{z}\\in[-1,1]^p$ 或 $[0,1]^p$（不同文獻習慣不同），$p$ 是雜訊維度。網路吃進 $\\boldsymbol{z}$，輸出生成資料 $\\widehat{\\boldsymbol{x}}\\in\\mathbb{R}^d$——每一次丟一組不同的骰子點數，複製機就吐出一個不同的生成樣本。</p> <h3>訓練損失：直接搬 kp4 的公式來用</h3> <p>假設訓練資料 $\\{\\boldsymbol{x}_i\\}_{i=1}^n$，GMMN 每輪生成 $m$ 筆資料 $\\{\\widehat{\\boldsymbol{x}}_j\\}_{j=1}^m$，損失函數就是 kp4 式 (11)：</p> <p>$$ \\mathcal{L}:=\\operatorname{MMD}^2(P_x,P_{\\widehat{x}})\\approx\\frac{1}{n^2}\\sum_{i,j}^n k(\\boldsymbol{x}_i,\\boldsymbol{x}_j)+\\frac{1}{m^2}\\sum_{i,j}^m k(\\widehat{\\boldsymbol{x}}_i,\\widehat{\\boldsymbol{x}}_j)-\\frac{2}{nm}\\sum_{i,j}k(\\boldsymbol{x}_i,\\widehat{\\boldsymbol{x}}_j). \\tag{20} $$</p> <p>可以用 mini-batch 訓練（每次生成 $m$ 筆）。最小化這個損失，會把 $\\operatorname{MMD}(P_x,P_{\\widehat{x}})$ 推向 0——而根據 <strong>KP-5</strong> 的 Proposition 3（前提是核函數 universal），<strong>MMD 趨近 0 就代表生成分布趨近真實分布</strong>。kp2 到 kp5 鋪的那條長長的路，到這裡終於開花結果：<strong>MMD 不只是個度量工具，還能直接拿來當可微分的訓練損失去反向傳播</strong>。</p> <h3>一個變體：在自編碼器的潛在空間裡做 GMMN</h3> <p>還有一種做法（Fig. 2c）：先訓練一個重建自編碼器，GMMN 的目標不是原始資料，而是自編碼器<strong>潛在層（code space）</strong>的分布。GMMN 學會生成「看起來像潛在編碼」的向量，再交給解碼器還原成資料。</p> <h3>三個實務眉角</h3> <ol> <li><strong>核函數必須 universal</strong>（呼應 KP-5）——RBF、Laplacian 可以，多項式核不行，否則 MMD 不再是有效距離。</li> <li><strong>經驗上用 $\\sqrt{\\operatorname{MMD}^2}$ 當損失，生成品質更好</strong>（開根號後梯度尺度更平順，訓練較穩定）。</li> <li><strong>隱藏層建議 ReLU，輸出層依生成資料範圍選</strong>（例如 sigmoid 讓輸出落在 $[0,1]$）。</li> </ol> <h2>真的算一遍：一次極小玩具訓練損失</h2> <p>假設真實資料 $X=\\{1,2\\}$、目前生成資料 $\\widehat{X}=\\{1.5,2.5\\}$，用線性核 $k(a,b)=a\\cdot b$：</p> <p>$$ \\text{XX 項}=\\frac14(1{\\cdot}1+1{\\cdot}2+2{\\cdot}1+2{\\cdot}2)=\\frac{9}{4}=2.25 $$ $$ \\widehat{X}\\widehat{X}\\text{ 項}=\\frac14(1.5{\\cdot}1.5+1.5{\\cdot}2.5+2.5{\\cdot}1.5+2.5{\\cdot}2.5)=\\frac{16}{4}=4 $$ $$ \\text{交叉項}=\\frac24(1{\\cdot}1.5+1{\\cdot}2.5+2{\\cdot}1.5+2{\\cdot}2.5)=\\frac24\\times12=6 $$ $$ \\mathcal{L}=2.25+4-6=0.25. $$</p> <p>（線性核不是 universal，這裡只是為了讓手算簡單，示範式 20 每一項怎麼算出來——實際訓練要用 RBF 等 universal 核。）如果下一輪生成資料更接近真實資料（比如 $\\widehat{X}=\\{1.1,2.1\\}$），你可以自己動手算算看，$\\mathcal{L}$ 是不是真的變小了。</p> <h2>大家最容易在這裡搞混</h2> <p>第一，<strong>「GMMN 也需要一個判別器，只是換個名字」</strong>。錯，GMMN 完全沒有判別器，MMD 損失是直接可微分地反向傳播，中間沒有任何博弈或對抗過程。第二，<strong>「GMMN 的雜訊一定要是高斯分布」</strong>。錯，原文用的是均勻分布 $U$，這跟 GAN 常用高斯雜訊是不同的慣例。第三，<strong>「只要核函數選了 RBF，MMD 損失就一定會收斂到 0」</strong>。不一定，理論上保證的是「MMD=0 才代表分布相同」，但訓練過程能否真正收斂到 0，還牽涉優化難度、模型容量等實務因素。</p> <h2>跨知識點掛勾</h2> <p><strong>KP-1</strong> 提過 GMMN 跟 GAN 的核心差異，這裡完整展開；<strong>KP-4</strong> 的 MMD² 公式直接被搬來當損失函數；<strong>KP-5</strong> 的 Proposition 3 是「最小化 MMD 損失能訓練出好生成器」的理論根據；<strong>KP-7</strong> 會把這裡的 GMMN 擴展成能接收條件的版本；<strong>KP-8</strong> 會挑戰這裡「核函數固定」的假設。</p> <h2>換句話重述</h2> <p><strong>GMMN 把 GAN 的判別器換成 MMD 損失函數，用「讓生成分布逼近真實分布」的 MMD 當作直接可微分的訓練目標；只要核函數選對（universal），最小化這個損失在理論上保證生成分布會逼近訓練資料分布。</strong></p> <p><strong>一句話收尾：</strong> <strong>不用養鑑定師，直接拿尺去量——GMMN 把 MMD 這把尺的讀數，變成訓練複製機的懲罰訊號。</strong></p>"}, "7": {"title": "教授祕笈：條件式 GMMN——點餐機除了骰子，還要看菜單", "body": "<p>同學，KP-6 的複製機有個問題：它只會隨機吐出「像訓練資料整體」的東西，你沒辦法叫它「給我做一個房子」或「照這張照片的風格做一個」。這就像一台只會丟骰子亂出餐的自動點餐機——好吃是好吃，但你點不了菜。今天要幫這台機器加一個功能：<strong>除了骰子（隨機雜訊），再讓它多看一眼菜單（條件資訊）</strong>，這樣才能照著指定的類型出餐。</p> <h2>先把任務講成一句人話</h2> <p>一句話：<strong>條件式 GMMN 讓生成器額外接收側邊資訊（參考樣本或類別標籤），跟雜訊一起輸入；訓練損失還是 KP-6 的 MMD²，只是要針對每個條件分別計算。</strong></p> <h2>鷹架式：先直覺，再符號</h2> <h3>做法一：照著一張參考照片的風格出餐</h3> <p>如果你想生成「風格類似某張參考照片 $\\boldsymbol{x}\\in\\mathbb{R}^d$」的資料，把它跟雜訊向量 $\\boldsymbol{z}$（分布同 KP-6 式19）合併，有兩種做法：</p> <p><strong>接起來（concatenate）</strong>：</p> <p>$$ \\widetilde{\\boldsymbol{x}}=[\\boldsymbol{x},\\boldsymbol{z}]^\\top\\in\\mathbb{R}^{d+p}. \\tag{21} $$</p> <p><strong>加起來（add）</strong>：如果 $p=d$（維度相同），可以直接相加：</p> <p>$$ \\widetilde{x}=x+z\\in\\mathbb{R}^d. \\tag{22} $$</p> <p>把 $\\widetilde{\\boldsymbol{x}}$ 餵進神經網路（見原文 Fig. 2d），輸出 $\\widehat{\\boldsymbol{x}}\\in\\mathbb{R}^d$。訓練損失一樣是 KP-6 式 (20) 的 MMD²，隱藏層一樣建議 ReLU。</p> <p><strong>測試階段</strong>：使用者挑一張房子的照片餵進去，網路會生成「風格類似但不是訓練集裡任何一張」的新房子——某種意義上是訓練集裡所有房子照片的內插結果。</p> <h3>做法二：直接點名要哪個類別</h3> <p>受條件式 GAN 啟發，也可以直接用<strong>類別標籤</strong>當菜單，而不是用一張具體參考照片。令 $\\boldsymbol{\\ell}\\in\\{0,1\\}^c$ 是類別標籤的 one-hot 編碼（$c$ 是類別數），把標籤跟雜訊接起來：</p> <p>$$ \\widetilde{\\boldsymbol{x}}=[\\boldsymbol{\\ell},\\boldsymbol{z}]^\\top\\in\\mathbb{R}^{c+p}. \\tag{23} $$</p> <p><strong>關鍵差異</strong>：這時候 MMD 損失要<strong>針對每個類別分別最小化</strong>——對每一個類別標籤，比較「該類別的訓練資料」與「該類別條件下生成的資料」之間的 MMD，逐類最小化。測試階段，使用者選一個類別標籤餵進網路，就能生成那個類別的資料（選「房子」，生成一張新房子）。</p> <h2>真的算一遍：兩種菜單條件各算一次 MMD²</h2> <p>假設條件 1（比如「類別 A」）下，真實樣本 $\\boldsymbol{y}_1=[1,0]$、$\\boldsymbol{y}_2=[1.5,0.5]$，生成樣本 $\\widehat{\\boldsymbol{y}}_1=[0.7,0]$、$\\widehat{\\boldsymbol{y}}_2=[1.1,0.3]$，用線性核 $k(\\boldsymbol{a},\\boldsymbol{b})=\\boldsymbol{a}^\\top\\boldsymbol{b}$，無偏估計（$n=m=2$）：</p> <p>$$ \\text{YY 項}=\\boldsymbol{y}_1^\\top\\boldsymbol{y}_2=1\\times1.5+0\\times0.5=1.5 $$ $$ \\widehat{Y}\\widehat{Y}\\text{ 項}=\\widehat{\\boldsymbol{y}}_1^\\top\\widehat{\\boldsymbol{y}}_2=0.7\\times1.1+0\\times0.3=0.77 $$</p> <p>交叉項要對 $\\boldsymbol{y}_i^\\top\\widehat{\\boldsymbol{y}}_j$（$i,j\\in\\{1,2\\}$）四種配對取平均——你可以照式 (12) 的無偏公式自己代入驗算。條件 2（比如「類別 B」）下，換一組不同的真實/生成樣本，同法再算一次 MMD²。<strong>最後把兩個條件各自的 MMD² 取平均，就是條件式 MMD（CMMD²）</strong>——這正是把 KP-6 單一分布的 MMD 損失，擴展成「逐條件分別算、再平均」的做法。</p> <h2>先留一個反轉</h2> <p>你可能覺得「條件式 GMMN 聽起來需要一套全新的理論」——其實完全不用。留一個問題給你確認自己理解了：如果 KP-5 保證了「universal kernel 下 MMD=0 等價於分布相同」，那條件式 GMMN 裡「對每個類別分別算 MMD」，理論保證會不會因為多了條件而失效？（提示：想想看，每個類別各自的真實分布 vs 生成分布，本質上還是不是 KP-5 講的「兩個分布比較」這件事，只是重複做了 $c$ 次？）</p> <h2>舉一反三</h2> <p>這個「接起來/加起來」的條件合併手法，你在很多深度學習模型裡都會再遇到——條件式 VAE、條件式擴散模型的 class embedding，本質上都是同一招：把「你想要什麼」的資訊，跟「隨機性」的來源一起餵進網路。</p> <h2>大家最容易在這裡搞混</h2> <p>第一，<strong>「條件式 GMMN 需要全新的理論工具」</strong>。錯，訓練損失還是 MMD，universal kernel 的要求也完全一樣，只是輸入多了一個條件維度、損失拆成逐條件計算。第二，<strong>「式 (21) 串接跟式 (22) 相加是等價的兩種寫法」</strong>。不是，式 (22) 要求 $p=d$ 且會改變資訊的組合方式（相加會讓 $x$ 跟 $z$ 的資訊疊在一起，串接則各自保留完整維度），這是兩種不同的策略，不是同一件事的兩種寫法。第三，<strong>「用類別標籤條件生成時，只需要對整個資料集算一次 MMD」</strong>。錯，必須針對每個類別分別算真實 vs 生成的 MMD，逐類最小化，不能混在一起算一次就好。</p> <h2>跨知識點掛勾</h2> <p><strong>KP-6</strong> 的 GMMN 結構與損失函數是這裡的基礎，條件式只是多了輸入維度；<strong>KP-5</strong> 的 universal kernel 要求原封不動沿用到每個條件的 MMD 計算上；<strong>KP-8</strong> 會再進一步挑戰「核函數固定」這個假設，跟條件式 GMMN 是彼此獨立的兩個擴展方向。</p> <h2>換句話重述</h2> <p><strong>條件式 GMMN 靠「把條件資訊（參考實例或類別標籤）跟雜訊接起來或加起來」讓生成器聽懂指令；訓練損失還是 MMD，只是要針對每個條件分別計算——這是 KP-6 的直接擴展，沒有引入新的理論工具。</strong></p> <p><strong>一句話收尾：</strong> <strong>點餐機加了菜單，還是同一套廚藝（MMD 損失）——只是現在要照著每一道菜（每個條件）分別驗收出餐品質。</strong></p>"}, "8": {"title": "教授祕笈：MMD GAN——量身高不能只用一把固定的尺", "body": "<p>同學，KP-6、KP-7 的 GMMN 一直都用同一把固定的尺（固定頻寬的 RBF 核）去量真實跟生成資料差多少。但如果這把尺剛好不夠敏感——量不出某個方向上的細微差異呢？今天的想法很大膽：<strong>讓量法本身也去比賽，找出最會抓差異的量法</strong>，逼複製機要撐過最嚴格的檢驗才能過關。這就是 MMD GAN 的核心思路。</p> <h2>先把任務講成一句人話</h2> <p>一句話：<strong>MMD GAN 把 GMMN 固定不變的核函數變成可學習、可對抗優化的——用一個神經網路（必須單射，靠自編碼器結構保證）先把資料變換過再算 RBF 核，內層對抗地找出最挑剔的變換，外層生成器要在這個最挑剔標準下依然讓 MMD 最小。</strong></p> <h2>鷹架式：先直覺，再符號</h2> <h3>固定核函數的限制</h3> <p>KP-6、KP-7 都用固定 RBF 核：</p> <p>$$ \\underset{\\theta}{\\operatorname{minimize}}\\ \\operatorname{MMD}^2(P_x,P_{\\widehat{x}}(\\theta)), \\tag{24} $$</p> <p>其中 $\\theta$ 是生成器權重。但固定核函數的頻寬等超參數，可能不是「最能凸顯差異」的選擇——回想 KP-3 定義 MMD 時取 $\\sup_{f\\in\\mathcal{F}}$ 的精神：<strong>理論上應該在整個 universal kernel 集合裡，找出最會挑毛病的那一個</strong>。</p> <h3>把選核函數變成極大極小賽局</h3> <p>MMD GAN 的想法：<strong>內層去找出讓 MMD 最大的核函數（最挑剔、最能揭露生成器弱點）；外層生成器要在這個「最挑剔核函數」之下，還能讓 MMD 最小</strong>：</p> <p>$$ \\underset{\\theta}{\\operatorname{minimize}}\\ \\underset{k\\in\\mathcal{K}}{\\operatorname{maximize}}\\ \\operatorname{MMD}_k^2(P_x,P_{\\widehat{x}}(\\theta)), \\tag{25} $$</p> <p>其中 $\\mathcal{K}$ 是一群 characteristic（universal）核函數的集合。這正是<strong>把 GMMN 的核方法思路，跟 GAN 的對抗式訓練結合</strong>——但注意：對抗的對象不是「真假之爭」，而是「核函數該長什麼樣子」之爭。</p> <h3>窮舉核函數不可行：用神經網路建模</h3> <p>直接窮舉 $\\mathcal{K}$ 裡所有可能核函數不現實。這裡用一個關鍵性質：<strong>如果 $f$ 是單射（injective）函數，$k$ 是 characteristic 核函數，那複合函數 $\\widetilde{k}=k\\circ f$ 也是 characteristic</strong>。既然如此，用<strong>另一個神經網路</strong> $f_\\phi$（權重 $\\phi$）建模這個 $f$，式 (25) 就改寫成：</p> <p>$$ \\underset{\\theta}{\\operatorname{minimize}}\\ \\underset{\\phi}{\\operatorname{maximize}}\\ \\operatorname{MMD}_{k\\circ f_\\phi}^2(P_x,P_{\\widehat{x}}(\\theta)). \\tag{26} $$</p> <p>具體例子（式27）：把 RBF 核跟 $f_\\phi$ 組合起來：</p> <p>$$ \\widetilde{k}(\\boldsymbol{x},\\boldsymbol{y}):=\\exp\\!\\big(-\\gamma\\|f_\\phi(\\boldsymbol{x})-f_\\phi(\\boldsymbol{y})\\|_2^2\\big). $$</p> <p>白話講：<strong>不直接在原始資料空間算距離，先用神經網路 $f_\\phi$ 把資料變換一次，再算變換後的距離</strong>——這個變換本身可學習、可優化。</p> <h3>為什麼 $f_\\phi$ 一定要「單射」</h3> <p>$f$ 要單射，代表它必須有反函數 $f^{-1}$，滿足 $f^{-1}(f(\\boldsymbol{x}))=\\boldsymbol{x}$（不會把不同資料點映射到同一處，否則資訊丟失、\"挑毛病\"的能力也打折扣）。這可以用<strong>重建自編碼器</strong>保證：編碼器 $f_{\\phi_e}=f$、解碼器 $f_{\\phi_d}\\approx f^{-1}$。式 (26) 進一步寫成：</p> <p>$$ \\underset{\\theta}{\\operatorname{minimize}}\\ \\underset{\\phi:=\\{\\phi_e,\\phi_d\\}}{\\operatorname{maximize}}\\Big(\\operatorname{MMD}_{k\\circ f_{\\phi_e}}^2(P_x,P_{\\widehat{x}}(\\theta))-\\lambda\\,\\mathbb{E}\\big[\\|\\boldsymbol{x}-f_{\\phi_d}(f_{\\phi_e}(\\boldsymbol{x}))\\|_2^2\\big]\\Big), \\tag{28} $$</p> <p>$\\lambda\\gt 0$ 是正則化係數。內層最大化同時做兩件事：<strong>① 找出最能揭露生成器弱點的變換、② 靠重建誤差項確保這個變換維持可逆（不退化成沒意義的映射）</strong>。</p> <h3>整體架構：兩個神經網路同時訓練</h3> <p>MMD GAN 用<strong>兩個神經網路</strong>：GMMN 生成器（權重 $\\theta$）、重建自編碼器（權重 $\\phi_e,\\phi_d$），用式 (28) 同時訓練（見原文 Fig. 3）——外層最小化、內層最大化，跟 GAN 訓練精神一致，但賽局的內容不同。</p> <h2>真的算一遍：一個簡單的複合核</h2> <p>假設 $f_\\phi$ 是最簡單的線性變換 $f_\\phi(\\boldsymbol{x})=[2x_1,\\,0.5x_2]^\\top$（把第一維放大、第二維縮小），取兩個二維點 $\\boldsymbol{x}=[1,2]$、$\\boldsymbol{y}=[1,4]$，$\\gamma=1$：</p> <p>原始 RBF 距離：$\\|\\boldsymbol{x}-\\boldsymbol{y}\\|_2^2=(1{-}1)^2+(2{-}4)^2=4$，$k=\\exp(-4)\\approx0.0183$。</p> <p>變換後：$f_\\phi(\\boldsymbol{x})=[2,1]$，$f_\\phi(\\boldsymbol{y})=[2,2]$，$\\|f_\\phi(\\boldsymbol{x})-f_\\phi(\\boldsymbol{y})\\|_2^2=(2{-}2)^2+(1{-}2)^2=1$，$\\widetilde{k}=\\exp(-1)\\approx0.3679$。</p> <p>同一組資料，變換前後算出的核值差很多——這說明<strong>變換 $f_\\phi$ 確實改變了核函數「認為兩點有多相似」的判斷</strong>，這正是讓核函數變得可學習的意義：調整 $f_\\phi$，就能調整核函數對哪個方向的差異更敏感。</p> <h2>先留一個反轉</h2> <p>你可能以為 MMD GAN 的「對抗」跟 GAN 一樣，是「一個網路想騙過另一個網路判斷真假」。<strong>其實不是</strong>——MMD GAN 的兩個網路吵的架完全不同：生成器想在「任何核函數」下都表現好，核函數（透過 $f_\\phi$）則想找出「生成器表現最差」的那個變換角度。留一個問題：如果 $f_\\phi$ 訓練到後來完全不可逆（不再是單射），式 (28) 的重建誤差項會發生什麼變化？這個變化會怎麼「懲罰」這種退化？</p> <h2>舉一反三</h2> <p>這個「用神經網路學習一個特徵變換，再拿變換後的特徵算距離」的想法，你會在很多地方再看到——例如風格轉換模型常常在 VGG 網路的中間層特徵上算損失，而不是直接在原始像素空間算，道理是一樣的：<strong>原始空間的距離不一定是「感知上」最有意義的距離，變換到一個更好的特徵空間再算，效果通常更好</strong>。</p> <h2>大家最容易在這裡搞混</h2> <p>第一，<strong>「MMD GAN 的對抗是真假之爭」</strong>。錯，是「核函數該長什麼樣子」之爭，生成器要撐過最嚴格的度量標準，不是要騙過一個真假判別器。第二，<strong>「$f_\\phi$ 隨便設計都可以」</strong>。錯，$f_\\phi$ 必須維持接近單射（可逆），否則複合出來的核不再保證是 characteristic，這是靠自編碼器的重建誤差項來約束的。第三，<strong>「重建誤差項是主要訓練目標，MMD 只是附加項」</strong>。錯，MMD 才是外層要最小化的主要目標，重建誤差是內層最大化裡的約束項，用來維持 $f_\\phi$ 的可逆性。</p> <h2>跨知識點掛勾</h2> <p><strong>KP-3</strong> 取 $\\sup_{f\\in\\mathcal{F}}$ 的精神，這裡在核函數層級再做了一次（$\\max_{k\\in\\mathcal{K}}$）；<strong>KP-5</strong> 的 universal/characteristic 性質，是「複合核仍是 characteristic」這個關鍵定理的前提；<strong>KP-6</strong> 的固定核 GMMN 損失，是這裡式 (24) 的起點，MMD GAN 正是要突破這個固定核的限制。</p> <h2>換句話重述</h2> <p><strong>MMD GAN 把固定不變的核函數變成可學習、可對抗優化的——用一個要求單射（靠自編碼器保證）的神經網路把資料先變換過再算核值，內層對抗地找出最挑剔的變換，外層生成器要在這個最挑剔標準下依然讓 MMD 最小。</strong></p> <p><strong>一句話收尾：</strong> <strong>不要只用一把固定的尺——讓量法本身也去比賽，找出最會抓差異的那一把，生成器才能真正被逼出實力。</strong></p>"}, "9": {"title": "教授祕笈：結論——工具箱裡的老虎鉗可能被淘汰，但施力原理不會", "body": "<p>同學，還記得我們一開始的比喻嗎？兩包咖啡豆，怎麼確定是不是同一產地。我們一路走過來：從「均值不夠、要比動差」，到「換個空間（RKHS）一次比完」，到「核技巧讓它算得出來」，到「universal kernel 保證它是真距離」，最後把這把尺直接拿去訓練生成模型（GMMN）、讓生成器聽指令（條件式）、甚至讓尺本身也可以學習（MMD GAN）。今天要收尾了——這整趟旅程留下了什麼？</p> <h2>先把任務講成一句人話</h2> <p>一句話：<strong>GMMN 這個生成模型今天已經很少被直接使用，但它背後的 MMD 這把「量分布差異的尺」，至今仍活躍在領域轉換、分布對齊、統計檢定等場景。</strong></p> <h2>鷹架式：先直覺，再符號</h2> <h3>回顧全章走過的路</h3> <ol> <li><strong>KP-2</strong>：只比均值不夠，理論上要比所有動差才能保證分布相同。</li> <li><strong>KP-3、KP-4</strong>：MMD 把「比所有動差」轉化成「在 RKHS 裡比一個均值」，靠核技巧變成完全可計算的公式。</li> <li><strong>KP-5</strong>：這個度量要能當「真正的距離」，核函數必須是 universal——MMD=0 才精確等價於分布相同。</li> <li><strong>KP-6</strong>：GMMN 直接把 MMD 當生成模型的訓練損失，非對抗地訓練生成器。</li> <li><strong>KP-7</strong>：條件式 GMMN 讓生成器可以接收指令，生成特定類別或風格的資料。</li> <li><strong>KP-8</strong>：MMD GAN 把「選核函數」也變成可學習、可對抗優化的。</li> </ol> <h3>GMMN 這個模型：歷史意義大於實用意義</h3> <p>GMMN 提出了一個優雅的核方法途徑訓練生成模型，不需要對抗式訓練。但它的生成品質與可擴展性都比不上同時期崛起的 GAN，後來又陸續被 VAE、自回歸 Transformer、擴散模型超越。<strong>到今天，GMMN 主要是歷史與概念上的參考點</strong>——它示範了「除了對抗訓練，還有別的路可以走」，但作為實際部署的生成模型，已經很少被使用。</p> <h3>MMD 這個工具：至今仍然活躍</h3> <p>雖然 GMMN 這個模型退場了，但<strong>它背後的度量工具 MMD 完全沒有退場</strong>。MMD 至今仍廣泛用在：</p> <ul> <li><strong>領域轉換（domain adaptation）</strong>：量測來源領域與目標領域的分布差異，並想辦法縮小它。</li> <li><strong>分布對齊（distribution alignment）</strong>：任何需要「讓兩包資料的分布變像」的場景。</li> <li><strong>統計檢定（statistical testing）</strong>：核二樣本檢定本身就是一個嚴謹的統計工具，用來檢定兩組樣本是否來自同一分布。</li> </ul> <h2>真的算一遍：把整條推導鏈濃縮成一個問答</h2> <p>如果有人問你：「兩組樣本 $\\{1,2\\}$ 跟 $\\{2,3\\}$，用 RBF 核（$\\sigma=1$）算出來的 $\\operatorname{MMD}^2$ 是多少？」你現在應該能不假思索地回答：<strong>約 0.4324</strong>（KP-4 已經逐項算給你看過）。這不只是一個數字——它是整條推導鏈（Proposition 1 → Proposition 2 → 核技巧 → universal kernel）落地之後的具體產物。能夠隨口算出這個數字，代表你真的走完了這條路，而不是背了幾個名詞。</p> <h2>先留一個反轉</h2> <p>你可能會問：「這一章講的模型都過時了，那學這些有什麼用？」——這正是本章最後想留給你的反轉：<strong>GMMN 這個「模型」確實過時了，但 MMD 這個「工具」和它背後的推導邏輯，遠比任何一個特定模型長壽</strong>。回頭想想 <strong>KP-1</strong> 開頭的咖啡豆比喻——今天你已經知道怎麼嚴謹地回答「這兩包豆子像不像」這個問題了，這個能力不會因為 GMMN 過時而過時。</p> <h2>舉一反三</h2> <p>這個「模型會過時、工具與思路未必」的敘事，你在這門課的其他章節也會遇到——波茲曼機（RBM/DBN）作為模型已經很少直接使用，但它教會我們的能量函數建模思路，至今仍在影響 contrastive learning、diffusion model 等現代方法。下次你學到一個「聽起來過時」的模型時，不妨想想：<strong>它留下的工具或思路是什麼？</strong>這往往比模型本身的興衰更值得記住。</p> <h2>大家最容易在這裡搞混</h2> <p>第一，<strong>「GMMN 沒用了，代表整章白學」</strong>。錯，MMD 這個工具的理解本身極有價值，遠超過「會不會拿去訓練一個 2015 年的生成模型」。第二，<strong>「MMD 也跟 GMMN 一起過時了」</strong>。錯，MMD 作為通用度量工具，至今仍廣泛用於領域轉換、分布對齊、統計檢定——它跟 GMMN 這個特定應用是分開評價的。第三，<strong>「這一章的知識點只在深度學習領域有用」</strong>。不完全對，MMD 源自統計學的核二樣本檢定，應用範圍橫跨統計學、機器學習、因果推論等多個領域。</p> <h2>跨知識點掛勾</h2> <p><strong>KP-1</strong> 的開場咖啡豆比喻，這裡首尾呼應收束；<strong>KP-2</strong> 到 <strong>KP-5</strong> 建立的理論基礎（動差、RKHS、核技巧、universal kernel），是「MMD 之所以能留下來」的根本原因——<strong>因為它的數學基礎夠紮實，不依賴任何特定的神經網路架構</strong>；<strong>KP-6</strong> 到 <strong>KP-8</strong> 展示的是「工具的一種用法」（訓練生成模型），但工具本身的價值不侷限於這一種用法。</p> <h2>換句話重述</h2> <p><strong>GMMN 是生成模型發展史上一個重要但短暫的分支——用 MMD 取代判別器，走出一條非對抗訓練的路，但最終被更強大的方法超越；然而 MMD 這個核方法本身，作為量測分布差異的通用工具，至今仍在領域轉換、分布對齊、統計檢定等場景發光發熱。</strong></p> <p><strong>一句話收尾：</strong> <strong>模型會退場，但如果背後的數學夠硬，工具本身可以比模型活得更久——MMD 就是最好的例子。</strong></p>"}};
+(function(){
+  window.openGuide=function(kp){
+    var t=window.__GUIDES__[String(kp)]; if(!t) return;
+    document.getElementById('guide-title').textContent=t.title;
+    document.getElementById('guide-body').innerHTML=t.body;
+    document.getElementById('guide-modal').classList.add('open');
+    if(window.renderMath) setTimeout(window.renderMath,50);
+  };
+  window.closeGuide=function(){
+    var m=document.getElementById('guide-modal');
+    if(m) m.classList.remove('open');
+  };
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest('.guide-btn');
+    if(btn){ e.preventDefault(); window.openGuide(btn.getAttribute('data-kp')||btn.getAttribute('data-guide')); return; }
+    if(e.target.id==='guide-modal') window.closeGuide();
+    if(e.target.closest('#guide-modal .close')) window.closeGuide();
+  });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') window.closeGuide(); });
+})();
+</script>
+</body>
+</html>

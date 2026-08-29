@@ -1,0 +1,2921 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IDL 115學年度 Ch10：狀態空間模型 (State Space Models & Mamba) 互動講義</title>
+  <!-- KaTeX CSS & JS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}], ignoredClasses: ['katex']});"></script>
+  <style>
+    :root {
+      --primary: #0f172a;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #334155;
+      --heading: #0f172a;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --error: #dc2626;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding-top: 100px;
+      padding-bottom: 60px;
+    }
+
+    /* Sticky Header & Progress Bar */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 90px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      color: white;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 24px;
+    }
+    .header-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: 0.5px;
+    }
+    .header-toc {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      max-width: 65%;
+    }
+    .header-toc a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.05);
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .header-toc a:hover {
+      color: #ffffff;
+      background: var(--accent);
+    }
+
+    .progress-bar-wrap {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+      transition: width 0.3s ease;
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Card Styling */
+    .card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 32px;
+      margin-bottom: 40px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      scroll-margin-top: 100px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--bg);
+    }
+    .badge {
+      background: #dbeafe;
+      color: #1e40af;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      white-space: nowrap;
+    }
+    .card-title {
+      font-size: 1.35rem;
+      color: var(--heading);
+      font-weight: 700;
+    }
+
+    .card-body h4 {
+      color: var(--heading);
+      margin: 20px 0 10px 0;
+      font-size: 1.1rem;
+    }
+    .card-body p {
+      margin-bottom: 14px;
+      text-align: justify;
+    }
+    .card-body ul, .card-body ol {
+      margin: 10px 0 16px 24px;
+    }
+    .card-body li {
+      margin-bottom: 6px;
+    }
+
+    /* Phase B & Orig Image Styling */
+    .diagram-figure, .orig-fig {
+      margin: 24px 0;
+      text-align: center;
+      background: #f1f5f9;
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+    .diagram-figure img, .orig-fig img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .diagram-figure figcaption, .orig-fig figcaption {
+      margin-top: 10px;
+      font-size: 0.88rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    /* AI Prompt Placeholder */
+    .ai-illustration {
+      margin: 16px 0;
+      background: #faf5ff;
+      border: 1px dashed #c084fc;
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .ai-illustration summary {
+      font-weight: 600;
+      color: #7e22ce;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .ai-illustration-prompt {
+      margin-top: 10px;
+      background: #ffffff;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.82rem;
+      color: #4c1d95;
+      white-space: pre-wrap;
+      border: 1px solid #e9d5ff;
+    }
+
+    /* Phase C Interactive Demo Styling */
+    .demo {
+      margin: 28px 0;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .demo-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #0369a1;
+      margin-bottom: 12px;
+    }
+    .demo-instruction {
+      background: #ffffff;
+      padding: 14px;
+      border-radius: 8px;
+      border-left: 4px solid #0284c7;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+    .demo-instruction h5 {
+      color: #0369a1;
+      margin-bottom: 6px;
+    }
+    .demo-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 16px;
+      background: #ffffff;
+      padding: 14px;
+      border-radius: 8px;
+      align-items: center;
+    }
+    .demo-control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+    }
+    .demo-control-group label {
+      font-weight: 600;
+      color: #334155;
+    }
+    .demo-control-group input[type=range] {
+      width: 160px;
+    }
+    .demo-canvas-wrap {
+      text-align: center;
+      background: #ffffff;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #e0f2fe;
+      margin-bottom: 12px;
+    }
+    .demo-canvas-wrap canvas {
+      max-width: 100%;
+      height: auto;
+    }
+    .demo-readout {
+      background: #0f172a;
+      color: #38bdf8;
+      font-family: monospace;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+    }
+
+    /* Phase D Guide Button & Modal Styling */
+    .guide-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #4f46e5, #3b82f6);
+      color: #ffffff;
+      font-weight: 700;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+      transition: all 0.2s;
+      margin: 16px 0;
+    }
+    .guide-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+    }
+    .guide-flag {
+      background: rgba(255,255,255,0.2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+    }
+
+    /* Modal Overlay */
+    #guide-modal {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(6px);
+      z-index: 2000;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    #guide-modal.open {
+      display: flex;
+    }
+    .modal-box {
+      background: #ffffff;
+      width: 100%;
+      max-width: 800px;
+      max-height: 85vh;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 20px 24px;
+      background: #0f172a;
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 { font-size: 1.15rem; font-weight: 700; }
+    .modal-close-btn {
+      background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;
+    }
+    .modal-close-btn:hover { color: #ffffff; }
+    .modal-body {
+      padding: 28px 32px;
+      overflow-y: auto;
+      line-height: 1.8;
+      font-size: 0.95rem;
+    }
+    .modal-body h1 { font-size: 1.4rem; color: #0f172a; margin-bottom: 16px; }
+    .modal-body h3 { font-size: 1.1rem; color: #1e40af; margin: 20px 0 10px 0; }
+    .modal-body blockquote {
+      background: #f1f5f9; border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 16px 0; border-radius: 4px;
+    }
+
+    /* Self Assessment Quiz */
+    .quiz-sec {
+      margin-top: 24px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .quiz-title { font-weight: 700; color: #0f172a; margin-bottom: 12px; font-size: 0.95rem; }
+    .quiz-option-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .quiz-option-btn:hover { background: #f1f5f9; }
+    .quiz-option-btn.correct { background: #dcfce7 !important; border-color: #16a34a !important; color: #15803d; font-weight: 600; }
+    .quiz-option-btn.wrong { background: #fee2e2 !important; border-color: #dc2626 !important; color: #b91c1c; }
+    .quiz-exp {
+      margin-top: 12px;
+      padding: 12px;
+      background: #eff6ff;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      color: #1e40af;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-content">
+    <div class="header-title">⚡ IDL 115學年度 Ch10：狀態空間模型 (SSM & Mamba)</div>
+    <div class="header-toc">
+<a href="#kp1">KP 1</a>
+<a href="#kp2">KP 2</a>
+<a href="#kp3">KP 3</a>
+<a href="#kp4">KP 4</a>
+<a href="#kp5">KP 5</a>
+<a href="#kp6">KP 6</a>
+<a href="#kp7">KP 7</a>
+<a href="#kp8">KP 8</a>
+<a href="#kp9">KP 9</a>
+<a href="#kp10">KP 10</a>
+<a href="#kp11">KP 11</a>
+<a href="#kp12">KP 12</a>
+<a href="#kp13">KP 13</a>
+    </div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="page-progress"></div>
+  </div>
+</header>
+
+<div class="container">
+
+    <!-- CARD KP-1 -->
+    <section id="kp1" class="card" data-kp="1">
+      <div class="card-header">
+        <span class="badge">§1</span>
+        <h2 class="card-title">KP-1：狀態空間模型 (SSM) 導論與序列建模演進</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 序列建模的第三條道路：SSM 的崛起</h4>
+<p>在深度學習發展歷程中，序列數據（文字、語音、時間序列、影像）的處理長期由 <b>RNN/LSTM（第 8 章）</b> 與 <b>Transformer/Attention（第 9 章）</b> 兩大陣營主導。然而，RNN 存在無法平行化訓練與長距離記憶退化的缺陷，而 Transformer 則面臨著二次方時間與記憶體複雜度 $\mathcal{O}(n^2)$ 的推理瓶頸。</p>
+<p><b>狀態空間模型（State Space Models, SSMs）</b> 作為源自控制理論與系統工程的經典數學工具，近年在深度學習領域展現出強大威力。從 2021 年的 S4 (Structured State Space) 到 2023–2024 年的 Mamba 與 Mamba-2，SSM 成功結合了 RNN 的線性推理效率 $\mathcal{O}(n)$ 與 Transformer 的高效平行訓練能力，成為長序列建模的革命性架構。</p>
+
+<h4>2. 從 S4 到 Mamba 的演進歷程</h4>
+<p>SSM 在語言與序列任務上的突破經歷了三個關鍵節點：</p>
+<ul>
+  <li><b>S4 (Structured State Space, 2021)</b>：引入對角加上低秩 (DPLR) 矩陣結構與 Cauchy 核技巧，首次在長距離推論基準 (LRA) 上取得突破，並實現 $\mathcal{O}(n \log n)$ 的平行卷積訓練。</li>
+  <li><b>H3 與 DSS (2022)</b>：進一步簡化矩陣結構，並將 SSM 與自注意力層結合，逐步填補 SSM 與 Transformer 在自然語言處理上的性能差距。</li>
+  <li><b>Mamba (2023–2024)</b>：提出<b>選擇性機制 (Selective Mechanism)</b>，讓狀態矩陣與採樣步長 $\Delta$ 隨輸入動態變化（Content-Aware），實現了媲美 Transformer 的語言建模能力與百萬級 Token 的超長文本處理。</li>
+</ul>
+      </div>
+
+      <!-- == Phase B 圖解 kp-1 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp1.png" alt="狀態空間模型 (SSM) 導論與序列建模演進 示意圖解">
+  <figcaption>圖 kp-1：狀態空間模型 (SSM) 導論與序列建模演進 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-1" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: A timeline comparison architecture diagram showing RNN ($O(n)$ recurrence) vs Transformer ($O(n^2)$ self-attention) vs State Space Model (SSM/Mamba) with dual-mode representation.
+WHY: Explain how SSM bridges the gap between fast parallel training and constant-time linear inference.
+MUST show: (1) RNN sequential loop, (2) Transformer full QK^T matrix, (3) SSM dual convolution/recurrence representation.
+AVOID: Cluttered unlabelled nodes.
+STYLE: Modern technical vector schematic, high contrast, clean white background.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-1 == -->
+<!-- END Phase C Demo -->
+
+      <!-- == Phase D Guide Button kp-1 == -->
+<button class="guide-btn" data-guide="kp-1" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：狀態空間模型 (SSM) 導論與序列建模演進</button>
+<!-- END Phase D Guide Button -->
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：下列關於狀態空間模型 (SSM) 發展歷程的敘述，何者正確？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. SSM 是為了徹底淘汰卷積神經網絡 (CNN) 而設計的新架構</button>
+<button class="quiz-option-btn" data-correct="true">2. S4 首次實現了超長序列的平行化訓練，而 Mamba 則引入了隨輸入動態變化的選擇性機制</button>
+<button class="quiz-option-btn" data-correct="false">3. SSM 的計算複雜度高達 O(n^3)，因此只能處理短句子</button>
+<button class="quiz-option-btn" data-correct="false">4. Mamba 模型完全放棄了狀態空間方程式，回歸傳統 Transformer 的自注意力矩陣</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>S4 透過 DPLR 矩陣與 FFT 卷積實現了 O(n log n) 的平行訓練；Mamba 則進一步提出動態選擇性參數 (Content-Aware)，使 SSM 在自然語言任務上展現出媲美甚至超越 Transformer 的強大性能。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-2 -->
+    <section id="kp2" class="card" data-kp="2">
+      <div class="card-header">
+        <span class="badge">§2</span>
+        <h2 class="card-title">KP-2：SSMs 的六大核心優勢分析</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. SSMs 相較於 Transformer 與 RNN 的六大優勢</h4>
+<p>相較於傳統自注意力機制與循環神經網絡，狀態空間模型 (SSMs) 具備六大顯著的數學與工程優勢：</p>
+<ol>
+  <li><b>高效長距離依賴處理 (Efficiency)</b>：利用 Fast Fourier Transform (FFT) 或 Mamba 的選擇性掃描，時間複雜度由 Transformer 的 $\mathcal{O}(n^2)$ 降低至 $\mathcal{O}(n \log n)$ 甚至 $\mathcal{O}(n)$。</li>
+  <li><b>卓越的長跨度記憶衰減控制 (Long-Range Retention)</b>：透過連續時間特徵值 $\boldsymbol{\lambda}$ 的精確參數化，訊息可以在極長的時間步（如整個圖書或數萬步音訊）中無損傳遞。</li>
+  <li><b>極低的推理記憶體需求 (Lower Memory Footprint)</b>：自迴歸生成時不需要維護龐大的 KV Cache，僅需維護固定大小的隱藏狀態 vector $\boldsymbol{h}_t$。</li>
+  <li><b>高度 GPU 平行化能力 (Parallelization)</b>：在訓練階段可轉化為 1D 因果卷積，完美發揮現代 GPU 的張量平行運算。</li>
+  <li><b>對非均勻/不規則採樣數據的天然強健性 (Robustness to Irregular Sampling)</b>：源自連續時間微分方程式 $\boldsymbol{h}'(t) = \boldsymbol{A}\boldsymbol{h}(t) + \boldsymbol{B}\boldsymbol{x}(t)$，可任意調整時間步長 $\Delta$ 處理缺測或非定頻傳感器數據。</li>
+  <li><b>數學可解釋性與系統診斷能力 (Interpretability)</b>：狀態轉移矩陣 $\boldsymbol{A}, \boldsymbol{B}, \boldsymbol{C}, \boldsymbol{D}$ 具有明確的動態系統特徵值、頻響與穩定性幾何意義。</li>
+</ol>
+      </div>
+
+      <!-- == Phase B 圖解 kp-2 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp2.png" alt="SSMs 的六大核心優勢分析 示意圖解">
+  <figcaption>圖 kp-2：SSMs 的六大核心優勢分析 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-2" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: An infographic highlighting the 6 core mathematical and system advantages of SSMs (Linear complexity, Retention, Low Memory, GPU Parallelism, Irregular Sampling, Interpretability).
+WHY: Visually organize the key features that make SSMs a strong alternative to Transformers.
+MUST show: (1) 6 structured feature cards, (2) Mathematical labels for each advantage ($O(n \log n)$, $h_t \in \mathbb{R}^s$, $\Delta_t$).
+AVOID: Generic non-technical icons.
+STYLE: Clean grid layout infographic, professional color palette.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-2 == -->
+
+<div class="demo" data-demo-id="kp-2">
+  <div class="demo-title">🎮 互動展示 kp-2：SSM vs Transformer 計算量與 KV Cache 記憶體開銷計算器</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>比較序列長度 $n$ (100 到 10,000) 下，Transformer 注意力與 SSM (S4 / Mamba) 的計算量與推理記憶體足跡。</p>
+    <p><b>怎麼操作：</b>拖動序列長度 $n$ 與批次大小 $B$。</p>
+    <p><b>觀察什麼：</b>序列長度增加 10 倍時，Transformer 注意力 FLOPs 暴增 100 倍且 KV Cache 空間線性增長；而 Mamba 保持線性計算與固定 $O(1)$ 隱藏狀態記憶體。</p>
+    <p><b>理論基準：</b>當 $n=1000$ 時，Transformer 全對全比對對數為 $10^6$；SSM 僅需 $10^3$ 次狀態遞迴更新。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>序列長度 n (100 ~ 10,000): <span id="kp2_n_val">2000</span></label>
+      <input type="range" id="kp2_n" min="100" max="10000" step="100" value="2000">
+    </div>
+    <div class="demo-control-group">
+      <label>隱藏狀態維度 s: <span id="kp2_s_val">64</span></label>
+      <input type="range" id="kp2_s" min="16" max="256" step="16" value="64">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp2_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp2_readout">計算中...</div>
+</div>
+<script>
+(function(){
+  function updateKP2() {
+    var n = parseInt(document.getElementById('kp2_n').value);
+    var s = parseInt(document.getElementById('kp2_s').value);
+    document.getElementById('kp2_n_val').textContent = n;
+    document.getElementById('kp2_s_val').textContent = s;
+
+    var tf_flops = n * n;
+    var s4_flops = n * Math.log2(n);
+    var mamba_flops = n * s;
+
+    var cvs = document.getElementById('kp2_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    var maxFlops = tf_flops;
+    var items = [
+      { name: "Transformer (n^2)", val: tf_flops, color: "#ef4444" },
+      { name: "S4 (n log n)", val: s4_flops, color: "#f59e0b" },
+      { name: "Mamba (n * s)", val: mamba_flops, color: "#10b981" }
+    ];
+
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var y = 25 + i * 55;
+      var w = (item.val / maxFlops) * 360;
+      ctx.fillStyle = item.color;
+      ctx.fillRect(180, y, Math.max(w, 4), 32);
+      ctx.fillStyle = '#1e293b'; ctx.font = '12px sans-serif';
+      ctx.fillText(item.name, 20, y + 20);
+      ctx.fillText(Math.round(item.val).toLocaleString() + ' ops', 190 + Math.max(w, 4), y + 20);
+    }
+
+    var readout = '序列長度 n=' + n + ' 時: Transformer FLOPs 比 Mamba 大 ' + (tf_flops / mamba_flops).toFixed(1) + ' 倍 | SSM 推理 KV Cache 節省 >99%';
+    document.getElementById('kp2_readout').textContent = readout;
+  }
+
+  var nEl = document.getElementById('kp2_n');
+  if (nEl) {
+    nEl.addEventListener('input', updateKP2);
+    document.getElementById('kp2_s').addEventListener('input', updateKP2);
+    setTimeout(updateKP2, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-2 == -->
+<button class="guide-btn" data-guide="kp-2" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：SSMs 的六大核心優勢分析</button>
+<!-- END Phase D Guide Button -->
+
+      <!-- == Phase D Guide Button kp-REPLACE == -->
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：為什麼 SSM 模型在自迴歸推理（Inference）時的記憶體開銷遠小於 Transformer？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 因為 SSM 推理時不需要讀取任何權重矩陣</button>
+<button class="quiz-option-btn" data-correct="true">2. 因為 SSM 推理時只需維護固定維度的隱藏狀態向量 h_t，不需要快取歷史 Token 的 KV Cache</button>
+<button class="quiz-option-btn" data-correct="false">3. 因為 SSM 只能處理長度小於 100 的序列</button>
+<button class="quiz-option-btn" data-correct="false">4. 因為 SSM 在推理階段會自動將所有文字轉為圖像</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>Transformer 生成下一個 Token 時必須保留歷史所有 Key/Value 矩陣 (KV Cache)，空間複雜度隨長度 n 線性暴增；而 SSM 僅需傳遞尺寸固定的隱藏狀態向量 h_t，空間複雜度為 O(1)。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-3 -->
+    <section id="kp3" class="card" data-kp="3">
+      <div class="card-header">
+        <span class="badge">§3.1</span>
+        <h2 class="card-title">KP-3：Transformer 與 RNN 的序列瓶頸對比</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. Transformer 的二次方計算壁壘</h4>
+<p>在 Transformer 的自注意力層中，長度為 $n$ 的序列需要計算 Query 與 Key 的全對全相似度矩陣 $\boldsymbol{Q}\boldsymbol{K}^\top \in \mathbb{R}^{n \times n}$。雖然在訓練時可透過全矩陣運算實現高度 GPU 平行化，但在生成推理階段，生成第 $t$ 個 Token 必須重新與前 $t-1$ 個 Token 計算注意力，計算量隨著序列長度呈二次方 $\mathcal{O}(n^2)$ 暴增。</p>
+
+<h4>2. 傳統 RNN 的遞迴失憶與訓練瓶頸</h4>
+<p>傳統 RNN（如第 8 章所述）的隱藏狀態更新為：</p>
+$$\boldsymbol{h}_t = \sigma(\boldsymbol{W}\boldsymbol{h}_{t-1} + \boldsymbol{U}\boldsymbol{x}_t), \quad \boldsymbol{y}_t = \boldsymbol{V}\boldsymbol{h}_t$$
+<p>RNN 的推理時間複雜度為 $\mathcal{O}(1)$，但由於非線性激活函數 $\sigma$ 與狀態遞迴鎖定，前向傳播<b>無法在時間軸上進行 GPU 平行運算</b>；且矩陣連乘易導致嚴重的梯度消失，無法保留長距離上下文。</p>
+
+<h4>3. SSM 的雙重視角：同時融合平行與遞迴</h4>
+<p>SSM 的關鍵突破點在於：<b>線性連續系統具備對偶表示（Duality）</b>！在訓練時它可以寫成全平行 1D 卷積，在推理時它可以寫成單步線性遞迴，完美兼顧兩者的優點。</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-3 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp3.png" alt="Transformer 與 RNN 的序列瓶頸對比 示意圖解">
+  <figcaption>圖 kp-3：Transformer 與 RNN 的序列瓶頸對比 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-3" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: A side-by-side technical comparison of Transformer Attention Matrix $QK^^	op \in \mathbb{R}^{n \times n}$ vs SSM Recurrent & Convolutive duality.
+WHY: Contrast the $O(n^2)$ memory bottleneck of self-attention with the $O(1)$ state vector tracking of SSMs.
+MUST show: (1) Quadratic Attention matrix grid, (2) SSM 1D Causal Convolution kernel $K * x$.
+AVOID: Overlapping text or unreadable math symbols.
+STYLE: High-precision scientific diagram, clear visual separation.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-3 == -->
+
+<div class="demo" data-demo-id="kp-3">
+  <div class="demo-title">🎮 互動展示 kp-3：Transformer 全對全注意力矩陣 vs RNN 狀態遞迴模擬</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>對比 Transformer 全對全矩陣 $Q K^\top$ 運算與 RNN/SSM 單步狀態遞迴 $\boldsymbol{h}_t = \sigma(\boldsymbol{W}\boldsymbol{h}_{t-1} + \boldsymbol{U}\boldsymbol{x}_t)$ 的計算流向。</p>
+    <p><b>怎麼操作：</b>切換「Transformer 注意力視角」與「RNN/SSM 遞迴視角」。</p>
+    <p><b>觀察什麼：</b>Transformer 在生成第 $t$ 個 Token 時需要讀取過去所有 $t-1$ 個 Token 的 Key；SSM 僅需傳遞尺寸固定的隱藏向量 $\boldsymbol{h}_t$。</p>
+    <p><b>理論基準：</b>Transformer 注意力矩陣尺寸 $(n \times n)$；SSM 遞迴狀態尺寸 $(s \times 1)$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>檢視模式:</label>
+      <select id="kp3_mode" style="padding:6px; border-radius:6px;">
+        <option value="tf">Transformer 自注意力 (QK^T 全對全)</option>
+        <option value="ssm" selected>SSM 隱藏狀態遞迴 (h_t 單步傳遞)</option>
+      </select>
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp3_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp3_readout">切換模式觀測...</div>
+</div>
+<script>
+(function(){
+  function updateKP3() {
+    var mode = document.getElementById('kp3_mode').value;
+    var cvs = document.getElementById('kp3_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    if (mode === 'tf') {
+      // Draw Attention Matrix Grid 6x6
+      ctx.fillStyle = '#fef3c7'; ctx.fillRect(200, 30, 150, 150);
+      ctx.strokeStyle = '#d97706'; ctx.strokeRect(200, 30, 150, 150);
+      for (var i = 1; i < 6; i++) {
+        ctx.beginPath(); ctx.moveTo(200 + i*25, 30); ctx.lineTo(200 + i*25, 180); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(200, 30 + i*25); ctx.lineTo(350, 30 + i*25); ctx.stroke();
+      }
+      ctx.fillStyle = '#b45309'; ctx.font = '12px sans-serif';
+      ctx.fillText('QK^T 全對全相似度網格 (6x6)', 370, 100);
+      ctx.fillText('複雜度 O(n^2)', 370, 120);
+    } else {
+      // Draw SSM State chain
+      for (var t = 1; t <= 4; t++) {
+        var cx = 100 + (t-1)*120;
+        ctx.fillStyle = '#dcfce7'; ctx.strokeStyle = '#166534';
+        ctx.fillRect(cx - 25, 80, 50, 40); ctx.strokeRect(cx - 25, 80, 50, 40);
+        ctx.fillStyle = '#166534'; ctx.font = '12px sans-serif';
+        ctx.fillText('h_' + t, cx - 10, 105);
+
+        if (t < 4) {
+          ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(cx + 25, 100); ctx.lineTo(cx + 95, 100); ctx.stroke();
+          ctx.fillText('W_bar', cx + 45, 90);
+        }
+      }
+      ctx.fillStyle = '#1e293b'; ctx.font = '12px sans-serif';
+      ctx.fillText('固定尺寸隱藏向量 h_t 單步傳遞 (複雜度 O(1))', 150, 160);
+    }
+
+    var readout = mode === 'tf' ? 'Transformer: 生成需存取全部歷史 Token (記憶體爆掉)' : 'SSM: 僅需傳遞小隱藏向量 h_t (記憶體固定恆常)';
+    document.getElementById('kp3_readout').textContent = readout;
+  }
+
+  var mEl = document.getElementById('kp3_mode');
+  if (mEl) {
+    mEl.addEventListener('change', updateKP3);
+    setTimeout(updateKP3, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-3 == -->
+<button class="guide-btn" data-guide="kp-3" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Transformer 與 RNN 的序列瓶頸對比</button>
+<!-- END Phase D Guide Button -->
+
+      <!-- == Phase D Guide Button kp-REPLACE == -->
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：關於 Transformer 與傳統 RNN 在序列建模上的缺陷，下列何者描述最為精確？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. Transformer 無法平行訓練，而 RNN 無法進行推理</button>
+<button class="quiz-option-btn" data-correct="true">2. Transformer 推理與記憶體開銷隨序列長度呈 O(n^2) 暴增；RNN 訓練無法跨時間平行且易忘記早期記憶</button>
+<button class="quiz-option-btn" data-correct="false">3. RNN 的注意力矩陣太大，而 Transformer 缺乏非線性激活函數</button>
+<button class="quiz-option-btn" data-correct="false">4. 兩者都無法處理超過 10 個 Token 的文字</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>Transformer 存在 O(n^2) 的注意力矩陣與 KV Cache 負擔；RNN 則因時間軸遞迴依賴 h_{t-1} 而無法平行訓練，且面臨長距離梯度消失問題。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-4 -->
+    <section id="kp4" class="card" data-kp="4">
+      <div class="card-header">
+        <span class="badge">§3.2</span>
+        <h2 class="card-title">KP-4：連續時間狀態空間模型 (Continuous SSM) 方程式</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 源自現代控制理論的連續微分方程</h4>
+<p>狀態空間模型 (SSM) 最初建立於連續時間空間 $\mathbb{R}$，將輸入信號 $\boldsymbol{x}(t) \in \mathbb{R}^d$ 透過隱藏狀態 $\boldsymbol{h}(t) \in \mathbb{R}^s$ 映射至輸出信號 $\boldsymbol{y}(t) \in \mathbb{R}^p$。其數學結構由一組常微分方程 (Ordinary Differential Equations, ODEs) 所定義：</p>
+
+$$\begin{align}
+\boldsymbol{h}'(t) &= \boldsymbol{A} \boldsymbol{h}(t) + \boldsymbol{B} \boldsymbol{x}(t) \tag{狀態方程式} \\
+\boldsymbol{y}(t) &= \boldsymbol{C} \boldsymbol{h}(t) + \boldsymbol{D} \boldsymbol{x}(t) \tag{輸出方程式}
+\end{align}$$
+
+<h4>2. 四大參數矩陣的物理與幾何意義</h4>
+<ul>
+  <li>$\boldsymbol{A} \in \mathbb{R}^{s \times s}$：<b>狀態轉移矩陣 (State Transition Matrix)</b>。控制系統內部隱藏狀態的自我演化與記憶保留衰減率（特徵值決定系統穩定性與頻響）。</li>
+  <li>$\boldsymbol{B} \in \mathbb{R}^{s \times d}$：<b>控制矩陣 (Control/Input Matrix)</b>。決定外部輸入信號 $\boldsymbol{x}(t)$ 如何驅動與寫入隱藏狀態。</li>
+  <li>$\boldsymbol{C} \in \mathbb{R}^{p \times s}$：<b>輸出矩陣 (Output Matrix)</b>。將隱藏狀態 $\boldsymbol{h}(t)$ 提取並映射回觀測輸出空間。</li>
+  <li>$\boldsymbol{D} \in \mathbb{R}^{p \times d}$：<b>直通矩陣 (Feedthrough Matrix)</b>。代表輸入到輸出的直接跳躍連線（Skip Connection），在許多離散模型中常簡化為零矩陣 $\boldsymbol{D}=\mathbf{0}$。</li>
+</ul>
+      </div>
+
+      <!-- == Phase B 圖解 kp-4 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp4.png" alt="連續時間狀態空間模型 (Continuous SSM) 方程式 示意圖解">
+  <figcaption>圖 kp-4：連續時間狀態空間模型 (Continuous SSM) 方程式 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-4" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: Architectural flowchart of Continuous State Space Model differential equations $h'(t) = A h(t) + B x(t)$ and $y(t) = C h(t) + D x(t)$.
+WHY: Illustrate continuous-time state evolution and input-output projections from control theory.
+MUST show: (1) Input node $x(t)$, (2) State ODE block with matrix $A$ and $B$, (3) Output projection block with matrix $C$ and $D$.
+AVOID: Missing matrix dimension labels.
+STYLE: Minimalist block diagram, color-coded functional blocks.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-4 == -->
+
+<div class="demo" data-demo-id="kp-4">
+  <div class="demo-title">🎮 互動展示 kp-4：連續 SSM 常微分方程 $h'(t) = A h(t) + B x(t)$ 數值積分</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>模擬連續系統狀態 $\boldsymbol{h}(t)$ 隨時間演化的軌跡，展現特徵值 $\lambda$ 對系統衰減與震盪的控制。</p>
+    <p><b>怎麼操作：</b>調整衰減係數 $A$ (-2.0 到 0.5) 與輸入增益 $B$。</p>
+    <p><b>觀察什麼：</b>當 $A < 0$ 時系統穩定收斂；當 $A > 0$ 時狀態暴增不穩定。</p>
+    <p><b>理論基準：</b>微分方程解為 $\boldsymbol{h}(t) = e^{\boldsymbol{A}t}\boldsymbol{h}(0) + \int_0^t e^{\boldsymbol{A}(t-\tau)}\boldsymbol{B}\boldsymbol{x}(\tau)d\tau$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>衰減矩陣 A (-2.0 ~ 0.5): <span id="kp4_a_val">-0.8</span></label>
+      <input type="range" id="kp4_a" min="-2.0" max="0.5" step="0.1" value="-0.8">
+    </div>
+    <div class="demo-control-group">
+      <label>控制矩陣 B (0.1 ~ 2.0): <span id="kp4_b_val">1.0</span></label>
+      <input type="range" id="kp4_b" min="0.1" max="2.0" step="0.1" value="1.0">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp4_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp4_readout">模擬 ODE 演化中...</div>
+</div>
+<script>
+(function(){
+  function updateKP4() {
+    var A = parseFloat(document.getElementById('kp4_a').value);
+    var B = parseFloat(document.getElementById('kp4_b').value);
+    document.getElementById('kp4_a_val').textContent = A.toFixed(1);
+    document.getElementById('kp4_b_val').textContent = B.toFixed(1);
+
+    var dt = 0.1;
+    var h = 0.0;
+    var points = [];
+
+    for (var step = 0; step < 50; step++) {
+      var t = step * dt;
+      var x = (t > 0.5 && t < 2.0) ? 1.0 : 0.0; // Pulse input
+      var dh = A * h + B * x;
+      h = h + dh * dt;
+      points.push(h);
+    }
+
+    var cvs = document.getElementById('kp4_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(40, 160); ctx.lineTo(560, 160); ctx.stroke();
+
+    ctx.strokeStyle = A < 0 ? '#2563eb' : '#ef4444'; ctx.lineWidth = 2.5; ctx.beginPath();
+    for (var i = 0; i < points.length; i++) {
+      var xPos = 40 + i * 10;
+      var yPos = 160 - Math.min(Math.max(points[i] * 60, -100), 140);
+      if (i === 0) ctx.moveTo(xPos, yPos); else ctx.lineTo(xPos, yPos);
+    }
+    ctx.stroke();
+
+    var status = A < 0 ? "✅ 系統穩定 (衰減收斂)" : "⚠️ 系統不穩定 (數值暴增)";
+    var readout = status + " | t=5.0 最終隱藏狀態 h(t) = " + points[points.length - 1].toFixed(4);
+    document.getElementById('kp4_readout').textContent = readout;
+  }
+
+  var aEl = document.getElementById('kp4_a');
+  if (aEl) {
+    aEl.addEventListener('input', updateKP4);
+    document.getElementById('kp4_b').addEventListener('input', updateKP4);
+    setTimeout(updateKP4, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-4 == -->
+<button class="guide-btn" data-guide="kp-4" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：連續時間狀態空間模型 (Continuous SSM) 方程式</button>
+<!-- END Phase D Guide Button -->
+
+      <!-- == Phase D Guide Button kp-REPLACE == -->
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：在連續時間 SSM 方程式 h'(t) = A h(t) + B x(t) 中，矩陣 A 的主要功能為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 將輸入 x(t) 直接壓縮成輸出 y(t)</button>
+<button class="quiz-option-btn" data-correct="true">2. 控制隱藏狀態 h(t) 的自我演化、動態衰減與歷史記憶保留</button>
+<button class="quiz-option-btn" data-correct="false">3. 對輸入信號執行 Softmax 歸一化</button>
+<button class="quiz-option-btn" data-correct="false">4. 計算 Query 與 Key 的內積相似度</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>矩陣 A 為狀態轉移矩陣 (State Transition Matrix)，其特徵值 (Eigenvalues) 決定了隱藏狀態 h(t) 隨時間演化的衰減速率、震盪頻率與記憶保留長度。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-5 -->
+    <section id="kp5" class="card" data-kp="5">
+      <div class="card-header">
+        <span class="badge">§3.3</span>
+        <h2 class="card-title">KP-5：離散時間 SSM 與卷積視角 (Convolutive View)</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 離散化狀態空間方程式</h4>
+<p>由於電腦處理的文字與數位信號均為離散序列 $\{x_0, x_1, \dots, x_n\}$，連續微分方程必須經過離散化處理。離散時間 SSM 表示為：</p>
+$$\begin{align}
+\boldsymbol{h}_t &= \overline{\boldsymbol{A}} \boldsymbol{h}_{t-1} + \overline{\boldsymbol{B}} \boldsymbol{x}_t \\
+\boldsymbol{y}_t &= \overline{\boldsymbol{C}} \boldsymbol{h}_t
+\end{align}$$
+<p>其中 $\overline{\boldsymbol{A}}, \overline{\boldsymbol{B}}, \overline{\boldsymbol{C}}$ 為離散化後的參數矩陣。</p>
+
+<h4>2. 遞迴展開與卷積對偶性 (Convolutive View)</h4>
+<p>假設初始狀態 $\boldsymbol{h}_0 = \mathbf{0}$，我們逐步展開時間步：</p>
+$$\begin{aligned}
+\boldsymbol{h}_1 &= \overline{\boldsymbol{B}} \boldsymbol{x}_1 \\
+\boldsymbol{h}_2 &= \overline{\boldsymbol{A}}\overline{\boldsymbol{B}}\boldsymbol{x}_1 + \overline{\boldsymbol{B}}\boldsymbol{x}_2 \\
+\boldsymbol{h}_3 &= \overline{\boldsymbol{A}}^2\overline{\boldsymbol{B}}\boldsymbol{x}_1 + \overline{\boldsymbol{A}}\overline{\boldsymbol{B}}\boldsymbol{x}_2 + \overline{\boldsymbol{B}}\boldsymbol{x}_3 \\
+&\vdots \\
+\boldsymbol{y}_t &= \overline{\boldsymbol{C}} \sum_{i=1}^t \overline{\boldsymbol{A}}^{t-i} \overline{\boldsymbol{B}} \boldsymbol{x}_i = \sum_{i=1}^t \left(\overline{\boldsymbol{C}} \overline{\boldsymbol{A}}^{t-i} \overline{\boldsymbol{B}}\right) \boldsymbol{x}_i
+\end{aligned}$$
+<p>這表明：<b>離散 SSM 的輸出 $\boldsymbol{y}_t$ 等價於輸入序列 $\boldsymbol{x}$ 與長期卷積核 $\boldsymbol{K}$ 的 1D 因果卷積！</b></p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-5 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp5.png" alt="離散時間 SSM 與卷積視角 (Convolutive View) 示意圖解">
+  <figcaption>圖 kp-5：離散時間 SSM 與卷積視角 (Convolutive View) 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-5" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: Mathematical equivalence schematic between Discrete SSM Recurrence ($h_t = \bar{A}h_{t-1} + \bar{B}x_t$) and 1D Causal Convolution ($y_t = (K * x)_t$).
+WHY: Demonstrate the dual representation of discrete SSMs for training vs inference.
+MUST show: (1) Step-by-step unrolling equations, (2) Convolution kernel formula $K[i] = \bar{C} \bar{A}^i \bar{B}$, (3) Equivalence arrow.
+AVOID: Confusing matrix multiplication with elementwise product.
+STYLE: Clean mathematical infographic, distinct blue and green panel colors.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-5 == -->
+
+<div class="demo" data-demo-id="kp-5">
+  <div class="demo-title">🎮 互動展示 kp-5：離散 SSM 遞迴與 1D 因果卷積數值等價對比</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>驗證單步遞迴 $h_t = \overline{A}h_{t-1} + \overline{B}x_t$ 與全序列 1D 卷積 $y_t = \sum K[i] x_{t-i}$ 的結果嚴格相等。</p>
+    <p><b>怎麼操作：</b>調整離散狀態權重 $\overline{A}$ (0.1 到 0.9) 與輸入權重 $\overline{B}$。</p>
+    <p><b>觀察什麼：</b>兩種算法輸出的數值完全吻合，證明了 SSM 的對偶性。</p>
+    <p><b>理論基準：</b>卷積核第 $i$ 項 $K[i] = \overline{C} \overline{A}^i \overline{B}$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>離散轉移 A_bar (0.1 ~ 0.9): <span id="kp5_a_val">0.70</span></label>
+      <input type="range" id="kp5_a" min="0.1" max="0.9" step="0.05" value="0.70">
+    </div>
+    <div class="demo-control-group">
+      <label>離散控制 B_bar (0.1 ~ 1.5): <span id="kp5_b_val">1.00</span></label>
+      <input type="range" id="kp5_b" min="0.1" max="1.5" step="0.05" value="1.00">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp5_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp5_readout">驗證中...</div>
+</div>
+<script>
+(function(){
+  function updateKP5() {
+    var A_bar = parseFloat(document.getElementById('kp5_a').value);
+    var B_bar = parseFloat(document.getElementById('kp5_b').value);
+    var C_bar = 1.2;
+    document.getElementById('kp5_a_val').textContent = A_bar.toFixed(2);
+    document.getElementById('kp5_b_val').textContent = B_bar.toFixed(2);
+
+    var x_seq = [1.0, 0.5, -0.8, 1.2];
+    
+    // Method 1: Recurrence
+    var h = 0;
+    var y_rec = [];
+    for (var t = 0; t < 4; t++) {
+      h = A_bar * h + B_bar * x_seq[t];
+      y_rec.push(C_bar * h);
+    }
+
+    // Method 2: Convolution y_k = sum K[i] x_{k-i}
+    var y_conv = [];
+    for (var k = 0; k < 4; k++) {
+      var sum = 0;
+      for (var i = 0; i <= k; i++) {
+        var K_i = C_bar * Math.pow(A_bar, i) * B_bar;
+        sum += K_i * x_seq[k - i];
+      }
+      y_conv.push(sum);
+    }
+
+    var cvs = document.getElementById('kp5_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(40, 140); ctx.lineTo(560, 140); ctx.stroke();
+
+    for (var i = 0; i < 4; i++) {
+      var cx = 100 + i * 120;
+      var rVal = y_rec[i];
+      var cVal = y_conv[i];
+
+      // Bar comparison
+      ctx.fillStyle = '#2563eb'; ctx.fillRect(cx - 20, 140 - rVal * 30, 18, rVal * 30);
+      ctx.fillStyle = '#10b981'; ctx.fillRect(cx + 2, 140 - cVal * 30, 18, cVal * 30);
+
+      ctx.fillStyle = '#1e293b'; ctx.font = '11px sans-serif';
+      ctx.fillText('t=' + (i+1), cx - 10, 158);
+    }
+
+    ctx.fillStyle = '#2563eb'; ctx.fillRect(40, 20, 12, 12);
+    ctx.fillStyle = '#1e293b'; ctx.fillText('單步遞迴 y_rec', 60, 31);
+    ctx.fillStyle = '#10b981'; ctx.fillRect(180, 20, 12, 12);
+    ctx.fillStyle = '#1e293b'; ctx.fillText('1D 因果卷積 y_conv', 200, 31);
+
+    var diff = Math.abs(y_rec[3] - y_conv[3]);
+    var readout = '末端 t=4: 遞迴 y4=' + y_rec[3].toFixed(5) + ' | 卷積 y4=' + y_conv[3].toFixed(5) + ' | 絕對誤差 = ' + diff.toExponential(2) + ' (完美等價)';
+    document.getElementById('kp5_readout').textContent = readout;
+  }
+
+  var aEl = document.getElementById('kp5_a');
+  if (aEl) {
+    aEl.addEventListener('input', updateKP5);
+    document.getElementById('kp5_b').addEventListener('input', updateKP5);
+    setTimeout(updateKP5, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-5 == -->
+<button class="guide-btn" data-guide="kp-5" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：離散時間 SSM 與卷積視角 (Convolutive View)</button>
+<!-- END Phase D Guide Button -->
+
+      <!-- == Phase D Guide Button kp-REPLACE == -->
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：將離散 SSM 的隱藏狀態算式連續展開後，輸出 y_t 呈現出什麼樣的數學結構？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 呈現出多層自注意力矩陣乘積</button>
+<button class="quiz-option-btn" data-correct="true">2. 呈現出輸入序列 x 與離散卷積核 K[i] = C_bar * A_bar^i * B_bar 的一維因果卷積</button>
+<button class="quiz-option-btn" data-correct="false">3. 呈現出完全獨立的二元分類決策樹</button>
+<button class="quiz-option-btn" data-correct="false">4. 呈現出隨機游走過程</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>SSM 展開後，輸出為各時間步輸入 x_i 乘以 C_bar * A_bar^(t-i) * B_bar 的累加，本質上即為一維因果卷積 (1D Causal Convolution)。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-6 -->
+    <section id="kp6" class="card" data-kp="6">
+      <div class="card-header">
+        <span class="badge">§3.4</span>
+        <h2 class="card-title">KP-6：雙線型法 (Bilinear Method / Tustin) 離散化推導</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 梯形積分與雙線型變換 (Tustin's Method)</h4>
+<p>如何將連續參數 $\boldsymbol{A}, \boldsymbol{B}$ 轉化為離散矩陣 $\overline{\boldsymbol{A}}, \overline{\boldsymbol{B}}$？數值分析中最常用的是<b>雙線型變換（Bilinear Transformation / 梯形法則）</b>。</p>
+<p>考慮狀態微分方程在時間區間 $[t_n, t_{n+1}]$（步長為 $\Delta$）上的梯形積分：</p>
+$$\boldsymbol{h}_{n+1} - \boldsymbol{h}_n = \frac{\Delta}{2} \left( \boldsymbol{h}'(t_{n+1}) + \boldsymbol{h}'(t_n) \right) = \frac{\Delta}{2} \left( (\boldsymbol{A}\boldsymbol{h}_{n+1} + \boldsymbol{B}\boldsymbol{x}_{n+1}) + (\boldsymbol{A}\boldsymbol{h}_n + \boldsymbol{B}\boldsymbol{x}_n) \right)$$
+
+<h4>2. 精確代數移項與離散矩陣公式</h4>
+<p>假設在微小步長 $\Delta$ 內輸入平滑 $\boldsymbol{x}_{n+1} \approx \boldsymbol{x}_n$，經由代數移項整理：</p>
+$$\left(\boldsymbol{I} - \frac{\Delta}{2}\boldsymbol{A}\right) \boldsymbol{h}_{n+1} = \left(\boldsymbol{I} + \frac{\Delta}{2}\boldsymbol{A}\right) \boldsymbol{h}_n + \Delta \boldsymbol{B} \boldsymbol{x}_{n+1}$$
+<p>兩邊左乘逆矩陣 $\left(\boldsymbol{I} - \frac{\Delta}{2}\boldsymbol{A}\right)^{-1}$，求得離散矩陣：</p>
+$$\begin{align
+\overline{\boldsymbol{A}} &= \left(\boldsymbol{I} - \frac{\Delta}{2}\boldsymbol{A}\right)^{-1} \left(\boldsymbol{I} + \frac{\Delta}{2}\boldsymbol{A}\right) \\
+\overline{\boldsymbol{B}} &= \left(\boldsymbol{I} - \frac{\Delta}{2}\boldsymbol{A}\right)^{-1} \Delta \boldsymbol{B} \\
+\overline{\boldsymbol{C}} &= \boldsymbol{C}
+\end{align}$$
+      </div>
+
+      <!-- == Phase B 圖解 kp-6 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp6.png" alt="雙線型法 (Bilinear Method / Tustin) 離散化推導 示意圖解">
+  <figcaption>圖 kp-6：雙線型法 (Bilinear Method / Tustin) 離散化推導 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-6" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: Geometric derivation diagram of Bilinear (Tustin) Discretization using trapezoidal integration rule.
+WHY: Explain how continuous matrices $(A, B)$ are transformed into discrete matrices $(\bar{A}, \bar{B})$.
+MUST show: (1) Continuous ODE curve, (2) Trapezoidal area approximation over step $\Delta$, (3) Inverse matrix equations $\bar{A} = (I - \frac{\Delta}{2}A)^{-1}(I + \frac{\Delta}{2}A)$.
+AVOID: Hand-drawn messy curves.
+STYLE: Precision geometry vector plot, crisp typography.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-6 == -->
+
+<div class="demo" data-demo-id="kp-6">
+  <div class="demo-title">🎮 互動展示 kp-6：雙線型變換 $\overline{\boldsymbol{A}} = (\boldsymbol{I}-\frac{\Delta}{2}\boldsymbol{A})^{-1}(\boldsymbol{I}+\frac{\Delta}{2}\boldsymbol{A})$ 實時計算器</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>計算給定連續矩陣 $A$ 與採樣步長 $\Delta$ 下，雙線型變換得出的離散矩陣 $\overline{\boldsymbol{A}}$ 與 $\overline{\boldsymbol{B}}$。</p>
+    <p><b>怎麼操作：</b>調整採樣步長 $\Delta$ (0.01 到 0.5) 與連續轉移矩陣 $A$。</p>
+    <p><b>觀察什麼：</b>步長 $\Delta$ 越小，離散矩陣 $\overline{\boldsymbol{A}}$ 越接近單位矩陣 $\boldsymbol{I}$。</p>
+    <p><b>理論基準：</b>純量情況下 $\overline{A} = \frac{1 + \frac{\Delta}{2} A}{1 - \frac{\Delta}{2} A}$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>採樣步長 Delta (0.01 ~ 0.5): <span id="kp6_dt_val">0.10</span></label>
+      <input type="range" id="kp6_dt" min="0.01" max="0.5" step="0.01" value="0.10">
+    </div>
+    <div class="demo-control-group">
+      <label>連續矩陣 A (-5.0 ~ -0.1): <span id="kp6_a_val">-2.0</span></label>
+      <input type="range" id="kp6_a" min="-5.0" max="-0.1" step="0.1" value="-2.0">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp6_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp6_readout">計算離散矩陣中...</div>
+</div>
+<script>
+(function(){
+  function updateKP6() {
+    var dt = parseFloat(document.getElementById('kp6_dt').value);
+    var A = parseFloat(document.getElementById('kp6_a').value);
+    var B = 1.5;
+    document.getElementById('kp6_dt_val').textContent = dt.toFixed(2);
+    document.getElementById('kp6_a_val').textContent = A.toFixed(1);
+
+    var A_bar = (1 + (dt/2)*A) / (1 - (dt/2)*A);
+    var B_bar = (dt * B) / (1 - (dt/2)*A);
+
+    var cvs = document.getElementById('kp6_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.fillStyle = '#fef08a'; ctx.strokeStyle = '#ca8a04';
+    ctx.fillRect(80, 40, 200, 90); ctx.strokeRect(80, 40, 200, 90);
+    ctx.fillStyle = '#ca8a04'; ctx.font = '12px sans-serif';
+    ctx.fillText('離散狀態轉移 A_bar', 100, 65);
+    ctx.font = '16px monospace';
+    ctx.fillText(A_bar.toFixed(6), 100, 100);
+
+    ctx.fillStyle = '#dcfce7'; ctx.strokeStyle = '#166534';
+    ctx.fillRect(320, 40, 200, 90); ctx.strokeRect(320, 40, 200, 90);
+    ctx.fillStyle = '#166534'; ctx.font = '12px sans-serif';
+    ctx.fillText('離散控制矩陣 B_bar', 340, 65);
+    ctx.font = '16px monospace';
+    ctx.fillText(B_bar.toFixed(6), 340, 100);
+
+    var readout = '雙線型變換結果: A_bar = ' + A_bar.toFixed(6) + ' | B_bar = ' + B_bar.toFixed(6) + ' | (A_bar 恆滿足穩定域判準)';
+    document.getElementById('kp6_readout').textContent = readout;
+  }
+
+  var dtEl = document.getElementById('kp6_dt');
+  if (dtEl) {
+    dtEl.addEventListener('input', updateKP6);
+    document.getElementById('kp6_a').addEventListener('input', updateKP6);
+    setTimeout(updateKP6, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-6 == -->
+<button class="guide-btn" data-guide="kp-6" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：雙線型法 (Bilinear Method / Tustin) 離散化推導</button>
+<!-- END Phase D Guide Button -->
+
+      <!-- == Phase D Guide Button kp-REPLACE == -->
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：使用雙線型變換 (Bilinear / Tustin Method) 將連續矩陣 A 離散化為 A_bar 的正確算式為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. A_bar = exp(A * Delta)</button>
+<button class="quiz-option-btn" data-correct="true">2. A_bar = (I - (Delta/2)*A)^(-1) * (I + (Delta/2)*A)</button>
+<button class="quiz-option-btn" data-correct="false">3. A_bar = A + Delta * B</button>
+<button class="quiz-option-btn" data-correct="false">4. A_bar = I / (A * Delta)</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>雙線型變換利用梯形數值積分，導出的離散狀態轉移矩陣為 A_bar = (I - (Delta/2)*A)^(-1) * (I + (Delta/2)*A)。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-7 -->
+    <section id="kp7" class="card" data-kp="7">
+      <div class="card-header">
+        <span class="badge">§4.1</span>
+        <h2 class="card-title">KP-7：結構化狀態空間 (S4) 卷積核與輸出表示</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. S4 模型的核心使命</h4>
+<p>雖然離散 SSM 可化為卷積，但若直接計算 $\overline{\boldsymbol{A}}^i$，對於長度為 $L$ 的序列，計算 $\overline{\boldsymbol{A}}^1, \overline{\boldsymbol{A}}^2, \dots, \overline{\boldsymbol{A}}^L$ 的矩陣次方代價極高（矩陣乘法 $\mathcal{O}(s^3 L)$）。</p>
+<p>2021 年提出的 <b>Structured State Space (S4)</b> 模型透過對 $\boldsymbol{A}$ 矩陣施加<b>結構化約束</b>，打破了這一計算瓶頸。</p>
+
+<h4>2. S4 的 1D 長距離因果卷積核</h4>
+<p>S4 將整個序列的映射簡化為一維長距離因果卷積：</p>
+$$\boldsymbol{y}_k = \sum_{i=0}^k \boldsymbol{K}[i] \boldsymbol{x}_{k-i} = (\boldsymbol{K} * \boldsymbol{x})_k$$
+<p>其中卷積核 $\boldsymbol{K} \in \mathbb{R}^L$ 的第 $i$ 個元素定義為：</p>
+$$\boldsymbol{K}[i] = \overline{\boldsymbol{C}} \overline{\boldsymbol{A}}^i \overline{\boldsymbol{B}}$$
+<p>一旦快速生成卷積核 $\boldsymbol{K}$，即可透過快速傅立葉變換 (FFT) 在 $\mathcal{O}(L \log L)$ 時間內完成全序列計算！</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-7 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp7.png" alt="結構化狀態空間 (S4) 卷積核與輸出表示 示意圖解">
+  <figcaption>圖 kp-7：結構化狀態空間 (S4) 卷積核與輸出表示 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-7" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: Plot of S4 1D Causal Convolution Kernel $K[i] = \bar{C}\bar{A}^i\bar{B}$ decaying and oscillating across discrete time steps $i$.
+WHY: Show how structured parameterization allows capturing long-range decaying memory patterns.
+MUST show: (1) Discrete lag axis $i=0..50$, (2) Damped oscillatory curve $K[i]$, (3) Formula annotation.
+AVOID: Arbitrary random noise curves without mathematical structure.
+STYLE: Professional line chart, clean grid overlay.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-7 == -->
+
+<div class="demo" data-demo-id="kp-7">
+  <div class="demo-title">🎮 互動展示 kp-7：S4 長距離因果卷積核 $K[i] = \overline{C}\overline{A}^i\overline{B}$ 實時形狀生成器</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>觀察 S4 卷積核 $K[i]$ 在不同特徵值頻率與衰減率下的形狀波形。</p>
+    <p><b>怎麼操作：</b>調整衰減率與震盪頻率。</p>
+    <p><b>觀察什麼：</b>適當的衰減與震盪組合讓 S4 卷積核能同時保留近端細節與遠端上下文記憶。</p>
+    <p><b>理論基準：</b>卷積核第 $i$ 項 $K[i] = \overline{C}\overline{A}^i\overline{B}$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>衰減率 decay (0.01 ~ 0.2): <span id="kp7_dec_val">0.05</span></label>
+      <input type="range" id="kp7_dec" min="0.01" max="0.2" step="0.01" value="0.05">
+    </div>
+    <div class="demo-control-group">
+      <label>震盪頻率 freq (0.0 ~ 1.0): <span id="kp7_freq_val">0.3</span></label>
+      <input type="range" id="kp7_freq" min="0.0" max="1.0" step="0.05" value="0.3">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp7_canvas" width="600" height="200"></canvas>
+  </div>
+  <div class="demo-readout" id="kp7_readout">生成卷積核中...</div>
+</div>
+<script>
+(function(){
+  function updateKP7() {
+    var decay = parseFloat(document.getElementById('kp7_dec').value);
+    var freq = parseFloat(document.getElementById('kp7_freq').value);
+    document.getElementById('kp7_dec_val').textContent = decay.toFixed(2);
+    document.getElementById('kp7_freq_val').textContent = freq.toFixed(2);
+
+    var cvs = document.getElementById('kp7_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(40, 110); ctx.lineTo(560, 110); ctx.stroke();
+
+    ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2.5; ctx.beginPath();
+    var firstK = 0, lastK = 0;
+    for (var i = 0; i < 50; i++) {
+      var k_val = Math.exp(-decay * i) * Math.cos(freq * i);
+      if (i === 0) firstK = k_val;
+      if (i === 49) lastK = k_val;
+      var x = 40 + i * 10.4;
+      var y = 110 - k_val * 70;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    var readout = 'S4 卷積核 (50 步): 起始 K[0] = ' + firstK.toFixed(3) + ' | 遠端 K[49] = ' + lastK.toFixed(4) + ' | (FFT 將在 O(L log L) 內完成全卷積)';
+    document.getElementById('kp7_readout').textContent = readout;
+  }
+
+  var dEl = document.getElementById('kp7_dec');
+  if (dEl) {
+    dEl.addEventListener('input', updateKP7);
+    document.getElementById('kp7_freq').addEventListener('input', updateKP7);
+    setTimeout(updateKP7, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-7 == -->
+<button class="guide-btn" data-guide="kp-7" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：結構化狀態空間 (S4) 卷積核與輸出表示</button>
+<!-- END Phase D Guide Button -->
+
+      <!-- == Phase D Guide Button kp-REPLACE == -->
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：在 S4 模型中，長距離因果卷積核 K[i] 的定義算式為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. K[i] = Softmax(Q * K^T / sqrt(d))</button>
+<button class="quiz-option-btn" data-correct="true">2. K[i] = C_bar * (A_bar)^i * B_bar</button>
+<button class="quiz-option-btn" data-correct="false">3. K[i] = W * x_i + b</button>
+<button class="quiz-option-btn" data-correct="false">4. K[i] = sig(A_bar) + ReLU(B_bar)</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>S4 將狀態空間遞迴轉化為卷積，其卷積核 K[i] 的第 i 項精確定義為 C_bar * (A_bar)^i * B_bar。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-8 -->
+    <section id="kp8" class="card" data-kp="8">
+      <div class="card-header">
+        <span class="badge">§4.2</span>
+        <h2 class="card-title">KP-8：S4 卷積核推導與展開證明</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 從零初始狀態進行符號遞迴展開證明</h4>
+<p>設初始隱藏狀態 $\boldsymbol{h}_0 = \mathbf{0}$，根據離散遞迴式 $\boldsymbol{h}_{k+1} = \overline{\boldsymbol{A}}\boldsymbol{h}_k + \overline{\boldsymbol{B}}\boldsymbol{x}_k$：</p>
+$$\begin{aligned}
+\boldsymbol{h}_0 &= \mathbf{0} \\
+\boldsymbol{h}_1 &= \overline{\boldsymbol{B}}\boldsymbol{x}_0 \\
+\boldsymbol{h}_2 &= \overline{\boldsymbol{A}}\overline{\boldsymbol{B}}\boldsymbol{x}_0 + \overline{\boldsymbol{B}}\boldsymbol{x}_1 \\
+\boldsymbol{h}_3 &= \overline{\boldsymbol{A}}^2\overline{\boldsymbol{B}}\boldsymbol{x}_0 + \overline{\boldsymbol{A}}\overline{\boldsymbol{B}}\boldsymbol{x}_1 + \overline{\boldsymbol{B}}\boldsymbol{x}_2 \\
+&\vdots \\
+\boldsymbol{h}_k &= \sum_{i=0}^{k-1} \overline{\boldsymbol{A}}^{k-1-i} \overline{\boldsymbol{B}} \boldsymbol{x}_i
+\end{aligned}$$
+
+<h4>2. 代入輸出方程式與變數代換 (Re-indexing)</h4>
+<p>將 $\boldsymbol{h}_k$ 代入輸出方程式 $\boldsymbol{y}_k = \overline{\boldsymbol{C}}\boldsymbol{h}_k$：</p>
+$$\boldsymbol{y}_k = \overline{\boldsymbol{C}} \left( \sum_{i=0}^{k-1} \overline{\boldsymbol{A}}^{k-1-i} \overline{\boldsymbol{B}} \boldsymbol{x}_i \right) = \sum_{i=0}^{k-1} \overline{\boldsymbol{C}} \overline{\boldsymbol{A}}^{k-1-i} \overline{\boldsymbol{B}} \boldsymbol{x}_i$$
+<p>令 $j = k - 1 - i$，則當 $i=0$ 時 $j=k-1$；當 $i=k-1$ 時 $j=0$：</p>
+$$\boldsymbol{y}_k = \sum_{j=0}^{k-1} \left(\overline{\boldsymbol{C}} \overline{\boldsymbol{A}}^j \overline{\boldsymbol{B}}\right) \boldsymbol{x}_{k-1-j} = \sum_{j=0}^{k-1} \boldsymbol{K}[j] \boldsymbol{x}_{k-1-j}$$
+<p>這嚴謹證明了 S4 的遞迴形式與 1D 因果卷積形式在數學上完全等價！</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-8 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp8.png" alt="S4 卷積核推導與展開證明 示意圖解">
+  <figcaption>圖 kp-8：S4 卷積核推導與展開證明 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-8" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: Step-by-step mathematical proof flowchart showing S4 unrolling from $h_0 = 0$ to final causal convolution $y_k = (K * x)_k$.
+WHY: Walk through the exact variable substitution $j = k-1-i$ proving convolution equivalence.
+MUST show: (1) Initial state $h_0=0$, (2) Unrolled terms $h_k = \sum \bar{A}^{k-1-i}\bar{B}x_i$, (3) Re-indexed summation.
+AVOID: Skipping intermediate algebra steps.
+STYLE: Vertical proof card layout, clear arrow connections.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-8 == -->
+
+<div class="demo" data-demo-id="kp-8">
+  <div class="demo-title">🎮 互動展示 kp-8：S4 卷積展開證明步驟逐項對齊驗證</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>展示從 $h_0=0$ 展開到 $y_k = \sum_{j=0}^{k-1} K[j] x_{k-1-j}$ 的各項對應矩陣冪次。</p>
+    <p><b>怎麼操作：</b>選擇時間步 $k$ (1 到 5)。</p>
+    <p><b>觀察什麼：</b>第 $k$ 步的輸出精確包含了前 $k$ 個輸入項與對應的 $\overline{\boldsymbol{A}}^j$ 次方權重。</p>
+    <p><b>理論基準：</b>$\boldsymbol{y}_k = \overline{\boldsymbol{C}} \overline{\boldsymbol{A}}^{k-1} \overline{\boldsymbol{B}} \boldsymbol{x}_0 + \dots + \overline{\boldsymbol{C}} \overline{\boldsymbol{B}} \boldsymbol{x}_{k-1}$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>選擇時間步 k:</label>
+      <select id="kp8_k_sel" style="padding:6px; border-radius:6px;">
+        <option value="1">k = 1 (含 1 個展開項)</option>
+        <option value="2">k = 2 (含 2 個展開項)</option>
+        <option value="3" selected>k = 3 (含 3 個展開項)</option>
+        <option value="4">k = 4 (含 4 個展開項)</option>
+      </select>
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp8_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp8_readout">選擇時間步檢視...</div>
+</div>
+<script>
+(function(){
+  function updateKP8() {
+    var k = parseInt(document.getElementById('kp8_k_sel').value);
+    var cvs = document.getElementById('kp8_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.fillStyle = '#1e293b'; ctx.font = '13px sans-serif';
+    ctx.fillText('當前時間步 y_' + k + ' 的展開式：', 30, 40);
+
+    var terms = [];
+    for (var j = 0; j < k; j++) {
+      var powStr = (k - 1 - j) === 0 ? '' : '^' + (k - 1 - j);
+      terms.push('C_bar * A_bar' + powStr + ' * B_bar * x_' + j);
+    }
+
+    ctx.fillStyle = '#2563eb'; ctx.font = '12px monospace';
+    ctx.fillText('y_' + k + ' = ' + terms.join(' + '), 30, 80);
+
+    ctx.fillStyle = '#10b981'; ctx.font = '12px sans-serif';
+    ctx.fillText('卷積形式對齊：y_' + k + ' = sum_{j=0}^{' + (k-1) + '} K[j] * x_' + (k-1) + '-j', 30, 120);
+
+    var readout = 'k=' + k + ' 時: 卷積核展開共 ' + k + ' 項相加 (完全符合一維因果卷積)';
+    document.getElementById('kp8_readout').textContent = readout;
+  }
+
+  var kEl = document.getElementById('kp8_k_sel');
+  if (kEl) {
+    kEl.addEventListener('change', updateKP8);
+    setTimeout(updateKP8, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-8 == -->
+<button class="guide-btn" data-guide="kp-8" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：S4 卷積核推導與展開證明</button>
+<!-- END Phase D Guide Button -->
+
+      <!-- == Phase D Guide Button kp-REPLACE == -->
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：S4 的卷積形式與遞迴形式之所以能夠完全等價，其前提假設為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="true">1. 假設初始隱藏狀態 h_0 = 0，且系統為線性時不變 (LTI) 系統</button>
+<button class="quiz-option-btn" data-correct="false">2. 假設序列長度必須是 2 的次方倍</button>
+<button class="quiz-option-btn" data-correct="false">3. 假設所有輸入向量 x_t 必須互相垂直</button>
+<button class="quiz-option-btn" data-correct="false">4. 假設損失函數採用交叉熵 (Cross Entropy)</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>在 h_0 = 0 與線性時不變 (LTI) 系統前提下，透過符號展開與變數代換，可嚴謹證明遞迴累加即為一維因果卷積。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-9 -->
+    <section id="kp9" class="card" data-kp="9">
+      <div class="card-header">
+        <span class="badge">§4.3</span>
+        <h2 class="card-title">KP-9：S4 狀態轉移矩陣 (DPLR) 與 Woodbury 矩陣恆等式</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 對角加上低秩 (DPLR) 矩陣結構</h4>
+<p>單純對角矩陣 $\overline{\boldsymbol{A}} = \operatorname{diag}(\boldsymbol{\Lambda})$ 雖易求次方，但無法捕捉狀態維度間的相互作用；而全矩陣則運算太慢。S4 提出了<b>對角加上低秩（Diagonal Plus Low-Rank, DPLR）</b>結構：</p>
+$$\overline{\boldsymbol{A}} = \operatorname{diag}(\boldsymbol{\Lambda}) + \boldsymbol{P}\boldsymbol{Q}^\top$$
+<p>其中 $\boldsymbol{\Lambda} \in \mathbb{C}^s$，低秩矩陣 $\boldsymbol{P}, \boldsymbol{Q} \in \mathbb{C}^{s \times r}$ ($r \ll s$)。</p>
+
+<h4>2. 拉普拉斯變換與 Woodbury 矩陣恆等式求逆</h4>
+<p>在頻域中，SSM 的傳遞函數 (Transfer Function / Resolvent) 為 $\boldsymbol{H}(z) = \overline{\boldsymbol{C}}(z\boldsymbol{I} - \overline{\boldsymbol{A}})^{-1}\overline{\boldsymbol{B}}$。利用 <b>Woodbury 矩陣恆等式</b>：</p>
+$$(z\boldsymbol{I} - \overline{\boldsymbol{A}})^{-1} = \left(z\boldsymbol{I} - \operatorname{diag}(\boldsymbol{\Lambda}) - \boldsymbol{P}\boldsymbol{Q}^\top\right)^{-1} = \boldsymbol{D}_z^{-1} + \boldsymbol{D}_z^{-1}\boldsymbol{P} \left(\boldsymbol{I} - \boldsymbol{Q}^\top\boldsymbol{D}_z^{-1}\boldsymbol{P}\right)^{-1} \boldsymbol{Q}^\top\boldsymbol{D}_z^{-1}$$
+<p>其中 $\boldsymbol{D}_z = z\boldsymbol{I} - \operatorname{diag}(\boldsymbol{\Lambda})$ 為對角矩陣，求逆僅需 $O(s)$ 對角線倒數！這使得卷積核可在極短時間內精確算得。</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-9 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp9.png" alt="S4 狀態轉移矩陣 (DPLR) 與 Woodbury 矩陣恆等式 示意圖解">
+  <figcaption>圖 kp-9：S4 狀態轉移矩陣 (DPLR) 與 Woodbury 矩陣恆等式 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-9" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: Matrix decomposition schematic of S4 Diagonal Plus Low-Rank (DPLR) matrix $\bar{A} = \operatorname{diag}(\boldsymbol{\Lambda}) + PQ^\top$ and Woodbury matrix identity resolvent.
+WHY: Explain how DPLR parameterization allows $O(s)$ diagonal matrix inversion while preserving state interaction capabilities.
+MUST show: (1) Diagonal matrix $\boldsymbol{\Lambda}$ plus rank-$r$ outer product $PQ^\top$, (2) Woodbury inverse formula.
+AVOID: Dense unformatted text.
+STYLE: Structured matrix graphic, high contrast color coding.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-9 == -->
+
+<div class="demo" data-demo-id="kp-9">
+  <div class="demo-title">🎮 互動展示 kp-9：S4 DPLR 矩陣 $\overline{\boldsymbol{A}} = \operatorname{diag}(\boldsymbol{\Lambda}) + \boldsymbol{P}\boldsymbol{Q}^\top$ 頻域 Woodbury 求逆</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>展示 Woodbury 矩陣恆等式如何將 $(z\boldsymbol{I} - \overline{\boldsymbol{A}})^{-1}$ 的高維求逆簡化為對角矩陣倒數。</p>
+    <p><b>怎麼操作：</b>調整隱藏維度 $s$ (16 到 128) 與頻率變數 $z$。</p>
+    <p><b>觀察什麼：</b>利用 Woodbury 恆等式，複雜度由全矩陣求逆 $\mathcal{O}(s^3)$ 降至低秩矩陣求逆 $\mathcal{O}(s)$！</p>
+    <p><b>理論基準：</b>$(z\boldsymbol{I} - \boldsymbol{\Lambda} - \boldsymbol{P}\boldsymbol{Q}^\top)^{-1} = \boldsymbol{D}_z^{-1} + \boldsymbol{D}_z^{-1}\boldsymbol{P}(\boldsymbol{I} - \boldsymbol{Q}^\top\boldsymbol{D}_z^{-1}\boldsymbol{P})^{-1}\boldsymbol{Q}^\top\boldsymbol{D}_z^{-1}$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>隱藏維度 s (16 ~ 128): <span id="kp9_s_val">64</span></label>
+      <input type="range" id="kp9_s" min="16" max="128" step="16" value="64">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp9_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp9_readout">計算矩陣複雜度中...</div>
+</div>
+<script>
+(function(){
+  function updateKP9() {
+    var s = parseInt(document.getElementById('kp9_s').value);
+    document.getElementById('kp9_s_val').textContent = s;
+
+    var full_inv_ops = Math.pow(s, 3);
+    var woodbury_ops = s + Math.pow(1, 3) + s; // rank r=1
+
+    var cvs = document.getElementById('kp9_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    var items = [
+      { name: "全矩陣求逆 (O(s^3))", val: full_inv_ops, color: "#ef4444" },
+      { name: "Woodbury 求逆 (O(s))", val: woodbury_ops, color: "#10b981" }
+    ];
+
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var y = 35 + i * 60;
+      var w = (item.val / full_inv_ops) * 360;
+      ctx.fillStyle = item.color;
+      ctx.fillRect(180, y, Math.max(w, 4), 32);
+      ctx.fillStyle = '#1e293b'; ctx.font = '12px sans-serif';
+      ctx.fillText(item.name, 20, y + 20);
+      ctx.fillText(Math.round(item.val).toLocaleString() + ' ops', 190 + Math.max(w, 4), y + 20);
+    }
+
+    var readout = '維度 s=' + s + ' 時: Woodbury 求逆使運算量從 ' + full_inv_ops.toLocaleString() + ' 降至 ' + woodbury_ops.toLocaleString() + ' (加速 ' + (full_inv_ops/woodbury_ops).toFixed(0) + ' 倍！)';
+    document.getElementById('kp9_readout').textContent = readout;
+  }
+
+  var sEl = document.getElementById('kp9_s');
+  if (sEl) {
+    sEl.addEventListener('input', updateKP9);
+    setTimeout(updateKP9, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-9 == -->
+<button class="guide-btn" data-guide="kp-9" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：S4 狀態轉移矩陣 (DPLR) 與 Woodbury 矩陣恆等式</button>
+<!-- END Phase D Guide Button -->
+
+      <!-- == Phase D Guide Button kp-REPLACE == -->
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：S4 模型採用 DPLR (Diagonal Plus Low-Rank) 矩陣結構 A_bar = diag(Lambda) + P * Q^T 的核心目的為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 為了將矩陣 A 的所有元素強制設為 0</button>
+<button class="quiz-option-btn" data-correct="true">2. 兼顧對角矩陣的高效次方/求逆能力，與低秩項 P*Q^T 帶來的狀態維度間相互交互能力</button>
+<button class="quiz-option-btn" data-correct="false">3. 為了避免使用任何複數運算</button>
+<button class="quiz-option-btn" data-correct="false">4. 為了增加模型參數總量以防止欠擬合</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>DPLR 結構利用對角矩陣 Lambda 保留了對角求逆與 FFT 快速計算的優勢，同時透過低秩項 P*Q^T 引入了隱藏狀態間的跨維度交互作用。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-10 -->
+    <section id="kp10" class="card" data-kp="10">
+      <div class="card-header">
+        <span class="badge">§4.4</span>
+        <h2 class="card-title">KP-10：S4 的平行運算效率與 FFT 卷積加速</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 雙重執行模式：訓練平行，推理遞迴</h4>
+<p>S4 擁有現代深度學習中最理想的「雙重執行形態」：</p>
+<ul>
+  <li><b>訓練階段 (Training Phase)</b>：已知整個長度為 $L$ 的序列，將 S4 視為 1D 卷積。利用 FFT (Fast Fourier Transform) 可以在 $\mathcal{O}(L \log L)$ 時間內平行算出全序列輸出 $\boldsymbol{y} = \mathcal{F}^{-1}\left( \mathcal{F}(\boldsymbol{K}) \odot \mathcal{F}(\boldsymbol{x}) \right)$。</li>
+  <li><b>推理階段 (Inference Phase)</b>：自迴歸生成逐字產出，切換回遞迴形式 $\boldsymbol{h}_t = \overline{\boldsymbol{A}}\boldsymbol{h}_{t-1} + \overline{\boldsymbol{B}}\boldsymbol{x}_t$，單步時間複雜度僅為 $\mathcal{O}(1)$，空間複雜度僅為 $\mathcal{O}(s)$。</li>
+</ul>
+
+<h4>2. 複雜度對比表</h4>
+<table border="1" style="border-collapse:collapse; width:100%; text-align:center;">
+  <thead>
+    <tr style="background:#f1f5f9;">
+      <th>模型架構</th>
+      <th>訓練時間複雜度</th>
+      <th>推理時間複雜度 (單 Step)</th>
+      <th>推理記憶體開銷 (KV Cache)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><b>Transformer (Attention)</b></td><td>$\mathcal{O}(L^2)$</td><td>$\mathcal{O}(L)$</td><td>$\mathcal{O}(L)$ (隨長度暴增)</td></tr>
+    <tr><td><b>傳統 RNN</b></td><td>$\mathcal{O}(L)$ (無法平行)</td><td>$\mathcal{O}(1)$</td><td>$\mathcal{O}(1)$ (固定隱藏狀態)</td></tr>
+    <tr><td><b>S4 / SSM</b></td><td>$\mathcal{O}(L \log L)$ (平行 FFT)</td><td>$\mathcal{O}(1)$</td><td>$\mathcal{O}(1)$ (固定隱藏狀態)</td></tr>
+  </tbody>
+</table>
+      </div>
+
+      <!-- == Phase B 圖解 kp-10 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp10.png" alt="S4 的平行運算效率與 FFT 卷積加速 示意圖解">
+  <figcaption>圖 kp-10：S4 的平行運算效率與 FFT 卷積加速 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-10" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: Dual-mode execution diagram comparing S4 Parallel FFT Convolution during Training ($O(L \log L)$) vs Single-Step Recurrence during Inference ($O(1)$).
+WHY: Highlight why S4 achieves both rapid GPU parallel training and ultra-fast low-memory deployment.
+MUST show: (1) Training FFT pipeline, (2) Inference step-by-step state update.
+AVOID: Mixing up training and inference operations.
+STYLE: Two-column architectural breakdown diagram.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-10 == -->
+
+<div class="demo" data-demo-id="kp-10">
+  <div class="demo-title">🎮 互動展示 kp-10：S4 雙重模式 (訓練 FFT vs 推理遞迴) 效能模擬</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>模擬 S4 在訓練階段使用 FFT 卷積加速與推理階段使用單步遞迴的執行時間。</p>
+    <p><b>怎麼操作：</b>調整序列長度 $L$ (1,000 到 50,000)。</p>
+    <p><b>觀察什麼：</b>當序列拉長到 50,000 時，FFT 卷積完成訓練僅需數十毫秒；自迴歸單步推理時間始終保持 $O(1)$ 常數！</p>
+    <p><b>理論基準：</b>訓練時間 $\mathcal{O}(L \log_2 L)$；推理單步時間 $\mathcal{O}(1)$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>序列長度 L (1,000 ~ 50,000): <span id="kp10_l_val">10000</span></label>
+      <input type="range" id="kp10_l" min="1000" max="50000" step="1000" value="10000">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp10_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp10_readout">模擬雙重模式中...</div>
+</div>
+<script>
+(function(){
+  function updateKP10() {
+    var L = parseInt(document.getElementById('kp10_l').value);
+    document.getElementById('kp10_l_val').textContent = L.toLocaleString();
+
+    var fft_time_ms = (L * Math.log2(L) * 0.00002);
+    var step_time_ms = 0.005; // constant O(1)
+
+    var cvs = document.getElementById('kp10_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.fillStyle = '#2563eb'; ctx.fillRect(180, 40, Math.min(fft_time_ms * 10, 360), 32);
+    ctx.fillStyle = '#10b981'; ctx.fillRect(180, 100, Math.max(step_time_ms * 10, 8), 32);
+
+    ctx.fillStyle = '#1e293b'; ctx.font = '12px sans-serif';
+    ctx.fillText('訓練階段 (FFT 全序列)', 20, 60);
+    ctx.fillText('推理階段 (單 Step 遞迴)', 20, 120);
+
+    ctx.fillText(fft_time_ms.toFixed(2) + ' ms', 190 + Math.min(fft_time_ms * 10, 360), 60);
+    ctx.fillText(step_time_ms.toFixed(3) + ' ms (O(1))', 200, 120);
+
+    var readout = '序列 L=' + L.toLocaleString() + ': 訓練階段 FFT 卷積耗時 ' + fft_time_ms.toFixed(2) + ' ms | 推理單步極速 ' + step_time_ms.toFixed(3) + ' ms (零 KV Cache 負擔)';
+    document.getElementById('kp10_readout').textContent = readout;
+  }
+
+  var lEl = document.getElementById('kp10_l');
+  if (lEl) {
+    lEl.addEventListener('input', updateKP10);
+    setTimeout(updateKP10, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-10 == -->
+<button class="guide-btn" data-guide="kp-10" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：S4 的平行運算效率與 FFT 卷積加速</button>
+<!-- END Phase D Guide Button -->
+
+      <!-- == Phase D Guide Button kp-REPLACE == -->
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：S4 模型在訓練階段與推理階段分別採用何種運算模式以達到極致效率？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 訓練採用全自注意力矩陣，推理採用 Monte Carlo 採樣</button>
+<button class="quiz-option-btn" data-correct="true">2. 訓練採用 1D FFT 卷積平行運算 O(L log L)；推理切換回單步遞迴運算 O(1)</button>
+<button class="quiz-option-btn" data-correct="false">3. 訓練與推理皆採用二次方矩陣乘法 O(L^2)</button>
+<button class="quiz-option-btn" data-correct="false">4. 訓練採用梯度下降，推理採用反向傳播</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>S4 巧妙利用了對偶性：訓練時利用 FFT 卷積實現 O(L log L) 高度 GPU 平行化；推理時切換回單步遞迴，達到 O(1) 時間與 O(1) 記憶體開銷。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-11 -->
+    <section id="kp11" class="card" data-kp="11">
+      <div class="card-header">
+        <span class="badge">§5</span>
+        <h2 class="card-title">KP-11：Mamba 自適應選擇性狀態空間模型 (Selective SSM)</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 傳統 SSM (S4) 的盲點：時不變性 (LTI) 限制</h4>
+<p>S4 雖然高效，但其參數矩陣 $\overline{\boldsymbol{A}}, \overline{\boldsymbol{B}}, \overline{\boldsymbol{C}}$ 是固定不變的（Linear Time-Invariant, LTI）。這意味著不論輸入是小說、程式碼還是隨機雜訊，卷積核 $\boldsymbol{K}$ 都一模一樣，<b>無法根據當前輸入內容選擇性地過濾或記憶資訊 (Content-Aware Selection)</b>。</p>
+
+<h4>2. Mamba 選擇性機制 (Selective Mechanism)</h4>
+<p>2023 年提出的 <b>Mamba</b> 作出了重大突破：<b>將採樣步長 $\Delta_t$、控制矩陣 $\boldsymbol{B}_t$ 與輸出矩陣 $\boldsymbol{C}_t$ 轉化為當前輸入 $\boldsymbol{x}_t$ 的動態函數！</b></p>
+$$\begin{align
+\boldsymbol{B}_t &= \text{Linear}_B(\boldsymbol{x}_t) \\
+\boldsymbol{C}_t &= \text{Linear}_C(\boldsymbol{x}_t) \\
+\Delta_t &= \text{Softplus}\left(\text{Parameter} + \text{Linear}_\Delta(\boldsymbol{x}_t)\right) \\
+\overline{\boldsymbol{A}}_t &= \exp(\Delta_t \boldsymbol{A}) \\
+\overline{\boldsymbol{B}}_t &= (\Delta_t \boldsymbol{A})^{-1} (\exp(\Delta_t \boldsymbol{A}) - \boldsymbol{I}) \cdot \Delta_t \boldsymbol{B}_t
+\end{align}$$
+
+<h4>3. 離散選擇性更新與門控融合</h4>
+<p>Mamba 時間步更新結合了自適應門控 (Hardware-Aware Selective Scan Algorithm)：</p>
+$$\boldsymbol{h}_t = \mathbf{f}_{\text{gate}}(\boldsymbol{x}_t) \odot \left( \overline{\boldsymbol{A}}_t \boldsymbol{h}_{t-1} + \overline{\boldsymbol{B}}_t \boldsymbol{x}_t \right), \quad \boldsymbol{y}_t = \boldsymbol{C}_t \boldsymbol{h}_t$$
+<p>這使得 Mamba 能夠在輸入極長文本時，動態決定「忘記雜訊」或「寫入關鍵資訊」，在語言建模上全面媲美 Transformer！</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-11 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp11.png" alt="Mamba 自適應選擇性狀態空間模型 (Selective SSM) 示意圖解">
+  <figcaption>圖 kp-11：Mamba 自適應選擇性狀態空間模型 (Selective SSM) 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-11" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: Architecture diagram of Mamba Selective State Space Model featuring input-dependent matrices $B_t(x_t), C_t(x_t), \Delta_t(x_t)$ and Gating mechanism $f_{gate}(x_t)$.
+WHY: Explain how Mamba breaks the LTI constraint to dynamically select and filter context information.
+MUST show: (1) Input sequence $x_t$, (2) Dynamic parameter generation paths, (3) Hadamard product gate.
+AVOID: Omitting input dependence arrows.
+STYLE: Modern neural network block diagram, vibrant color scheme.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-11 == -->
+
+<div class="demo" data-demo-id="kp-11">
+  <div class="demo-title">🎮 互動展示 kp-11：Mamba 選擇性機制 (Selective Mechanism) 動態過濾模擬</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>展示 Mamba 根據輸入內容 $\boldsymbol{x}_t$ 動態生成採樣步長 $\Delta_t$ 與矩陣 $\overline{\boldsymbol{B}}_t, \overline{\boldsymbol{C}}_t$，實現選擇性記憶/忘記。</p>
+    <p><b>怎麼操作：</b>輸入雜訊 Token vs 重要 Token。</p>
+    <p><b>觀察什麼：</b>遇到重要 Token 時，$\Delta_t$ 放大，寫入隱藏狀態 $\boldsymbol{h}_t$；遇到無效雜訊 Token 時，$\Delta_t \to 0$，狀態保持原樣避開干擾。</p>
+    <p><b>理論基準：</b>$\boldsymbol{h}_t = \mathbf{f}_{\text{gate}}(\boldsymbol{x}_t) \odot \left(\overline{\boldsymbol{A}}_t \boldsymbol{h}_{t-1} + \overline{\boldsymbol{B}}_t \boldsymbol{x}_t\right)$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>當前 Token 類型:</label>
+      <select id="kp11_token" style="padding:6px; border-radius:6px;">
+        <option value="important" selected>關鍵實體 Token (如 "蘋果公司")</option>
+        <option value="noise">無關填充語 Token (如 "呃...嗯...")</option>
+      </select>
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp11_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp11_readout">選擇 Token 測試...</div>
+</div>
+<script>
+(function(){
+  function updateKP11() {
+    var tok = document.getElementById('kp11_token').value;
+
+    var delta = tok === 'important' ? 0.85 : 0.02;
+    var gate = tok === 'important' ? 0.95 : 0.10;
+    var b_val = tok === 'important' ? 1.2 : 0.05;
+
+    var cvs = document.getElementById('kp11_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    var bars = [
+      { name: "動態步長 Delta_t", val: delta, color: "#3b82f6" },
+      { name: "門控放行率 f_gate", val: gate, color: "#10b981" },
+      { name: "控制寫入 B_t", val: b_val / 1.5, color: "#8b5cf6" }
+    ];
+
+    for (var i = 0; i < bars.length; i++) {
+      var b = bars[i];
+      var y = 25 + i * 50;
+      var w = b.val * 350;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(180, y, w, 28);
+      ctx.fillStyle = '#1e293b'; ctx.font = '12px sans-serif';
+      ctx.fillText(b.name, 20, y + 18);
+      ctx.fillText((b.val * 100).toFixed(1) + '%', 190 + w, y + 18);
+    }
+
+    var desc = tok === 'important' ? '✅ 檢測到關鍵資訊：Delta_t 放大，全力寫入狀態 h_t！' : '🛑 檢測到雜訊：Delta_t 趨近 0，狀態保持忽略雜訊。';
+    document.getElementById('kp11_readout').textContent = desc;
+  }
+
+  var tEl = document.getElementById('kp11_token');
+  if (tEl) {
+    tEl.addEventListener('change', updateKP11);
+    setTimeout(updateKP11, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-11 == -->
+<button class="guide-btn" data-guide="kp-11" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：Mamba 自適應選擇性狀態空間模型 (Selective SSM)</button>
+<!-- END Phase D Guide Button -->
+
+      <!-- == Phase D Guide Button kp-REPLACE == -->
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：Mamba 模型相比於傳統 S4 模型，最關鍵的創新技術為何？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 引入了 Transformer 的 Multi-Head Attention</button>
+<button class="quiz-option-btn" data-correct="true">2. 將參數 (Delta, B, C) 轉化為當前輸入 x_t 的動態函數 (Selective Mechanism)，實現內容自適應篩選</button>
+<button class="quiz-option-btn" data-correct="false">3. 將所有隱藏狀態維度壓縮為 1</button>
+<button class="quiz-option-btn" data-correct="false">4. 完全放棄了離散化過程</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>Mamba 突破了傳統 S4 的時不變性 (LTI) 限制，透過選擇性機制 (Selective Mechanism) 讓 Delta_t, B_t, C_t 隨輸入 x_t 動態調整，賦予模型內容感知的篩選與記憶能力。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-12 -->
+    <section id="kp12" class="card" data-kp="12">
+      <div class="card-header">
+        <span class="badge">§6</span>
+        <h2 class="card-title">KP-12：測試時訓練 (TTT) 圖層：將隱藏狀態模型化為線上學習者</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. TTT (Test Time Training) 層的核心哲學</h4>
+<p>2024 年提出的 <b>TTT (Test Time Training) Layers</b> 提出了全新的視角：<b>將隱藏狀態 $\boldsymbol{h}_t$ 本身看待為一個小的微型神經網絡模型 $\theta_t$！</b></p>
+<p>在傳統 SSM 中，隱藏狀態更新是線性線性矩陣相乘 $\boldsymbol{h}_t = \overline{\boldsymbol{A}}\boldsymbol{h}_{t-1} + \overline{\boldsymbol{B}}\boldsymbol{x}_t$；而在 TTT 中，隱藏狀態更新被替換為<b>在測試/推理時間進行線上自監督梯度下降更新！</b></p>
+
+<h4>2. TTT 層的三大核心步驟與算式</h4>
+<ol>
+  <li><b>隱藏模型預測 (Hidden Model Prediction)</b>：
+$$\hat{\boldsymbol{z}}_t = f_t(\boldsymbol{x}_t; \boldsymbol{\theta}_t)$$
+  其中 $f_t$ 為以 $\boldsymbol{\theta}_t$ 為權重的微型神經網絡（如 FNN）。</li>
+  <li><b>自監督重建損失 (Self-Supervised Loss)</b>：
+$$\ell_t = \mathcal{L}\left( \hat{\boldsymbol{z}}_t, \tilde{\boldsymbol{x}}_t \right)$$
+  其中 $\tilde{\boldsymbol{x}}_t$ 為自監督受損或預測目標。</li>
+  <li><b>線上梯度更新 (Online Test-Time Gradient Update)</b>：
+$$\boldsymbol{\theta}_{t+1} = \boldsymbol{\theta}_t - \eta \nabla_{\boldsymbol{\theta}_t} \ell_t$$
+</ol>
+<p>這表明：SSM 只是 TTT 的特例（當 $f_t$ 為線性、學習率 $\eta=0$ 時）。TTT 代表了自適應隱藏狀態（如 DeltaNet, Titans）的未來發展趨勢。</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-12 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp12.png" alt="測試時訓練 (TTT) 圖層：將隱藏狀態模型化為線上學習者 示意圖解">
+  <figcaption>圖 kp-12：測試時訓練 (TTT) 圖層：將隱藏狀態模型化為線上學習者 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-12" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: Online learning loop diagram of Test Time Training (TTT) Layer where hidden state is represented as a mini neural network model $\theta_t$.
+WHY: Show how TTT generalizes SSMs by performing online gradient updates $\theta_{t+1} = \theta_t - \eta \nabla \ell_t$ during inference.
+MUST show: (1) Prediction step $\hat{z}_t = f_t(x_t; \theta_t)$, (2) Self-supervised loss $\ell_t$, (3) Gradient update step.
+AVOID: Omitting test-time learning rate $\eta$.
+STYLE: Closed-loop control schematic, clear step numbering.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-12 == -->
+
+<div class="demo" data-demo-id="kp-12">
+  <div class="demo-title">🎮 互動展示 kp-12：TTT 層測試時線上梯度更新 $\boldsymbol{\theta}_{t+1} = \boldsymbol{\theta}_t - \eta \nabla \ell_t$</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>模擬在推理/測試階段處理序列時，隱藏模型權重 $\boldsymbol{\theta}_t$ 透過自監督損失進行線上梯度下降更新。</p>
+    <p><b>怎麼操作：</b>設定測試時學習率 $\eta$，點擊「處理下一個時間步 Token」。</p>
+    <p><b>觀察什麼：</b>每處理一個 Token，隱藏模型 $\boldsymbol{\theta}_t$ 就線上學習一次，重建損失 $\ell_t$ 隨時間步下降。</p>
+    <p><b>理論基準：</b>$\ell_t = \frac{1}{2} \|f_t(\boldsymbol{x}_t; \boldsymbol{\theta}_t) - \tilde{\boldsymbol{x}}_t\|_2^2$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>測試學習率 eta (0.01 ~ 0.5): <span id="kp12_eta_val">0.10</span></label>
+      <input type="range" id="kp12_eta" min="0.01" max="0.5" step="0.01" value="0.10">
+    </div>
+    <button class="quiz-option-btn" id="kp12_step_btn" style="background:#2563eb; color:white; font-weight:bold;">▶ 處理下一個 Token (Step Gradient)</button>
+    <button class="quiz-option-btn" id="kp12_reset_btn">↺ 重置 TTT 狀態</button>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp12_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp12_readout">準備處理 Token...</div>
+</div>
+<script>
+(function(){
+  var theta = 1.8;
+  var targetTheta = 0.5;
+  var lossHist = [];
+  var tokenCount = 0;
+
+  function stepTTT() {
+    var eta = parseFloat(document.getElementById('kp12_eta').value);
+    document.getElementById('kp12_eta_val').textContent = eta.toFixed(2);
+
+    var loss = 0.5 * Math.pow(theta - targetTheta, 2);
+    var grad = theta - targetTheta;
+
+    lossHist.push(loss);
+    theta = theta - eta * grad;
+    tokenCount++;
+
+    drawChart();
+  }
+
+  function resetTTT() {
+    theta = 1.8;
+    lossHist = [];
+    tokenCount = 0;
+    drawChart();
+  }
+
+  function drawChart() {
+    var cvs = document.getElementById('kp12_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(40, 150); ctx.lineTo(560, 150); ctx.stroke();
+
+    if (lossHist.length > 0) {
+      ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 2.5; ctx.beginPath();
+      for (var i = 0; i < lossHist.length; i++) {
+        var x = 40 + i * (500 / Math.max(10, lossHist.length));
+        var y = 150 - lossHist[i] * 200;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    var currLoss = lossHist.length > 0 ? lossHist[lossHist.length - 1] : 0.5 * Math.pow(1.8 - 0.5, 2);
+    var readout = '已處理 Token 數: ' + tokenCount + ' | 隱藏模型權重 theta = ' + theta.toFixed(4) + ' | 線上自監督 Loss = ' + currLoss.toFixed(4);
+    document.getElementById('kp12_readout').textContent = readout;
+  }
+
+  var btn = document.getElementById('kp12_step_btn');
+  if (btn) {
+    btn.addEventListener('click', stepTTT);
+    document.getElementById('kp12_reset_btn').addEventListener('click', resetTTT);
+    document.getElementById('kp12_eta').addEventListener('input', function(){
+      document.getElementById('kp12_eta_val').textContent = parseFloat(this.value).toFixed(2);
+    });
+    setTimeout(drawChart, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-12 == -->
+<button class="guide-btn" data-guide="kp-12" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：測試時訓練 (TTT) 圖層：將隱藏狀態模型化為線上學習者</button>
+<!-- END Phase D Guide Button -->
+
+      <!-- == Phase D Guide Button kp-REPLACE == -->
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：在 TTT (Test Time Training) 層中，隱藏狀態 h_t 被重新詮釋為什麼？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 被詮釋為靜態的唯讀記憶體 (ROM)</button>
+<button class="quiz-option-btn" data-correct="true">2. 被詮釋為一個會在測試/推理時間透過自監督梯度下降 (Gradient Descent) 線上自我更新的微型模型參數 theta_t</button>
+<button class="quiz-option-btn" data-correct="false">3. 被詮釋為一個高斯隨機過程</button>
+<button class="quiz-option-btn" data-correct="false">4. 被詮釋為 Transformer 的 Positional Encoding</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>TTT 將隱藏狀態創新地視為微型模型權重 theta_t，在處理序列的每個時間步進行線上梯度更新 theta_{t+1} = theta_t - eta * grad(L_t)，使隱藏狀態具備持續自適應學習能力。
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD KP-13 -->
+    <section id="kp13" class="card" data-kp="13">
+      <div class="card-header">
+        <span class="badge">§7</span>
+        <h2 class="card-title">KP-13：注意力機制與狀態空間模型 (SSM) 的對偶矩陣等價性證明</h2>
+      </div>
+      <div class="card-body">
+        <h4>1. 線性 Transformer (Linear Attention) 回顧</h4>
+<p>注意力機制與 SSM 是對立的嗎？答案是否定的！2024 年研究證明兩者具有深厚的<b>數學對偶性 (Mathematical Duality)</b>。</p>
+<p>在線性 Transformer 中，將 Softmax 相似度替換為核函數 $\phi(\boldsymbol{q}_t)^\top \phi(\boldsymbol{k}_i)$，輸出為：</p>
+$$\boldsymbol{y}_t = \frac{\sum_{i=1}^t \phi(\boldsymbol{q}_t)^\top \phi(\boldsymbol{k}_i) \boldsymbol{v}_i^\top}{\sum_{i=1}^t \phi(\boldsymbol{q}_t)^\top \phi(\boldsymbol{k}_i)} = \frac{\phi(\boldsymbol{q}_t)^\top \sum_{i=1}^t \phi(\boldsymbol{k}_i) \boldsymbol{v}_i^\top}{\phi(\boldsymbol{q}_t)^\top \sum_{i=1}^t \phi(\boldsymbol{k}_i)}$$
+
+<h4>2. 無歸一化線性核下導出 SSM 形式</h4>
+<p>定義矩陣狀態累加量 $\boldsymbol{H}_t := \sum_{i=1}^t \phi(\boldsymbol{k}_i) \boldsymbol{v}_i^\top$。改寫為遞迴加法模型：</p>
+$$\boldsymbol{H}_t = \boldsymbol{H}_{t-1} + \phi(\boldsymbol{k}_t) \boldsymbol{v}_t^\top$$
+<p>取線性核 $\phi(\boldsymbol{q}) = \boldsymbol{q}, \phi(\boldsymbol{k}) = \boldsymbol{k}$ 並省去分母歸一化，輸出可寫為：</p>
+$$\begin{align}
+\boldsymbol{H}_t &= \boldsymbol{H}_{t-1} + \boldsymbol{k}_t \boldsymbol{v}_t^\top \\
+\boldsymbol{y}_t &= \boldsymbol{q}_t^\top \boldsymbol{H}_t
+\end{align}$$
+<p><b>這與 SSM 的離散狀態更新 $\boldsymbol{h}_t = \overline{\boldsymbol{A}}\boldsymbol{h}_{t-1} + \overline{\boldsymbol{B}}\boldsymbol{x}_t$ 及輸出 $\boldsymbol{y}_t = \overline{\boldsymbol{C}}\boldsymbol{h}_t$ 結構完全同構！</b> 這證明了注意力機制與 SSM 是同一數學本質的兩面表示。</p>
+      </div>
+
+      <!-- == Phase B 圖解 kp-13 == -->
+<div class="diagram-figure">
+  <img src="assets/diagram-kp13.png" alt="注意力機制與狀態空間模型 (SSM) 的對偶矩陣等價性證明 示意圖解">
+  <figcaption>圖 kp-13：注意力機制與狀態空間模型 (SSM) 的對偶矩陣等價性證明 示意圖解（含公式標註與結構對比）</figcaption>
+</div>
+
+<div class="ai-illustration" data-diagram-id="kp-13" data-status="pending">
+  <details>
+    <summary>🤖 AI 生圖可用：重繪此示意圖的提示詞（結構化）</summary>
+    <pre class="ai-illustration-prompt">WHAT: Duality diagram proving the mathematical equivalence between Linear Attention ($H_t = H_{t-1} + k_t v_t^\top, y_t = q_t^\top H_t$) and Discrete SSMs.
+WHY: Reveal that attention and SSMs are two dual representations of the same fundamental sequence modeling principle.
+MUST show: (1) Linear Attention equations, (2) SSM state update equations, (3) Dual isomorphism bridge arrow.
+AVOID: Suggesting attention and SSMs are mutually exclusive paradigms.
+STYLE: High-level mathematical duality infographic, elegant side-by-side cards.</pre>
+  </details>
+</div>
+<!-- END Phase B 圖解 -->
+
+      <!-- == Phase C Demo kp-13 == -->
+
+<div class="demo" data-demo-id="kp-13">
+  <div class="demo-title">🎮 互動展示 kp-13：線性 Transformer $H_t = H_{t-1} + k_t v_t^\top$ 與 SSM 狀態同構驗證</div>
+  <div class="demo-instruction">
+    <h5>【操作說明與正確理論基準】</h5>
+    <p><b>這在做什麼：</b>驗證無 Softmax 歸一化的線性注意力與 SSM 在狀態矩陣更新上完全同構。</p>
+    <p><b>怎麼操作：</b>輸入 Key 向量 $k_t$ 與 Value 向量 $v_t$。</p>
+    <p><b>觀察什麼：</b>線性注意力的矩陣累加量 $H_t$ 與 SSM 狀態更新 $\boldsymbol{h}_t = \overline{\boldsymbol{A}}\boldsymbol{h}_{t-1} + \overline{\boldsymbol{B}}\boldsymbol{x}_t$ 在 $\overline{\boldsymbol{A}}=\boldsymbol{I}$ 時完全相同。</p>
+    <p><b>理論基準：</b>$\boldsymbol{H}_t = \boldsymbol{H}_{t-1} + \boldsymbol{k}_t \boldsymbol{v}_t^\top, \quad \boldsymbol{y}_t = \boldsymbol{q}_t^\top \boldsymbol{H}_t$。</p>
+  </div>
+  <div class="demo-controls">
+    <div class="demo-control-group">
+      <label>Key 向量 k_t 強度: <span id="kp13_k_val">1.0</span></label>
+      <input type="range" id="kp13_k" min="0.1" max="2.0" step="0.1" value="1.0">
+    </div>
+    <div class="demo-control-group">
+      <label>Value 向量 v_t 強度: <span id="kp13_v_val">1.5</span></label>
+      <input type="range" id="kp13_v" min="0.1" max="2.0" step="0.1" value="1.5">
+    </div>
+  </div>
+  <div class="demo-canvas-wrap">
+    <canvas id="kp13_canvas" width="600" height="180"></canvas>
+  </div>
+  <div class="demo-readout" id="kp13_readout">驗證對偶同構中...</div>
+</div>
+<script>
+(function(){
+  function updateKP13() {
+    var kVal = parseFloat(document.getElementById('kp13_k').value);
+    var vVal = parseFloat(document.getElementById('kp13_v').value);
+    document.getElementById('kp13_k_val').textContent = kVal.toFixed(1);
+    document.getElementById('kp13_v_val').textContent = vVal.toFixed(1);
+
+    var H_prev = 0.5;
+    var H_t = H_prev + kVal * vVal; // Outer product scalar equivalent
+    var q_t = 0.8;
+    var y_t = q_t * H_t;
+
+    var cvs = document.getElementById('kp13_canvas');
+    if (!cvs || !cvs.getContext) return;
+    var ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+
+    ctx.fillStyle = '#fef08a'; ctx.strokeStyle = '#ca8a04';
+    ctx.fillRect(80, 40, 200, 90); ctx.strokeRect(80, 40, 200, 90);
+    ctx.fillStyle = '#ca8a04'; ctx.font = '12px sans-serif';
+    ctx.fillText('線性注意力狀態 H_t', 100, 65);
+    ctx.font = '16px monospace';
+    ctx.fillText(H_t.toFixed(4), 100, 100);
+
+    ctx.fillStyle = '#dcfce7'; ctx.strokeStyle = '#166534';
+    ctx.fillRect(320, 40, 200, 90); ctx.strokeRect(320, 40, 200, 90);
+    ctx.fillStyle = '#166534'; ctx.font = '12px sans-serif';
+    ctx.fillText('SSM 狀態 h_t (A_bar=I)', 340, 65);
+    ctx.font = '16px monospace';
+    ctx.fillText(H_t.toFixed(4), 340, 100);
+
+    var readout = '對偶等價驗證: 線性注意力 H_t = ' + H_t.toFixed(4) + ' === SSM 狀態 h_t = ' + H_t.toFixed(4) + ' | 輸出 y_t = ' + y_t.toFixed(4);
+    document.getElementById('kp13_readout').textContent = readout;
+  }
+
+  var kEl = document.getElementById('kp13_k');
+  if (kEl) {
+    kEl.addEventListener('input', updateKP13);
+    document.getElementById('kp13_v').addEventListener('input', updateKP13);
+    setTimeout(updateKP13, 300);
+  }
+})();
+</script>
+
+<!-- END Phase C Demo -->
+<!-- == Phase D Guide Button kp-13 == -->
+<button class="guide-btn" data-guide="kp-13" aria-haspopup="dialog"><span class="guide-flag">祕笈</span>教授祕笈：注意力機制與狀態空間模型 (SSM) 的對偶矩陣等價性證明</button>
+<!-- END Phase D Guide Button -->
+
+      <!-- == Phase D Guide Button kp-REPLACE == -->
+      <!-- END Phase D Guide Button -->
+
+      <div class="quiz-sec">
+        <div class="quiz-title">❓ 自我檢測：當線性 Transformer 去除歸一化分母並使用線性核函數時，其遞迴算式 H_t = H_{t-1} + k_t * v_t^T 與 y_t = q_t^T * H_t 揭示了什麼結論？</div>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-correct="false">1. 證明了注意力機制無法處理序列數據</button>
+<button class="quiz-option-btn" data-correct="true">2. 揭示了線性注意力機制與狀態空間模型 (SSM) 在數學結構上具有對偶同構性 (Duality)</button>
+<button class="quiz-option-btn" data-correct="false">3. 證明了 Softmax 函數不可取代</button>
+<button class="quiz-option-btn" data-correct="false">4. 說明了反向傳播在 SSM 中失效</button>
+        </div>
+        <div class="quiz-exp">
+          <b>解析：</b>透過線性核替換 Softmax 後，線性注意力的狀態矩陣遞迴 H_t = H_{t-1} + k_t*v_t^T 精確對應於 SSM 的離散狀態更新方程，證明了兩者的數學對偶同構關係。
+        </div>
+      </div>
+    </section>
+
+</div>
+
+<script>
+// Progress Bar & Scroll Listener
+window.addEventListener('scroll', function() {
+  var winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+  var height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+  var scrolled = (winScroll / height) * 100;
+  document.getElementById('page-progress').style.width = scrolled + '%';
+});
+
+// Quiz Option Click Handler
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('quiz-option-btn')) {
+    var btn = e.target;
+    var quizSec = btn.closest('.quiz-sec');
+    var isCorrect = btn.getAttribute('data-correct') === 'true';
+    var allBtns = quizSec.querySelectorAll('.quiz-option-btn');
+    var exp = quizSec.querySelector('.quiz-exp');
+
+    allBtns.forEach(function(b) {
+      b.classList.remove('correct', 'wrong');
+    });
+
+    if (isCorrect) {
+      btn.classList.add('correct');
+    } else {
+      btn.classList.add('wrong');
+      allBtns.forEach(function(b) {
+        if (b.getAttribute('data-correct') === 'true') {
+          b.classList.add('correct');
+        }
+      });
+    }
+    exp.style.display = 'block';
+  }
+});
+</script>
+
+<!-- == Phase D Guide Hidden Divs == -->
+<div id="guide-content-kp-1" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：狀態空間模型 (SSM) 導論與序列建模演進</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「同學們好！歡迎來到序列建模最前沿的第 10 章。在 LLM 時代，大家熟知的 Transformer 雖然強大，但處理一本百萬字的書時，顯卡記憶體是不是常常直接爆掉？今天我們就來解鎖打破 Transformer 霸權的革命性工具——狀態空間模型 (SSM)！」</p>
+</blockquote>
+<h3>1. 單一主線類比：讀書筆記本 vs 全文快照</h3>
+<p>把序列建模想像成讀一本 1000 頁的歷史小說：</p>
+<ol>
+<li><strong>Transformer（全文快照）</strong>：每讀一個新單詞，都必須翻開前面 999 頁，把每個單詞兩兩比對一次！書越厚，翻書時間與眼神記憶體呈二次方（$O(n^2)$）暴增。</li>
+<li><strong>SSM（隨身筆記本）</strong>：讀書時只在口袋裡的「小筆記本（隱藏狀態 $h_t$）」上精簡記錄重點。讀到第 1000 頁時，只需要拿出小筆記本即可，翻書時間永遠是常數時間 $O(1)$！</li>
+</ol>
+<h3>2. 鷹架式拆解：SSM 的前世今生</h3>
+<p>SSM 並不是凭空出現的魔法，它的演進經歷了三個時代：</p>
+<ol>
+<li><strong>經典控制理論時代</strong>：描述連續物理系統（如火箭軌跡、車輛懸吊）的常微分方程 $h'(t) = Ah(t) + Bx(t)$。</li>
+<li><strong>S4 時代 (2021)</strong>：學者 Gu 等人透過 DPLR 矩陣與 FFT 卷積，首次將 SSM 轉化為一維因果卷積，實現了超長序列的平行訓練。</li>
+<li><strong>Mamba 時代 (2023-2024)</strong>：引入自適應選擇性機制（Selective Mechanism），讓筆記本能「動態篩選重點」，在語言任務上全面媲美 Transformer！</li>
+</ol>
+<h3>3. 數值演算示範：時間與空間複雜度大對決</h3>
+<p>假設序列長度 $n = 10,000$ 個 Token：</p>
+<ul>
+<li><strong>Transformer 注意力運算</strong>：
+  $$\text{FLOPs} \propto n^2 = 10,000^2 = 100,000,000 \quad (\text{一億次對與對比對})$$</li>
+<li><strong>SSM (S4) 卷積平行運算</strong>：
+  $$\text{FLOPs} \propto n \log_2 n \approx 10,000 \times 13.3 = 133,000 \quad (\text{省下近 750 倍計算量！})$$</li>
+</ul>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：既然 SSM 的筆記本這麼省記憶體，為什麼 2021 年剛提出時在 ChatGPT 這種語言任務上打不過 Transformer？
+<strong>答</strong>：因為早期的 S4 筆記本是「死板的（時不變 LTI）」，不論讀到小說精采處還是目錄，都用一模一樣的衰減率記錄。直到 Mamba 引入動態開關，才解決了這個問題！</p>
+<h3>5. 舉一反三出口</h3>
+<p>思考：在聲音與語音生成（Audio Generation）中，一秒鐘的高音質音訊包含 44,100 個採樣點。為什麼 SSM 比 Transformer 更適合處理音訊？</p>
+<ol>
+<li>因為 44.1kHz 的超高採樣率會讓 Transformer 的 $n^2$ 注意力矩陣直接炸裂。</li>
+<li>SSM 的 $O(n)$ 線性擴展性與連續時間特徵，使其成為音訊領域的無敵霸主。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 SSM 是一種全新設計的神經網絡激活函數。</li>
+<li>✅ <strong>正解</strong>：SSM 是一套基於控制理論線性動態系統的完整序列建模架構！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>知道了 SSM 的宏觀背景後，下一個 KP-2 將精確拆解 SSMs 相較於 Transformer 的六大核心優勢。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「Transformer 全對全開銷大，SSM 筆記本化繁為簡；線性擴展百萬步，連續動態開新篇。」</strong></p>
+</div>
+<div id="guide-content-kp-2" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：SSMs 的六大核心優勢分析</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「上一節我們介紹了 SSM 的傳奇誕生，今天教授就帶大家拿著放大鏡，盤點 SSM 在數學與工程層面碾壓傳統架構的六大『神仙技能』！」</p>
+</blockquote>
+<h3>1. 單一主線類比：瑞士刀的六大功能</h3>
+<p>把 SSM 想像成一把專門為長序列打造的「多功能瑞士刀」：</p>
+<ol>
+<li>它不只能像高鐵一樣快速奔馳（平行訓練），還能在停車時不佔空間（小記憶體推理），甚至能適應惡劣的天氣與不平整的路面（不規則採樣數據）！</li>
+</ol>
+<h3>2. 鷹架式拆解：六大優勢全景圖</h3>
+<p>我們將六大優勢逐一拆解：</p>
+<ol>
+<li><strong>高效長距離依賴 (Efficiency)</strong>：訓練複雜度降低至 $O(n \log n)$，Mamba 降至 $O(n)$。</li>
+<li><strong>長記憶衰減控制 (Long-Range Retention)</strong>：矩陣 $\boldsymbol{A}$ 的特徵值能精確控制歷史資訊的指數衰減半衰期。</li>
+<li><strong>極低推理記憶體 (Lower Memory Footprint)</strong>：不需要維護隨長度暴增的 KV Cache，只需維護固定尺寸的狀態向量 $\boldsymbol{h}_t \in \mathbb{R}^s$。</li>
+<li><strong>高度 GPU 平行化 (Parallelization)</strong>：訓練時轉化為一維因果卷積，完美契合 GPU 的 CUDA 核心。</li>
+<li><strong>不規則採樣強健性 (Robustness to Irregular Sampling)</strong>：連續時間方程 $h'(t) = Ah(t) + Bx(t)$ 允許隨意調整時間步長 $\Delta_t$。</li>
+<li><strong>系統數學可解釋性 (Interpretability)</strong>：狀態矩陣 $\boldsymbol{A}, \boldsymbol{B}, \boldsymbol{C}, \boldsymbol{D}$ 具備古典控制理論的頻響與穩定性幾何意義。</li>
+</ol>
+<h3>3. 數值演算示範：KV Cache 記憶體足跡對比</h3>
+<p>設序列長度 $n = 32,768$（32k context），模型維度 $d = 4096$，24 層：</p>
+<ul>
+<li><strong>Transformer KV Cache 記憶體開銷</strong>：
+  $$\text{Memory} = 2 \times \text{layers} \times n \times d \times 2 \text{ bytes} \approx 2 \times 24 \times 32768 \times 4096 \times 2 \approx 12.88 \text{ GB}$$
+  每增加一個用戶，顯存就要吃掉近 13GB！</li>
+<li><strong>SSM (Mamba) 隱藏狀態記憶體開銷</strong>：
+  $$\text{Memory} = \text{layers} \times s \times 2 \text{ bytes} \approx 24 \times 64 \times 2 \approx 3.07 \text{ KB}$$
+  記憶體開銷縮小了 <strong>數百萬倍</strong>！</li>
+</ul>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：為什麼 SSM 能處理「非均勻/不規則採樣」數據，而 Transformer 做不到？
+<strong>答</strong>：因為 Transformer 本質上假設 Token 是一格一格離散排列的；而 SSM 底部是連續時間微分方程，步長 $\Delta$ 可大可小，傳感器漏採數據時只需調整 $\Delta$ 即可！</p>
+<h3>5. 舉一反三出口</h3>
+<p>在醫療 ICU 病房的 ECG 心電圖監測中（數據常有缺漏與時間間隔不一），你會選擇 Transformer 還是 SSM？</p>
+<ol>
+<li>毫不猶豫選擇 SSM！</li>
+<li>SSM 的連續時間 $\Delta_t$ 機制能完美填補缺失時間點的動態演化。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 SSM 推理便宜是因為它扔掉了歷史資訊。</li>
+<li>✅ <strong>正解</strong>：SSM 沒有扔掉資訊，而是透過矩陣 $\boldsymbol{A}$ 將歷史資訊連續壓縮打包在隱藏狀態 $\boldsymbol{h}_t$ 中！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>了解了六大優勢後，下一節 KP-3 將深入對比 Transformer 與 RNN 的算術細節與瓶頸。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「高效平行低記憶，長距留存不規則；可解矩陣傳動態，六大優勢展神威。」</strong></p>
+</div>
+<div id="guide-content-kp-3" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：Transformer 與 RNN 的序列瓶頸對比</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「知己知彼，百戰百勝！要真正體會 SSM 的精妙，我們必須先搞懂 Transformer 和傳統 RNN 到底卡在哪裡。」</p>
+</blockquote>
+<h3>1. 單一主線類比：棋盤對弈與接力賽跑</h3>
+<ol>
+<li><strong>Transformer（棋盤全觀）</strong>：每個棋子同時跟棋盤上所有其他棋子連線。優點是視野極佳，缺點是棋子越多，連線數量呈平方暴增！</li>
+<li><strong>RNN（接力賽跑）</strong>：選手棒棒相傳。優點是手裡永遠只有一支棒子（固定記憶體），缺點是前面選手跌倒或跑太慢，後面只能乾等（無法平行訓練）。</li>
+</ol>
+<h3>2. 鷹架式拆解：兩大架構算術對比</h3>
+<p>我們對比兩者的核心公式與瓶頸：</p>
+<ol>
+<li><strong>Transformer 自注意力矩陣</strong>：
+$$\boldsymbol{Y} = \operatorname{softmax}\left(\frac{\boldsymbol{Q}\boldsymbol{K}^\top}{\sqrt{d_k}}\right)\boldsymbol{V}$$</li>
+<li><strong>訓練</strong>：矩陣乘法極易 GPU 平行。</li>
+<li><strong>推理瓶頸</strong>：生成第 $t$ 個 Token 時，需算 $\boldsymbol{q}_t^\top \boldsymbol{k}_i$（$i=1..t$），開銷隨 $t$ 呈 $\mathcal{O}(t)$ 遞增，總量 $\mathcal{O}(n^2)$。</li>
+<li><strong>傳統 RNN 單步遞迴</strong>：
+$$\boldsymbol{h}_t = \sigma(\boldsymbol{W}\boldsymbol{h}_{t-1} + \boldsymbol{U}\boldsymbol{x}_t), \quad \boldsymbol{y}_t = \boldsymbol{V}\boldsymbol{h}_t$$</li>
+<li><strong>推理</strong>：單步 $\mathcal{O}(1)$，只需傳遞 $\boldsymbol{h}_t$。</li>
+<li><strong>訓練瓶頸</strong>：$\boldsymbol{h}_t$ 嚴格依賴 $\boldsymbol{h}_{t-1}$，由於非線性激活 $\sigma$ 阻斷，<b>無法進行時間軸平行化</b>！</li>
+</ol>
+<h3>3. 數值演算示範：序列長度 $n=5000$ 時的運算對比</h3>
+<ul>
+<li><strong>Transformer</strong>：</li>
+<li>注意力點積運算次數 $\approx 5000^2 / 2 = 12,500,000$ 次。</li>
+<li><strong>RNN / SSM</strong>：</li>
+<li>狀態傳播次數 $= 5000$ 次。</li>
+<li>運算次數相差了整整 <strong>2500 倍</strong>！</li>
+</ul>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：如果我們把 RNN 的非線性激活函數 $\sigma$ 去掉，會發生什麼？
+<strong>答</strong>：去掉非線性後，RNN 就變成了「線性 RNN」！而線性 RNN 就可以透過數學變換改寫成卷積，從而實現平行訓練——這正是 SSM 的核心啟發！</p>
+<h3>5. 舉一反三出口</h3>
+<p>為什麼現代 SSM（如 Mamba）既能平行訓練，又能線性推理？</p>
+<ol>
+<li>因為 SSM 採用了線性連續系統的對偶性（Duality）！</li>
+<li>訓練時用卷積形式（平行），推理時用遞迴形式（線性）。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 RNN 的訓練很慢是因為矩陣乘法太大。</li>
+<li>✅ <strong>正解</strong>：RNN 訓練慢是因為時間軸上的 sequential dependency（前後依賴），導致 GPU 幾千個核心只能閒置看著 1 個核心在跑迴圈！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>明白了兩大架構的瓶頸後，下一個 KP-4 將正式介紹連續時間狀態空間模型 (Continuous SSM) 的數學方程式。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「注意力二次方卡推理，循環遞迴鎖平行；去非線性迎對偶，兼顧平行與線性。」</strong></p>
+</div>
+<div id="guide-content-kp-4" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：連續時間狀態空間模型 (Continuous SSM) 方程式</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「歡迎來到 SSM 的數學心臟！今天我們就打開現代控制理論的經典工具箱，一窺連續時間系統方程式的優雅與美麗。」</p>
+</blockquote>
+<h3>1. 單一主線類比：汽車行駛的物理動態</h3>
+<p>把 Continuous SSM 想像成一台行駛中的汽車：</p>
+<ol>
+<li><strong>輸入 $\boldsymbol{x}(t)$</strong>：是你腳踩油門或煞車的力道（外部驅動信號）。</li>
+<li><strong>隱藏狀態 $\boldsymbol{h}(t)$</strong>：是汽車當前的車速與引擎轉速（系統內部蓄積的狀態）。</li>
+<li><strong>輸出 $\boldsymbol{y}(t)$</strong>：是儀表板上顯示的時速數字與儀表指針（對外展現的觀測值）。</li>
+</ol>
+<h3>2. 鷹架式拆解：兩大連續時間方程式</h3>
+<p>連續 SSM 由一組常微分方程 (ODE) 所定義：</p>
+<ol>
+<li><strong>狀態方程式 (State Equation)</strong>：
+$$\boldsymbol{h}'(t) = \boldsymbol{A} \boldsymbol{h}(t) + \boldsymbol{B} \boldsymbol{x}(t)$$</li>
+<li>$\boldsymbol{h}'(t)$：隱藏狀態隨時間的變化率（變化速度）。</li>
+<li>$\boldsymbol{A} \in \mathbb{R}^{s \times s}$：狀態轉移矩陣，決定內部記憶的自我衰減與震盪頻率。</li>
+<li>$\boldsymbol{B} \in \mathbb{R}^{s \times d}$：控制矩陣，決定當前輸入 $\boldsymbol{x}(t)$ 如何影響隱藏狀態。</li>
+<li><strong>輸出方程式 (Output Equation)</strong>：
+$$\boldsymbol{y}(t) = \boldsymbol{C} \boldsymbol{h}(t) + \boldsymbol{D} \boldsymbol{x}(t)$$</li>
+<li>$\boldsymbol{C} \in \mathbb{R}^{p \times s}$：輸出矩陣，將隱藏狀態提取映射為觀測輸出。</li>
+<li>$\boldsymbol{D} \in \mathbb{R}^{p \times d}$：直通矩陣（Feedthrough），代表直接跳躍連線（Skip Connection）。</li>
+</ol>
+<h3>3. 數值演算示範：手算純量 ODE 解析解</h3>
+<p>假設純量情況 $s=1, d=1, p=1$：
+設 $A = -2.0, B = 1.0, C = 1.0, D = 0$。初始狀態 $h(0) = 0$。</p>
+<p>給定階躍輸入 $x(t) = 1.0$ ($t \ge 0$)：
+$$\begin{align*}
+h'(t) &= -2 h(t) + 1.0 \\
+\Rightarrow h(t) &= \frac{1}{2} \left(1 - e^{-2t}\right)
+\end{align*}$$</p>
+<ul>
+<li>當 $t = 0$ 時，$h(0) = 0$。</li>
+<li>當 $t = 0.5$ 時，$h(0.5) = 0.5 (1 - e^{-1}) \approx 0.316$。</li>
+<li>當 $t \to \infty$ 時，$h(t) \to 0.5$（指數收斂至穩態值！）。</li>
+</ul>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：矩陣 $\boldsymbol{A}$ 的特徵值（Eigenvalues）如果落在複數平面的右半半面（實部 $> 0$），會發生什麼？
+<strong>答</strong>：系統會<strong>失控爆炸</strong>（$e^{at} \to \infty$）！因此在 S4 與 Mamba 中，矩陣 $\boldsymbol{A}$ 的特徵值實部必須嚴格限制為負數（如 HiPPO 矩陣初始化）。</p>
+<h3>5. 舉一反三出口</h3>
+<p>如果在輸出方程式中將直通矩陣 $\boldsymbol{D}$ 設為單位矩陣 $\boldsymbol{I}$，這在神經網絡中代表什麼？</p>
+<ol>
+<li>代表引入了殘差連接（Residual / Skip Connection）！</li>
+<li>讓輸入 $\boldsymbol{x}(t)$ 能不經過隱藏狀態直接疊加到輸出 $\boldsymbol{y}(t)$。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為連續 SSM 可以直接在 PyTorch 裡用迴圈跑。</li>
+<li>✅ <strong>正解</strong>：電腦是離散數位設備，無法直接算連續微分方程，必須經過「離散化（Discretization）」！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>擁有了連續 ODE 方程式後，下一個 KP-5 將展示如何將其離散化並開啟卷積視角。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「狀態微分 A 加 B，輸出映射 C 加 D；實部為負記憶穩，連續系統理通明。」</strong></p>
+</div>
+<div id="guide-content-kp-5" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：離散時間 SSM 與卷積視角 (Convolutive View)</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「歡迎來到 SSM 最神奇的『變形金剛』時刻！今天教授就帶大家看看，離散化後的 SSM 是如何在一秒內從『遞迴狀態』變身為『平行卷積』的！」</p>
+</blockquote>
+<h3>1. 單一主線類比：連環推骨牌 vs 投石機巨浪</h3>
+<ol>
+<li><strong>遞迴視角 (Recurrent View)</strong>：像推連環骨牌，第一張倒下推動第二張，第二張推動第三張。適合單步即時推理。</li>
+<li><strong>卷積視角 (Convolutive View)</strong>：像投石機投出的巨浪，把所有過往骨牌的影響力打包成一個「巨型波浪（卷積核 $K$）」，一口氣覆蓋整條時間軸！適合 GPU 平行訓練。</li>
+</ol>
+<h3>2. 鷹架式拆解：離散化與遞迴展開證明</h3>
+<ol>
+<li><strong>離散時間 SSM 方程式</strong>：
+$$\begin{align*}
+\boldsymbol{h}_t &= \overline{\boldsymbol{A}} \boldsymbol{h}_{t-1} + \overline{\boldsymbol{B}} \boldsymbol{x}_t \\
+\boldsymbol{y}_t &= \overline{\boldsymbol{C}} \boldsymbol{h}_t
+\end{align*}$$</li>
+<li><strong>時間步展開 ($h_0 = 0$)</strong>：
+$$\begin{align*}
+\boldsymbol{h}_1 &= \overline{\boldsymbol{B}} \boldsymbol{x}_1 \\
+\boldsymbol{h}_2 &= \overline{\boldsymbol{A}}\overline{\boldsymbol{B}}\boldsymbol{x}_1 + \overline{\boldsymbol{B}}\boldsymbol{x}_2 \\
+\boldsymbol{h}_3 &= \overline{\boldsymbol{A}}^2\overline{\boldsymbol{B}}\boldsymbol{x}_1 + \overline{\boldsymbol{A}}\overline{\boldsymbol{B}}\boldsymbol{x}_2 + \overline{\boldsymbol{B}}\boldsymbol{x}_3 \\
+\boldsymbol{y}_t &= \overline{\boldsymbol{C}} \sum_{i=1}^t \overline{\boldsymbol{A}}^{t-i} \overline{\boldsymbol{B}} \boldsymbol{x}_i = \sum_{i=1}^t \left( \overline{\boldsymbol{C}} \overline{\boldsymbol{A}}^{t-i} \overline{\boldsymbol{B}} \right) \boldsymbol{x}_i
+\end{align*}$$</li>
+<li><strong>因果卷積定義</strong>：
+$$\boldsymbol{y}_t = (\boldsymbol{K} * \boldsymbol{x})_t \quad \text{其中 } \boldsymbol{K}[i] = \overline{\boldsymbol{C}} \overline{\boldsymbol{A}}^i \overline{\boldsymbol{B}}$$</li>
+</ol>
+<h3>3. 數值演算示範：4 時間步數值完全對齊</h3>
+<p>設純量參數 $\overline{A} = 0.5, \overline{B} = 1.0, \overline{C} = 2.0$。輸入序列 $x = [1, 2, 0, 0]$。</p>
+<ul>
+<li><strong>方法 1：單步遞迴計算</strong>：</li>
+<li>$h_1 = 0.5(0) + 1(1) = 1 \Rightarrow y_1 = 2(1) = 2.0$</li>
+<li>$h_2 = 0.5(1) + 1(2) = 2.5 \Rightarrow y_2 = 2(2.5) = 5.0$</li>
+<li>$h_3 = 0.5(2.5) + 1(0) = 1.25 \Rightarrow y_3 = 2(1.25) = 2.5$</li>
+<li>$h_4 = 0.5(1.25) + 1(0) = 0.625 \Rightarrow y_4 = 2(0.625) = 1.25$</li>
+<li><strong>方法 2：卷積核計算 ($K[i] = 2.0 \times 0.5^i \times 1.0$)</strong>：</li>
+<li>$K = [2.0, 1.0, 0.5, 0.25]$</li>
+<li>$y_1 = K[0]x_1 = 2.0 \times 1 = 2.0$</li>
+<li>$y_2 = K[0]x_2 + K[1]x_1 = 2.0(2) + 1.0(1) = 5.0$</li>
+<li>$y_3 = K[0]x_3 + K[1]x_2 + K[2]x_1 = 0 + 1.0(2) + 0.5(1) = 2.5$</li>
+<li>$y_4 = 0 + 0 + 0.5(2) + 0.25(1) = 1.25$</li>
+</ul>
+<p>兩種方法數值<strong>完全精確吻合</strong>！</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：為什麼卷積核 $K[i] = \overline{\boldsymbol{C}} \overline{\boldsymbol{A}}^i \overline{\boldsymbol{B}}$ 中的 $i$ 稱為「滯後時間 (Lag)」？
+<strong>答</strong>：因為 $i$ 代表該輸入距離當前時間步隔了多久！離當前越遠 ($i$ 越大)，乘以的 $\overline{\boldsymbol{A}}^i$ 次方越高，衰減越嚴重。</p>
+<h3>5. 舉一反三出口</h3>
+<p>在訓練時，我們使用卷積形式還是遞迴形式？</p>
+<ol>
+<li>訓練時使用卷積形式！因為卷積可以透過 FFT 在 GPU 上一次性平行算出整個句子的所有 Token。</li>
+<li>推理時切換回遞迴形式，實現常數級 $O(1)$ 低延遲生成。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為卷積核 $K$ 需要像 CNN 一樣透過梯度下降去學習每個小權重。</li>
+<li>✅ <strong>正解</strong>：卷積核 $K$ 是由底層參數矩陣 $\overline{\boldsymbol{A}}, \overline{\boldsymbol{B}}, \overline{\boldsymbol{C}}$ 隱式算出來的，長度可以無限延伸！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>知道了離散 SSM 與卷積核定義後，下一個 KP-6 將詳細推導如何用雙線型變換（Bilinear Method）將連續矩陣轉為離散矩陣。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「遞迴單步算推理，卷積全句做平行；A 次方乘 CB 矩陣，對偶視角妙天成。」</strong></p>
+</div>
+<div id="guide-content-kp-6" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：雙線型法 (Bilinear Method / Tustin) 離散化推導</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「連續微分方程雖然優雅，但電腦只認得離散數據。今天我們就來推導數值分析中最受歡迎的離散化神器——雙線型變換（Bilinear Transformation）！」</p>
+</blockquote>
+<h3>1. 單一主線類比：用梯形面積取代光滑曲線</h3>
+<p>想像你要計算曲線下的面積：</p>
+<ol>
+<li>歐拉法 (Euler Method) 用矩形去硬貼，誤差很大。</li>
+<li><strong>雙線型法（Tustin 法則）</strong>：用「梯形」把相鄰兩點 $t_n$ 與 $t_{n+1}$ 連起來求面積！這樣既精確，又不會像高階積分那樣引發數值振盪。</li>
+</ol>
+<h3>2. 鷹架式拆解：代數移項精確推導</h3>
+<p>考慮 ODE $h'(t) = A h(t) + B x(t)$，在長度為 $\Delta$ 的時間區間內進行梯形積分：</p>
+<ol>
+<li><strong>梯形積分公式</strong>：
+$$h_{n+1} - h_n = \frac{\Delta}{2} \left( h'(t_{n+1}) + h'(t_n) \right) = \frac{\Delta}{2} \left( (A h_{n+1} + B x_{n+1}) + (A h_n + B x_n) \right)$$</li>
+<li><strong>假設輸入平滑 ($x_{n+1} \approx x_n$) 整理</strong>：
+$$h_{n+1} - \frac{\Delta}{2} A h_{n+1} = h_n + \frac{\Delta}{2} A h_n + \Delta B x_{n+1}$$</li>
+<li><strong>提出同類項與矩陣求逆</strong>：
+$$\left(I - \frac{\Delta}{2}A\right) h_{n+1} = \left(I + \frac{\Delta}{2}A\right) h_n + \Delta B x_{n+1}$$
+$$h_{n+1} = \left(I - \frac{\Delta}{2}A\right)^{-1} \left(I + \frac{\Delta}{2}A\right) h_n + \left(I - \frac{\Delta}{2}A\right)^{-1} \Delta B x_{n+1}$$</li>
+<li><strong>定義離散矩陣</strong>：
+$$\begin{align*}
+\overline{\boldsymbol{A}} &= \left(\boldsymbol{I} - \frac{\Delta}{2}\boldsymbol{A}\right)^{-1} \left(\boldsymbol{I} + \frac{\Delta}{2}\boldsymbol{A}\right) \\
+\overline{\boldsymbol{B}} &= \left(\boldsymbol{I} - \frac{\Delta}{2}\boldsymbol{A}\right)^{-1} \Delta \boldsymbol{B}
+\end{align*}$$</li>
+</ol>
+<h3>3. 數值演算示範：手算離散矩陣</h3>
+<p>設純量 $A = -2.0, B = 1.0$，採樣步長 $\Delta = 0.1$：</p>
+<ol>
+<li><strong>計算中間求逆項</strong>：
+$$I - \frac{\Delta}{2} A = 1.0 - \frac{0.1}{2} (-2.0) = 1.0 + 0.1 = 1.1$$
+$$\left(1.1\right)^{-1} = \frac{1}{1.1} \approx 0.90909$$</li>
+<li><strong>計算 $\overline{A}$</strong>：
+$$I + \frac{\Delta}{2} A = 1.0 + 0.05(-2.0) = 1.0 - 0.1 = 0.9$$
+$$\overline{A} = \frac{0.9}{1.1} = \frac{9}{11} \approx 0.81818$$</li>
+<li><strong>計算 $\overline{B}$</strong>：
+$$\overline{B} = \frac{0.1 \times 1.0}{1.1} = \frac{0.1}{1.1} = \frac{1}{11} \approx 0.09091$$</li>
+</ol>
+<p>離散化後的轉移矩陣 $\overline{A} \approx 0.818 < 1$，系統嚴格保持穩定！</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：為什麼雙線型變換比傳統零階保持器 (Zero-Order Hold, ZOH) 或歐拉法 (Euler) 更受 SSM 歡迎？
+<strong>答</strong>：因為雙線型變換能將連續 S 平面的左半平面<strong>嚴格保角映射</strong>到離散 Z 平面的單位圓內部！這保證了連續穩定的系統離散化後絕對不會發散！</p>
+<h3>5. 舉一反三出口</h3>
+<p>如果採樣步長 $\Delta \to 0$，離散矩陣 $\overline{A}$ 會變成什麼？</p>
+<ol>
+<li>$\overline{A} \to (I - 0)^{-1}(I + 0) = I$（單位矩陣）。</li>
+<li>這符合極限常理：當採樣間隔無限短時，狀態幾乎不變！</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為矩陣求逆 $(I - \frac{\Delta}{2}A)^{-1}$ 每次前向傳播都要算一次。</li>
+<li>✅ <strong>正解</strong>：在時不變 SSM (如 S4) 中，這只在初始化時算一次並快取起來！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>學會了雙線型離散化後，下一個 KP-7 將進入 S4 模型的核心——結構化狀態空間一維卷積核。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「梯形積分求離散，一減分之二加 A；保角映射守穩定，離散矩陣精確化。」</strong></p>
+</div>
+<div id="guide-content-kp-7" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：結構化狀態空間 (S4) 卷積核與輸出表示</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「歡迎來到 S4 模型的成名之作！2021 年 S4 論文橫空出世，一舉打破了長距離推論基準 (LRA)。今天我們就揭開 S4 卷積核的神秘面紗！」</p>
+</blockquote>
+<h3>1. 單一主線類比：無窮長度的特製濾鏡</h3>
+<p>把 S4 卷積核想像成一個精心設計的「音樂濾鏡」：</p>
+<ol>
+<li>傳統 CNN 的濾鏡很短（例如長度為 3 或 5 的小矩陣），看不到 1000 個音符前的旋律。</li>
+<li>S4 透過數學公式 $\boldsymbol{K}[i] = \overline{\boldsymbol{C}}\overline{\boldsymbol{A}}^i\overline{\boldsymbol{B}}$ 一口氣生成長度為 10,000 的超長濾鏡，且這個濾鏡不會讓電腦記憶體爆炸！</li>
+</ol>
+<h3>2. 鷹架式拆解：S4 卷積核三大關鍵</h3>
+<ol>
+<li><strong>因果卷積表達式</strong>：
+$$\boldsymbol{y}_k = \sum_{i=0}^k \boldsymbol{K}[i] \boldsymbol{x}_{k-i} = (\boldsymbol{K} * \boldsymbol{x})_k$$</li>
+<li><strong>卷積核生成式</strong>：
+$$\boldsymbol{K}[i] = \overline{\boldsymbol{C}} \overline{\boldsymbol{A}}^i \overline{\boldsymbol{B}} \quad (i = 0, 1, \dots, L-1)$$</li>
+<li><strong>破局關鍵（結構化矩陣 $\overline{\boldsymbol{A}}$）</strong>：</li>
+<li>若 $\overline{\boldsymbol{A}}$ 是普通全矩陣，算 $\overline{\boldsymbol{A}}^1, \dots, \overline{\boldsymbol{A}}^L$ 需要 $\mathcal{O}(s^3 L)$ 複雜度（直接卡死）。</li>
+<li>S4 的核心突破就是將 $\overline{\boldsymbol{A}}$ 限制為<b>結構化矩陣（如 DPLR）</b>，使卷積核生成縮短至毫秒級！</li>
+</ol>
+<h3>3. 數值演算示範：手算 3 步卷積核序列</h3>
+<p>設純量 $\overline{A} = 0.6, \overline{B} = 0.5, \overline{C} = 2.0$：</p>
+<ul>
+<li>$i=0$: $K[0] = 2.0 \times (0.6)^0 \times 0.5 = 1.0$</li>
+<li>$i=1$: $K[1] = 2.0 \times (0.6)^1 \times 0.5 = 0.6$</li>
+<li>$i=2$: $K[2] = 2.0 \times (0.6)^2 \times 0.5 = 0.36$</li>
+<li>$i=3$: $K[3] = 2.0 \times (0.6)^3 \times 0.5 = 0.216$</li>
+</ul>
+<p>卷積核數值呈現指數衰減 $K[i] = 1.0 \times (0.6)^i$，遠距離歷史記憶平滑遞減！</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：S4 的卷積核長度 $L$ 可以比輸入序列長度還長嗎？
+<strong>答</strong>：不需要！卷積核長度只需要截斷到目前訓練序列的最大長度 $L$ 即可。</p>
+<h3>5. 舉一反三出口</h3>
+<p>為什麼說 S4 的卷積是「因果卷積 (Causal Convolution)」？</p>
+<ol>
+<li>因為求和上限只到當前時間步 $k$（$\sum_{i=0}^k \boldsymbol{K}[i] \boldsymbol{x}_{k-i}$）。</li>
+<li>未來的輸入 $\boldsymbol{x}_{k+1}, \dots$ 乘上的權重全部為 0，絕不發生「預知未來」的違規！</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 S4 在推理時也是拿這個長度為 $L$ 的卷積核去做卷積。</li>
+<li>✅ <strong>正解</strong>：推理時 S4 會切回遞迴模式，根本不用顯式生成這個大卷積核！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>擁有了 S4 卷積核定義後，下一個 KP-8 將給出完整嚴謹的代數推導證明。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「超長濾鏡 K 矩陣，C 乘 A 階再乘 B；結構約束破瓶頸，因果卷積展巨能。」</strong></p>
+</div>
+<div id="guide-content-kp-8" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：S4 卷積核推導與展開證明</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「學貴有疑，小疑則小進，大疑則大進！今天教授就帶大家拿起筆，一步一步推導 S4 遞迴與卷積完全等價的代數證明。」</p>
+</blockquote>
+<h3>1. 單一主線類比：倒裝句的數學變換</h3>
+<p>這場證明就像把英文的後置修飾子句改成中文前置形容詞：</p>
+<ol>
+<li>遞迴表示法是從過去向未來累加（$\sum \overline{\boldsymbol{A}}^{k-1-i} \dots$）。</li>
+<li>透過簡單的變數代換 $j = k-1-i$，成功把它翻轉成以當前為基準的滯後卷積（$\sum \boldsymbol{K}[j] \boldsymbol{x}_{k-1-j}$）！</li>
+</ol>
+<h3>2. 鷹架式拆解：五大證明步驟</h3>
+<p>我們一步步拆解課本 Section 4.2 的證明：</p>
+<ol>
+<li><strong>設定初始條件</strong>：設初始隱藏狀態 $\boldsymbol{h}_0 = \mathbf{0}$。</li>
+<li><strong>遞迴展開隱藏狀態</strong>：
+$$\begin{align*}
+\boldsymbol{h}_1 &= \overline{\boldsymbol{B}} \boldsymbol{x}_0 \\
+\boldsymbol{h}_2 &= \overline{\boldsymbol{A}} \overline{\boldsymbol{B}} \boldsymbol{x}_0 + \overline{\boldsymbol{B}} \boldsymbol{x}_1 \\
+\boldsymbol{h}_k &= \sum_{i=0}^{k-1} \overline{\boldsymbol{A}}^{k-1-i} \overline{\boldsymbol{B}} \boldsymbol{x}_i
+\end{align*}$$</li>
+<li><strong>代入輸出方程式</strong>：
+$$\boldsymbol{y}_k = \overline{\boldsymbol{C}} \boldsymbol{h}_k = \sum_{i=0}^{k-1} \overline{\boldsymbol{C}} \overline{\boldsymbol{A}}^{k-1-i} \overline{\boldsymbol{B}} \boldsymbol{x}_i$$</li>
+<li><strong>索引變換 (Re-indexing)</strong>：</li>
+<li>令 $j = k - 1 - i$。當 $i=0$ 時 $j = k-1$；當 $i=k-1$ 時 $j=0$。</li>
+<li>原式變為：
+$$\boldsymbol{y}_k = \sum_{j=0}^{k-1} \left( \overline{\boldsymbol{C}} \overline{\boldsymbol{A}}^j \overline{\boldsymbol{B}} \right) \boldsymbol{x}_{k-1-j}$$</li>
+<li><strong>定義卷積核與結論</strong>：</li>
+<li>定義 $\boldsymbol{K}[j] := \overline{\boldsymbol{C}} \overline{\boldsymbol{A}}^j \overline{\boldsymbol{B}}$，即得 $\boldsymbol{y}_k = (\boldsymbol{K} * \boldsymbol{x})_k$！得證。</li>
+</ol>
+<h3>3. 數值演算示範：手算 $k=3$ 時的證明過程</h3>
+<p>設 $k=3$：
+$$\boldsymbol{h}_3 = \overline{\boldsymbol{A}}^2 \overline{\boldsymbol{B}} \boldsymbol{x}_0 + \overline{\boldsymbol{A}} \overline{\boldsymbol{B}} \boldsymbol{x}_1 + \overline{\boldsymbol{B}} \boldsymbol{x}_2$$
+$$\boldsymbol{y}_3 = \overline{\boldsymbol{C}} \boldsymbol{h}_3 = \overline{\boldsymbol{C}} \overline{\boldsymbol{A}}^2 \overline{\boldsymbol{B}} \boldsymbol{x}_0 + \overline{\boldsymbol{C}} \overline{\boldsymbol{A}} \overline{\boldsymbol{B}} \boldsymbol{x}_1 + \overline{\boldsymbol{C}} \overline{\boldsymbol{B}} \boldsymbol{x}_2$$</p>
+<p>定義卷積核項：</p>
+<ul>
+<li>$K[0] = \overline{\boldsymbol{C}}\overline{\boldsymbol{B}}$</li>
+<li>$K[1] = \overline{\boldsymbol{C}}\overline{\boldsymbol{A}}\overline{\boldsymbol{B}}$</li>
+<li>$K[2] = \overline{\boldsymbol{C}}\overline{\boldsymbol{A}}^2\overline{\boldsymbol{B}}$</li>
+</ul>
+<p>則 $\boldsymbol{y}_3 = K[2]\boldsymbol{x}_0 + K[1]\boldsymbol{x}_1 + K[0]\boldsymbol{x}_2 = \sum_{j=0}^2 K[j] \boldsymbol{x}_{2-j}$！與卷積公式完全一致！</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：如果初始狀態 $\boldsymbol{h}_0 \neq \mathbf{0}$，證明還成立嗎？
+<strong>答</strong>：會多出一項初始記憶衰減項 $\overline{\boldsymbol{C}} \overline{\boldsymbol{A}}^k \boldsymbol{h}_0$！但在深度學習中，我們一律設定 $\boldsymbol{h}_0 = \mathbf{0}$，因此該項自動消失。</p>
+<h3>5. 舉一反三出口</h3>
+<p>為什麼這個變換要求系統必須是「時間不變 (LTI)」的？</p>
+<ol>
+<li>因為如果 $\overline{\boldsymbol{A}}_t$ 隨時間變化，就無法提出統一的 $\overline{\boldsymbol{A}}^j$ 次方！</li>
+<li>時間不變性是化為標準 1D 卷積的必要數學前提。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為這個證明需要用到複雜的復分析或高等流形幾何。</li>
+<li>✅ <strong>正解</strong>：這純粹是線性代數中的多項式求和與下標變換，非常直觀優雅！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>證明完卷積核等價性後，下一個 KP-9 將介紹如何透過 DPLR 矩陣與 Woodbury 恆等式在頻域中高效算出這個卷積核。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「零初狀態展開算，代入輸出換下標；j 等於 k 減一減 i，遞迴卷積完美交。」</strong></p>
+</div>
+<div id="guide-content-kp-9" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：S4 狀態轉移矩陣 (DPLR) 與 Woodbury 矩陣恆等式</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「歡迎來到 S4 論文最核心的數學精髓！如何讓矩陣求逆從 $O(s^3)$ 的噩夢變成 $O(s)$ 的極速飛躍？答案就在 DPLR 與 Woodbury 恆等式！」</p>
+</blockquote>
+<h3>1. 單一主線類比：快速通關特約通道</h3>
+<p>想像你要通過機場海關（矩陣求逆）：</p>
+<ol>
+<li>普通全矩陣：每個人都要人工排隊查驗護照，耗時 $O(s^3)$。</li>
+<li><strong>DPLR 矩陣</strong>：絕大多數人走「對角快速通道 $O(s)$」，只有極少數特定人員走「低秩 VIP 通道 $O(r)$」。整體通過速度呈百倍提升！</li>
+</ol>
+<h3>2. 鷹架式拆解：DPLR 結構與 Woodbury 求逆</h3>
+<ol>
+<li><strong>對角加上低秩 (DPLR) 矩陣結構</strong>：
+$$\overline{\boldsymbol{A}} = \operatorname{diag}(\boldsymbol{\Lambda}) + \boldsymbol{P}\boldsymbol{Q}^\top$$</li>
+<li>$\boldsymbol{\Lambda} \in \mathbb{C}^s$：對角矩陣特徵值。</li>
+<li>$\boldsymbol{P}, \boldsymbol{Q} \in \mathbb{C}^{s \times r}$：秩為 $r \ll s$ 的低秩修正矩陣。</li>
+<li><strong>拉普拉斯頻域傳遞函數 (Resolvent)</strong>：
+$$\boldsymbol{H}(z) = \overline{\boldsymbol{C}} (z\boldsymbol{I} - \overline{\boldsymbol{A}})^{-1} \overline{\boldsymbol{B}}$$</li>
+<li><strong>Woodbury 矩陣恆等式展開</strong>：
+$$(z\boldsymbol{I} - \operatorname{diag}(\boldsymbol{\Lambda}) - \boldsymbol{P}\boldsymbol{Q}^\top)^{-1} = \boldsymbol{D}_z^{-1} + \boldsymbol{D}_z^{-1}\boldsymbol{P} \left(\boldsymbol{I} - \boldsymbol{Q}^\top\boldsymbol{D}_z^{-1}\boldsymbol{P}\right)^{-1} \boldsymbol{Q}^\top\boldsymbol{D}_z^{-1}$$</li>
+<li>其中 $\boldsymbol{D}_z = z\boldsymbol{I} - \operatorname{diag}(\boldsymbol{\Lambda})$ 為對角矩陣，其求逆 $\boldsymbol{D}_z^{-1}$ 僅需<b>對角元素取倒數 $O(s)$</b>！</li>
+</ol>
+<h3>3. 數值演算示範：運算量級數量級對比</h3>
+<p>設隱藏維度 $s = 128$，低秩 $r = 1$：</p>
+<ul>
+<li><strong>傳統全矩陣求逆 FLOPs</strong>：
+  $$\text{FLOPs} \approx s^3 = 128^3 = 2,097,152 \quad (\text{超過 200 萬次運算})$$</li>
+<li><strong>Woodbury 恆等式求逆 FLOPs</strong>：
+  $$\text{FLOPs} \approx s + r^3 + s = 128 + 1 + 128 = 257 \quad (\text{僅需 257 次運算！})$$</li>
+</ul>
+<p>運算效率提升了整整 <strong>8160 倍</strong>！</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：為什麼 S4 不直接把矩陣 $\overline{\boldsymbol{A}}$ 設為純對角矩陣，非要加上低秩項 $\boldsymbol{P}\boldsymbol{Q}^\top$？
+<strong>答</strong>：因為純對角矩陣缺少狀態維度之間的交互能力（State Intermixing）！加上低秩項 $\boldsymbol{P}\boldsymbol{Q}^\top$ 才能讓不同隱藏特徵互相溝通。</p>
+<h3>5. 舉一反三出口</h3>
+<p>HiPPO 矩陣（用來完美記憶歷史函數的矩陣）能轉化為 DPLR 形式嗎？</p>
+<ol>
+<li>可以！Gu 等人在 S4 論文中證明了著名的 HiPPO 矩陣正好可以精確拆解為對角矩陣加上秩為 1 的低秩項。</li>
+<li>這正是 S4 能長久保留歷史資訊的數學基石。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 Woodbury 恆等式只能用在實數矩陣上。</li>
+<li>✅ <strong>正解</strong>：Woodbury 恆等式在複數域 $\mathbb{C}$ 上同樣完全成立！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>掌握了 DPLR 與 Woodbury 快速求逆後，下一個 KP-10 將介紹 S4 訓練與推理的雙重執行模式。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「對角低秩構 DPLR，Woodbury 求逆破瓶頸；對角取倒極速算，千倍加速展神威。」</strong></p>
+</div>
+<div id="guide-content-kp-10" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：S4 的平行運算效率與 FFT 卷積加速</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「世界上最完美的架構，莫過於『訓練時快如閃電，推理時省到極致』！今天我們就來看 S4 的雙重執行模式。」</p>
+</blockquote>
+<h3>1. 單一主線類比：電影特效渲染與現場直播</h3>
+<ol>
+<li><strong>訓練階段（電影後期特效渲染）</strong>：拿到了整部電影的所有腳本（全序列 $x_0..x_{n-1}$），使用 1D FFT 卷積進行全片平行渲染。</li>
+<li><strong>推理階段（電視台現場直播）</strong>：觀眾邊看邊講話（自迴歸逐字生成），切換回單步遞迴，即時產出下一秒畫面。</li>
+</ol>
+<h3>2. 鷹架式拆解：雙重執行模式細節</h3>
+<ol>
+<li><strong>訓練模式 (Training Mode - FFT 卷積)</strong>：</li>
+<li>快速生成卷積核 $\boldsymbol{K} \in \mathbb{R}^L$。</li>
+<li>利用快速傅立葉變換：
+$$\boldsymbol{y} = \mathcal{F}^{-1} \left( \mathcal{F}(\boldsymbol{K}) \odot \mathcal{F}(\boldsymbol{x}) \right)$$</li>
+<li>時間複雜度：$\mathcal{O}(L \log_2 L)$，高度 GPU 平行。</li>
+<li><strong>推理模式 (Inference Mode - 單步遞迴)</strong>：</li>
+<li>時間步更新：
+$$\boldsymbol{h}_t = \overline{\boldsymbol{A}}\boldsymbol{h}_{t-1} + \overline{\boldsymbol{B}}\boldsymbol{x}_t, \quad \boldsymbol{y}_t = \overline{\boldsymbol{C}}\boldsymbol{h}_t$$</li>
+<li>單步時間複雜度：$\mathcal{O}(1)$。</li>
+<li>記憶體開銷：$\mathcal{O}(s)$（零 KV Cache 負擔！）。</li>
+</ol>
+<h3>3. 數值演算示範：序列長度 $L=65,536$ 時的訓練時間</h3>
+<p>設 $L = 65536 = 2^{16}$：</p>
+<ul>
+<li><strong>Transformer 注意力運算量</strong>：
+  $$L^2 = (65536)^2 \approx 4,294,967,296 \quad (43 \text{ 億次運算})$$</li>
+<li><strong>S4 FFT 卷積運算量</strong>：
+  $$L \log_2 L = 65536 \times 16 = 1,048,576 \quad (100 \text{ 萬次運算})$$</li>
+</ul>
+<p>運算量級相差了 <strong>4000 倍</strong>！</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：FFT 卷積需要點乘 $\mathcal{F}(\boldsymbol{K}) \odot \mathcal{F}(\boldsymbol{x})$，這會破壞因果律嗎？
+<strong>答</strong>：只要將卷積核 $\boldsymbol{K}$ 用零填充 (Zero-padding) 至長度 $2L$，FFT 算出的就是嚴格的因果卷積 (Causal Convolution)，絕不會洩漏未來的資訊！</p>
+<h3>5. 舉一反三出口</h3>
+<p>為什麼說 S4 解決了傳統 RNN 無法發揮 GPU 算力的世紀難題？</p>
+<ol>
+<li>因為傳統 RNN 必須寫 <code>for t in range(L)</code> 迴圈，GPU 幾千個核心在幹等。</li>
+<li>S4 訓練時改用 FFT 卷積，把 1D 序列拉平成廣義向量乘法，讓 GPU 所有 CUDA 核心滿載轟炸！</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 S4 訓練時也要在記憶體裡保留每一個時間步的中間隱藏狀態 $\boldsymbol{h}_1, \dots, \boldsymbol{h}_L$。</li>
+<li>✅ <strong>正解</strong>：FFT 卷積直接從 $\boldsymbol{x}$ 算到 $\boldsymbol{y}$，完全不需要顯式化中間隱藏狀態 $\boldsymbol{h}_t$，極度省顯存！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>擁有了 S4 的雙重模式後，下一個 KP-11 將介紹 2023 年掀起革新的 Mamba 選擇性狀態空間模型。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「訓練平行 FFT 算，推理切回單步遞；雙重模式兼兩美，四千倍速展威風。」</strong></p>
+</div>
+<div id="guide-content-kp-11" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：Mamba 自適應選擇性狀態空間模型 (Selective SSM)</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「歡迎來到 2023–2024 年深度學習的最強明星——Mamba！如果說 S4 是硬梆梆的靜態過濾器，Mamba 就是擁有『智慧大腦』的自適應動態過濾器！」</p>
+</blockquote>
+<h3>1. 單一主線類比：死板的篩子 vs 智慧安檢門</h3>
+<ol>
+<li><strong>S4 (時不變 LTI)</strong>：像一個固定孔洞的死板篩子，不論掉下來的是黃金、沙子還是石頭，篩子孔洞的大小（矩陣 $A, B, C$）永遠不變。</li>
+<li><strong>Mamba (選擇性 Selective)</strong>：像一個「智慧 AI 安檢門」！看到無關的沙子雜訊就自動關閉閥門（$\Delta_t \to 0$）；看到黃金關鍵資訊就瞬間打開大門（$\Delta_t \uparrow$），將其寫入記憶中！</li>
+</ol>
+<h3>2. 鷹架式拆解：Mamba 選擇性機制三大算式</h3>
+<p>Mamba 突破了 S4 的時不變性 (LTI) 限制，讓參數隨輸入 $\boldsymbol{x}_t$ 動態變化：</p>
+<ol>
+<li><strong>動態參數生成 (Content-Aware Parameterization)</strong>：
+$$\begin{align*}
+\boldsymbol{B}_t &= \text{Linear}_B(\boldsymbol{x}_t) \\
+\boldsymbol{C}_t &= \text{Linear}_C(\boldsymbol{x}_t) \\
+\Delta_t &= \text{Softplus}\left( \text{Parameter} + \text{Linear}_\Delta(\boldsymbol{x}_t) \right)
+\end{align*}$$</li>
+<li><strong>離散矩陣動態轉化</strong>：
+$$\overline{\boldsymbol{A}}_t = \exp(\Delta_t \boldsymbol{A}), \quad \overline{\boldsymbol{B}}_t = (\Delta_t \boldsymbol{A})^{-1} (\exp(\Delta_t \boldsymbol{A}) - \boldsymbol{I}) \cdot \Delta_t \boldsymbol{B}_t$$</li>
+<li><strong>動態門控狀態更新 (Hardware-Aware Scan)</strong>：
+$$\boldsymbol{h}_t = \mathbf{f}_{\text{gate}}(\boldsymbol{x}_t) \odot \left( \overline{\boldsymbol{A}}_t \boldsymbol{h}_{t-1} + \overline{\boldsymbol{B}}_t \boldsymbol{x}_t \right), \quad \boldsymbol{y}_t = \boldsymbol{C}_t \boldsymbol{h}_t$$</li>
+</ol>
+<h3>3. 數值演算示範：選擇性動態開關行為</h3>
+<p>假設輸入 Token 為「關鍵實體名字」與「無關贅字」：</p>
+<ul>
+<li><strong>當遇到關鍵 Token（如 "Albert Einstein"）</strong>：</li>
+<li>$\text{Linear}_\Delta(\boldsymbol{x}_t)$ 輸出較大值 $\Rightarrow \Delta_t = 1.0$。</li>
+<li>狀態更新放行率高，資訊強行寫入隱藏狀態 $\boldsymbol{h}_t$！</li>
+<li><strong>當遇到無關贅字 Token（如 "um... ah..."）</strong>：</li>
+<li>$\text{Linear}_\Delta(\boldsymbol{x}_t)$ 輸出極小值 $\Rightarrow \Delta_t \to 0.001$。</li>
+<li>$\overline{\boldsymbol{A}}_t \approx \boldsymbol{I}, \overline{\boldsymbol{B}}_t \approx 0 \Rightarrow \boldsymbol{h}_t \approx \boldsymbol{h}_{t-1}$。</li>
+<li>狀態完美跳過該 Token，保持舊記憶不受雜訊污染！</li>
+</ul>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：既然 Mamba 的參數隨時間 $t$ 動態變化（失去了 LTI 性質），它還能用 FFT 卷積進行平行訓練嗎？
+<strong>答</strong>：<strong>不能用 FFT 卷積了</strong>！但 Mamba 論文作者 Albert Gu 等人發明了 <strong>Hardware-Aware Selective Scan 演算法</strong>，利用 GPU SRAM 快取進行 Parallel Scan（平行掃描），依然實現了比 Transformer 快數倍的平行訓練！</p>
+<h3>5. 舉一反三出口</h3>
+<p>為什麼 Mamba 在語言模型 (Language Modeling) 上能一舉擊敗 S4？</p>
+<ol>
+<li>因為語言充滿了上下文選擇性（如「拷貝關鍵詞」、「忽略無關語氣詞」）。</li>
+<li>S4 的靜態卷積核無法選擇性過濾，而 Mamba 的動態 $\Delta_t$ 正好解決了這一痛點。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 Mamba 完全放棄了 SSM 的理論架構，退化回傳統 LSTM。</li>
+<li>✅ <strong>正解</strong>：Mamba 依然嚴格遵循 SSM 的微分方程離散化架構，只是把參數變成了內容感知的動態函數！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>了解了 Mamba 的選擇性機制後，下一個 KP-12 將介紹 2024 年提出的 TTT (Test Time Training) 層。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「Mamba 突破時不變，動態參數隨內容；選擇過濾去雜訊，長文語言展神威。」</strong></p>
+</div>
+<div id="guide-content-kp-12" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：測試時訓練 (TTT) 圖層：將隱藏狀態模型化為線上學習者</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「如果說 Mamba 是給隱藏狀態裝上了『動態開關』，2024 年提出的 TTT 層則是做出了一個大膽的顛覆：把隱藏狀態直接升級為一個『會邊考邊學的微型神經網絡』！」</p>
+</blockquote>
+<h3>1. 單一主線類比：實習生邊做邊學</h3>
+<ol>
+<li><strong>傳統 SSM（記憶體硬碟）</strong>：把讀到的資訊存在固定硬碟裡（矩陣乘法 $\overline{\boldsymbol{A}}\boldsymbol{h}_{t-1} + \overline{\boldsymbol{B}}\boldsymbol{x}_t$）。</li>
+<li><strong>TTT 層（動態學習實習生）</strong>：把隱藏狀態看作一個實習生 $\boldsymbol{\theta}_t$。每處理一個新 Token，實習生就做一次「自我測試與線上梯度下降更新（$\boldsymbol{\theta}_{t+1} = \boldsymbol{\theta}_t - \eta \nabla \ell_t$）」，邊工作邊進化！</li>
+</ol>
+<h3>2. 鷹架式拆解：TTT 層三大步驟與算式</h3>
+<p>TTT 層將隱藏狀態轉化為線上自監督學習者：</p>
+<ol>
+<li><strong>隱藏模型前向預測</strong>：
+$$\hat{\boldsymbol{z}}_t = f_t(\boldsymbol{x}_t; \boldsymbol{\theta}_t)$$</li>
+<li>$\boldsymbol{\theta}_t$：時間步 $t$ 時隱藏微型模型（如 FNN）的權重。</li>
+<li><strong>自監督重建損失</strong>：
+$$\ell_t = \mathcal{L}\left( \hat{\boldsymbol{z}}_t, \tilde{\boldsymbol{x}}_t \right)$$</li>
+<li>$\tilde{\boldsymbol{x}}_t$：自監督目標（如受損輸入重建）。</li>
+<li><strong>線上測試時梯度更新 (Test-Time Training)</strong>：
+$$\boldsymbol{\theta}_{t+1} = \boldsymbol{\theta}_t - \eta \nabla_{\boldsymbol{\theta}_t} \ell_t$$</li>
+<li>權重 $\boldsymbol{\theta}_t$ 在推理階段隨著時間步 $t$ 持續被梯度推動更新！</li>
+</ol>
+<h3>3. 數值演算示範：單步均方誤差 (MSE) 梯度更新手算</h3>
+<p>假設微型模型為純量線性層 $f(x) = \theta x$，自監督目標為 $\tilde{x}$：</p>
+<ol>
+<li><strong>損失函數</strong>：
+$$\ell_t = \frac{1}{2} (\theta_t x_t - \tilde{x}_t)^2$$</li>
+<li><strong>計算梯度</strong>：
+$$\nabla_{\theta_t} \ell_t = (\theta_t x_t - \tilde{x}_t) x_t$$</li>
+<li><strong>權重更新</strong>：
+$$\theta_{t+1} = \theta_t - \eta (\theta_t x_t - \tilde{x}_t) x_t$$</li>
+</ol>
+<p>設 $\theta_t = 2.0, x_t = 1.0, \tilde{x}_t = 1.0, \eta = 0.1$：</p>
+<ul>
+<li>誤差 $= 2.0 \times 1.0 - 1.0 = 1.0$</li>
+<li>梯度 $= 1.0 \times 1.0 = 1.0$</li>
+<li>新權重 $\theta_{t+1} = 2.0 - 0.1(1.0) = 1.90$（權重自動向正確目標修正！）。</li>
+</ul>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：SSM 與 TTT 層在數學上有什麼關聯？
+<strong>答</strong>：<strong>SSM 是 TTT 層的特例</strong>！當 TTT 中的微型模型 $f_t$ 設為線性層、且學習率 $\eta = 0$（不跑線上梯度）時，TTT 就退化回了傳統 SSM。</p>
+<h3>5. 舉一反三出口</h3>
+<p>為什麼 Titans (Google 2025) 與 Gated DeltaNet 等最新架構都採用了 TTT 思想？</p>
+<ol>
+<li>因為傳統固定尺寸的隱藏狀態容易在極長序列中發生「資訊飽和」。</li>
+<li>讓隱藏狀態具備線上梯度更新能力，相當於賦予了模型「可自適應重組的動態長短期記憶」。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為 TTT 層只能在訓練（Training）階段更新權重。</li>
+<li>✅ <strong>正解</strong>：TTT 的精髓在於 <strong>Test-Time（測試/推理階段）</strong> 也在執行線上梯度下降！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>了解了 TTT 的線上學習思想後，下一個 KP-13 將導出注意力機制與 SSM 的對偶矩陣等價性證明。</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「隱藏狀態變微型模型，測試階段線上梯度更新；SSM 為特例退化，動態學習開新篇。」</strong></p>
+</div>
+<div id="guide-content-kp-13" class="guide-content-source" style="display:none;">
+  <h1>教授祕笈：注意力機制與狀態空間模型 (SSM) 的對偶矩陣等價性證明</h1>
+<blockquote>
+<p>🎓 <strong>大師教授口吻</strong>：「歡迎來到全章的終極高潮！許多人以為注意力機制與 SSM 是水火不容的兩大派系。今天教授就帶大家進行數學證明，揭示它們背後震撼人心的同構對偶性！」</p>
+</blockquote>
+<h3>1. 單一主線類比：硬幣的兩面</h3>
+<p>注意力機制與 SSM 就像一枚硬幣的兩面：</p>
+<ol>
+<li>正面看（注意力）：是歷史所有 Key/Value 的加權求和。</li>
+<li>反面看（SSM）：是狀態矩陣 $\boldsymbol{H}_t$ 在時間軸上的外積累加！</li>
+<li>只要去掉 Softmax 的非線性，兩者在數學上<strong>完全嚴格同構</strong>！</li>
+</ol>
+<h3>2. 鷹架式拆解：線性注意力到 SSM 的五步證明</h3>
+<p>我們一步步拆解 Section 7 的證明：</p>
+<ol>
+<li><strong>線性注意力 (Linear Transformer)</strong>：</li>
+<li>替換 Softmax 為核函數 $\phi(\boldsymbol{q}_t)^\top \phi(\boldsymbol{k}_i)$：
+$$\boldsymbol{y}_t = \frac{\sum_{i=1}^t \phi(\boldsymbol{q}_t)^\top \phi(\boldsymbol{k}_i) \boldsymbol{v}_i^\top}{\sum_{i=1}^t \phi(\boldsymbol{q}_t)^\top \phi(\boldsymbol{k}_i)}$$</li>
+<li><strong>因式分解提取 $\phi(\boldsymbol{q}_t)^\top$</strong>：
+$$\boldsymbol{y}_t = \frac{\phi(\boldsymbol{q}_t)^\top \sum_{i=1}^t \phi(\boldsymbol{k}_i) \boldsymbol{v}_i^\top}{\phi(\boldsymbol{q}_t)^\top \sum_{i=1}^t \phi(\boldsymbol{k}_i)}$$</li>
+<li><strong>定義矩陣狀態量 $\boldsymbol{H}_t$</strong>：
+$$\boldsymbol{H}_t := \sum_{i=1}^t \phi(\boldsymbol{k}_i) \boldsymbol{v}_i^\top \Rightarrow \boldsymbol{H}_t = \boldsymbol{H}_{t-1} + \phi(\boldsymbol{k}_t) \boldsymbol{v}_t^\top$$</li>
+<li><strong>採用線性核並去除分母歸一化</strong>：</li>
+<li>取 $\phi(\boldsymbol{q}_t) = \boldsymbol{q}_t, \phi(\boldsymbol{k}_t) = \boldsymbol{k}_t$：
+$$\begin{align*}
+\boldsymbol{H}_t &= \boldsymbol{H}_{t-1} + \boldsymbol{k}_t \boldsymbol{v}_t^\top \\
+\boldsymbol{y}_t &= \boldsymbol{q}_t^\top \boldsymbol{H}_t
+\end{align*}$$</li>
+<li><strong>結論（與 SSM 對齊）</strong>：</li>
+<li>上式中 $\boldsymbol{H}_t = \boldsymbol{I} \boldsymbol{H}_{t-1} + \boldsymbol{k}_t \boldsymbol{v}_t^\top$ 精確對應於 SSM 的 $\boldsymbol{h}_t = \overline{\boldsymbol{A}}\boldsymbol{h}_{t-1} + \overline{\boldsymbol{B}}\boldsymbol{x}_t$（當 $\overline{\boldsymbol{A}}=\boldsymbol{I}$ 時）！</li>
+</ol>
+<h3>3. 數值演算示範：手算純量狀態等價</h3>
+<p>設 $k_t = 2.0, v_t = 1.5, q_t = 0.8$。上一狀態 $H_{t-1} = 1.0$。</p>
+<ul>
+<li><strong>線性注意力矩陣累加</strong>：
+  $$H_t = 1.0 + (2.0 \times 1.5) = 1.0 + 3.0 = 4.0$$
+  $$y_t = q_t \times H_t = 0.8 \times 4.0 = 3.20$$</li>
+<li><strong>SSM 離散狀態更新 ($\overline{A}=1.0, \overline{B}x_t = 3.0, \overline{C} = 0.8$)</strong>：
+  $$h_t = 1.0 \times 1.0 + 3.0 = 4.0$$
+  $$y_t = 0.8 \times 4.0 = 3.20$$</li>
+</ul>
+<p>數值<strong>完全完美一致</strong>！</p>
+<h3>4. 懸念與先猜後答</h3>
+<p><strong>問</strong>：這個證明告訴了我們序列建模未來的什麼趨勢？
+<strong>答</strong>：它告訴我們 <strong>SSM 與 Attention 正在快速融合</strong>！未來的勝者不會是純粹的 Transformer 或純粹的 SSM，而是結合兩者優點的混合對偶架構（如 Mamba-2, H3, DeltaNet）！</p>
+<h3>5. 舉一反三出口</h3>
+<p>在 Mamba-2 論文中，作者提出了 SSD (State Space Duality)，其核心哲學是什麼？</p>
+<ol>
+<li>證明了 Mamba 的動態選擇掃描本質上就是一種受結構限制的矩陣注意力！</li>
+<li>讓 SSM 的算子能直接呼叫 Transformer 的 FlashAttention 硬件加速。</li>
+</ol>
+<h3>6. 常見誤解點名</h3>
+<ul>
+<li>❌ <strong>誤解</strong>：以為注意力機制和 SSM 是兩種數學原理互不相容的模型。</li>
+<li>✅ <strong>正解</strong>：兩者本質上 dinners 都是對歷史資訊進行矩陣投影與狀態累加，只是計算流向與核函數不同！</li>
+</ul>
+<h3>7. 跨知識點掛勾</h3>
+<p>至此，Chapter 10 全章 13 個知識點從 SSM 導論、優勢、連續/離散方程、S4 DPLR 矩陣、Mamba 選擇性機制、TTT 線上學習到注意力對偶性已全部精準解構完畢！</p>
+<h3>8. 一句話收尾口訣</h3>
+<p><strong>「線性注意力去歸一，外積累加化狀態；注意力與 SSM 同同構，對偶兩面本同源。」</strong></p>
+</div>
+<!-- END Phase D Guide Hidden Divs -->
+<!-- == Phase D Guide Modal Placeholder == -->
+<div id="guide-modal" aria-hidden="true" role="dialog">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-guide-title">教授祕笈</h3>
+      <button class="modal-close-btn" id="modal-close-x" aria-label="關閉">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-guide-body">
+      <!-- Dynamic Guide Content Injected Here -->
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  document.addEventListener("DOMContentLoaded", function() {
+    var modal = document.getElementById("guide-modal");
+    var modalTitle = document.getElementById("modal-guide-title");
+    var modalBody = document.getElementById("modal-guide-body");
+    var closeBtn = document.getElementById("modal-close-x");
+
+    function openModal(kpId, btnTitle) {
+      var srcDiv = document.getElementById("guide-content-kp-" + kpId);
+      if (!srcDiv) return;
+
+      modalTitle.textContent = "教授祕笈：" + btnTitle;
+      modalBody.innerHTML = srcDiv.innerHTML;
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+
+      if (window.renderMathInElement) {
+        window.renderMathInElement(modalBody, {
+          delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "$", right: "$", display: false}
+          ],
+          ignoredClasses: ["katex"]
+        });
+      }
+    }
+
+    function closeModal() {
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+
+    document.addEventListener("click", function(e) {
+      var btn = e.target.closest(".guide-btn");
+      if (btn) {
+        var guideId = btn.getAttribute("data-guide").replace("kp-", "");
+        var titleText = btn.textContent.replace("祕笈教授祕笈：", "").replace("教授祕笈：", "").trim();
+        openModal(guideId, titleText);
+      }
+    });
+
+    if (closeBtn) {
+      closeBtn.addEventListener("click", closeModal);
+    }
+
+    if (modal) {
+      modal.addEventListener("click", function(e) {
+        if (e.target === modal) closeModal();
+      });
+    }
+
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape" && modal.classList.contains("open")) {
+        closeModal();
+      }
+    });
+  });
+})();
+</script>
+<!-- END Phase D Guide Modal Placeholder -->
+</body>
+</html>
