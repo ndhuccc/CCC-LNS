@@ -3,317 +3,464 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CCC 課程講義</title>
+<meta name="description" content="CCC 課程互動式自學講義：Pattern Recognition 與 Introductory Deep Learning。">
+<title>CCC 課程講義｜Pattern Recognition × Introductory Deep Learning</title>
 <style>
   :root{
-    --bg:#f6f3ec;
-    --text:#1d1b18;
-    --muted:#736a5c;
-    --accent:#2f3e5c;
-    --accent-soft:#e9e4d6;
-    --divider:rgba(29,27,24,0.1);
-
-    --font-serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,"Songti TC","PMingLiU",serif;
+    --paper:#f5f1e9;
+    --surface:#fffdf8;
+    --surface-strong:#f0eadf;
+    --ink:#1c2b32;
+    --muted:#66747a;
+    --line:#d8d2c8;
+    --accent:#c9684b;
+    --accent-soft:#f3ded4;
+    --deep:#183b49;
+    --focus:#17627a;
     --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
+    --font-serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,"Noto Serif TC","PMingLiU",serif;
     --font-mono:"SF Mono","Cascadia Code",Consolas,"Courier New",monospace;
   }
 
   *{box-sizing:border-box;}
-
+  html{scroll-behavior:smooth;}
   body{
     margin:0;
+    color:var(--ink);
+    background:var(--paper);
     font-family:var(--font-sans);
-    background:var(--bg);
-    color:var(--text);
-    line-height:1.65;
+    line-height:1.6;
   }
+  a{color:inherit;}
+  button{font:inherit;}
+  :focus-visible{outline:3px solid var(--focus);outline-offset:3px;}
 
-  header{
-    padding:clamp(3rem,7vw,5.5rem) 1.5rem 3rem;
-    text-align:center;
-    border-bottom:1px solid var(--divider);
+  .masthead{
+    color:#f8f4ec;
+    background:var(--deep);
+    border-bottom:1px solid rgba(255,255,255,.12);
   }
-  .kicker{
+  .masthead-inner{
+    display:grid;
+    grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);
+    gap:clamp(2rem,6vw,6rem);
+    max-width:1180px;
+    margin:0 auto;
+    padding:clamp(3rem,8vw,6.5rem) 1.5rem clamp(2.5rem,6vw,4.5rem);
+    align-items:end;
+  }
+  .eyebrow,.course-code,.chapter-kicker,.stat-label,.coverage-label{
     font-family:var(--font-mono);
-    font-size:.72rem;
-    letter-spacing:.18em;
+    letter-spacing:.13em;
     text-transform:uppercase;
-    color:var(--muted);
-    margin:0 0 1.1rem;
   }
-  header h1{
+  .eyebrow{
+    margin:0 0 1.3rem;
+    color:#b9cbd0;
+    font-size:.72rem;
+  }
+  h1,h2,h3,p{margin-top:0;}
+  h1{
+    max-width:760px;
+    margin-bottom:1.4rem;
     font-family:var(--font-serif);
+    font-size:clamp(2.6rem,6vw,4.6rem);
     font-weight:500;
-    font-size:clamp(2.1rem,4.5vw,2.9rem);
-    letter-spacing:-.01em;
-    margin:0 0 .9rem;
+    letter-spacing:-.045em;
+    line-height:1.04;
   }
-  header p{
-    margin:0;
+  h1 em{color:#f0b39e;font-style:normal;}
+  .lede{
+    max-width:660px;
+    margin-bottom:0;
+    color:#d7e1e0;
+    font-size:clamp(1rem,1.6vw,1.15rem);
+  }
+  .masthead-note{
+    padding:1.2rem 0 0 1.5rem;
+    border-left:1px solid rgba(255,255,255,.22);
+  }
+  .masthead-note p{margin-bottom:1.4rem;color:#c8d5d4;font-size:.92rem;}
+  .masthead-note strong{color:#fff7e9;font-weight:600;}
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem;}
+  .stat{padding:.9rem .8rem;border-top:1px solid rgba(255,255,255,.3);}
+  .stat-value{display:block;color:#fff7e9;font-family:var(--font-serif);font-size:1.8rem;line-height:1.1;}
+  .stat-label{display:block;margin-top:.35rem;color:#a9c0c2;font-size:.62rem;line-height:1.35;}
+
+  .course-nav-wrap{
+    position:sticky;
+    z-index:5;
+    top:0;
+    border-bottom:1px solid var(--line);
+    background:rgba(245,241,233,.94);
+    backdrop-filter:blur(14px);
+  }
+  .course-nav{
+    display:flex;
+    align-items:center;
+    gap:.45rem;
+    max-width:1180px;
+    margin:0 auto;
+    padding:.8rem 1.5rem;
+  }
+  .filter-button{
+    cursor:pointer;
+    padding:.65rem .9rem;
+    border:1px solid transparent;
+    border-radius:999px;
     color:var(--muted);
-    font-size:.98rem;
+    background:transparent;
+    font-size:.82rem;
+    transition:background-color .2s ease,color .2s ease,border-color .2s ease,transform .2s ease;
   }
+  .filter-button:hover{color:var(--ink);border-color:var(--line);}
+  .filter-button[aria-pressed="true"]{color:var(--surface);background:var(--deep);border-color:var(--deep);}
+  .filter-button:active{transform:scale(.98);}
+  .filter-status{margin-left:auto;color:var(--muted);font-size:.78rem;}
 
   main{
-    max-width:760px;
+    max-width:1180px;
     margin:0 auto;
-    padding:clamp(2.5rem,6vw,4rem) 1.5rem 5rem;
+    padding:clamp(2rem,5vw,4.5rem) 1.5rem 5rem;
   }
-
   .course{margin-bottom:4rem;}
-  .course:last-child{margin-bottom:0;}
-  main.tabs-active .course{display:none;}
-  main.tabs-active .course.active{display:block;}
-
-  .tabs{
-    display:flex;
-    gap:.5rem;
-    max-width:760px;
-    margin:0 auto;
-    padding:1.5rem 1.5rem 0;
-    overflow-x:auto;
-    border-bottom:1px solid var(--divider);
+  .course[hidden]{display:none;}
+  .course-heading{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(280px,.72fr);
+    gap:2rem;
+    align-items:end;
+    margin-bottom:1.4rem;
   }
-  .tab{
-    appearance:none;
-    border:none;
-    background:none;
-    cursor:pointer;
-    font-family:var(--font-mono);
-    font-size:.78rem;
-    letter-spacing:.1em;
-    text-transform:uppercase;
-    color:var(--muted);
-    padding:.7rem .2rem;
-    margin-bottom:-1px;
-    border-bottom:2px solid transparent;
-    white-space:nowrap;
-    transition:color .2s ease, border-color .2s ease;
-  }
-  .tab:hover{color:var(--text);}
-  .tab[aria-selected="true"]{color:var(--accent); border-bottom-color:var(--accent);}
-  .tab:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
-
-  .course-code{
-    font-family:var(--font-mono);
-    font-size:.72rem;
-    letter-spacing:.16em;
-    text-transform:uppercase;
-    color:var(--accent);
-    margin:0 0 .4rem;
-  }
+  .course-code{margin-bottom:.55rem;color:var(--accent);font-size:.68rem;}
   .course h2{
+    margin-bottom:.45rem;
     font-family:var(--font-serif);
+    font-size:clamp(2rem,4vw,3.1rem);
     font-weight:500;
-    font-size:clamp(1.35rem,3vw,1.7rem);
-    margin:0 0 1.4rem;
-    padding-bottom:1rem;
-    border-bottom:1px solid var(--divider);
+    letter-spacing:-.035em;
+    line-height:1.1;
   }
+  .course-subtitle{margin:0;color:var(--muted);font-size:1rem;}
+  .course-summary{padding:1.1rem 1.2rem;background:var(--surface-strong);border:1px solid var(--line);border-radius:1rem;}
+  .course-summary p{margin-bottom:.8rem;font-size:.86rem;}
+  .coverage-row{display:flex;justify-content:space-between;gap:1rem;color:var(--muted);font-size:.75rem;}
+  .coverage-label{font-size:.62rem;}
+  .coverage-track{height:5px;margin-top:.55rem;overflow:hidden;background:#d9d4cb;border-radius:999px;}
+  .coverage-track span{display:block;height:100%;background:var(--accent);border-radius:inherit;}
 
-  .grid{
-    display:flex;
-    flex-direction:column;
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem;}
+  .chapter-card{
+    display:grid;
+    grid-template-columns:3.2rem minmax(0,1fr);
+    gap:1rem;
+    min-height:190px;
+    padding:1.15rem;
+    border:1px solid var(--line);
+    border-radius:1rem;
+    background:var(--surface);
+    transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
   }
-
-  .card{
-    display:flex;
-    align-items:baseline;
-    gap:1.1rem;
-    padding:.95rem .25rem;
-    border-bottom:1px solid var(--divider);
+  .chapter-card:hover{transform:translateY(-2px);border-color:#bbaea2;box-shadow:0 10px 22px rgba(28,43,50,.07);}
+  .chapter-card.is-featured{border-color:#e3b3a2;background:#fffaf4;}
+  .chapter-index{
+    align-self:start;
+    color:var(--accent);
+    font-family:var(--font-serif);
+    font-size:1.65rem;
+    line-height:1;
+  }
+  .chapter-kicker{margin:0 0 .45rem;color:var(--muted);font-size:.59rem;}
+  .chapter-card h3{margin-bottom:.35rem;font-size:1.03rem;font-weight:650;line-height:1.35;}
+  .chapter-description{margin-bottom:1rem;color:var(--muted);font-size:.8rem;line-height:1.5;}
+  .chapter-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-top:auto;}
+  .action{
+    display:inline-flex;
+    align-items:center;
+    gap:.55rem;
+    min-height:2.15rem;
+    padding:.42rem .7rem;
+    border:1px solid var(--line);
+    border-radius:.55rem;
     text-decoration:none;
-    color:var(--text);
-    transition:padding-left .2s ease, background-color .2s ease;
+    font-size:.75rem;
+    transition:background-color .2s ease,color .2s ease,border-color .2s ease,transform .2s ease;
   }
-  .card:last-child{border-bottom:none;}
-  .card:hover, .card:focus-visible{
-    padding-left:.6rem;
-    background:var(--accent-soft);
-  }
+  .action:hover{transform:translateY(-1px);border-color:var(--accent);}
+  .action-notes{color:var(--deep);background:#edf2f0;}
+  .action-slide{color:#8f432f;background:var(--accent-soft);border-color:#e8b9a8;}
+  .action-slide::after{content:"↗";font-size:.9rem;}
+  .action-muted{color:#8b918f;background:#f4f1eb;cursor:default;}
+  .action-label{font-weight:650;}
+  .slide-count{color:inherit;opacity:.72;font-size:.68rem;}
+  .slide-links{display:flex;flex-wrap:wrap;gap:.35rem;width:100%;padding-top:.1rem;}
+  .slide-links-label{width:100%;color:var(--muted);font-family:var(--font-mono);font-size:.61rem;letter-spacing:.08em;text-transform:uppercase;}
+  .slide-link{padding:.34rem .5rem;border:1px solid #e3d2c8;border-radius:.4rem;color:#8f432f;background:#fff6ef;text-decoration:none;font-size:.7rem;line-height:1.25;}
+  .slide-link:hover{border-color:var(--accent);background:#f9e9df;}
+  .orientation-note{color:var(--muted);font-size:.72rem;}
 
-  .card .badge{
-    font-family:var(--font-mono);
-    font-size:.78rem;
-    color:var(--accent);
-    min-width:2.6rem;
-    flex-shrink:0;
-  }
+  footer{padding:1.8rem 1.5rem 3rem;border-top:1px solid var(--line);color:var(--muted);font-size:.78rem;text-align:center;}
+  footer a{color:var(--deep);}
 
-  .card .title{
-    font-size:.98rem;
-    font-weight:400;
-    flex:1;
-    padding-bottom:2px;
-    background-image:linear-gradient(var(--text),var(--text));
-    background-size:0% 1px;
-    background-repeat:no-repeat;
-    background-position:left bottom;
-    transition:background-size .25s ease;
+  @media (max-width:800px){
+    .masthead-inner,.course-heading{grid-template-columns:1fr;}
+    .masthead-note{padding:1.3rem 0 0;border-top:1px solid rgba(255,255,255,.22);border-left:0;}
+    .grid{grid-template-columns:1fr;}
+    .filter-status{display:none;}
   }
-  .card:hover .title, .card:focus-visible .title{
-    background-size:100% 1px;
+  @media (max-width:520px){
+    .course-nav{padding:.7rem 1rem;overflow-x:auto;}
+    .filter-button{flex-shrink:0;padding:.58rem .72rem;font-size:.76rem;}
+    main{padding-left:1rem;padding-right:1rem;}
+    .masthead-inner{padding-left:1rem;padding-right:1rem;}
+    .chapter-card{grid-template-columns:2.4rem minmax(0,1fr);padding:1rem;}
+    .chapter-index{font-size:1.35rem;}
   }
-
-  .card::after{
-    content:"\2192";
-    color:var(--accent);
-    font-size:.85rem;
-    opacity:0;
-    transform:translateX(-4px);
-    transition:opacity .2s ease, transform .2s ease;
-  }
-  .card:hover::after, .card:focus-visible::after{
-    opacity:1;
-    transform:translateX(0);
-  }
-
-  footer{
-    text-align:center;
-    color:var(--muted);
-    font-size:.82rem;
-    padding:2rem 1.5rem 3rem;
-    border-top:1px solid var(--divider);
-  }
-
-  @media (prefers-color-scheme:dark){
-    :root{
-      --bg:#171511;
-      --text:#ece6d9;
-      --muted:#9c9384;
-      --accent:#a9bcdb;
-      --accent-soft:#232019;
-      --divider:rgba(236,230,217,0.12);
-    }
-  }
-
   @media (prefers-reduced-motion:reduce){
-    .card, .card .title, .card::after{transition:none;}
-  }
-
-  @media (max-width:480px){
-    .card{gap:.7rem;}
-    .card .badge{min-width:2.2rem; font-size:.72rem;}
-    .tabs{gap:.3rem; padding-left:1rem; padding-right:1rem;}
+    html{scroll-behavior:auto;}
+    .filter-button,.chapter-card,.action,.slide-link{transition:none;}
   }
 </style>
 </head>
 <body>
-<header>
-  <p class="kicker">Course Library</p>
-  <h1>課程講義總覽</h1>
-  <p>互動式自學講義 · 點選章節即可開啟</p>
+<header class="masthead">
+  <div class="masthead-inner">
+    <div>
+      <p class="eyebrow">CCC · Open Course Library</p>
+      <h1>從模式到深度，<br><em>兩條學習路徑</em></h1>
+      <p class="lede">互動式自學講義與課堂投影片集中在同一個入口。先選一門課，再從章節講義進入；有投影片的章節，也可以直接開啟課堂版教材。</p>
+    </div>
+    <aside class="masthead-note" aria-label="網站內容摘要">
+      <p><strong>閱讀方式</strong><br>講義適合逐步閱讀；投影片適合課堂投影與快速複習。兩者可以互相切換。</p>
+      <div class="stat-grid" aria-label="內容統計">
+        <div class="stat"><span class="stat-value">2</span><span class="stat-label">Courses</span></div>
+        <div class="stat"><span class="stat-value">38</span><span class="stat-label">Chapters</span></div>
+        <div class="stat"><span class="stat-value">32</span><span class="stat-label">Slide decks</span></div>
+      </div>
+    </aside>
+  </div>
 </header>
-<main>
+
+<div class="course-nav-wrap">
+  <nav class="course-nav" aria-label="課程篩選">
+    <button class="filter-button" type="button" data-filter="all" aria-pressed="true">全部課程</button>
+    <button class="filter-button" type="button" data-filter="PR_115" aria-pressed="false">PR 115 · Pattern Recognition</button>
+    <button class="filter-button" type="button" data-filter="IDL_115" aria-pressed="false">IDL 115 · Introductory Deep Learning</button>
+    <span class="filter-status" id="filter-status" aria-live="polite">目前顯示兩門課程</span>
+  </nav>
+</div>
+
+<main id="course-library">
   <!-- COURSE:PR_115 -->
-  <section class="course">
-    <p class="course-code">PR 115</p>
-    <h2>Pattern Recognition</h2>
+  <section class="course" id="course-pr-115" data-course="PR_115" aria-labelledby="course-pr-title">
+    <div class="course-heading">
+      <div>
+        <p class="course-code">PR 115 · Course 01</p>
+        <h2 id="course-pr-title">Pattern Recognition</h2>
+        <p class="course-subtitle">圖形識別：從特徵、決策邊界，到分類與分群。</p>
+      </div>
+      <div class="course-summary">
+        <p>建立一套從資料表示到分類決策的完整視角，逐章連回模式識別的核心問題。</p>
+        <div class="coverage-row"><span class="coverage-label">投影片整合進度</span><span>3 / 16 章節</span></div>
+        <div class="coverage-track" aria-label="PR 115 投影片整合進度 3 / 16"><span style="width:18.75%"></span></div>
+      </div>
+    </div>
     <div class="grid">
-      <a class="card" href="PR_115/Ch01-introduction/index.html"><span class="badge">Ch01</span><div class="title">導論（Introduction）</div></a>
-      <a class="card" href="PR_115/Ch02-bayes-classifiers/index.html"><span class="badge">Ch02</span><div class="title">以貝氏決策理論為基礎的分類器</div></a>
-      <a class="card" href="PR_115/Ch03-linear-classifiers/index.html"><span class="badge">Ch03</span><div class="title">線性分類器</div></a>
-      <a class="card" href="PR_115/Ch04-nonlinear-classifiers/index.html"><span class="badge">Ch04</span><div class="title">非線性分類器（Nonlinear Classifiers）</div></a>
-      <a class="card" href="PR_115/Ch05-feature-selection/index.html"><span class="badge">Ch05</span><div class="title">特徵選擇（Feature Selection）</div></a>
-      <a class="card" href="PR_115/Ch06-feature-generation-i/index.html"><span class="badge">Ch06</span><div class="title">特徵生成 I：資料轉換與降維</div></a>
-      <a class="card" href="PR_115/Ch07-feature-generation-ii/index.html"><span class="badge">Ch07</span><div class="title">特徵生成 II：影像與音訊特徵</div></a>
-      <a class="card" href="PR_115/Ch08-template-matching/index.html"><span class="badge">Ch08</span><div class="title">樣板匹配（Template Matching）</div></a>
-      <a class="card" href="PR_115/Ch09-context-dependent-classification/index.html"><span class="badge">Ch09</span><div class="title">情境相關分類（Context-Dependent Classification）</div></a>
-      <a class="card" href="PR_115/Ch10-supervised-epilogue/index.html"><span class="badge">Ch10</span><div class="title">監督式學習終章（Supervised Learning: The Epilogue）</div></a>
-      <a class="card" href="PR_115/Ch11-clustering-basic-concepts/index.html"><span class="badge">Ch11</span><div class="title">分群：基本概念（Clustering: Basic Concepts）</div></a>
-      <a class="card" href="PR_115/Ch12-clustering-sequential/index.html"><span class="badge">Ch12</span><div class="title">循序分群演算法（Sequential Algorithms）</div></a>
-      <a class="card" href="PR_115/Ch13-hierarchical-clustering/index.html"><span class="badge">Ch13</span><div class="title">階層式分群演算法（Hierarchical Algorithms）</div></a>
-      <a class="card" href="PR_115/Ch14-function-optimization-clustering/index.html"><span class="badge">Ch14</span><div class="title">函數最佳化分群</div></a>
-      <a class="card" href="PR_115/Ch15-clustering-iv/index.html"><span class="badge">Ch15</span><div class="title">其它分群演算法（Clustering Algorithms IV）</div></a>
-      <a class="card" href="PR_115/Ch16-cluster-validity/index.html"><span class="badge">Ch16</span><div class="title">叢集效度（Cluster Validity）</div></a>
+      <article class="chapter-card is-featured">
+        <div class="chapter-index">00</div>
+        <div>
+          <p class="chapter-kicker">Course Orientation</p>
+          <h3>課程說明與修課規定</h3>
+          <p class="chapter-description">開課前先了解課程路線、學習方式與修課規範。</p>
+          <div class="chapter-actions">
+            <span class="orientation-note">目前提供投影片</span>
+            <a class="action action-slide" href="PR_115/Ch00-course-orientation/slides/01-course-orientation-bilingual.html"><span class="action-label">投影片</span><span class="slide-count">1 頁</span></a>
+          </div>
+        </div>
+      </article>
+      <article class="chapter-card is-featured">
+        <div class="chapter-index">01</div>
+        <div>
+          <p class="chapter-kicker">Introduction</p>
+          <h3>導論</h3>
+          <p class="chapter-description">先把整門課的地圖攤開：什麼是模式、特徵與學習系統？</p>
+          <div class="chapter-actions">
+            <a class="action action-notes" href="PR_115/Ch01-introduction/index.html"><span class="action-label">講義</span><span class="slide-count">Chapter page</span></a>
+          </div>
+          <div class="slide-links">
+            <span class="slide-links-label">投影片 · 5 頁</span>
+            <a class="slide-link" href="PR_115/Ch01-introduction/slides/01-pattern-recognition-overview.html">01 課程總覽</a>
+            <a class="slide-link" href="PR_115/Ch01-introduction/slides/02-pattern-recognition-feature-space-bilingual.html">02 特徵空間</a>
+            <a class="slide-link" href="PR_115/Ch01-introduction/slides/03-pattern-recognition-iterative-loop-bilingual.html">03 迭代迴圈</a>
+            <a class="slide-link" href="PR_115/Ch01-introduction/slides/04-pattern-recognition-learning-paradigms-bilingual.html">04 學習典範</a>
+            <a class="slide-link" href="PR_115/Ch01-introduction/slides/05-pattern-recognition-curriculum-roadmap-bilingual.html">05 課程地圖</a>
+          </div>
+        </div>
+      </article>
+      <article class="chapter-card is-featured">
+        <div class="chapter-index">02</div>
+        <div>
+          <p class="chapter-kicker">Bayesian Classifiers</p>
+          <h3>以貝氏決策理論為基礎的分類器</h3>
+          <p class="chapter-description">從機率與代價函數出發，理解分類器如何做出決策。</p>
+          <div class="chapter-actions">
+            <a class="action action-notes" href="PR_115/Ch02-bayes-classifiers/index.html"><span class="action-label">講義</span><span class="slide-count">Chapter page</span></a>
+          </div>
+          <div class="slide-links">
+            <span class="slide-links-label">KP 投影片 · 19 份</span>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp01-bayes-rule-bilingual.html">KP01 貝氏決策理論</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp02-error-region-bilingual.html">KP02 決策區域與誤判機率</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp03-risk-minimization-bilingual.html">KP03 風險最小化與損失矩陣</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp04-hypersurface-bilingual.html">KP04 決策超曲面與判別函數</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp05-gaussian-bilingual.html">KP05 高斯機率密度函數</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp06-qda-bilingual.html">KP06 二次判別函數 QDA</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp07-lda-bilingual.html">KP07 LDA 決策超平面</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp08-minimum-distance-bilingual.html">KP08 最小距離分類器</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp09-maximum-likelihood-bilingual.html">KP09 最大概似估計 ML</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp10-map-estimation-bilingual.html">KP10 最大後驗機率 MAP</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp11-bayesian-inference-bilingual.html">KP11 貝氏推論</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp12-maximum-entropy-bilingual.html">KP12 最大熵估計</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp13-mixture-models-em-bilingual.html">KP13 混合模型與 EM</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp14-nonparametric-estimation-bilingual.html">KP14 無母數估計</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp15-curse-of-dimensionality-knn-bilingual.html">KP15 維度詛咒與 k 近鄰</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp16-naive-bayes-bilingual.html">KP16 單純貝氏分類器</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp17-nearest-neighbor-rule-bilingual.html">KP17 最近鄰居法則</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp18-bayesian-networks-part1-bilingual.html">KP18 貝氏網路（一）</a>
+            <a class="slide-link" href="PR_115/Ch02-bayes-classifiers/slides/pr115-ch02-kp19-bayesian-networks-part2-bilingual.html">KP19 貝氏網路（二）</a>
+          </div>
+        </div>
+      </article>
+      <article class="chapter-card"><div class="chapter-index">03</div><div><p class="chapter-kicker">Linear Classifiers</p><h3>線性分類器</h3><p class="chapter-description">用線性決策面切開特徵空間，建立可計算的分類邊界。</p><div class="chapter-actions"><a class="action action-notes" href="PR_115/Ch03-linear-classifiers/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">04</div><div><p class="chapter-kicker">Nonlinear Classifiers</p><h3>非線性分類器</h3><p class="chapter-description">當直線不夠用：探索更有彈性的分類器與邊界。</p><div class="chapter-actions"><a class="action action-notes" href="PR_115/Ch04-nonlinear-classifiers/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">05</div><div><p class="chapter-kicker">Feature Selection</p><h3>特徵選擇</h3><p class="chapter-description">留下真正有用的訊息，讓模型更精簡、更容易解釋。</p><div class="chapter-actions"><a class="action action-notes" href="PR_115/Ch05-feature-selection/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">06</div><div><p class="chapter-kicker">Feature Generation I</p><h3>特徵生成 I：資料轉換與降維</h3><p class="chapter-description">改變資料的座標與尺度，讓隱藏結構變得可見。</p><div class="chapter-actions"><a class="action action-notes" href="PR_115/Ch06-feature-generation-i/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">07</div><div><p class="chapter-kicker">Feature Generation II</p><h3>特徵生成 II：影像與音訊特徵</h3><p class="chapter-description">從原始訊號萃取可用的表徵，連接感知與辨識。</p><div class="chapter-actions"><a class="action action-notes" href="PR_115/Ch07-feature-generation-ii/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">08</div><div><p class="chapter-kicker">Template Matching</p><h3>樣板匹配</h3><p class="chapter-description">讓樣板在資料中尋找相似形狀，理解匹配的基本直覺。</p><div class="chapter-actions"><a class="action action-notes" href="PR_115/Ch08-template-matching/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">09</div><div><p class="chapter-kicker">Context-Dependent Classification</p><h3>情境相關分類</h3><p class="chapter-description">把鄰近脈絡與上下文納入判斷，走出孤立樣本的限制。</p><div class="chapter-actions"><a class="action action-notes" href="PR_115/Ch09-context-dependent-classification/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">10</div><div><p class="chapter-kicker">Supervised Learning</p><h3>監督式學習終章</h3><p class="chapter-description">回顧監督式學習的主線，整理模型、資料與泛化的關係。</p><div class="chapter-actions"><a class="action action-notes" href="PR_115/Ch10-supervised-epilogue/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">11</div><div><p class="chapter-kicker">Clustering Basics</p><h3>分群：基本概念</h3><p class="chapter-description">在沒有標籤時，從資料本身尋找群組與結構。</p><div class="chapter-actions"><a class="action action-notes" href="PR_115/Ch11-clustering-basic-concepts/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">12</div><div><p class="chapter-kicker">Sequential Algorithms</p><h3>循序分群演算法</h3><p class="chapter-description">資料一筆一筆到來時，模型如何持續更新自己的分群？</p><div class="chapter-actions"><a class="action action-notes" href="PR_115/Ch12-clustering-sequential/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">13</div><div><p class="chapter-kicker">Hierarchical Algorithms</p><h3>階層式分群演算法</h3><p class="chapter-description">從局部鄰近關係逐步組織出群組的階層。</p><div class="chapter-actions"><a class="action action-notes" href="PR_115/Ch13-hierarchical-clustering/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">14</div><div><p class="chapter-kicker">Function Optimization</p><h3>函數最佳化分群</h3><p class="chapter-description">把分群寫成最佳化問題，觀察目標函數如何塑造結果。</p><div class="chapter-actions"><a class="action action-notes" href="PR_115/Ch14-function-optimization-clustering/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">15</div><div><p class="chapter-kicker">Clustering Algorithms IV</p><h3>其它分群演算法</h3><p class="chapter-description">比較不同分群策略的假設、優勢與適用情境。</p><div class="chapter-actions"><a class="action action-notes" href="PR_115/Ch15-clustering-iv/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">16</div><div><p class="chapter-kicker">Cluster Validity</p><h3>叢集效度</h3><p class="chapter-description">沒有標準答案時，如何判斷分群結果是否合理？</p><div class="chapter-actions"><a class="action action-notes" href="PR_115/Ch16-cluster-validity/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
     </div>
   </section>
+
   <!-- COURSE:IDL_115 -->
-  <section class="course">
-    <p class="course-code">IDL 115</p>
-    <h2>Elements of Deep Learning</h2>
+  <section class="course" id="course-idl-115" data-course="IDL_115" aria-labelledby="course-idl-title">
+    <div class="course-heading">
+      <div>
+        <p class="course-code">IDL 115 · Course 02</p>
+        <h2 id="course-idl-title">Introductory Deep Learning</h2>
+        <p class="course-subtitle">深度學習導論：從生物神經元、感知器，到現代生成模型。</p>
+      </div>
+      <div class="course-summary">
+        <p>沿著神經網路的演進路線前進，把模型、損失、幾何與訓練方法接成一張完整地圖。</p>
+        <div class="coverage-row"><span class="coverage-label">投影片整合進度</span><span>2 / 22 章節</span></div>
+        <div class="coverage-track" aria-label="IDL 115 投影片整合進度 2 / 22"><span style="width:9.1%"></span></div>
+      </div>
+    </div>
     <div class="grid">
-      <a class="card" href="IDL_115/Ch01-introduction-history/index.html"><span class="badge">Ch01</span><div class="title">Introduction and History</div></a>
-      <a class="card" href="IDL_115/Ch02-perceptron-mlp/index.html"><span class="badge">Ch02</span><div class="title">From Perceptron to Feedforward Neural Networks</div></a>
-      <a class="card" href="IDL_115/Ch03-backprop-optimization/index.html"><span class="badge">Ch03</span><div class="title">Backpropagation and Optimization</div></a>
-      <a class="card" href="IDL_115/Ch04-cnn/index.html"><span class="badge">Ch04</span><div class="title">Convolutional Neural Networks</div></a>
-      <a class="card" href="IDL_115/Ch05-regularization-overfitting/index.html"><span class="badge">Ch05</span><div class="title">Regularization and Overfitting</div></a>
-      <a class="card" href="IDL_115/Ch06-theoretical-foundations-generalization/index.html"><span class="badge">Ch06</span><div class="title">Theoretical Foundations of Generalization</div></a>
-      <a class="card" href="IDL_115/Ch07-boltzmann-machines/index.html"><span class="badge">Ch07</span><div class="title">Boltzmann Machines</div></a>
-      <a class="card" href="IDL_115/Ch08-rnn-lstm/index.html"><span class="badge">Ch08</span><div class="title">Recurrent Neural Networks and LSTM</div></a>
-      <a class="card" href="IDL_115/Ch09-attention-transformers/index.html"><span class="badge">Ch09</span><div class="title">Attention Mechanisms and Transformers</div></a>
-      <a class="card" href="IDL_115/Ch10-ssm-mamba/index.html"><span class="badge">Ch10</span><div class="title">State Space Models and Mamba</div></a>
-      <a class="card" href="IDL_115/Ch11-large-language-models/index.html"><span class="badge">Ch11</span><div class="title">Large Language Models</div></a>
-      <a class="card" href="IDL_115/Ch12-variational-models/index.html"><span class="badge">Ch12</span><div class="title">Variational Models</div></a>
-      <a class="card" href="IDL_115/Ch13-gmmn/index.html"><span class="badge">Ch13</span><div class="title">Generative Moment Matching Networks</div></a>
-      <a class="card" href="IDL_115/Ch14-gan/index.html"><span class="badge">Ch14</span><div class="title">Generative Adversarial Networks</div></a>
-      <a class="card" href="IDL_115/Ch15-diffusion-models/index.html"><span class="badge">Ch15</span><div class="title">Diffusion Models</div></a>
-      <a class="card" href="IDL_115/Ch16-deep-metric-learning-self-supervised/index.html"><span class="badge">Ch16</span><div class="title">Deep Metric Learning and Self-Supervised Learning</div></a>
-      <a class="card" href="IDL_115/Ch17-graph-neural-networks/index.html"><span class="badge">Ch17</span><div class="title">Graph Neural Networks</div></a>
-      <a class="card" href="IDL_115/Ch18-deep-rl/index.html"><span class="badge">Ch18</span><div class="title">Deep Reinforcement Learning</div></a>
-      <a class="card" href="IDL_115/Ch19-fewshot-metalearning/index.html"><span class="badge">Ch19</span><div class="title">Few-Shot Learning and Meta-Learning</div></a>
-      <a class="card" href="IDL_115/Ch20-compression-distillation/index.html"><span class="badge">Ch20</span><div class="title">Neural Network Compression and Knowledge Distillation</div></a>
-      <a class="card" href="IDL_115/Ch21-practical-deep-learning-tips/index.html"><span class="badge">Ch21</span><div class="title">Practical Tips in Deep Learning</div></a>
-      <a class="card" href="IDL_115/Ch22-coding-neural-networks/index.html"><span class="badge">Ch22</span><div class="title">Coding Neural Networks</div></a>
+      <article class="chapter-card is-featured">
+        <div class="chapter-index">01</div>
+        <div>
+          <p class="chapter-kicker">Introduction and History</p>
+          <h3>Introduction and History</h3>
+          <p class="chapter-description">先從機器學習的地圖與歷史出發，再進入深度學習的問題意識。</p>
+          <div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch01-introduction-history/index.html"><span class="action-label">講義</span><span class="slide-count">Chapter page</span></a></div>
+          <div class="slide-links">
+            <span class="slide-links-label">投影片 · 10 頁</span>
+            <a class="slide-link" href="IDL_115/Ch01-introduction-history/slides/01-ml-theory-surrogate-bias-loop.html">01 假設與偏誤</a>
+            <a class="slide-link" href="IDL_115/Ch01-introduction-history/slides/02-ml-vector-representation-mapping.html">02 向量表示</a>
+            <a class="slide-link" href="IDL_115/Ch01-introduction-history/slides/03-ml-classification-vs-regression.html">03 分類 vs 回歸</a>
+            <a class="slide-link" href="IDL_115/Ch01-introduction-history/slides/04-ml-unsupervised-clustering-dr.html">04 非監督學習</a>
+            <a class="slide-link" href="IDL_115/Ch01-introduction-history/slides/05-ml-dr-and-rl.html">05 降維與強化</a>
+            <a class="slide-link" href="IDL_115/Ch01-introduction-history/slides/06-pattern-recognition-statistical-classification-bilingual.html">06 統計分類</a>
+            <a class="slide-link" href="IDL_115/Ch01-introduction-history/slides/07-ml-regression-dimensionality-reduction-bilingual.html">07 回歸與降維</a>
+            <a class="slide-link" href="IDL_115/Ch01-introduction-history/slides/08-ml-ai-history-mp-perceptron-bilingual.html">08 AI 歷史</a>
+            <a class="slide-link" href="IDL_115/Ch01-introduction-history/slides/09-ml-cnn-history-bilingual.html">09 CNN 歷史</a>
+            <a class="slide-link" href="IDL_115/Ch01-introduction-history/slides/10-ml-overview-treasure-map-bilingual.html">10 尋寶地圖</a>
+          </div>
+        </div>
+      </article>
+      <article class="chapter-card is-featured">
+        <div class="chapter-index">02</div>
+        <div>
+          <p class="chapter-kicker">Perceptron to MLP</p>
+          <h3>From Perceptron to Feedforward Neural Networks</h3>
+          <p class="chapter-description">從生物神經元與 M-P 模型開始，走到感知器、MLP 與萬有逼近定理。</p>
+          <div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch02-perceptron-mlp/index.html"><span class="action-label">講義</span><span class="slide-count">Chapter page</span></a></div>
+          <div class="slide-links">
+            <span class="slide-links-label">投影片 · 14 頁</span>
+            <a class="slide-link" href="IDL_115/Ch02-perceptron-mlp/slides/01-ai-foundations-perceptron-to-uat-bilingual.html">01 感知器 → UAT</a>
+            <a class="slide-link" href="IDL_115/Ch02-perceptron-mlp/slides/02-ai-foundations-2-1-biological-neuron-bilingual.html">02 生物神經元</a>
+            <a class="slide-link" href="IDL_115/Ch02-perceptron-mlp/slides/03-ai-foundations-mp-neuron-bilingual.html">03 M-P 神經元</a>
+            <a class="slide-link" href="IDL_115/Ch02-perceptron-mlp/slides/04-ai-foundations-mp-to-mlp-bilingual.html">04 M-P 到 MLP</a>
+            <a class="slide-link" href="IDL_115/Ch02-perceptron-mlp/slides/05-ai-foundations-perceptron-signum-geometry-bilingual.html">05 Signum 與幾何</a>
+            <a class="slide-link" href="IDL_115/Ch02-perceptron-mlp/slides/06-perceptron-limitations-xor-generalization-bilingual.html">06 XOR 與泛化</a>
+            <a class="slide-link" href="IDL_115/Ch02-perceptron-mlp/slides/07-ai-foundations-adaline-sigmoid-mlp-bilingual.html">07 ADALINE 與 Sigmoid</a>
+            <a class="slide-link" href="IDL_115/Ch02-perceptron-mlp/slides/08-ai-foundations-linear-collapse-bilingual.html">08 線性坍縮</a>
+            <a class="slide-link" href="IDL_115/Ch02-perceptron-mlp/slides/09-deep-learning-activation-functions-bilingual.html">09 激活函數</a>
+            <a class="slide-link" href="IDL_115/Ch02-perceptron-mlp/slides/10-ai-foundations-loss-functions-bilingual.html">10 損失函數</a>
+            <a class="slide-link" href="IDL_115/Ch02-perceptron-mlp/slides/11-ai-foundations-adaline-bilingual.html">11 ADALINE</a>
+            <a class="slide-link" href="IDL_115/Ch02-perceptron-mlp/slides/12-ai-foundations-sigmoid-bilingual.html">12 Sigmoid</a>
+            <a class="slide-link" href="IDL_115/Ch02-perceptron-mlp/slides/13-ai-foundations-rbf-som-bilingual.html">13 RBF 與 SOM</a>
+            <a class="slide-link" href="IDL_115/Ch02-perceptron-mlp/slides/14-ai-foundations-uat-chapter4-bilingual.html">14 UAT 與結論</a>
+          </div>
+        </div>
+      </article>
+      <article class="chapter-card"><div class="chapter-index">03</div><div><p class="chapter-kicker">Backpropagation and Optimization</p><h3>Backpropagation and Optimization</h3><p class="chapter-description">理解誤差如何反向傳播，以及最佳化如何推動參數更新。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch03-backprop-optimization/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">04</div><div><p class="chapter-kicker">Convolutional Neural Networks</p><h3>Convolutional Neural Networks</h3><p class="chapter-description">從局部感受野與權重共享出發，理解 CNN 如何看見影像。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch04-cnn/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">05</div><div><p class="chapter-kicker">Regularization and Overfitting</p><h3>Regularization and Overfitting</h3><p class="chapter-description">在記住訓練資料與真正泛化之間，尋找模型複雜度的平衡。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch05-regularization-overfitting/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">06</div><div><p class="chapter-kicker">Generalization</p><h3>Theoretical Foundations of Generalization</h3><p class="chapter-description">把泛化誤差、複雜度與理論保證放到同一個框架理解。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch06-theoretical-foundations-generalization/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">07</div><div><p class="chapter-kicker">Boltzmann Machines</p><h3>Boltzmann Machines</h3><p class="chapter-description">用能量與機率描述神經網路中的隱藏結構與生成過程。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch07-boltzmann-machines/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">08</div><div><p class="chapter-kicker">Recurrent Networks</p><h3>Recurrent Neural Networks and LSTM</h3><p class="chapter-description">讓模型保留時間脈絡，處理序列中的記憶與遺忘。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch08-rnn-lstm/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">09</div><div><p class="chapter-kicker">Attention and Transformers</p><h3>Attention Mechanisms and Transformers</h3><p class="chapter-description">從注意力權重到 Transformer，理解序列建模的轉向。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch09-attention-transformers/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">10</div><div><p class="chapter-kicker">State Space Models</p><h3>State Space Models and Mamba</h3><p class="chapter-description">以狀態空間的觀點重新思考長序列與高效率建模。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch10-ssm-mamba/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">11</div><div><p class="chapter-kicker">Large Language Models</p><h3>Large Language Models</h3><p class="chapter-description">從語言表示、預訓練到生成，建立大型語言模型的基本地圖。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch11-large-language-models/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">12</div><div><p class="chapter-kicker">Variational Models</p><h3>Variational Models</h3><p class="chapter-description">以變分推論逼近難以直接計算的機率分佈。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch12-variational-models/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">13</div><div><p class="chapter-kicker">GMMN</p><h3>Generative Moment Matching Networks</h3><p class="chapter-description">不用顯式密度函數，也能用矩匹配學習生成分佈。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch13-gmmn/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">14</div><div><p class="chapter-kicker">Generative Adversarial Networks</p><h3>Generative Adversarial Networks</h3><p class="chapter-description">讓生成器與鑑別器互相博弈，逼近真實資料的分佈。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch14-gan/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">15</div><div><p class="chapter-kicker">Diffusion Models</p><h3>Diffusion Models</h3><p class="chapter-description">從逐步加噪與去噪的過程理解新一代生成模型。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch15-diffusion-models/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">16</div><div><p class="chapter-kicker">Metric and Self-Supervised Learning</p><h3>Deep Metric Learning and Self-Supervised Learning</h3><p class="chapter-description">學習距離與表徵，讓模型從未標記資料中挖掘監督訊號。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch16-deep-metric-learning-self-supervised/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">17</div><div><p class="chapter-kicker">Graph Neural Networks</p><h3>Graph Neural Networks</h3><p class="chapter-description">把節點與關係一起納入學習，處理非歐幾何的資料結構。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch17-graph-neural-networks/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">18</div><div><p class="chapter-kicker">Deep Reinforcement Learning</p><h3>Deep Reinforcement Learning</h3><p class="chapter-description">在互動與回饋中學習策略，連接深度網路與決策。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch18-deep-rl/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">19</div><div><p class="chapter-kicker">Few-Shot and Meta-Learning</p><h3>Few-Shot Learning and Meta-Learning</h3><p class="chapter-description">當樣本很少時，如何讓模型借用過去的學習經驗？</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch19-fewshot-metalearning/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">20</div><div><p class="chapter-kicker">Compression and Distillation</p><h3>Neural Network Compression and Knowledge Distillation</h3><p class="chapter-description">把大模型的能力壓縮到更小、更容易部署的模型。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch20-compression-distillation/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">21</div><div><p class="chapter-kicker">Practical Deep Learning</p><h3>Practical Tips in Deep Learning</h3><p class="chapter-description">整理訓練、除錯與實作時最常遇到的關鍵判斷。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch21-practical-deep-learning-tips/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
+      <article class="chapter-card"><div class="chapter-index">22</div><div><p class="chapter-kicker">Coding Neural Networks</p><h3>Coding Neural Networks</h3><p class="chapter-description">把概念落到程式碼，從零開始組出可訓練的神經網路。</p><div class="chapter-actions"><a class="action action-notes" href="IDL_115/Ch22-coding-neural-networks/index.html"><span class="action-label">講義</span></a><span class="action action-muted">投影片待加入</span></div></div></article>
     </div>
   </section>
 </main>
-<footer>更多課程陸續加入中</footer>
+
+<footer>
+  <p>CCC 課程互動式自學講義 · <a href="https://github.com/ndhuccc/CCC-LNS">Source on GitHub</a></p>
+</footer>
+
 <script>
 (function(){
-  var main = document.querySelector('main');
-  var sections = Array.prototype.slice.call(main.querySelectorAll(':scope > section.course'));
-  if(sections.length < 2) return;
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-filter]'));
+  var courses = Array.prototype.slice.call(document.querySelectorAll('.course[data-course]'));
+  var status = document.getElementById('filter-status');
+  var labels = {all:'目前顯示兩門課程', PR_115:'目前顯示 Pattern Recognition', IDL_115:'目前顯示 Introductory Deep Learning'};
 
-  var tablist = document.createElement('nav');
-  tablist.className = 'tabs';
-  tablist.setAttribute('role','tablist');
-  tablist.setAttribute('aria-label','課程');
-
-  var tabs = sections.map(function(section, i){
-    var codeEl = section.querySelector('.course-code');
-    var label = codeEl ? codeEl.textContent.trim() : ('課程 ' + (i + 1));
-    var id = 'course-panel-' + i;
-    section.id = id;
-    section.setAttribute('role','tabpanel');
-    section.setAttribute('aria-labelledby', id + '-tab');
-
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'tab';
-    btn.id = id + '-tab';
-    btn.textContent = label;
-    btn.setAttribute('role','tab');
-    btn.setAttribute('aria-controls', id);
-    btn.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
-    btn.tabIndex = i === 0 ? 0 : -1;
-    btn.addEventListener('click', function(){ activate(i); });
-    tablist.appendChild(btn);
-    return btn;
-  });
-
-  function activate(index){
-    sections.forEach(function(section, i){
-      var active = i === index;
-      section.classList.toggle('active', active);
-      tabs[i].setAttribute('aria-selected', active ? 'true' : 'false');
-      tabs[i].tabIndex = active ? 0 : -1;
-    });
+  function activate(filter, updateUrl){
+    var isAll = filter === 'all';
+    courses.forEach(function(course){ course.hidden = !isAll && course.getAttribute('data-course') !== filter; });
+    buttons.forEach(function(button){ button.setAttribute('aria-pressed', button.getAttribute('data-filter') === filter ? 'true' : 'false'); });
+    if(status) status.textContent = labels[filter] || labels.all;
+    if(updateUrl && window.history && window.history.replaceState){
+      window.history.replaceState(null, '', filter === 'all' ? window.location.pathname : '#' + filter);
+    }
   }
 
-  tablist.addEventListener('keydown', function(e){
-    var current = tabs.findIndex(function(t){ return t.getAttribute('aria-selected') === 'true'; });
-    var next = null;
-    if(e.key === 'ArrowRight') next = (current + 1) % tabs.length;
-    else if(e.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
-    else if(e.key === 'Home') next = 0;
-    else if(e.key === 'End') next = tabs.length - 1;
-    if(next !== null){ e.preventDefault(); activate(next); tabs[next].focus(); }
+  buttons.forEach(function(button){
+    button.addEventListener('click', function(){ activate(button.getAttribute('data-filter'), true); });
   });
 
-  main.parentNode.insertBefore(tablist, main);
-  main.classList.add('tabs-active');
-  activate(0);
+  var hash = window.location.hash.replace('#','');
+  activate(labels[hash] ? hash : 'all', false);
 })();
 </script>
 </body>

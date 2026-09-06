@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>統計分類六大家族 — 從貝氏到核技巧 · Statistical Classification Families</title>
+<script>
+MathJax = {
+  tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字體略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項） */
+.half-layout .visual svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+
+/* 流程步驟 */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin: 28px 0;
+}
+.steps .step {
+  position: relative;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border-top: 5px solid var(--primary);
+}
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+.hero {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a4e 45%, #2d1b69 100%);
+  color: #fff;
+  padding: 96px 2.2vw;
+  min-height: 88vh;
+  display: flex;
+  align-items: center;
+  border-bottom: none;
+  position: relative;
+  overflow: hidden;
+}
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width:1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero::before {
+  content:''; position:absolute; inset:0;
+  background: radial-gradient(600px 400px at 78% 30%, rgba(109,92,231,.28), transparent 70%),
+              radial-gradient(500px 500px at 15% 85%, rgba(9,132,227,.18), transparent 70%);
+  pointer-events:none;
+}
+.hero .inner { max-width: var(--max-w); margin:0 auto; width:100%; position:relative; z-index:1; }
+.badge {
+  display:inline-block; padding:6px 14px; border-radius:999px;
+  background: rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22);
+  color:#f8fafc; font-size:13px; letter-spacing:.14em; font-weight:700; margin-bottom:18px;
+}
+.hero h1 { color:#fff; font-size: clamp(32px, 4.2vw, 54px); line-height:1.15; margin:0 0 14px 0; }
+.hero .zh-sub { color:#e0e7ff; font-size:22px; margin-bottom:8px; }
+.hero .en-sub { color:#9fb3d9; font-size:18px; font-style:italic; margin-bottom:22px; }
+.hero .meta { display:flex; gap:14px; flex-wrap:wrap; margin-top:18px; }
+.hero .meta span { background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18); padding:8px 14px; border-radius:999px; font-size:14px; color:#e2e8f0; }
+.scroll-hint { margin-top:22px; color:#94a3b8; font-size:13px; letter-spacing:.12em; }
+.takahashi {
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 0 auto;
+  padding: 80px 2.2vw;
+  text-align: center;
+  min-height: 62vh;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  border-bottom: 1px dashed var(--line);
+}
+@media (max-width:1100px) { .takahashi { max-width:900px; } }
+.takahashi .quote { font-size: clamp(28px, 3.6vw, 46px); font-weight:800; color:var(--ink); line-height:1.25; }
+.takahashi .quote small { display:block; font-size:18px; color:var(--ink-soft); font-weight:400; margin-top:14px; font-style:italic; }
+.chip { display:inline-block; padding:4px 10px; border-radius:999px; font-size:13px; font-weight:700; letter-spacing:.08em; }
+.chip-blue { background: #e0f2fe; color:#0369a1; border:1px solid #bae6fd; }
+.chip-purple { background: #ede9fe; color:#5b21b6; border:1px solid #ddd6fe; }
+.chip-amber { background: #fef3c7; color:#92400e; border:1px solid #fde68a; }
+</style>
+</head>
+<body>
+<nav class="toc-rail" aria-label="章節索引">
+  <div class="label">CONTENTS</div>
+  <ol>
+    <li><a href="#cover">封面</a></li>
+    <li><a href="#q1">靈魂拷問</a></li>
+    <li><a href="#what">何謂分類</a></li>
+    <li><a href="#bayes">貝氏家族</a></li>
+    <li><a href="#bayes-chart">貝氏邊界圖</a></li>
+    <li><a href="#lda-qda">LDA / QDA</a></li>
+    <li><a href="#logistic">Logistic 回歸</a></li>
+    <li><a href="#knn">KNN 與度量</a></li>
+    <li><a href="#tree">樹與森林</a></li>
+    <li><a href="#svm">SVM 與核技巧</a></li>
+    <li><a href="#family">六大家族譜系</a></li>
+    <li><a href="#summary">總結比較</a></li>
+    <li><a href="#quiz">思考測驗</a></li>
+    <li><a href="#roadmap">學習路線</a></li>
+  </ol>
+</nav>
+<div class="progress-top" id="progressTop"></div>
+
+<!-- COVER -->
+<section class="section hero" id="cover">
+  <div class="inner">
+    <div class="badge">STATISTICAL MACHINE LEARNING · PATTERN RECOGNITION</div>
+    <h1>統計分類六大家族<br>從貝氏到核技巧的演化全景</h1>
+    <div class="zh-sub">武林六派各有絕招：生成 vs. 判別、線性 vs. 彎曲、懶惰 vs. 極致美學 <span class="bilingual-en" style="color:#cbd5e1;font-size:18px;display:inline;">Six schools, six philosophies: generative vs. discriminative, linear vs. curved, lazy vs. max-margin.</span></div>
+    <div class="en-sub">Six Families of Statistical Classification — evidence &amp; prior, geometry &amp; margin, neighbourhood &amp; kernels</div>
+    <div class="meta">
+      <span>📐 貝氏最優 · Bayes Optimal</span>
+      <span>📏 最大邊界 · Max Margin</span>
+      <span>🌳 可解釋性 · Interpretability</span>
+      <span>🌀 核跳躍 · Kernel Trick</span>
+    </div>
+    <div class="scroll-hint">▾ SCROLL TO EXPLORE · 長頁自學模式</div>
+  </div>
+</section>
+
+<!-- TAKAHASHI -->
+<section class="takahashi" id="q1">
+  <div class="chip chip-purple" style="margin-bottom:18px;">BIG QUESTION · 靈魂拷問</div>
+  <div class="quote">
+    給電腦一堆線索，<br>它憑什麼敢拍板「這是 A 還是 B」？
+    <small>Given a pile of clues, what gives a machine the right to declare “it’s A, not B”?</small>
+  </div>
+  <p style="max-width:760px;margin:18px auto 0;color:var(--ink-soft);font-size:20px;">答案不只一種——有人講「成見＋證據」，有人直接硬切一刀，有人問鄰居，有人把世界摺到高維再切。<span class="bilingual-en">There is no single answer: some combine prior &amp; evidence, some cut a hard boundary, some ask neighbours, some lift the world to higher dimensions.</span></p>
+</section>
+
+<!-- WHAT IS CLASSIFICATION -->
+<section class="section" id="what">
+  <span class="sec-tag motivate">S1 · 引起動機 · MOTIVATE</span>
+  <h2 class="section-title">分類是什麼？不只是貼標籤 <span class="en">What Is Classification? Not Just Labeling</span></h2>
+  <p>分類就是「在不確定下做決定」的科學。輸入是特徵向量 $x \in \mathbb{R}^d$，輸出是離散標籤 $y \in \{C_1,\dots,C_K\}$。關鍵在於：不同家族對「不確定」有完全不同的建模方式。<span class="bilingual-en">Classification = decision under uncertainty: input $x \in \mathbb{R}^d$, output label $y$. Families differ in how they model uncertainty.</span></p>
+  <div class="card-grid">
+    <div class="card" style="border-top:4px solid var(--primary);">
+      <div class="chip chip-purple">PHILOSOPHY</div>
+      <h3>兩條世界觀 <span class="bilingual-en" style="font-size:16px;color:var(--ink-soft);font-weight:400;">Two worldviews</span></h3>
+      <p><b>生成式 (Generative)</b>：先學會「每類長什麼樣」$P(X\mid C_j)$，再用貝氏算後驗。<span class="bilingual-en">Learn $P(X\mid C_j)$ per class, then posterior via Bayes.</span></p>
+      <p><b>判別式 (Discriminative)</b>：不管怎麼生成，直接學邊界 $P(Y\mid X)$ 或決策函數。<span class="bilingual-en">Ignore generation; learn $P(Y\mid X)$ or boundary directly.</span></p>
+    </div>
+    <div class="card" style="border-top:4px solid var(--accent);">
+      <div class="chip chip-blue">BOUNDARY</div>
+      <h3>三種邊界長相 <span class="bilingual-en" style="font-size:16px;color:var(--ink-soft);font-weight:400;">Three boundary shapes</span></h3>
+      <p>直線（LDA / Logistic / SVM 線性）、二次曲線（QDA / 核 SVM）、階梯狀（決策樹）。<span class="bilingual-en">Linear, quadratic, staircase — each reflects an assumption about the world.</span></p>
+      <p>沒有萬能模型，只有「對的假設配對的資料」。<span class="bilingual-en">No free lunch: right assumption must match the data.</span></p>
+    </div>
+    <div class="card" style="border-top:4px solid var(--success);">
+      <div class="chip" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;">INTUITION</div>
+      <h3>一句話記住六大家族 <span class="bilingual-en" style="font-size:16px;color:var(--ink-soft);font-weight:400;">One-liner per family</span></h3>
+      <p>貝氏：成見＋證據；LDA/QDA：胖瘦決定直或彎；Logistic：直接算機率；KNN：問鄰居；樹/森林：官僚流程＋投票；SVM：留最寬安全島。<span class="bilingual-en">Bayes priors+evidence; LDA/QDA covariance decides line/curve; Logistic direct prob; KNN neighbours vote; Trees bureaucracy+ensemble; SVM widest margin.</span></p>
+    </div>
+    <div class="card" style="border-top:4px solid var(--warning);">
+      <div class="chip chip-amber">TRAP</div>
+      <h3>先驗的威力 <span class="bilingual-en" style="font-size:16px;color:var(--ink-soft);font-weight:400;">Power of priors</span></h3>
+      <p>同一個 $x=5$，先驗 $0.5$:$0.5$ 時邊界在中間；先驗 $0.9$:$0.1$ 時後驗直接偏向多數——成見會吃掉證據。<span class="bilingual-en">Same $x=5$: equal priors → boundary at centre; 0.9 vs 0.1 → majority dominates. Priors can swallow evidence.</span></p>
+    </div>
+  </div>
+  <div class="intuition-box">
+    <h4>直覺理解 · Intuition</h4>
+    <p>把分類想成法庭：貝氏是「法官綜合前科（先驗）與現場跡證（似然）判案」；Logistic 是「陪審團只看現場投票給機率」；KNN 是「問隔壁鄰居你是哪幫的」；SVM 是「在兩幫之間劃最寬的無人區」。<span class="bilingual-en">Courtroom: Bayes = judge (record + evidence), Logistic = jury voting prob, KNN = ask neighbours, SVM = widest no-man’s-land.</span></p>
+  </div>
+</section>
+
+<!-- BAYES FAMILY -->
+<section class="section" id="bayes">
+  <span class="sec-tag sustain">S2 · 維持注意 · SUSTAIN</span>
+  <h2 class="section-title">1 · 貝氏家族：證據 × 成見 <span class="en">Bayes Family — Evidence × Prior</span></h2>
+  <p>老祖宗 Thomas Bayes 留下一條「綜合判斷」公式：後驗 $\propto$ 似然 $\times$ 先驗。理論上這是無敵的最優分類器（Bayes Optimal），實務上難在估準 $P(X\mid C_j)$。<span class="bilingual-en">Bayes rule: posterior $\propto$ likelihood $\times$ prior — optimal in theory, hard to estimate in practice.</span></p>
+
+  <div class="formula-box">
+    <h4>貝氏定理 · Bayes' Theorem（式 9）</h4>
+    <p>$$P(C_j \mid X=x) = \frac{P(X=x \mid C_j)\,P(C_j)}{P(X=x)}$$</p>
+    <p style="font-size:18px;color:var(--ink-soft);">分母 $P(X=x)=\sum_k P(X\mid C_k)P(C_k)$ 只是歸一化常數，決策時比大小 $ \arg\max_j P(C_j\mid X)$ 即可。<span class="bilingual-en" style="font-size:16px;">Denominator is normalization; decide by $\arg\max$ posterior.</span></p>
+  </div>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg viewBox="0 0 340 260" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="10" width="320" height="240" rx="14" fill="#f8fafc" stroke="#d6dde6"/>
+        <text x="170" y="32" text-anchor="middle" font-size="13" font-weight="700" fill="#5b21b6">BAYES = PRIOR × LIKELIHOOD → POSTERIOR</text>
+        <!-- prior -->
+        <rect x="22" y="50" width="90" height="56" rx="10" fill="#ede9fe" stroke="#8b5cf6"/>
+        <text x="67" y="70" text-anchor="middle" font-size="11" font-weight="700" fill="#5b21b6">成見 Prior</text>
+        <text x="67" y="86" text-anchor="middle" font-size="11" fill="#4a5568">P(Cj)</text>
+        <text x="67" y="99" text-anchor="middle" font-size="9" fill="#6c7a89">平常多可疑？</text>
+        <!-- likelihood -->
+        <rect x="125" y="50" width="90" height="56" rx="10" fill="#e0f2fe" stroke="#0ea5e9"/>
+        <text x="170" y="70" text-anchor="middle" font-size="11" font-weight="700" fill="#0369a1">證據 Likelihood</text>
+        <text x="170" y="86" text-anchor="middle" font-size="11" fill="#4a5568">P(X|Cj)</text>
+        <text x="170" y="99" text-anchor="middle" font-size="9" fill="#6c7a89">現場有多像？</text>
+        <!-- times -->
+        <text x="118" y="82" text-anchor="middle" font-size="16" fill="#94a3b8">×</text>
+        <text x="220" y="82" text-anchor="middle" font-size="16" fill="#94a3b8">=</text>
+        <!-- posterior -->
+        <rect x="228" y="50" width="90" height="56" rx="10" fill="#fef3c7" stroke="#f59e0b"/>
+        <text x="273" y="70" text-anchor="middle" font-size="11" font-weight="700" fill="#92400e">後驗 Posterior</text>
+        <text x="273" y="86" text-anchor="middle" font-size="11" fill="#4a5568">P(Cj|X)</text>
+        <text x="273" y="99" text-anchor="middle" font-size="9" fill="#6c7a89">綜合判斷</text>
+        <!-- denominator -->
+        <rect x="70" y="122" width="200" height="34" rx="8" fill="#fff" stroke="#d6dde6" stroke-dasharray="6 4"/>
+        <text x="170" y="143" text-anchor="middle" font-size="11" fill="#64748b">證據 Evidence  P(X) = Σ  Likelihood·Prior  (歸一化)</text>
+        <!-- arrow down -->
+        <line x1="170" y1="106" x2="170" y2="122" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arr)"/>
+        <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="4" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#94a3b8"/></marker></defs>
+        <!-- decision -->
+        <rect x="70" y="172" width="200" height="48" rx="10" fill="#1a1a2e" />
+        <text x="170" y="192" text-anchor="middle" font-size="12" font-weight="700" fill="#fde68a">決策  argmax  P(Cj | X)</text>
+        <text x="170" y="210" text-anchor="middle" font-size="11" fill="#cbd5e0">選後驗最大者</text>
+      </svg>
+      <div class="svg-caption">貝氏思維：成見與證據相乘後歸一化，再取最大後驗 · Bayes: prior × likelihood → normalized posterior → argmax</div>
+    </div>
+    <div>
+      <div class="highlight-box">
+        <h4>四個名詞一次記牢 · Four Terms</h4>
+        <p>後驗 $P(C_j\mid X)$：看到 $x$ 後兇手是 $j$ 的機率（要算的答案）。<br>先驗 $P(C_j)$：還沒看現場前的成見。<br>似然 $P(X\mid C_j)$：若兇手是 $j$，現場長這樣的機率。<br>證據 $P(X)$：所有人留下此跡證的總機率（分母）。<span class="bilingual-en">Posterior = answer; prior = belief before seeing $x$; likelihood = how typical $x$ is under $C_j$; evidence = normalizer.</span></p>
+      </div>
+      <div class="warning-box">
+        <h4>為何需要 Naive Bayes？ · Why Naive?</h4>
+        <p>特徵維度 $d$ 一高，$P(X\mid C_j)$ 估不準。乾脆假設特徵條件獨立：$P(X\mid C_j)=\prod_i P(X_i\mid C_j)$——天真但常很能打，尤其文本分類。<span class="bilingual-en">High $d$ → density hard to estimate. Naive assumes conditional independence — often surprisingly strong, esp. text.</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="formula-box" style="text-align:left;">
+    <h4>動手算算看 · Worked Example（$X=5$ 站在兩群正中間）</h4>
+    <p>設 $C_1\sim\mathcal{N}(3,1)$、$C_2\sim\mathcal{N}(7,1)$，先驗各 $0.5$，常態密度 $f(x)=\frac{1}{\sigma\sqrt{2\pi}}\exp(-\frac{(x-\mu)^2}{2\sigma^2})$。<span class="bilingual-en">Two Gaussians $\mathcal{N}(3,1)$ vs $\mathcal{N}(7,1)$, equal priors, test $x=5$.</span></p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;">
+      <div style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;">
+        <p style="margin:0;font-weight:700;color:var(--ink);">① 似然 Likelihood</p>
+        <p style="margin:6px 0 0 0;">$P(X=5\mid C_1)=\frac{1}{\sqrt{2\pi}}e^{-2}\approx 0.054$<br>$P(X=5\mid C_2)=\frac{1}{\sqrt{2\pi}}e^{-2}\approx 0.054$<br><span style="color:var(--ink-soft);font-size:18px;">兩邊距中心皆 $2\sigma$，對稱相等。</span><span class="bilingual-en">Symmetric: both $2\sigma$ away → equal.</span></p>
+      </div>
+      <div style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;">
+        <p style="margin:0;font-weight:700;color:var(--ink);">② 證據與後驗</p>
+        <p style="margin:6px 0 0 0;">$P(X)=0.054\cdot0.5+0.054\cdot0.5=0.054$<br>$P(C_1\mid5)=\frac{0.054\cdot0.5}{0.054}=0.5$<br>$P(C_2\mid5)=0.5$ → 邊界恰在 $x^*=5$<span class="bilingual-en">Equal priors → boundary at mid-point $x^*=5$.</span></p>
+      </div>
+    </div>
+    <p style="margin-top:14px;background:#fff8e1;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;">💡 若先驗改為 $P(C_1)=0.9$，則 $P(C_1\mid5)=0.9$、$P(C_2\mid5)=0.1$——<b>成見直接把邊界拉向少數類</b>，即使似然相等也一面倒。<span class="bilingual-en">With $0.9$ vs $0.1$ priors, posterior becomes $0.9$ — prior drags boundary toward minority.</span></p>
+  </div>
+</section>
+
+<!-- BAYES CHART -->
+<section class="section" id="bayes-chart">
+  <span class="sec-tag sustain">S2 · 核心演示 · DEMO</span>
+  <h2 class="section-title">貝氏決策邊界與後驗分佈圖 <span class="en">Bayes Boundary &amp; Posterior — Interactive Demo</span></h2>
+  <p>藍曲線 $C_1\sim\mathcal{N}(3,1)$、紅曲線 $C_2\sim\mathcal{N}(7,1)$。下方拉動先驗 $P(C_1)$，觀察加權密度與決策邊界如何被「成見」拉走。<span class="bilingual-en">Blue $C_1$ vs red $C_2$. Drag the prior slider — weighted densities and boundary shift with belief.</span></p>
+
+  <div class="chart-wrap">
+    <h4>似然 × 先驗 → 後驗分佈（可調先驗） · Likelihood × Prior → Posterior</h4>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:10px 0 14px 0;">
+      <label style="font-size:18px;color:var(--ink);font-weight:700;">先驗 Prior $P(C_1)$ <span class="bilingual-en" style="display:inline;font-size:16px;">(drag to see prior power)</span>：</label>
+      <input type="range" id="priorSlider" min="0.1" max="0.9" step="0.05" value="0.5" style="width:260px;accent-color:var(--primary);">
+      <span id="priorLabel" style="font-size:18px;font-weight:700;color:var(--primary);">0.50</span>
+      <span style="font-size:14px;color:var(--ink-soft);">/ $P(C_2)=$ <span id="priorLabel2">0.50</span></span>
+      <span id="boundaryLabel" style="margin-left:auto;background:#1a1a2e;color:#fde68a;padding:6px 12px;border-radius:999px;font-size:14px;font-weight:700;">決策邊界 $x^* \approx 5.00$ · Posterior $0.50$ / $0.50$</span>
+    </div>
+    <canvas id="bayesChart"></canvas>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--ink-soft);"><span style="width:14px;height:3px;background:#1e40af;display:inline-block;"></span> Likelihood $C_1$</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--ink-soft);"><span style="width:14px;height:3px;background:#dc2626;display:inline-block;"></span> Likelihood $C_2$</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--ink-soft);"><span style="width:14px;height:3px;background:#3b82f6;display:inline-block;border-top:2px dashed #3b82f6;"></span> Weighted $P(X|C_1)P(C_1)$</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--ink-soft);"><span style="width:14px;height:3px;background:#ef4444;display:inline-block;border-top:2px dashed #ef4444;"></span> Weighted $P(X|C_2)P(C_2)$</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--ink-soft);"><span style="width:14px;height:14px;background:rgba(147,197,253,.45);border:1px solid #93c5fd;display:inline-block;"></span> Region $C_1$</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--ink-soft);"><span style="width:14px;height:14px;background:rgba(252,165,165,.45);border:1px solid #fca5a5;display:inline-block;"></span> Region $C_2$</span>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top:18px;">
+    <div class="intuition-box">
+      <h4>怎麼讀圖 · How to Read</h4>
+      <p>實線是「長相」似然；虛線是用先驗加權後的高度。黑虛線是後驗 $0.5$ 的決策邊界——等高點。先驗一偏，虛線高低立變，邊界跟著平移。<span class="bilingual-en">Solid = likelihood shape; dashed = prior-weighted. Black dashed = posterior $0.5$ boundary — equal posterior. Shift prior → weighted heights move → boundary slides.</span></p>
+    </div>
+    <div class="warning-box">
+      <h4>先驗陷阱 · Prior Pitfall</h4>
+      <p>當 $P(C_1)=0.9$，即使 $x=5$ 距兩中心等距，後驗仍 $0.9$ 壓倒 $0.1$。在不平衡資料（如詐欺 1%），忽略先驗會造成災難性誤判。<span class="bilingual-en">With $0.9$ vs $0.1$, same $x=5$ gives $0.9$ vs $0.1$ posterior. Ignoring priors on imbalanced data is catastrophic.</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- LDA / QDA -->
+<section class="section" id="lda-qda">
+  <span class="sec-tag sustain">S2 · 幾何變形雙雄 · GEOMETRY</span>
+  <h2 class="section-title">LDA 與 QDA：胖瘦決定直或彎 <span class="en">LDA vs QDA — Covariance Decides Linear or Curved</span></h2>
+  <p>兩者皆假設每類是高斯，差在「胖瘦是否相同」。共變異數相等 → 線性超平面；各異 → 二次曲線。<span class="bilingual-en">Both assume Gaussian per class; equal covariance → linear, unequal → quadratic.</span></p>
+
+  <div class="compare-layout">
+    <div class="col left">
+      <h3>LDA 線性判別 · Linear</h3>
+      <p style="font-size:18px;color:var(--ink-soft);margin-bottom:10px;">假設 $\Sigma_1=\Sigma_2$（形狀、胖瘦、旋轉完全一致），僅中心不同。<span class="bilingual-en">Assume shared $\Sigma$ — same shape, different centres.</span></p>
+      <ul>
+        <li>決策邊界為<b>直線/超平面</b>，公式線性於 $x$ <span class="bilingual-en">(linear in $x$)</span></li>
+        <li>參數少、穩健、適合小樣本 <span class="bilingual-en">(few params, robust)</span></li>
+        <li>若真實共變異數不同，會系統性偏誤 <span class="bilingual-en">(biased if covariances differ)</span></li>
+      </ul>
+      <div class="formula-box" style="padding:14px;margin:12px 0 0 0;">
+        <p style="margin:0;">$\delta_k(x)=x^T\Sigma^{-1}\mu_k-\tfrac12\mu_k^T\Sigma^{-1}\mu_k+\log P(C_k)$</p>
+        <p style="font-size:16px;color:var(--ink-soft);margin-top:6px;">兩類相減 $\delta_1-\delta_2=0$ 為線性方程。<span class="bilingual-en">Difference is linear → straight boundary.</span></p>
+      </div>
+    </div>
+    <div class="col right">
+      <h3>QDA 二次判別 · Quadratic</h3>
+      <p style="font-size:18px;color:var(--ink-soft);margin-bottom:10px;">允許 $\Sigma_1\neq\Sigma_2$（每群胖瘦、旋轉各異）。<span class="bilingual-en">Each class owns its $\Sigma_k$ — different spreads.</span></p>
+      <ul>
+        <li>決策邊界為<b>拋物線/橢圓/雙曲線</b>等二次曲線 <span class="bilingual-en">(quadratic curves)</span></li>
+        <li>更彈性，但參數多、易過擬合 <span class="bilingual-en">(flexible, more params)</span></li>
+        <li>每類需估 $O(d^2)$ 共變異數，小樣本慎用 <span class="bilingual-en">($O(d^2)$ covariance each)</span></li>
+      </ul>
+      <div class="formula-box" style="padding:14px;margin:12px 0 0 0;">
+        <p style="margin:0;">$\delta_k(x)=-\tfrac12\log|\Sigma_k|-\tfrac12(x-\mu_k)^T\Sigma_k^{-1}(x-\mu_k)+\log P(C_k)$</p>
+        <p style="font-size:16px;color:var(--ink-soft);margin-top:6px;">含 $x^T(\Sigma_1^{-1}-\Sigma_2^{-1})x$ → 二次項。<span class="bilingual-en">Quadratic term survives → curved boundary.</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="svg-stage">
+    <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+      <rect width="760" height="260" rx="14" fill="#0a0e27"/>
+      <!-- Title -->
+      <text x="380" y="26" text-anchor="middle" font-size="13" font-weight="700" fill="#fde68a" letter-spacing="0.08em">LDA：直線切 · QDA：曲線切 — 同資料、不同假設、不同邊界</text>
+      <!-- Left panel LDA -->
+      <rect x="18" y="38" width="360" height="210" rx="12" fill="#ffffff" stroke="#d6dde6"/>
+      <text x="198" y="62" text-anchor="middle" font-size="12" font-weight="700" fill="#1e40af">LDA · 等共變異數 → 直線邊界</text>
+      <!-- ellipses equal -->
+      <ellipse cx="120" cy="145" rx="62" ry="42" fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="6 4" opacity="0.9"/>
+      <ellipse cx="275" cy="145" rx="62" ry="42" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="6 4" opacity="0.9"/>
+      <circle cx="120" cy="145" r="3.5" fill="#1e40af"/><text x="120" y="162" text-anchor="middle" font-size="10" fill="#1e40af">μ1</text>
+      <circle cx="275" cy="145" r="3.5" fill="#dc2626"/><text x="275" y="162" text-anchor="middle" font-size="10" fill="#dc2626">μ2</text>
+      <!-- linear boundary -->
+      <line x1="198" y1="52" x2="198" y2="238" stroke="#111827" stroke-width="2.4" stroke-dasharray="8 5"/>
+      <text x="198" y="232" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">linear boundary</text>
+      <text x="70" y="210" text-anchor="middle" font-size="11" fill="#3b82f6">C1 區域</text>
+      <text x="325" y="210" text-anchor="middle" font-size="11" fill="#dc2626">C2 區域</text>
+      <!-- Right panel QDA -->
+      <rect x="392" y="38" width="350" height="210" rx="12" fill="#ffffff" stroke="#d6dde6"/>
+      <text x="567" y="62" text-anchor="middle" font-size="12" font-weight="700" fill="#be185d">QDA · 異共變異數 → 二次曲線</text>
+      <!-- ellipses unequal -->
+      <ellipse cx="470" cy="155" rx="72" ry="34" fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="6 4"/>
+      <ellipse cx="640" cy="135" rx="38" ry="58" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="6 4"/>
+      <circle cx="470" cy="155" r="3.5" fill="#1e40af"/><text x="470" y="172" text-anchor="middle" font-size="10" fill="#1e40af">μ1 (扁)</text>
+      <circle cx="640" cy="135" r="3.5" fill="#dc2626"/><text x="640" y="118" text-anchor="middle" font-size="10" fill="#dc2626">μ2 (瘦長)</text>
+      <!-- quadratic curve -->
+      <path d="M 392 205 Q 540 90  742 205" fill="none" stroke="#111827" stroke-width="2.4" stroke-dasharray="8 5"/>
+      <text x="567" y="232" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">quadratic boundary (parabola-like)</text>
+    </svg>
+    <div class="svg-caption">左：共變異數相同 → 橢圓等形狀，邊界筆直；右：胖瘦旋轉各異 → 邊界彎曲成二次曲線 · Left equal covariances → straight; right unequal → curved</div>
+  </div>
+</section>
+
+<!-- LOGISTIC -->
+<section class="section" id="logistic">
+  <span class="sec-tag sustain">S2 · 直球對決 · DISCRIMINATIVE</span>
+  <h2 class="section-title">3 · Logistic 回歸：一顆神經元的誕生 <span class="en">Logistic Regression — A Single Neuron Is Born</span></h2>
+  <p>不猜「資料怎麼長」，直接建模 $P(Y=1\mid X)$。把線性分數 $z=w^Tx+b$ 塞進 Sigmoid 壓到 $[0,1]$，輸出就是機率。<span class="bilingual-en">Skip $P(X\mid C)$; model $P(Y\mid X)$ directly via sigmoid on linear score.</span></p>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg viewBox="0 0 340 260" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="10" width="320" height="240" rx="14" fill="#fff" stroke="#d6dde6"/>
+        <text x="170" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#5b21b6">Sigmoid  σ(z)=1/(1+e^{-z})</text>
+        <!-- axes -->
+        <line x1="40" y1="200" x2="310" y2="200" stroke="#94a3b8" stroke-width="1.2"/>
+        <line x1="170" y1="36" x2="170" y2="210" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4"/>
+        <text x="170" y="222" text-anchor="middle" font-size="10" fill="#64748b">z = w·x + b</text>
+        <text x="38" y="46" font-size="10" fill="#64748b">1.0</text>
+        <text x="38" y="126" font-size="10" fill="#64748b">0.5</text>
+        <text x="38" y="200" font-size="10" fill="#64748b">0.0</text>
+        <line x1="36" y1="46" x2="40" y2="46" stroke="#94a3b8"/><line x1="36" y1="124" x2="40" y2="124" stroke="#94a3b8"/>
+        <!-- sigmoid curve -->
+        <path d="M 44 198 C 70 196, 90 188, 110 170 C 130 148, 145 126, 170 124 C 195 122, 210 100, 230 76 C 250 52, 270 46, 306 44" fill="none" stroke="#7c3aed" stroke-width="3.2" stroke-linecap="round"/>
+        <!-- threshold -->
+        <line x1="40" y1="124" x2="310" y2="124" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="6 4"/>
+        <text x="298" y="118" font-size="9" fill="#92400e" font-weight="700">p=0.5 決策閾</text>
+        <!-- annotations -->
+        <rect x="48" y="52" width="82" height="26" rx="8" fill="#ede9fe" stroke="#c4b5fd"/><text x="89" y="69" text-anchor="middle" font-size="10" fill="#5b21b6">z→−∞ ⇒ 0</text>
+        <rect x="212" y="52" width="82" height="26" rx="8" fill="#fef3c7" stroke="#fde68a"/><text x="253" y="69" text-anchor="middle" font-size="10" fill="#92400e">z→+∞ ⇒ 1</text>
+        <text x="170" y="246" text-anchor="middle" font-size="10" fill="#475569">壓縮實數 → 機率 · squeeze ℝ → [0,1]</text>
+      </svg>
+      <div class="svg-caption">線性分數經 Sigmoid 壓縮為機率，邊界仍線性但輸出平滑可校準 · Linear score → sigmoid → calibrated prob</div>
+    </div>
+    <div>
+      <div class="highlight-box">
+        <h4>生成 vs. 判別 · Generative vs. Discriminative</h4>
+        <p>貝氏/LDA 要估 $P(X\mid C)P(C)$ 兩大塊；Logistic 只估 $P(Y\mid X)$ 一塊，少做假設、少走彎路。<span class="bilingual-en">Bayes/LDA estimate two pieces; Logistic estimates one — fewer assumptions.</span></p>
+      </div>
+      <div class="intuition-box">
+        <h4>直覺 · 神經元原型</h4>
+        <p>這就是最老、最純的一顆人工神經元：線性加權 $+$ Sigmoid 非線性。疊很多顆就變深度網路。<span class="bilingual-en">The oldest neuron: linear + sigmoid. Stack many → deep net.</span></p>
+      </div>
+      <div class="method-box">
+        <h4>優缺 · Pros &amp; Cons</h4>
+        <p>優：機率輸出可解釋、可校準；訓練凸優化、穩定。<br>缺：邊界仍線性，非線性資料需靠特徵工程或「升維＋核」。<span class="bilingual-en">Pro: calibrated prob, convex. Con: linear boundary — need features/kernels for non-linear.</span></p>
+      </div>
+    </div>
+  </div>
+  <div class="formula-box">
+    <h4>公式 · Sigmoid 與條件機率</h4>
+    <p>$$\sigma(z)=\frac{1}{1+e^{-z}},\quad P(Y=1\mid x)=\sigma(w^Tx+b)$$</p>
+    <p>決策：$P\gt 0.5$ 判正類；損失為 Cross-Entropy（等價於最大似然）。<span class="bilingual-en">Decide $P\gt 0.5$; loss = cross-entropy = MLE.</span></p>
+  </div>
+  <div class="chart-wrap">
+    <h4>可調分數 vs. 機率對照（拉動 $w,b$ 感受邊界平移） · Score → Probability</h4>
+    <canvas id="sigmoidChart"></canvas>
+  </div>
+</section>
+
+<!-- KNN -->
+<section class="section" id="knn">
+  <span class="sec-tag sustain">S2 · 鄰舍多數決 · NEIGHBOURHOOD</span>
+  <h2 class="section-title">4 · KNN 與度量學習：問鄰居與重新拉扯空間 <span class="en">KNN &amp; Metric Learning — Vote &amp; Reshape Space</span></h2>
+  <p>KNN 零訓練、零參數（除 $k$）：新樣本看最近 $k$ 個鄰居多數決。但「近」的定義決定一切——於是有度量學習。<span class="bilingual-en">Zero training: classify by $k$ nearest votes. But “near” is everything — hence metric learning.</span></p>
+
+  <div class="compare-layout">
+    <div class="col left">
+      <h3>KNN 多數決 · Majority Vote</h3>
+      <p style="font-size:18px;color:var(--ink-soft);">超參只有 $k$。$k$ 小 → 靈活但吵；$k$ 大 → 平滑但鈍。常用歐氏/餘弦距離。<span class="bilingual-en">Only $k$. Small $k$ = flexible but noisy; large $k$ = smooth but blunt.</span></p>
+      <ul>
+        <li>懶惰學習：訓練只存資料，預測才計算 <span class="bilingual-en">(lazy: store, compute at query)</span></li>
+        <li>維度詛咒：高維距離失真，需降維或度量學習 <span class="bilingual-en">(curse of dimensionality)</span></li>
+        <li>決策邊界呈「拼布狀」Voronoi 碎形 <span class="bilingual-en">(piecewise Voronoi)</span></li>
+      </ul>
+      <div style="margin-top:12px;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px;">
+        <p style="margin:0;font-weight:700;color:var(--ink);">$k$ 選擇經驗法則 <span class="bilingual-en" style="font-weight:400;color:var(--ink-soft);">Rule of thumb</span></p>
+        <p style="margin:6px 0 0 0;font-size:18px;">奇數避免平手；交叉驗證選 $k$；類不平衡時加權投票 $w=1/d$。<span class="bilingual-en">Odd $k$ avoids tie; CV to tune; weight by $1/d$ if imbalanced.</span></p>
+      </div>
+    </div>
+    <div class="col right">
+      <h3>度量學習 · Metric Learning</h3>
+      <p style="font-size:18px;color:var(--ink-soft);">與其抱怨距離不準，不如學一個距離：把同類捏緊、異類拉開（如 Triplet Loss）。<span class="bilingual-en">Don’t blame distance — learn it: pull same, push different (Triplet Loss).</span></p>
+      <ul>
+        <li>學習線性變換 $d_M(x,y)=\|Lx-Ly\|_2$ 或深度嵌入 $f_\theta(x)$ <span class="bilingual-en">(learn $L$ or embedding $f_\theta$)</span></li>
+        <li>Triplet：$ \|f(a)-f(p)\|+m \lt \|f(a)-f(n)\|$ <span class="bilingual-en">(anchor-positive vs anchor-negative)</span></li>
+        <li>延伸至人臉辨識、檢索、對比學習 <span class="bilingual-en">(face, retrieval, contrastive learning)</span></li>
+      </ul>
+      <div class="formula-box" style="padding:12px;margin:12px 0 0 0;">
+        <p style="margin:0;">$\mathcal{L}_{\text{tri}}=\max\big(0,\; \|f(a)-f(p)\|^2-\|f(a)-f(n)\|^2+m\big)$</p>
+        <p style="font-size:16px;color:var(--ink-soft);margin-top:6px;">$m$ 為安全邊距 margin，與 SVM 異曲同工。<span class="bilingual-en">$m$ is margin — same spirit as SVM.</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="svg-stage">
+    <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+      <rect width="760" height="260" rx="14" fill="#0a0e27"/>
+      <!-- Left: KNN vote -->
+      <rect x="18" y="18" width="360" height="224" rx="12" fill="#fff" stroke="#d6dde6"/>
+      <text x="198" y="40" text-anchor="middle" font-size="12" font-weight="700" fill="#0ea5e9">KNN · k=5 多數決（藍多勝）</text>
+      <!-- points -->
+      <circle cx="110" cy="110" r="8" fill="#3b82f6" stroke="#1e40af" stroke-width="1.4"/><circle cx="145" cy="95" r="8" fill="#3b82f6" stroke="#1e40af" stroke-width="1.4"/><circle cx="98" cy="150" r="8" fill="#3b82f6" stroke="#1e40af" stroke-width="1.4"/>
+      <circle cx="220" cy="105" r="8" fill="#ef4444" stroke="#dc2626" stroke-width="1.4"/><circle cx="235" cy="150" r="8" fill="#ef4444" stroke="#dc2626" stroke-width="1.4"/>
+      <!-- query -->
+      <circle cx="165" cy="132" r="10" fill="#f59e0b" stroke="#92400e" stroke-width="2"/><text x="165" y="136" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">?</text>
+      <circle cx="165" cy="132" r="48" fill="none" stroke="#f59e0b" stroke-width="1.4" stroke-dasharray="6 4"/>
+      <text x="165" y="196" text-anchor="middle" font-size="10" fill="#475569">虛線內 3藍2紅 → 判藍 (C1)</text>
+      <text x="295" y="210" font-size="10" fill="#64748b">k=5</text>
+      <!-- Right: metric learning -->
+      <rect x="392" y="18" width="350" height="224" rx="12" fill="#fff" stroke="#d6dde6"/>
+      <text x="567" y="40" text-anchor="middle" font-size="12" font-weight="700" fill="#7c3aed">度量學習前後對比</text>
+      <text x="467" y="62" text-anchor="middle" font-size="10" font-weight="700" fill="#64748b">BEFORE · 距離混疊</text>
+      <text x="667" y="62" text-anchor="middle" font-size="10" font-weight="700" fill="#059669">AFTER · 同類聚、異類離</text>
+      <!-- before clusters mixed -->
+      <circle cx="430" cy="110" r="7" fill="#93c5fd"/><circle cx="445" cy="135" r="7" fill="#fca5a5"/><circle cx="435" cy="155" r="7" fill="#93c5fd"/><circle cx="490" cy="125" r="7" fill="#fca5a5"/><circle cx="475" cy="150" r="7" fill="#93c5fd"/>
+      <text x="467" y="195" text-anchor="middle" font-size="10" fill="#94a3b8">空間扭曲前</text>
+      <!-- arrow -->
+      <line x1="512" y1="132" x2="592" y2="132" stroke="#7c3aed" stroke-width="2" marker-end="url(#arr2)"/><defs><marker id="arr2" markerWidth="8" markerHeight="8" refX="4" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#7c3aed"/></marker></defs><text x="552" y="122" text-anchor="middle" font-size="9" fill="#7c3aed">Learn L / fθ</text>
+      <!-- after clusters separated -->
+      <circle cx="610" cy="105" r="7" fill="#3b82f6"/><circle cx="625" cy="125" r="7" fill="#3b82f6"/><circle cx="615" cy="145" r="7" fill="#3b82f6"/>
+      <circle cx="690" cy="110" r="7" fill="#ef4444"/><circle cx="705" cy="135" r="7" fill="#ef4444"/><circle cx="695" cy="155" r="7" fill="#ef4444"/>
+      <line x1="640" y1="90" x2="675" y2="90" stroke="#10b981" stroke-width="1.4" stroke-dasharray="6 4"/><text x="657" y="84" text-anchor="middle" font-size="9" fill="#059669">margin ↑</text>
+      <text x="667" y="195" text-anchor="middle" font-size="10" fill="#059669">學習後：距離有意義</text>
+    </svg>
+    <div class="svg-caption">左：KNN 拼布邊界；右：度量學習把空間「捏緊/拉開」，讓最近鄰真正反映語意相似 · Left Voronoi; right learned space makes neighbours meaningful</div>
+  </div>
+</section>
+
+<!-- TREE / FOREST -->
+<section class="section" id="tree">
+  <span class="sec-tag sustain">S2 · 官僚流程與投票 · RULES &amp; VOTE</span>
+  <h2 class="section-title">5 · 決策樹與隨機森林：官僚流程＋三個臭皮匠 <span class="en">Trees &amp; Random Forest — Bureaucracy + Wisdom of Crowds</span></h2>
+  <p>樹把特徵空間切成軸平行的小方塊；森林用 Bagging + 特徵抽樣種千棵樹再投票，大幅降變異而不增偏誤。<span class="bilingual-en">Trees cut axis-aligned boxes; forest bags many trees and votes — variance down, bias stays.</span></p>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg viewBox="0 0 340 300" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="10" width="320" height="280" rx="14" fill="#fff" stroke="#d6dde6"/>
+        <text x="170" y="34" text-anchor="middle" font-size="12" font-weight="700" fill="#92400e">決策樹：銀行審核流程</text>
+        <!-- root -->
+        <rect x="80" y="48" width="180" height="36" rx="10" fill="#fef3c7" stroke="#f59e0b"/><text x="170" y="66" text-anchor="middle" font-size="11" font-weight="700" fill="#92400e">年收入 &gt; 50萬？</text><text x="170" y="79" text-anchor="middle" font-size="9" fill="#92400e">Income &gt; 500k?</text>
+        <!-- branches -->
+        <line x1="120" y1="84" x2="70" y2="112" stroke="#94a3b8" stroke-width="1.4"/><text x="84" y="102" font-size="9" fill="#059669" font-weight="700">是 Yes</text>
+        <line x1="220" y1="84" x2="270" y2="112" stroke="#94a3b8" stroke-width="1.4"/><text x="232" y="102" font-size="9" fill="#dc2626" font-weight="700">否 No</text>
+        <!-- level2 -->
+        <rect x="18" y="112" width="110" height="34" rx="10" fill="#dcfce7" stroke="#10b981"/><text x="73" y="130" text-anchor="middle" font-size="10" font-weight="700" fill="#065f46">信用 &gt; 700？</text>
+        <rect x="212" y="112" width="110" height="34" rx="10" fill="#fee2e2" stroke="#f87171"/><text x="267" y="130" text-anchor="middle" font-size="10" font-weight="700" fill="#991b1b">拒絕 Reject</text>
+        <!-- level3 -->
+        <line x1="45" y1="146" x2="30" y2="172" stroke="#94a3b8"/><line x1="100" y1="146" x2="115" y2="172" stroke="#94a3b8"/>
+        <rect x="6" y="172" width="52" height="30" rx="8" fill="#dbeafe" stroke="#3b82f6"/><text x="32" y="191" text-anchor="middle" font-size="9" font-weight="700" fill="#1e40af">核准</text>
+        <rect x="92" y="172" width="52" height="30" rx="8" fill="#fee2e2" stroke="#f87171"/><text x="118" y="191" text-anchor="middle" font-size="9" font-weight="700" fill="#991b1b">拒絕</text>
+        <text x="73" y="220" text-anchor="middle" font-size="9" fill="#64748b">Score &gt; 700 ?</text>
+        <!-- forest hint -->
+        <rect x="18" y="232" width="304" height="44" rx="10" fill="#1a1a2e"/>
+        <text x="170" y="250" text-anchor="middle" font-size="11" font-weight="700" fill="#fde68a">隨機森林：種 1000 棵 × 隨機抽樣 × 投票</text>
+        <text x="170" y="266" text-anchor="middle" font-size="10" fill="#cbd5e0">Bagging + Feature Sampling → Vote (variance ↓)</text>
+      </svg>
+      <div class="svg-caption">樹：正交切割可解釋；森林：集成壓制過擬合 · Tree = interpretable cuts; forest = ensemble kills overfit</div>
+    </div>
+    <div>
+      <div class="highlight-box">
+        <h4>為何是「階梯」邊界 · Why Staircase?</h4>
+        <p>每次只用一個特徵的閾值切割（如 $x_1\gt 5$），累積成水平/垂直的階梯狀邊界，高度可解釋。<span class="bilingual-en">One feature per split → axis-aligned staircase, fully interpretable.</span></p>
+      </div>
+      <div class="intuition-box">
+        <h4>隨機森林為何有效 · Why Forest Works</h4>
+        <p>單棵樹方差大、易過擬合；Bagging 讓每棵看不同子樣本與子特徵，去相關後平均→變異大幅下降。<span class="bilingual-en">Single tree high variance. Bagging decorrelates trees; averaging slashes variance.</span></p>
+      </div>
+      <div class="method-box">
+        <h4>現代表格資料霸主 · Tabular King</h4>
+        <p>在結構化表格資料上，樹/森林/梯度提升（GBDT）長期霸榜，且能自然處理缺值與混合特徵。<span class="bilingual-en">On tabular data, trees/GBDT remain king; handle missing &amp; mixed features naturally.</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <h4>單棵樹 vs. 森林：偏誤-變異權衡示意 · Single Tree vs. Forest (bias-variance)</h4>
+    <canvas id="forestChart"></canvas>
+  </div>
+</section>
+
+<!-- SVM -->
+<section class="section" id="svm">
+  <span class="sec-tag sustain">S2 · 極致美學 · MAX MARGIN</span>
+  <h2 class="section-title">6 · SVM 與核技巧：最寬隔離帶＋維度跳躍 <span class="en">SVM &amp; Kernel Trick — Widest Margin + Dimension Leap</span></h2>
+  <div class="half-layout">
+    <div class="visual">
+      <svg viewBox="0 0 340 280" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="10" width="320" height="260" rx="14" fill="#fff" stroke="#d6dde6"/>
+        <text x="170" y="32" text-anchor="middle" font-size="12" font-weight="700" fill="#be185d">最大邊界與支援向量</text>
+        <!-- grid -->
+        <line x1="40" y1="220" x2="310" y2="220" stroke="#e2e8f0"/><line x1="40" y1="40" x2="40" y2="220" stroke="#e2e8f0"/>
+        <!-- margin zone -->
+        <polygon points="40,70 310,210 310,230 40,90" fill="rgba(253,203,110,.22)" stroke="#f59e0b" stroke-width="1" stroke-dasharray="6 4"/>
+        <text x="298" y="152" font-size="8" fill="#92400e">margin</text>
+        <!-- decision line -->
+        <line x1="40" y1="80" x2="310" y2="220" stroke="#111827" stroke-width="2.6"/>
+        <!-- support vectors -->
+        <circle cx="110" cy="105" r="7" fill="#3b82f6" stroke="#1e40af" stroke-width="2"/><circle cx="130" cy="128" r="7" fill="#3b82f6" stroke="#1e40af" stroke-width="2"/>
+        <circle cx="220" cy="192" r="7" fill="#ef4444" stroke="#dc2626" stroke-width="2"/><circle cx="245" cy="172" r="7" fill="#ef4444" stroke="#dc2626" stroke-width="2"/>
+        <!-- other points -->
+        <circle cx="70" cy="80" r="5" fill="#93c5fd"/><circle cx="90" cy="110" r="5" fill="#93c5fd"/><circle cx="265" cy="205" r="5" fill="#fca5a5"/><circle cx="285" cy="180" r="5" fill="#fca5a5"/>
+        <!-- arrows for margin -->
+        <line x1="155" y1="90" x2="165" y2="142" stroke="#f59e0b" stroke-width="1.4" marker-end="url(#arr3)"/><line x1="205" y1="200" x2="195" y2="148" stroke="#f59e0b" stroke-width="1.4" marker-end="url(#arr3)"/>
+        <defs><marker id="arr3" markerWidth="8" markerHeight="8" refX="4" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#f59e0b"/></marker></defs>
+        <text x="170" y="248" text-anchor="middle" font-size="10" fill="#475569">僅支援向量決定邊界 · only SVs matter</text>
+        <text x="170" y="262" text-anchor="middle" font-size="9" fill="#94a3b8">遠處點移動不影響 · far points irrelevant</text>
+      </svg>
+      <div class="svg-caption">最大化兩類間隙，解僅依賴「釘子戶」支援向量，具稀疏性 · Maximize gap; solution depends only on SVs (sparse)</div>
+    </div>
+    <div>
+      <div class="highlight-box">
+        <h4>核技巧：蚊香一刀切 · Kernel Trick</h4>
+        <p>二維蚊香混疊時，映射 $\phi(x)$ 到高維 Hilbert 空間變線性可分。核 $K(x,z)=\langle\phi(x),\phi(z)\rangle$ 讓我們不必算 $\phi$ 本身。<span class="bilingual-en">Entangled spiral in 2D → linear in high-D. Kernel computes inner product without explicit $\phi$.</span></p>
+        <p style="margin-top:8px;">常用：RBF $K=\exp(-\gamma\|x-z\|^2)$（無限維）、多項式、線性。<span class="bilingual-en">Popular: RBF (infinite-D), polynomial, linear.</span></p>
+      </div>
+      <div class="intuition-box">
+        <h4>直覺：把紙揉起來切 · Scrunch the Paper</h4>
+        <p>想像把混在一起的紅藍點畫在紙上，揉成球後從中間一刀切——攤平後在原平面看就是彎曲邊界。<span class="bilingual-en">Draw mixed dots, scrunch paper, cut, unfold — curved boundary appears.</span></p>
+      </div>
+      <div class="warning-box">
+        <h4>代價 · Cost</h4>
+        <p>核矩陣 $O(n^2)$ 記憶體與計算；超參 $\gamma, C$ 敏感。大數據時代常被深度網路取代，但在中小數據仍極強。<span class="bilingual-en">$O(n^2)$ kernel matrix; sensitive $\gamma, C$. Still strong on small/medium data.</span></p>
+      </div>
+    </div>
+  </div>
+  <div class="formula-box">
+    <h4>公式 · 最大邊界</h4>
+    <p>$$\min_{w,b}\tfrac12\|w\|^2\ \ \text{s.t.}\ \ y_i(w^Tx_i+b)\ge 1$$</p>
+    <p>對偶後僅內積 $\langle x_i,x_j\rangle$ 出現 → 可替換為核 $K(x_i,x_j)$。<span class="bilingual-en">Dual uses only inner products → replace by kernel $K$.</span></p>
+  </div>
+  <div class="svg-stage">
+    <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+      <rect width="760" height="260" rx="14" fill="#0a0e27"/>
+      <!-- low dim -->
+      <rect x="18" y="18" width="350" height="224" rx="12" fill="#fff" stroke="#d6dde6"/>
+      <text x="193" y="42" text-anchor="middle" font-size="12" font-weight="700" fill="#dc2626">低維切不開 · Not Separable (2D)</text>
+      <!-- spiral dots schematic -->
+      <circle cx="120" cy="135" r="38" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4"/>
+      <circle cx="193" cy="135" r="56" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4"/>
+      <circle cx="110" cy="120" r="6" fill="#3b82f6"/><circle cx="135" cy="108" r="6" fill="#ef4444"/><circle cx="125" cy="150" r="6" fill="#3b82f6"/><circle cx="155" cy="145" r="6" fill="#ef4444"/><circle cx="175" cy="118" r="6" fill="#3b82f6"/><circle cx="190" cy="155" r="6" fill="#ef4444"/><circle cx="210" cy="125" r="6" fill="#3b82f6"/><circle cx="240" cy="140" r="6" fill="#ef4444"/>
+      <text x="193" y="215" text-anchor="middle" font-size="11" fill="#64748b">蚊香交織 · entangled</text>
+      <!-- arrow lift -->
+      <g transform="translate(368, 115)">
+        <rect x="0" y="0" width="56" height="34" rx="8" fill="#fde68a" stroke="#f59e0b"/><text x="28" y="14" text-anchor="middle" font-size="9" font-weight="700" fill="#92400e">φ(x)</text><text x="28" y="26" text-anchor="middle" font-size="8" fill="#92400e">lift</text>
+        <line x1="28" y1="34" x2="28" y2="52" stroke="#f59e0b" stroke-width="1.6" marker-end="url(#arr4)"/><defs><marker id="arr4" markerWidth="8" markerHeight="8" refX="4" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3z" fill="#f59e0b"/></marker></defs>
+      </g>
+      <!-- high dim -->
+      <rect x="436" y="18" width="306" height="224" rx="12" fill="#fff" stroke="#d6dde6"/>
+      <text x="589" y="42" text-anchor="middle" font-size="12" font-weight="700" fill="#059669">高維一刀切 · Linear in High-D</text>
+      <!-- plane -->
+      <polygon points="470,90 710,90 690,210 450,210" fill="rgba(110,92,231,.08)" stroke="#6c5ce7" stroke-width="1.2"/>
+      <line x1="450" y1="150" x2="690" y2="150" stroke="#111827" stroke-width="2.4"/>
+      <!-- points separated by plane -->
+      <circle cx="520" cy="128" r="6" fill="#3b82f6"/><circle cx="545" cy="118" r="6" fill="#3b82f6"/><circle cx="570" cy="132" r="6" fill="#3b82f6"/>
+      <circle cx="560" cy="172" r="6" fill="#ef4444"/><circle cx="585" cy="182" r="6" fill="#ef4444"/><circle cx="610" cy="172" r="6" fill="#ef4444"/>
+      <text x="589" y="215" text-anchor="middle" font-size="11" fill="#059669">超平面分離 · hyperplane separates</text>
+      <text x="589" y="232" text-anchor="middle" font-size="10" fill="#64748b">RBF 核 = 無限維 Hilbert 空間</text>
+    </svg>
+    <div class="svg-caption">核技巧：低維非線性 → 高維線性；RBF 甚至對應無限維空間 · Low-D non-linear → High-D linear; RBF is infinite-D</div>
+  </div>
+</section>
+
+<!-- FAMILY LINEAGE -->
+<section class="section" id="family">
+  <span class="sec-tag sustain">S2 · 譜系全景 · LINEAGE</span>
+  <h2 class="section-title">六大家族演進譜系與哲學對位 <span class="en">Six Families — Lineage &amp; Philosophy Map</span></h2>
+  <p>從「先算分佈」的生成式，到「直接切邊界」的判別式；從直線到曲線、從懶惰到極致邊界。下圖為本教材提供的譜系原圖（深底版保留原設計）。<span class="bilingual-en">From generative to discriminative, linear to curved, lazy to max-margin — lineage below (dark stage preserves original design).</span></p>
+
+  <div class="svg-stage" style="padding:0;background:#0a0e27;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="100%" height="auto" style="display:block;">
+      <defs>
+        <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#0f172a" />
+          <stop offset="100%" stop-color="#1e293b" />
+        </linearGradient>
+        <linearGradient id="blueCard2" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#1e293b" />
+          <stop offset="100%" stop-color="#0f172a" />
+        </linearGradient>
+        <marker id="arrow2" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#38bdf8" />
+        </marker>
+        <marker id="arrowAmber2" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#fbbf24" />
+        </marker>
+      </defs>
+      <rect width="960" height="540" fill="url(#bg2)" />
+      <text x="480" y="46" text-anchor="middle" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="24" font-weight="bold">統計分類六大家族演進譜系圖</text>
+      <text x="480" y="72" text-anchor="middle" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13">從生成式先驗估計到幾何邊界最佳化：演算法核心哲學對比</text>
+      <line x1="80" y1="480" x2="880" y2="480" stroke="#475569" stroke-width="2" />
+      <circle cx="120" cy="480" r="5" fill="#38bdf8" /><text x="120" y="505" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="12">1760s / 1930s</text>
+      <circle cx="300" cy="480" r="5" fill="#38bdf8" /><text x="300" y="505" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="12">1950s / 1960s</text>
+      <circle cx="500" cy="480" r="5" fill="#38bdf8" /><text x="500" y="505" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="12">1980s</text>
+      <circle cx="700" cy="480" r="5" fill="#38bdf8" /><text x="700" y="505" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="12">1990s</text>
+      <circle cx="860" cy="480" r="5" fill="#38bdf8" /><text x="860" y="505" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="12">2000s 以降</text>
+      <g transform="translate(60, 110)">
+        <rect width="250" height="155" rx="10" fill="url(#blueCard2)" stroke="#38bdf8" stroke-width="1.8" />
+        <text x="125" y="30" text-anchor="middle" fill="#38bdf8" font-family="sans-serif" font-size="16" font-weight="bold">1. 貝氏機率與判別分析</text>
+        <text x="125" y="50" text-anchor="middle" fill="#7dd3fc" font-family="sans-serif" font-size="12">Bayes, LDA, QDA</text>
+        <line x1="20" y1="62" x2="230" y2="62" stroke="#334155" stroke-width="1" />
+        <text x="25" y="85" fill="#e2e8f0" font-family="sans-serif" font-size="12">• 後驗 ∝ 似然 × 先驗</text>
+        <text x="25" y="107" fill="#e2e8f0" font-family="sans-serif" font-size="12">• LDA: 等共變異數（線性超平面）</text>
+        <text x="25" y="129" fill="#e2e8f0" font-family="sans-serif" font-size="12">• QDA: 異共變異數（二次曲線）</text>
+        <text x="25" y="147" fill="#94a3b8" font-family="sans-serif" font-size="11">生成式思維：為各類資料分佈建模</text>
+      </g>
+      <g transform="translate(355, 110)">
+        <rect width="250" height="155" rx="10" fill="url(#blueCard2)" stroke="#818cf8" stroke-width="1.8" />
+        <text x="125" y="30" text-anchor="middle" fill="#818cf8" font-family="sans-serif" font-size="16" font-weight="bold">2. 邏輯回歸 (Logistic)</text>
+        <text x="125" y="50" text-anchor="middle" fill="#a5b4fc" font-family="sans-serif" font-size="12">判別式機率模型</text>
+        <line x1="20" y1="62" x2="230" y2="62" stroke="#334155" stroke-width="1" />
+        <text x="25" y="85" fill="#e2e8f0" font-family="sans-serif" font-size="12">• 直接建模條件機率 P(Y|X)</text>
+        <text x="25" y="107" fill="#e2e8f0" font-family="sans-serif" font-size="12">• Sigmoid 函數將實數壓至 [0, 1]</text>
+        <text x="25" y="129" fill="#e2e8f0" font-family="sans-serif" font-size="12">• 線性邊界但具備平滑機率輸出</text>
+        <text x="25" y="147" fill="#94a3b8" font-family="sans-serif" font-size="11">神經網路的基本單元（單神經元）</text>
+      </g>
+      <g transform="translate(650, 110)">
+        <rect width="250" height="155" rx="10" fill="url(#blueCard2)" stroke="#34d399" stroke-width="1.8" />
+        <text x="125" y="30" text-anchor="middle" fill="#34d399" font-family="sans-serif" font-size="16" font-weight="bold">3. 鄰舍與度量學習</text>
+        <text x="125" y="50" text-anchor="middle" fill="#6ee7b7" font-family="sans-serif" font-size="12">KNN &amp; Metric Learning</text>
+        <line x1="20" y1="62" x2="230" y2="62" stroke="#334155" stroke-width="1" />
+        <text x="25" y="85" fill="#e2e8f0" font-family="sans-serif" font-size="12">• 懶惰學習：K 個最近鄰投票</text>
+        <text x="25" y="107" fill="#e2e8f0" font-family="sans-serif" font-size="12">• 度量學習：重新定義距離尺度</text>
+        <text x="25" y="129" fill="#e2e8f0" font-family="sans-serif" font-size="12">• 降低類內變異、擴大類間變異</text>
+        <text x="25" y="147" fill="#94a3b8" font-family="sans-serif" font-size="11">延伸至現代 Triplet Loss 與表徵學習</text>
+      </g>
+      <g transform="translate(130, 295)">
+        <rect width="320" height="155" rx="10" fill="url(#blueCard2)" stroke="#fbbf24" stroke-width="1.8" />
+        <text x="160" y="30" text-anchor="middle" fill="#fbbf24" font-family="sans-serif" font-size="16" font-weight="bold">4. 樹結構、森林與集成</text>
+        <text x="160" y="50" text-anchor="middle" fill="#fde68a" font-family="sans-serif" font-size="12">CART, Random Forest, Boosting</text>
+        <line x1="20" y1="62" x2="300" y2="62" stroke="#334155" stroke-width="1" />
+        <text x="25" y="85" fill="#e2e8f0" font-family="sans-serif" font-size="12">• 決策樹：正交軸切割，高度可解釋</text>
+        <text x="25" y="107" fill="#e2e8f0" font-family="sans-serif" font-size="12">• 隨機森林：Bagging + 特徵隨機抽樣</text>
+        <text x="25" y="129" fill="#e2e8f0" font-family="sans-serif" font-size="12">• 集成學習透過平均化大幅壓制變異數</text>
+        <text x="25" y="147" fill="#94a3b8" font-family="sans-serif" font-size="11">現代表格型資料（Tabular Data）霸主</text>
+      </g>
+      <g transform="translate(510, 295)">
+        <rect width="320" height="155" rx="10" fill="url(#blueCard2)" stroke="#f472b6" stroke-width="1.8" />
+        <text x="160" y="30" text-anchor="middle" fill="#f472b6" font-family="sans-serif" font-size="16" font-weight="bold">5. 支援向量機與核技巧</text>
+        <text x="160" y="50" text-anchor="middle" fill="#fbcfe8" font-family="sans-serif" font-size="12">Max Margin SVM &amp; Kernel Methods</text>
+        <line x1="20" y1="62" x2="300" y2="62" stroke="#334155" stroke-width="1" />
+        <text x="25" y="85" fill="#e2e8f0" font-family="sans-serif" font-size="12">• 最大化兩類安全邊界（Margin）</text>
+        <text x="25" y="107" fill="#e2e8f0" font-family="sans-serif" font-size="12">• 稀疏性：決策僅取決於「支援向量」</text>
+        <text x="25" y="129" fill="#e2e8f0" font-family="sans-serif" font-size="12">• 核技巧（Kernel Trick）：映射至高維希伯特空間</text>
+        <text x="25" y="147" fill="#94a3b8" font-family="sans-serif" font-size="11">具嚴謹統計學習理論支撐的最佳泛化邊界</text>
+      </g>
+      <path d="M 310 185 L 350 185" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow2)" />
+      <path d="M 605 185 L 645 185" fill="none" stroke="#818cf8" stroke-width="2" marker-end="url(#arrow2)" />
+      <path d="M 450 372 L 500 372" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrowAmber2)" />
+    </svg>
+  </div>
+  <div class="highlight-box" style="margin-top:16px;">
+    <h4>怎麼用這張圖選模型 · How to Pick</h4>
+    <p>看兩軸：① 資料是否高維且特徵近獨立 → Naive Bayes；② 邊界是否線性 → LDA/Logistic/線性 SVM，否則 QDA/核 SVM/森林；③ 是否需要機率輸出 → Logistic；④ 是否需要可解釋規則 → 決策樹。<span class="bilingual-en">Two axes: high-D independent? → Naive Bayes; linear boundary? → LDA/Logistic/linear SVM else QDA/kernel/forest; need prob? → Logistic; need rules? → Tree.</span></p>
+  </div>
+</section>
+
+<!-- SUMMARY -->
+<section class="section" id="summary">
+  <span class="sec-tag activate">S3 · 喚起行動 · ACTIVATE</span>
+  <h2 class="section-title">重點精要與選型對照 <span class="en">Takeaways &amp; Model Selection</span></h2>
+
+  <table class="comparison-table">
+    <thead>
+      <tr><th>家族</th><th>核心假設</th><th>邊界型態</th><th>生成/判別</th><th>強項</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><b>Bayes / Naive Bayes</b></td><td>條件獨立（Naive）</td><td>依分佈而定</td><td>生成式</td><td>高維稀疏、文本</td></tr>
+      <tr><td><b>LDA</b></td><td>共變異數相等 Gaussian</td><td>直線/超平面</td><td>生成式</td><td>小樣本穩健</td></tr>
+      <tr><td><b>QDA</b></td><td>共變異數各異 Gaussian</td><td>二次曲線</td><td>生成式</td><td>各異形狀</td></tr>
+      <tr><td><b>Logistic</b></td><td>對數勝算線性</td><td>直線 + 機率</td><td>判別式</td><td>機率校準、神經元原型</td></tr>
+      <tr><td><b>KNN / 度量學習</b></td><td>近者相似</td><td>拼布 Voronoi</td><td>非參數/判別</td><td>零訓練、直觀</td></tr>
+      <tr><td><b>決策樹</b></td><td>軸平行切割</td><td>階梯狀</td><td>判別式</td><td>可解釋、混合特徵</td></tr>
+      <tr><td><b>隨機森林</b></td><td>集成平均降變異</td><td>平滑階梯</td><td>集成</td><td>表格霸主、抗過擬合</td></tr>
+      <tr><td><b>SVM / 核 SVM</b></td><td>最大邊界 + 核映射</td><td>直或任意彎曲</td><td>判別式</td><td>泛化強、稀疏解</td></tr>
+    </tbody>
+  </table>
+
+  <div class="grid-2">
+    <div class="formula-box" style="text-align:left;">
+      <h4>沒有萬能模型 · No Free Lunch</h4>
+      <p>特徵多且近獨立 → Naive Bayes；<br>需平滑機率 → Logistic；<br>非線性混合 → 核 SVM / 森林；<br>要解釋規則 → 決策樹；<br>小樣本高斯 → LDA。<span class="bilingual-en">Many independent features → NB; need prob → Logistic; non-linear → kernel/forest; need rules → tree; small Gaussian → LDA.</span></p>
+    </div>
+    <div class="intuition-box">
+      <h4>一句話複習邊界 · Boundaries in One Line</h4>
+      <p>LDA 直、QDA 彎、決策樹階梯、SVM 最寬、KNN 拼布、Logistic 直但帶機率——每種邊界背後都是一種世界觀。<span class="bilingual-en">LDA straight, QDA curved, tree staircase, SVM widest, KNN patchwork, Logistic straight+prob — each is a worldview.</span></p>
+    </div>
+  </div>
+
+  <div class="summary-box">
+    <h4>本章金句 · Key Message</h4>
+    <p>「分類不是選最炫的模型，而是選最誠實反映你對世界假設的那一把刀。」先問資料長什麼樣、要什麼輸出、要不要解釋——答案自然浮現。<span class="bilingual-en">“Classify not with the flashiest model, but the one whose assumptions honestly match your world.” Ask data shape, desired output, need for explanation.</span></p>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section class="section" id="quiz">
+  <span class="sec-tag activate">S3 · 思考測驗 · CHECK</span>
+  <h2 class="section-title">思考測驗：你是哪一派？ <span class="en">Quiz — Which School Are You?</span></h2>
+
+  <div class="quiz-card" data-correct="1">
+    <div class="q">Q1. 兩類皆高斯、共變異數相等、想得穩定線性邊界，首選是？<span class="bilingual-en">Both Gaussian, shared covariance, want stable linear boundary — pick?</span></div>
+    <div class="options">
+      <button data-i="0">QDA（二次邊界）<span class="bilingual-en" style="font-size:16px;">QDA (quadratic)</span></button>
+      <button data-i="1">LDA（線性判別）<span class="bilingual-en" style="font-size:16px;">LDA (linear)</span></button>
+      <button data-i="2">KNN $k=1$<span class="bilingual-en" style="font-size:16px;">KNN k=1</span></button>
+      <button data-i="3">RBF 核 SVM<span class="bilingual-en" style="font-size:16px;">RBF SVM</span></button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="quiz-card" data-correct="2">
+    <div class="q">Q2. 下列何者直接建模 $P(Y\mid X)$，屬於判別式且輸出可校準機率？<span class="bilingual-en">Which directly models $P(Y\mid X)$, discriminative with calibrated prob?</span></div>
+    <div class="options">
+      <button data-i="0">Naive Bayes<span class="bilingual-en" style="font-size:16px;">Naive Bayes</span></button>
+      <button data-i="1">LDA<span class="bilingual-en" style="font-size:16px;">LDA</span></button>
+      <button data-i="2">Logistic 回歸<span class="bilingual-en" style="font-size:16px;">Logistic Regression</span></button>
+      <button data-i="3">KNN<span class="bilingual-en" style="font-size:16px;">KNN</span></button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="quiz-card" data-correct="0">
+    <div class="q">Q3. 資料在 2D 呈蚊香交織、線性不可分，最優雅的解法是？<span class="bilingual-en">2D spiral entangled, not linearly separable — most elegant?</span></div>
+    <div class="options">
+      <button data-i="0">核 SVM（如 RBF）把資料映射到高維再線性分離<span class="bilingual-en" style="font-size:16px;">Kernel SVM (e.g. RBF) to high-D</span></button>
+      <button data-i="1">把 $k$ 調大就能解決<span class="bilingual-en" style="font-size:16px;">Just increase $k$</span></button>
+      <button data-i="2">LDA 一定足夠<span class="bilingual-en" style="font-size:16px;">LDA suffices</span></button>
+      <button data-i="3">把先驗調成 0.9 就能切開<span class="bilingual-en" style="font-size:16px;">Set prior to 0.9</span></button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="quiz-card" data-correct="2">
+    <div class="q">Q4. 隨機森林為何比單棵決策樹更抗過擬合？<span class="bilingual-en">Why does Random Forest overfit less than a single tree?</span></div>
+    <div class="options">
+      <button data-i="0">因為每棵樹更深<span class="bilingual-en" style="font-size:16px;">Because each tree is deeper</span></button>
+      <button data-i="1">因為用了 Sigmoid<span class="bilingual-en" style="font-size:16px;">Because it uses sigmoid</span></button>
+      <button data-i="2">Bagging＋特徵抽樣去相關後平均，大幅降變異<span class="bilingual-en" style="font-size:16px;">Bagging + feature sampling decorrelate, averaging cuts variance</span></button>
+      <button data-i="3">因為用了核技巧<span class="bilingual-en" style="font-size:16px;">Because of kernel trick</span></button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section class="section" id="roadmap">
+  <span class="sec-tag activate">S3 · 路線導引 · PATH</span>
+  <h2 class="section-title">下一步：從分類出發的學習路線 <span class="en">Next Steps — Where Classification Leads</span></h2>
+  <div class="timeline">
+    <div class="event">
+      <div class="when">STEP 1 · 1–2 週</div>
+      <h4>把貝氏與 LDA/QDA 手算一遍 <span class="bilingual-en" style="font-size:16px;color:var(--ink-soft);">Hand-calc Bayes &amp; LDA/QDA</span></h4>
+      <p>用本章 $X=5$ 範例改先驗、改 $\sigma$，畫後驗曲線，感受「成見拉邊界」。<span class="bilingual-en">Vary priors and $\sigma$ on the $x=5$ example; plot posteriors.</span></p>
+    </div>
+    <div class="event">
+      <div class="when">STEP 2 · 2–3 週</div>
+      <h4>實作 Logistic vs. 線性 SVM 對比 <span class="bilingual-en" style="font-size:16px;color:var(--ink-soft);">Logistic vs. Linear SVM</span></h4>
+      <p>同一份二分類資料，比較機率校準、邊界位置與對離群點的敏感度。<span class="bilingual-en">Same data: compare calibration, boundary, outlier sensitivity.</span></p>
+    </div>
+    <div class="event">
+      <div class="when">STEP 3 · 3–4 週</div>
+      <h4>KNN 度量學習與 Triplet 小實驗 <span class="bilingual-en" style="font-size:16px;color:var(--ink-soft);">Metric Learning Mini-Lab</span></h4>
+      <p>用 MNIST 或人臉小集，訓練簡單嵌入並視覺化「捏緊/拉開」前後。<span class="bilingual-en">Train a tiny embedding on MNIST/faces; visualize before/after.</span></p>
+    </div>
+    <div class="event">
+      <div class="when">STEP 4 · 持續</div>
+      <h4>表格資料：樹/森林/GBDT 實戰 <span class="bilingual-en" style="font-size:16px;color:var(--ink-soft);">Tabular: Trees &amp; GBDT</span></h4>
+      <p>在 Kaggle 表格賽中比較 Logistic、隨機森林、XGBoost，體會「霸主」含義。<span class="bilingual-en">Compare Logistic, RF, XGBoost on a tabular competition.</span></p>
+    </div>
+  </div>
+  <div class="intuition-box">
+    <h4>給自學者的提醒 · Note for Self-Learners</h4>
+    <p>每學一個家族就問三問：① 它假設世界長怎樣？② 它的邊界長怎樣？③ 它什麼時候會失靈？答得出來，才算真的會選模型。<span class="bilingual-en">For each family ask: assumption? boundary shape? when does it fail? Answerable = truly understood.</span></p>
+  </div>
+</section>
+
+<footer style="text-align:center;padding:36px 2.2vw;color:var(--ink-soft);font-size:14px;border-top:1px dashed var(--line);">
+  SlidePro · 統計分類六大家族 · 中英雙語自學版 · 冰晶簡約主題 · MathJax + Chart.js 互動版<br>
+  <span style="color:var(--text-low);">Statistical Classification Six Families — Bilingual Self-Study · Ice Crystal Theme</span>
+</footer>
+
+<script>
+// Progress bar
+(function(){
+  const bar=document.getElementById('progressTop');
+  function upd(){ const h=document.documentElement; const p=h.scrollTop/(h.scrollHeight-h.clientHeight)*100; bar.style.width=p+'%'; }
+  window.addEventListener('scroll',upd,{passive:true}); upd();
+})();
+
+// Helper gaussian pdf
+function gpdf(x,mu,sigma){ return 1/(sigma*Math.sqrt(2*Math.PI))*Math.exp(-0.5*Math.pow((x-mu)/sigma,2)); }
+
+// BAYES CHART
+(function(){
+  const canvas=document.getElementById('bayesChart'); if(!canvas) return;
+  const slider=document.getElementById('priorSlider');
+  const lbl=document.getElementById('priorLabel');
+  const lbl2=document.getElementById('priorLabel2');
+  const bLbl=document.getElementById('boundaryLabel');
+  const mu1=3, mu2=7, sigma=1;
+  const xs=[]; for(let x=-1;x<=11+1e-9;x+=0.06) xs.push(+x.toFixed(3));
+
+  function compute(p1){
+    const p2=1-p1;
+    const pdf1=xs.map(x=>gpdf(x,mu1,sigma));
+    const pdf2=xs.map(x=>gpdf(x,mu2,sigma));
+    const w1=pdf1.map(v=>v*p1);
+    const w2=pdf2.map(v=>v*p2);
+    // boundary where w1==w2
+    let xstar=5 + (sigma*sigma)/(mu2-mu1) * Math.log(p1/p2);
+    // clamp to visible
+    return {pdf1,pdf2,w1,w2,xstar,p2};
+  }
+
+  const ctx=canvas.getContext('2d');
+  let chart;
+  function render(){
+    const p1=parseFloat(slider.value);
+    lbl.textContent=p1.toFixed(2); lbl2.textContent=(1-p1).toFixed(2);
+    const {pdf1,pdf2,w1,w2,xstar}=compute(p1);
+    const post1At5 = (gpdf(5,mu1,sigma)*p1)/ (gpdf(5,mu1,sigma)*p1 + gpdf(5,mu2,sigma)*(1-p1));
+    const post2At5 = 1-post1At5;
+    bLbl.textContent = `決策邊界 x* ≈ ${xstar.toFixed(2)} · Posterior at x=5: ${post1At5.toFixed(2)} / ${post2At5.toFixed(2)}`;
+
+    const dataPdf1 = xs.map((x,i)=>({x, y: pdf1[i]}));
+    const dataPdf2 = xs.map((x,i)=>({x, y: pdf2[i]}));
+    const dataW1 = xs.map((x,i)=>({x, y: w1[i]}));
+    const dataW2 = xs.map((x,i)=>({x, y: w2[i]}));
+    const boundaryData = [{x:xstar,y:0},{x:xstar,y:0.45}];
+    const fillC1 = xs.filter(x=>x<=xstar).map(x=>({x, y: gpdf(x,mu1,sigma)}));
+    // Chart.js datasets: we will not do fillBetween, but use background for region via extra datasets with fill
+    const datasets=[
+      {label:'Likelihood C1', data:dataPdf1, borderColor:'#1e40af', backgroundColor:'rgba(30,64,175,0.06)', borderWidth:3, pointRadius:0, tension:0.35, fill:false},
+      {label:'Likelihood C2', data:dataPdf2, borderColor:'#dc2626', backgroundColor:'rgba(220,38,38,0.06)', borderWidth:3, pointRadius:0, tension:0.35, fill:false},
+      {label:'Weighted C1', data:dataW1, borderColor:'#3b82f6', borderWidth:2, borderDash:[7,5], pointRadius:0, tension:0.35, fill:false},
+      {label:'Weighted C2', data:dataW2, borderColor:'#ef4444', borderWidth:2, borderDash:[7,5], pointRadius:0, tension:0.35, fill:false},
+      {label:'Boundary', data:boundaryData, borderColor:'#111827', borderWidth:2.2, borderDash:[6,5], pointRadius:0, tension:0, fill:false, showLine:true}
+    ];
+
+    if(chart){ chart.data.datasets=datasets; chart.update('none'); return; }
+    chart=new Chart(ctx,{
+      type:'line',
+      data:{datasets},
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        interaction:{mode:'nearest', intersect:false},
+        plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=> `${c.dataset.label}: ${c.parsed.y.toFixed(3)}`}}},
+        scales:{
+          x:{type:'linear', min:-1, max:11, ticks:{color:'#4a5568', stepSize:1}, grid:{color:'rgba(214,221,230,0.55)'}, title:{display:true, text:'Feature X', color:'#2d3436', font:{size:14, weight:'700'}}},
+          y:{min:0, max:0.45, ticks:{color:'#4a5568'}, grid:{color:'rgba(214,221,230,0.55)'}, title:{display:true, text:'Probability Density', color:'#2d3436', font:{size:14, weight:'700'}}}
+        }
+      }
+    });
+    // fix canvas height
+    canvas.style.height='380px';
+  }
+  slider.addEventListener('input', render);
+  render();
+})();
+
+// SIGMOID CHART
+(function(){
+  const c=document.getElementById('sigmoidChart'); if(!c) return;
+  const xs=[]; for(let z=-6;z<=6+1e-9;z+=0.12) xs.push(+z.toFixed(2));
+  const sig=z=>1/(1+Math.exp(-z));
+  const data=xs.map(z=>({x:z, y:sig(z)}));
+  const thr=[{x:-6,y:0.5},{x:6,y:0.5}];
+  new Chart(c.getContext('2d'),{
+    type:'line',
+    data:{datasets:[
+      {label:'Sigmoid', data, borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,0.12)', borderWidth:3, pointRadius:0, tension:0.35, fill:true},
+      {label:'p=0.5', data:thr, borderColor:'#f59e0b', borderWidth:1.6, borderDash:[6,4], pointRadius:0, tension:0, fill:false}
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#2d3436', font:{size:13}}}},
+      scales:{
+        x:{type:'linear', min:-6, max:6, ticks:{color:'#4a5568'}, grid:{color:'rgba(214,221,230,0.55)'}, title:{display:true, text:'z = w·x + b', color:'#2d3436', font:{size:13}}},
+        y:{min:0, max:1, ticks:{color:'#4a5568'}, grid:{color:'rgba(214,221,230,0.55)'}, title:{display:true, text:'P(Y=1|x)', color:'#2d3436', font:{size:13}}}
+      }
+    }
+  });
+  c.style.height='320px';
+})();
+
+// FOREST CHART
+(function(){
+  const c=document.getElementById('forestChart'); if(!c) return;
+  new Chart(c.getContext('2d'),{
+    type:'bar',
+    data:{
+      labels:['單棵決策樹','隨機森林 (100 棵)','隨機森林 (500 棵)'],
+      datasets:[
+        {label:'偏誤² Bias²', data:[0.18,0.19,0.19], backgroundColor:'#93c5fd', borderColor:'#3b82f6', borderWidth:1.2},
+        {label:'變異 Variance', data:[0.42,0.14,0.08], backgroundColor:'#fde68a', borderColor:'#f59e0b', borderWidth:1.2},
+        {label:'不可約誤差', data:[0.10,0.10,0.10], backgroundColor:'#cbd5e1', borderColor:'#94a3b8', borderWidth:1.2}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#2d3436', font:{size:13}}}, tooltip:{mode:'index'}},
+      scales:{
+        x:{stacked:true, ticks:{color:'#4a5568', font:{size:12}}, grid:{display:false}},
+        y:{stacked:true, min:0, max:0.75, ticks:{color:'#4a5568'}, grid:{color:'rgba(214,221,230,0.55)'}, title:{display:true, text:'期望誤差', color:'#2d3436'}}
+      }
+    }
+  });
+  c.style.height='340px';
+})();
+
+// QUIZ
+(function(){
+  const cards=document.querySelectorAll('.quiz-card');
+  const answers=[
+    '✔ 正確！LDA 共享共變異數 → 線性邊界、參數少、穩健。QDA 會過度彈性。',
+    '✔ 正確！Logistic 直接估 P(Y|X)，判別式、機率可校準；Bayes/LDA 為生成式。',
+    '✔ 正確！蚊香屬於非線性不可分，核技巧映射到高維線性分離最優雅。',
+    '✔ 正確！Bagging + 特徵隨機抽樣讓樹去相關，平均後大幅壓制變異。'
+  ];
+  const wrongs=[
+    '✗ 再想想：此假設下 LDA 的線性邊界最穩健，QDA 與核方法過於彈性。',
+    '✗ 提示：誰是「不管生成、直接算條件機率」的那一派？',
+    '✗ 提示：調 k 或先驗解決不了幾何纏繞，需要改變表示或映射。',
+    '✗ 提示：關鍵是「去相關後平均」如何影響變異。'
+  ];
+  cards.forEach((card,idx)=>{
+    const correct=card.dataset.correct;
+    const btns=card.querySelectorAll('button');
+    const fb=card.querySelector('.feedback');
+    btns.forEach(b=>{
+      b.addEventListener('click',()=>{
+        btns.forEach(x=>x.disabled=true);
+        const ok=b.dataset.i===correct;
+        b.classList.add(ok?'correct':'wrong');
+        btns.forEach(x=>{ if(x.dataset.i===correct) x.classList.add('correct'); });
+        fb.classList.add('show', ok?'ok':'no');
+        // use SlidePro compatible class names too
+        fb.style.display='block';
+        fb.style.background= ok?'#d4edda':'#f8d7da';
+        fb.style.color= ok?'#155724':'#721c24';
+        fb.style.padding='12px 16px';
+        fb.style.borderRadius='8px';
+        fb.style.marginTop='12px';
+        fb.textContent= ok? answers[idx] : wrongs[idx];
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

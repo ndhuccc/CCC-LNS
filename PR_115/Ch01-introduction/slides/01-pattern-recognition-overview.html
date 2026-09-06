@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>樣式識別 · 機器如何學會一眼定乾坤 · Pattern Recognition Overview</title>
+
+<!-- MathJax 3 -->
+<script>
+MathJax = {
+  tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<style>
+/* ============================================================
+   Design Tokens — 冰晶簡約亮色主題（SlidePro 規範）
+   ============================================================ */
+:root {
+  --bg:        hsl(222, 45%, 98%);
+  --bg-card:   #ffffff;
+  --bg-deep:   #0a0e27;
+  --bg-soft:   #f8faff;
+  --ink:       #2d3436;
+  --ink-soft:  #4a5568;
+  --text-low:  #6c7a89;
+  --line:      #d6dde6;
+
+  --primary:   hsl(248, 58%, 46%);
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;
+  --warm:      #fdcb6e;
+  --magenta:   #e84393;
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  --t1: 55px;
+  --t2: 34px;
+  --t3: 22px;
+  --t4: 22px;
+  --t5: 13px;
+
+  --pad-section: 64px 6vw;
+  --max-w: 1600px;
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   ============================================================ */
+.bilingual-en {
+  display: block;
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--ink-soft);
+  line-height: 1.55;
+  letter-spacing: .01em;
+}
+.bilingual-en-inline {
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ============================================================
+   Section wrapper + TOC rail
+   ============================================================ */
+.section {
+  padding: var(--pad-section);
+  padding-right: 240px;
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+@media (max-width: 1100px) { .section { padding-right: 6vw; } }
+
+.hero {
+  padding: 96px 6vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+.hero .meta {
+  margin-top: 36px;
+  display: flex; gap: 18px; justify-content: center; flex-wrap: wrap;
+}
+.hero .meta .chip {
+  padding: 6px 14px;
+  background: rgba(0,212,255,.10);
+  border: 1px solid rgba(0,212,255,.4);
+  border-radius: 6px;
+  font-size: var(--t5);
+  color: #00d4ff;
+  letter-spacing: .08em;
+}
+
+.takahashi {
+  text-align: center;
+  padding: 80px 6vw;
+  max-width: 900px;
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -.02em;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  -webkit-text-fill-color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ============================================================
+   內容盒
+   ============================================================ */
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+.formula-box { background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%); border-left-color: var(--warm); }
+.formula-box h4 { color: #b7791f; }
+.formula-box mjx-container { font-size: 1.25em !important; }
+.highlight-box { background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%); border-left-color: var(--primary); }
+.highlight-box h4 { color: var(--primary); }
+.intuition-box { background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%); border-left-color: var(--info); }
+.intuition-box h4 { color: #00695c; }
+.method-box { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-left-color: var(--success); }
+.method-box h4 { color: #2e7d32; }
+.warning-box { background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); border-left-color: var(--warning); }
+.warning-box h4 { color: #c62828; }
+.summary-box { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; border-left-color: var(--primary); }
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+.summary-box p, .summary-box ul li { font-size: 22px; line-height: 1.7; }
+.quote-block { background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%); border-left-color: var(--magenta); font-style: italic; }
+.quote-block h4 { color: var(--magenta); }
+.quote-block p { color: var(--ink); font-size: var(--t4); }
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.method-box h4, .warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   版式元件
+   ============================================================ */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 28px;
+  align-items: stretch;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 30px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: flex; align-items: center; justify-content: center;
+}
+.half-layout .visual svg { width: 100%; height: auto; max-height: 360px; }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 28px 0;
+}
+.steps .step {
+  position: relative;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border-top: 5px solid var(--primary);
+}
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary); color: #fff;
+  font-weight: 700; font-size: 18px; margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(2) .num { background: var(--success); }
+.steps .step h4 { font-size: var(--t3); margin: 6px 0 12px 0; color: var(--ink); }
+.steps .step p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 五大戰場 5 欄 steps（覆寫） */
+.battlefield {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin: 28px 0;
+}
+.battlefield .bf-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 22px 18px;
+  box-shadow: var(--shadow);
+  border-top: 6px solid var(--accent);
+  font-size: var(--t4);
+}
+.battlefield .bf-card:nth-child(1) { border-top-color: #0284c7; }
+.battlefield .bf-card:nth-child(2) { border-top-color: #059669; }
+.battlefield .bf-card:nth-child(3) { border-top-color: #e11d48; }
+.battlefield .bf-card:nth-child(4) { border-top-color: #7c3aed; }
+.battlefield .bf-card:nth-child(5) { border-top-color: #d97706; }
+.battlefield .bf-card h4 { font-size: 21px; margin: 0 0 8px 0; color: var(--ink); }
+.battlefield .bf-card .bf-sub { font-size: 16px; color: var(--ink-soft); margin-bottom: 14px; font-style: italic; }
+.battlefield .bf-card .bf-label { font-size: 14px; font-weight: 700; color: var(--primary); margin: 12px 0 6px 0; letter-spacing: .04em; }
+.battlefield .bf-card ul { padding-left: 1.2em; margin: 0; }
+.battlefield .bf-card li { font-size: var(--t4); margin-bottom: 8px; color: var(--ink-soft); }
+@media (max-width: 1100px) { .battlefield { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .battlefield { grid-template-columns: 1fr; } }
+
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table tbody tr:hover { background: var(--primary-soft); }
+.comparison-table .good { color: var(--success); font-weight: 700; }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg-soft);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+.svg-stage {
+  background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 420px; }
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label {
+  color: var(--primary); letter-spacing: .2em; margin-bottom: 14px;
+  font-weight: 700; font-size: 16px;
+}
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft); text-decoration: none; display: block;
+  font-size: 14px; line-height: 1.4; border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary); font-weight: 700; margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+.progress-top {
+  position: fixed; top: 0; left: 0;
+  height: 4px; width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.MathJax { color: var(--ink) !important; }
+
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  margin: 32px 0;
+  opacity: .4;
+}
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<!-- TOC -->
+<nav class="toc-rail" aria-label="章節索引">
+  <div class="label">CH · 章節索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Question</a></li>
+    <li><a href="#b2"><span class="sec-tag motivate">S1</span> 機器開眼 · Opening</a></li>
+    <li><a href="#b3"><span class="sec-tag motivate">S1</span> 歷史逆襲 · History</a></li>
+    <li><a href="#b4"><span class="sec-tag sustain">S2</span> 兩步法 · Pipeline</a></li>
+    <li><a href="#b5"><span class="sec-tag sustain">S2</span> 線性切刀 · Linear</a></li>
+    <li><a href="#b6"><span class="sec-tag sustain">S2</span> 五大戰場 · 5 Fields</a></li>
+    <li><a href="#b7"><span class="sec-tag activate">S3</span> 記憶卡 · Recap</a></li>
+    <li><a href="#quiz"><span class="sec-tag activate">S3</span> 思考題 · Quiz</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================
+     1. COVER — 引起動機
+     ============================================================ -->
+<section class="section hero" id="cover">
+  <span class="badge">CH · 樣式識別 · LESSON 01</span>
+  <h1>樣式識別<br/>一眼定乾坤</h1>
+  <div class="zh-sub">機器如何學會「認出它是什麼」？— 從統計理論到工業 4.0 自動決策</div>
+  <div class="en-sub">Pattern Recognition Overview — How machines learn to see</div>
+  <div class="meta">
+    <div class="chip">特徵提取 · Feature Extraction</div>
+    <div class="chip">空間分類 · Classification</div>
+    <div class="chip">五大戰場 · 5 Battlefields</div>
+    <div class="chip">線性判別 · Linear Discriminant</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     2. BIG QUESTION — 高橋柳
+     ============================================================ -->
+<section class="takahashi" id="q1">
+  <div class="quote">
+    三歲小孩看一眼就懂蘋果 vs 檸檬，<br/>造價上億的電腦卻只會盯著 0 與 1 發呆？
+    <small>A 3-year-old spots apple vs lemon instantly — why can't a supercomputer?</small>
+  </div>
+</section>
+
+<!-- ============================================================
+     3. S1 · 機器開眼
+     ============================================================ -->
+<section class="section" id="b2">
+  <span class="sec-tag motivate">S1 · 引起動機</span>
+  <h2 class="section-title">機器開眼：教冰冷的機器長出「火眼金睛」
+    <span class="en">Open the Machine's Eyes — Teaching a cold computer to recognize</span>
+  </h2>
+
+  <div class="quote-block">
+    <h4>教授開場 · Professor's Opening</h4>
+    <p>
+      我三歲的小姪女看一眼就知道哪個是蘋果、哪個是檸檬；但如果你今天抱一台造價上億元的超級電腦過來，把這兩顆水果放在它面前，它只會一臉茫然地盯著你，因為對電腦來說，世界只是一大堆隨機跳動的 0 和 1。
+      <span class="bilingual-en">My 3-year-old niece spots apple vs lemon instantly — but a supercomputer just stares blankly, since for it the world is just streams of 0s and 1s.</span>
+    </p>
+    <p>
+      <b style="color:var(--primary)">樣式識別</b>，就是教這台冰冷的機器長出一雙「火眼金睛」，學會像人類一樣去「認出它是什麼」的科學！
+      <span class="bilingual-en"><b style="color:var(--primary)">Pattern Recognition</b>: the science of teaching cold machines to develop "fiery eyes" — to recognize things like humans do.</span>
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================
+     4. S1 · 歷史逆襲
+     ============================================================ -->
+<section class="section" id="b3">
+  <span class="sec-tag motivate">S1 · 引起動機</span>
+  <h2 class="section-title">歷史逆襲：從冷板凳上的統計學，到工業 4.0 的當紅炸子雞
+    <span class="en">From Ivory-Tower Statistics to Industry 4.0's Backbone</span>
+  </h2>
+
+  <p>
+    在 1960 年代以前，樣式識別根本不是什麼熱門的工程技術，它只是一群統計學家在紙上推導機率密度函數的抽象理論。為什麼？因為當時電腦比一間教室還大、運算速度慢得像蝸牛，就算統計公式再漂亮，你也沒辦法即時處理一張照片。
+    <span class="bilingual-en">Before 1960, pattern recognition was just abstract statistics on paper — computers filled a whole room, too slow for real images.</span>
+  </p>
+
+  <p>
+    但是，當社會從「出賣勞力的工廠工業時代」，跨進「資訊爆炸的後工業時代」時，整個世界完全變了！
+    <span class="bilingual-en">But as society shifted from labor-driven industry to information-explosion post-industry, everything changed.</span>
+  </p>
+
+  <div class="highlight-box">
+    <h4>產業痛點 · Industrial Pain Points</h4>
+    <ul style="padding-left:1.2em;margin:0;">
+      <li>工廠產線一秒鐘飛過 50 顆螺絲，工人盯到眼睛脫窗也抓不完瑕疵。<br/>
+        <span class="bilingual-en">Factory lines: 50 screws/sec — human eyes can't catch all defects.</span>
+      </li>
+      <li>銀行每天要清點幾百萬張支票上的手寫數字。<br/>
+        <span class="bilingual-en">Banks: millions of handwritten checks to process daily.</span>
+      </li>
+      <li>醫院每天產出成千上萬張 X 光片，放射科醫師看到深夜也看不完。<br/>
+        <span class="bilingual-en">Hospitals: thousands of X-ray images per day.</span>
+      </li>
+    </ul>
+  </div>
+
+  <div class="intuition-box">
+    <h4>逆轉時刻 · The Turning Point</h4>
+    <p>
+      人類的肉眼和雙手徹底不夠用了！這時候大家才猛然回頭發現：<b>幾十年前統計學家寫在黑板上的這套理論，正是所有「機器智慧自動決策」不可或缺的心臟！</b>
+      <span class="bilingual-en">Human eyes and hands are no longer enough — the statistics from decades ago turn out to be the <b>heart of all automatic machine decisions</b>.</span>
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================
+     5. S2 · 兩步法
+     ============================================================ -->
+<section class="section" id="b4">
+  <span class="sec-tag sustain">S2 · 維持注意</span>
+  <h2 class="section-title">萬變不離其宗：兩步法 — 特徵提取 $\to$ 空間分類
+    <span class="en">The Universal Two-Step Pipeline — Feature Extraction $\to$ Classification</span>
+  </h2>
+
+  <p>
+    講義列了五個看起來完全不相干的領域：工廠抓瑕疵、手機掃描辨識文字、醫師看 X 光、Siri 聽你講話、Google 以圖找圖。大一新生最容易犯的毛病，就是以為自己要學五種完全不同的黑科技。
+    <span class="bilingual-en">Five seemingly unrelated fields share one pipeline — not five different dark arts.</span>
+  </p>
+
+  <p>
+    其實，所有樣式識別背後<b>只有同一套靈魂兩步法</b>：
+    <span class="bilingual-en">In fact, only <b>one universal two-step pipeline</b>:</span>
+  </p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="num">1</div>
+      <h4>第一步 · 特徵提取 · Feature Extraction</h4>
+      <p>
+        你不能把整個世界原封不動塞給電腦。你必須想辦法<b>量出幾個「能把不同類別拆開」的關鍵數字</b>，我們管這些數字叫<b>特徵 (Features)</b>。
+        <span class="bilingual-en">Measure <b>a few discriminative numbers</b> — we call them <b>features</b>.</span>
+      </p>
+      <p>
+        例如水果的「圓度」和「紅色程度」。
+        <span class="bilingual-en">E.g. fruit's <b>roundness</b> &amp; <b>redness</b>.</span>
+      </p>
+    </div>
+    <div class="step">
+      <div class="num">2</div>
+      <h4>第二步 · 分類器 · Classifier</h4>
+      <p>
+        有了這些數字，每個物件就變成了多維幾何空間裡的一個「座標點」。分類器的工作超級單純：<b>找出一把手術刀（決策超平面），俐落地把空間切成兩半！</b>
+        <span class="bilingual-en">Each object becomes a <b>point</b> in feature space — <b>slice the space with a hyperplane</b>.</span>
+      </p>
+      <p>
+        落在左邊的叫檸檬，落在右邊的叫蘋果。
+        <span class="bilingual-en">Left = lemon, right = apple.</span>
+      </p>
+    </div>
+  </div>
+
+  <!-- 五大代表性戰場 SVG（深底舞台） -->
+  <div class="svg-stage">
+    <svg viewBox="0 0 960 520" width="100%" height="100%" role="img" aria-label="樣式識別兩步引擎與五大戰場">
+      <defs>
+        <linearGradient id="coreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#1e293b"/>
+          <stop offset="100%" stop-color="#0f172a"/>
+        </linearGradient>
+        <linearGradient id="blueCard" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#0284c7"/>
+          <stop offset="100%" stop-color="#0369a1"/>
+        </linearGradient>
+        <linearGradient id="greenCard" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#059669"/>
+          <stop offset="100%" stop-color="#047857"/>
+        </linearGradient>
+        <linearGradient id="purpleCard" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#7c3aed"/>
+          <stop offset="100%" stop-color="#5b21b6"/>
+        </linearGradient>
+        <linearGradient id="amberCard" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#d97706"/>
+          <stop offset="100%" stop-color="#b45309"/>
+        </linearGradient>
+        <linearGradient id="roseCard" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#e11d48"/>
+          <stop offset="100%" stop-color="#be123c"/>
+        </linearGradient>
+        <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+          <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.1"/>
+        </filter>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#64748b"/>
+        </marker>
+      </defs>
+
+      <rect width="960" height="520" rx="16" fill="#f8fafc"/>
+
+      <text x="480" y="38" font-family="sans-serif" font-size="22" font-weight="bold" fill="#0f172a" text-anchor="middle">
+        樣式識別（Pattern Recognition）本質引擎與五大代表性戰場
+      </text>
+      <text x="480" y="62" font-family="sans-serif" font-size="13" fill="#64748b" text-anchor="middle">
+        萬變不離其宗：先量出具備鑑別力的數值特徵，再由空間超平面劃定決策邊界
+      </text>
+
+      <!-- 兩步引擎 -->
+      <g transform="translate(40, 85)" filter="url(#shadow)">
+        <rect width="880" height="115" rx="12" fill="url(#coreGrad)"/>
+        <text x="440" y="28" font-family="sans-serif" font-size="14" font-weight="bold" fill="#38bdf8" text-anchor="middle">
+          樣式識別通用兩步處理引擎（The Universal Two-Step Pipeline）
+        </text>
+
+        <rect x="30" y="44" width="160" height="52" rx="8" fill="#334155"/>
+        <text x="110" y="66" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ffffff" text-anchor="middle">1. 物理物件／信號</text>
+        <text x="110" y="84" font-family="sans-serif" font-size="10.5" fill="#94a3b8" text-anchor="middle">影像、聲音、DNA、感測器</text>
+
+        <line x1="195" y1="70" x2="225" y2="70" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+        <rect x="230" y="44" width="190" height="52" rx="8" fill="#0369a1" stroke="#38bdf8" stroke-width="1.5"/>
+        <text x="325" y="66" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ffffff" text-anchor="middle">2. 特徵提取（量出數字）</text>
+        <text x="325" y="84" font-family="sans-serif" font-size="10.5" fill="#bae6fd" text-anchor="middle">映射到向量 x = [x₁, x₂]ᵀ ∈ ℝᵈ</text>
+
+        <line x1="425" y1="70" x2="455" y2="70" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+        <rect x="460" y="44" width="190" height="52" rx="8" fill="#15803d" stroke="#4ade80" stroke-width="1.5"/>
+        <text x="555" y="66" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ffffff" text-anchor="middle">3. 分類器（幾何切西瓜）</text>
+        <text x="555" y="84" font-family="sans-serif" font-size="10.5" fill="#bbf7d0" text-anchor="middle">超平面決策 g(x) = wᵀx + w₀ ≷ 0</text>
+
+        <line x1="655" y1="70" x2="685" y2="70" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+        <rect x="690" y="44" width="160" height="52" rx="8" fill="#334155"/>
+        <text x="770" y="66" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ffffff" text-anchor="middle">4. 智慧決策輸出</text>
+        <text x="770" y="84" font-family="sans-serif" font-size="10.5" fill="#94a3b8" text-anchor="middle">良/缺、字元碼、警示</text>
+      </g>
+
+      <!-- 連接器 -->
+      <path d="M 480 200 L 480 230" stroke="#94a3b8" stroke-width="2" fill="none"/>
+      <line x1="120" y1="230" x2="840" y2="230" stroke="#94a3b8" stroke-width="2"/>
+      <line x1="120" y1="230" x2="120" y2="250" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="300" y1="230" x2="300" y2="250" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="480" y1="230" x2="480" y2="250" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="660" y1="230" x2="660" y2="250" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="840" y1="230" x2="840" y2="250" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+      <!-- Card 1: 機器視覺 -->
+      <g transform="translate(35, 255)" filter="url(#shadow)">
+        <rect width="170" height="235" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2"/>
+        <rect width="170" height="36" rx="10" fill="url(#blueCard)"/>
+        <rect y="26" width="170" height="10" fill="#0369a1"/>
+        <text x="85" y="24" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">1. 機器視覺</text>
+        <g transform="translate(12, 55)" font-family="sans-serif" font-size="11" fill="#334155">
+          <text x="0" y="0" font-weight="bold" fill="#0f172a">代表場景：</text>
+          <text x="0" y="20">• 工廠產線零件自動組裝</text>
+          <text x="0" y="38">• 產品瑕疵高速自動剔除</text>
+          <text x="0" y="72" font-weight="bold" fill="#0f172a">核心價值：</text>
+          <text x="0" y="92">• 突破人類肉眼視覺疲勞</text>
+          <text x="0" y="110">• 0.01 秒完成幾何尺寸檢測</text>
+          <text x="0" y="128">• 工業 4.0 的基本眼目</text>
+        </g>
+      </g>
+
+      <!-- Card 2: OCR -->
+      <g transform="translate(215, 255)" filter="url(#shadow)">
+        <rect width="170" height="235" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2"/>
+        <rect width="170" height="36" rx="10" fill="url(#greenCard)"/>
+        <rect y="26" width="170" height="10" fill="#047857"/>
+        <text x="85" y="24" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">2. 文字辨識 (OCR)</text>
+        <g transform="translate(12, 55)" font-family="sans-serif" font-size="11" fill="#334155">
+          <text x="0" y="0" font-weight="bold" fill="#0f172a">代表場景：</text>
+          <text x="0" y="20">• 支票金額手寫數字辨識</text>
+          <text x="0" y="38">• 郵遞區號信件自動分流</text>
+          <text x="0" y="72" font-weight="bold" fill="#0f172a">核心價值：</text>
+          <text x="0" y="92">• 掃描像素轉 ASCII / 文字碼</text>
+          <text x="0" y="110">• 儲存空間大幅縮減 5000 倍</text>
+          <text x="0" y="128">• 文件可檢索、可自由編輯</text>
+        </g>
+      </g>
+
+      <!-- Card 3: CAD -->
+      <g transform="translate(395, 255)" filter="url(#shadow)">
+        <rect width="170" height="235" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2"/>
+        <rect width="170" height="36" rx="10" fill="url(#roseCard)"/>
+        <rect y="26" width="170" height="10" fill="#be123c"/>
+        <text x="85" y="24" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">3. 電腦輔助診斷</text>
+        <g transform="translate(12, 55)" font-family="sans-serif" font-size="11" fill="#334155">
+          <text x="0" y="0" font-weight="bold" fill="#0f172a">代表場景：</text>
+          <text x="0" y="20">• 乳房 X 光攝影微小鈣化</text>
+          <text x="0" y="38">• 肺部結節 CT 自動標註</text>
+          <text x="0" y="72" font-weight="bold" fill="#0f172a">核心價值：</text>
+          <text x="0" y="92">• 「守護生命的第二意見」</text>
+          <text x="0" y="110">• 彌補醫師 10-30% 偽陰性</text>
+          <text x="0" y="128">• 拯救早期無徵兆患者生命</text>
+        </g>
+      </g>
+
+      <!-- Card 4: ASR -->
+      <g transform="translate(575, 255)" filter="url(#shadow)">
+        <rect width="170" height="235" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2"/>
+        <rect width="170" height="36" rx="10" fill="url(#purpleCard)"/>
+        <rect y="26" width="170" height="10" fill="#5b21b6"/>
+        <text x="85" y="24" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">4. 語音辨識 (ASR)</text>
+        <g transform="translate(12, 55)" font-family="sans-serif" font-size="11" fill="#334155">
+          <text x="0" y="0" font-weight="bold" fill="#0f172a">代表場景：</text>
+          <text x="0" y="20">• 智慧語音助理 (Siri / 語音)</text>
+          <text x="0" y="38">• 會議即時字幕生成系統</text>
+          <text x="0" y="72" font-weight="bold" fill="#0f172a">核心價值：</text>
+          <text x="0" y="92">• 說話輸入比熟練打字快兩倍</text>
+          <text x="0" y="110">• 聲學訊號頻譜轉文字字元</text>
+          <text x="0" y="128">• 聽語障族群無障礙溝通橋樑</text>
+        </g>
+      </g>
+
+      <!-- Card 5: CBIR -->
+      <g transform="translate(755, 255)" filter="url(#shadow)">
+        <rect width="170" height="235" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2"/>
+        <rect width="170" height="36" rx="10" fill="url(#amberCard)"/>
+        <rect y="26" width="170" height="10" fill="#b45309"/>
+        <text x="85" y="24" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">5. 內容檢索 (CBIR)</text>
+        <g transform="translate(12, 55)" font-family="sans-serif" font-size="11" fill="#334155">
+          <text x="0" y="0" font-weight="bold" fill="#0f172a">代表場景：</text>
+          <text x="0" y="20">• 以圖找圖 (Google Lens)</text>
+          <text x="0" y="38">• 音樂旋律比對、DNA 比對</text>
+          <text x="0" y="72" font-weight="bold" fill="#0f172a">核心價值：</text>
+          <text x="0" y="92">• 拋棄死板的關鍵字標籤</text>
+          <text x="0" y="110">• 深入內容本質（Content-Based）</text>
+          <text x="0" y="128">• 計算幾何高維特徵距離比對</text>
+        </g>
+      </g>
+    </svg>
+    <div class="svg-caption">圖解：樣式識別通用兩步引擎 + 五大代表性戰場</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     6. S2 · 線性切刀（線性判別函數 + 數值試算）
+     ============================================================ -->
+<section class="section" id="b5">
+  <span class="sec-tag sustain">S2 · 維持注意</span>
+  <h2 class="section-title">線性切刀：動手切出你的第一刀
+    <span class="en">Cut Your First Decision Hyperplane — Linear Discriminant</span>
+  </h2>
+
+  <p>
+    我們用最經典的線性判別函數 (Linear Discriminant Function) 來把數學講透：
+    <span class="bilingual-en">Let's make the math concrete with the linear discriminant function:</span>
+  </p>
+
+  <div class="formula-box">
+    <h4>① 線性判別函數</h4>
+    <p style="font-size:var(--t3);text-align:center;">
+      $$g(\mathbf{x}) = \mathbf{w}^T \mathbf{x} + w_0 = w_1 x_1 + w_2 x_2 + w_0$$
+    </p>
+  </div>
+
+  <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+    <div>
+      <div class="method-box">
+        <h4>符號解碼 · Symbol Decoder</h4>
+        <ul style="padding-left:1.2em;margin:0;">
+          <li><b>$\mathbf{x} = [x_1, x_2]^T$</b>：待測樣品的兩個量測特徵。<br/>
+            <span class="bilingual-en">Sample's two measured <b>features</b>.</span>
+          </li>
+          <li><b>$\mathbf{w} = [w_1, w_2]^T$</b>：權重向量 (<b>法向量</b>)，指向「良品區」方向。<br/>
+            <span class="bilingual-en"><b>Weight vector</b> = direction toward class $\omega_1$.</span>
+          </li>
+          <li><b>$w_0$</b>：偏置項，決定決策超平面離原點多遠。<br/>
+            <span class="bilingual-en"><b>Bias</b>: distance of plane from origin.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="intuition-box">
+        <h4>幾何直覺 · Geometric Intuition</h4>
+        <p>
+          <b>決策超平面</b>就是系統猶豫不決的中立線：
+          <span class="bilingual-en">The <b>decision hyperplane</b> is the "neutral line" of doubt:</span>
+        </p>
+        <p style="font-size:var(--t3);text-align:center;">
+          $$g(\mathbf{x}) = 0 \iff w_1 x_1 + w_2 x_2 + w_0 = 0$$
+        </p>
+        <p>
+          切西瓜的那道切線，落在兩邊各分一類。
+          <span class="bilingual-en">The watermelon-cut line splitting two halves.</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="method-box" style="margin-top:18px;">
+    <h4>② 判別規則 · Decision Rule</h4>
+    <ul style="padding-left:1.2em;margin:0;">
+      <li>若 $g(\mathbf{x}) > 0$ $\Rightarrow$ 判定為第一類 (e.g. 良品 $\omega_1$)<br/>
+        <span class="bilingual-en">$g(\mathbf{x}) > 0 \Rightarrow$ <b>class $\omega_1$</b> (positive side).</span>
+      </li>
+      <li>若 $g(\mathbf{x}) < 0$ $\Rightarrow$ 判定為第二類 (e.g. 瑕疵品 $\omega_2$)<br/>
+        <span class="bilingual-en">$g(\mathbf{x}) < 0 \Rightarrow$ <b>class $\omega_2$</b> (negative side).</span>
+      </li>
+    </ul>
+  </div>
+
+  <h3 style="font-size:var(--t3);margin-top:32px;color:var(--ink);">
+    ③ 半導體晶圓檢測實例 · Worked Example: Wafer Defect Inspection
+    <span style="font-size:var(--t4);color:var(--ink-soft);font-style:italic;font-weight:400;"> — Semiconductor wafer inspection</span>
+  </h3>
+
+  <div class="warning-box">
+    <h4>情境設定 · Setup</h4>
+    <p>
+      相機自動量測兩個特徵：$x_1$（圓度）、$x_2$（平整度）。工廠訓練出決策超平面：
+      <span class="bilingual-en">Camera measures $x_1$ (roundness), $x_2$ (flatness). Trained plane:</span>
+    </p>
+    <p style="font-size:var(--t3);text-align:center;color:var(--warning);">
+      $$g(x_1, x_2) = 2x_1 + 3x_2 - 12$$
+    </p>
+    <p>
+      對應直線：$2x_1 + 3x_2 - 12 = 0 \;\Rightarrow\; x_2 = -\frac{2}{3}x_1 + 4$
+      <span class="bilingual-en">Line: $x_2 = -\tfrac{2}{3}x_1 + 4$</span>
+    </p>
+    <p>
+      法向量 $\mathbf{w} = [2, 3]^T$，長度 $\|\mathbf{w}\| = \sqrt{13} \approx 3.606$。
+      <span class="bilingual-en">Normal $\|\mathbf{w}\| = \sqrt{13} \approx 3.606$.</span>
+    </p>
+  </div>
+
+  <!-- 數值試算表 -->
+  <div class="formula-box" style="margin-top:18px;">
+    <h4>📊 兩批樣品實算 · Two Samples Calculation</h4>
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>樣品 (Sample)</th>
+          <th>量測 $(x_1, x_2)$</th>
+          <th>代入 $g(\mathbf{x})$</th>
+          <th>符號 (Sign)</th>
+          <th>幾何距離 $r = g / \|\mathbf{w}\|$</th>
+          <th>決策 (Decision)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>樣品 A</b></td>
+          <td class="mono">$(4.0,\ 3.0)$</td>
+          <td class="mono">$2(4) + 3(3) - 12 = +5$</td>
+          <td class="good"><b>正 ($+0.25$)</b></td>
+          <td class="mono">$+5/\sqrt{13} \approx +1.387$</td>
+          <td><b>良品</b> (Normal) — 信心高</td>
+        </tr>
+        <tr>
+          <td><b>樣品 B</b></td>
+          <td class="mono">$(1.0,\ 2.0)$</td>
+          <td class="mono">$2(1) + 3(2) - 12 = -4$</td>
+          <td class="bad"><b>負 ($-0.25$)</b></td>
+          <td class="mono">$-4/\sqrt{13} \approx -1.109$</td>
+          <td><b>瑕疵品</b> (Defective) — 剔除</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="ui-text center" style="margin-top:10px;">
+      <b>正負號 = 身分</b> ｜ <b>絕對值 = 距離切線的遠近（分類信心）</b>
+      <span class="bilingual-en">Sign = identity; |value| = confidence (distance to plane).</span>
+    </p>
+  </div>
+
+  <!-- Chart.js 視覺化：兩點 + 決策超平面 -->
+  <div class="chart-wrap">
+    <h4>特徵空間中的決策超平面 · Decision Hyperplane in Feature Space</h4>
+    <canvas id="classifierChart"></canvas>
+    <p class="ui-text center" style="margin-top:8px;">
+      綠色區 = $\mathcal{R}_1$（良品）；紅色區 = $\mathcal{R}_2$（瑕疵）；黑線 = $2x_1+3x_2-12=0$；藍箭頭 = 法向量 $\mathbf{w}$
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================
+     7. S2 · 五大戰場
+     ============================================================ -->
+<section class="section" id="b6">
+  <span class="sec-tag sustain">S2 · 維持注意</span>
+  <h2 class="section-title">五大經典戰場巡禮：為什麼人類社會不能沒有它？
+    <span class="en">Five Classic Battlefields — Why Civilization Can't Live Without It</span>
+  </h2>
+
+  <p>
+    有了「量數字 $\to$ 空間切一刀」的核心概念，來看五大代表性戰場：
+    <span class="bilingual-en">With the two-step pipeline, here are five battlefields:</span>
+  </p>
+
+  <div class="battlefield">
+    <div class="bf-card">
+      <h4>1. 機器視覺</h4>
+      <div class="bf-sub">Machine Vision</div>
+      <div class="bf-label">代表場景</div>
+      <ul>
+        <li>工廠產線自動組裝</li>
+        <li>瑕疵高速剔除</li>
+      </ul>
+      <div class="bf-label">核心價值</div>
+      <ul>
+        <li>突破人類視覺疲勞</li>
+        <li>0.01 秒幾何檢測</li>
+        <li>工業 4.0 基本眼目</li>
+      </ul>
+    </div>
+    <div class="bf-card">
+      <h4>2. 文字辨識 (OCR)</h4>
+      <div class="bf-sub">Optical Character Recognition</div>
+      <div class="bf-label">代表場景</div>
+      <ul>
+        <li>支票手寫數字</li>
+        <li>郵遞區號自動分信</li>
+      </ul>
+      <div class="bf-label">核心價值</div>
+      <ul>
+        <li>像素轉 ASCII / 文字碼</li>
+        <li>儲存空間縮減 5000 倍</li>
+        <li>文件可檢索、可編輯</li>
+      </ul>
+    </div>
+    <div class="bf-card">
+      <h4>3. 電腦輔助診斷</h4>
+      <div class="bf-sub">Computer-Aided Diagnosis (CAD)</div>
+      <div class="bf-label">代表場景</div>
+      <ul>
+        <li>乳房 X 光微小鈣化</li>
+        <li>肺部結節 CT 標註</li>
+      </ul>
+      <div class="bf-label">核心價值</div>
+      <ul>
+        <li>守護生命的第二意見</li>
+        <li>彌補 10-30% 偽陰性</li>
+        <li>拯救早期無徵兆患者</li>
+      </ul>
+    </div>
+    <div class="bf-card">
+      <h4>4. 語音辨識 (ASR)</h4>
+      <div class="bf-sub">Automatic Speech Recognition</div>
+      <div class="bf-label">代表場景</div>
+      <ul>
+        <li>Siri / 智慧助理</li>
+        <li>會議即時字幕</li>
+      </ul>
+      <div class="bf-label">核心價值</div>
+      <ul>
+        <li>語音比打字快 2 倍</li>
+        <li>聲學頻譜轉文字字元</li>
+        <li>聽語障無障礙溝通</li>
+      </ul>
+    </div>
+    <div class="bf-card">
+      <h4>5. 內容檢索 (CBIR)</h4>
+      <div class="bf-sub">Content-Based Image Retrieval</div>
+      <div class="bf-label">代表場景</div>
+      <ul>
+        <li>Google Lens 以圖找圖</li>
+        <li>音樂旋律比對、DNA 比對</li>
+      </ul>
+      <div class="bf-label">核心價值</div>
+      <ul>
+        <li>拋棄死板關鍵字標籤</li>
+        <li>深入內容本質</li>
+        <li>高維特徵距離比對</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     8. S3 · 記憶卡
+     ============================================================ -->
+<section class="section" id="b7">
+  <span class="sec-tag activate">S3 · 喚起行動</span>
+  <h2 class="section-title">一分鐘核心記憶卡 · One-Minute Recap
+    <span class="en">Crystallize the Core Ideas in 60 Seconds</span>
+  </h2>
+
+  <div class="summary-box">
+    <h4>⭐ 口訣 · Mantra</h4>
+    <p style="text-align:center;font-style:italic;">
+      「管它是瑕疵零件、手寫中文字、癌細胞、Siri 還是 DNA 序列——<br/>
+      先想辦法<b>量出能分開它們的關鍵數字</b>，<br/>
+      再在幾何空間中<b>畫出正確的切割邊界</b>。」
+    </p>
+    <p style="text-align:center;color:#b0c4de;font-size:18px;margin-top:14px;font-style:italic;">
+      Measure discriminative numbers, then draw the cutting boundary.
+    </p>
+  </div>
+
+  <div class="highlight-box">
+    <h4>四大記憶錨點 · Four Memory Anchors</h4>
+    <ol style="padding-left:1.4em;margin:0;">
+      <li>
+        <b>樣式識別的定義</b>：把物理世界的物件，分類到某個抽象類別的工程科學。
+        <span class="bilingual-en">Definition: classify physical objects into abstract categories.</span>
+      </li>
+      <li>
+        <b>萬物皆可化為「特徵」</b>：影像、聲音、文字在電腦裡都是特徵空間的向量座標點 $\mathbf{x}$。
+        <span class="bilingual-en">All become <b>feature vectors</b> in a high-dim space.</span>
+      </li>
+      <li>
+        <b>分類器的幾何本質</b>：在特徵空間裡畫出一道分界超平面 $g(\mathbf{x}) = \mathbf{w}^T\mathbf{x} + w_0 = 0$，正負號決定身分，絕對值代表信心。
+        <span class="bilingual-en">Sign = identity; |value| = confidence.</span>
+      </li>
+      <li>
+        <b>五大戰場的共同靈魂</b>：全都是「量出能區分類別的數字 $\to$ 幾何超平面裁決」的實踐！
+        <span class="bilingual-en">Same pipeline: features $\to$ hyperplane decision.</span>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============================================================
+     9. S3 · 思考題 (Quiz)
+     ============================================================ -->
+<section class="section" id="quiz">
+  <span class="sec-tag activate">S3 · 喚起行動</span>
+  <h2 class="section-title">思考題 · 提取練習
+    <span class="en">Reflection — Test Your Understanding</span>
+  </h2>
+
+  <p>
+    回答下列問題，看看自己有沒有把這個兩步法內化。
+    <span class="bilingual-en">Answer these to check if the two-step pipeline is internalized.</span>
+  </p>
+
+  <!-- Q1 -->
+  <div class="quiz-card" data-correct="1">
+    <div class="q">Q1. 樣式識別的核心「兩步法」是什麼？(Core two-step pipeline?)</div>
+    <div class="options">
+      <button data-i="0">先訓練大型神經網路，再做預測</button>
+      <button data-i="1">先做<b>特徵提取 (Feature Extraction)</b>，再做<b>空間分類 (Classification)</b></button>
+      <button data-i="2">先用相機拍照，再用人工標註</button>
+      <button data-i="3">先用統計模型，再用深度學習</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="quiz-card" data-correct="2">
+    <div class="q">Q2. 線性判別函數 $g(\mathbf{x}) = \mathbf{w}^T\mathbf{x} + w_0 = 0$ 代表什麼？(What does $g = 0$ represent?)</div>
+    <div class="options">
+      <button data-i="0">訓練誤差為零</button>
+      <button data-i="1">最佳分類結果</button>
+      <button data-i="2">決策超平面 (Decision Hyperplane)，幾何中立線</button>
+      <button data-i="3">資料平均值</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="quiz-card" data-correct="0">
+    <div class="q">Q3. 若 $g(\mathbf{x}) = +5$ 且 $\|\mathbf{w}\| = \sqrt{13} \approx 3.606$，這代表什麼？(What does $g=+5$ mean?)</div>
+    <div class="options">
+      <button data-i="0">判定為第一類 (e.g. 良品)，且距切線 <b>$r \approx +1.387$</b>，分類信心高</button>
+      <button data-i="1">判定為第二類，信心低</button>
+      <button data-i="2">落在決策超平面上，無法判定</button>
+      <button data-i="3">資料有誤，需重新量測</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Q4 -->
+  <div class="quiz-card" data-correct="1">
+    <div class="q">Q4. 電腦輔助診斷 (CAD) 在乳房 X 光篩檢的價值為何？(Value of CAD in mammography?)</div>
+    <div class="options">
+      <button data-i="0">完全取代放射科醫師</button>
+      <button data-i="1">當<b>「不知疲倦的副駕駛」</b>，彌補醫師 10-30% 偽陰性，在微小鈣化點提醒醫師多看一眼</button>
+      <button data-i="2">僅用於儲存病歷</button>
+      <button data-i="3">完全自動開立處方</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <p class="center muted" style="margin-top:48px;">
+    ── End of Lesson 01 · 第一課結束 ──<br/>
+    <span style="font-size:var(--t5);">下一課 · Next Lesson: 貝氏決策理論 (Bayesian Decision Theory)</span>
+  </p>
+  <p class="center muted" style="margin-top:8px;">
+    掌握這個兩步法，你就掌握了所有樣式識別應用的共同靈魂。
+    <span class="bilingual-en">Master this pipeline — you master every PR application.</span>
+  </p>
+</section>
+
+<!-- ============================================================
+     Chart.js CDN + JS
+     ============================================================ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+/* Chart 1: 決策超平面 + 兩樣品點 */
+(function () {
+  const ctx = document.getElementById('classifierChart');
+  if (!ctx) return;
+
+  // 2D 特徵空間 [0, 10] x [0, 10]
+  // 決策超平面: 2x1 + 3x2 - 12 = 0  =>  x2 = (12 - 2x1) / 3
+  // 法向量 w = [2, 3]
+  // 樣品 A (4, 3): g = 2(4) + 3(3) - 12 = +5  (良品)
+  // 樣品 B (1, 2): g = 2(1) + 3(2) - 12 = -4  (瑕疵)
+
+  const x1Range = [];
+  const x2Line = [];
+  for (let x1 = 0; x1 <= 10; x1 += 0.2) {
+    x1Range.push(x1.toFixed(1));
+    x2Line.push((12 - 2 * x1) / 3);
+  }
+
+  // 法向量箭頭：從原點 (0,0) 指向 (2/√13 * 4, 3/√13 * 4) ≈ (2.22, 3.33)
+  const wmag = Math.sqrt(13);
+  const arrowEnd = { x: 2 / wmag * 4, y: 3 / wmag * 4 };
+
+  new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: '良品樣品 (Class ω₁, g > 0)',
+          data: [{ x: 4, y: 3 }],
+          backgroundColor: 'rgba(0, 184, 148, 0.9)',
+          borderColor: '#00b894',
+          borderWidth: 2,
+          pointRadius: 14,
+          pointHoverRadius: 16,
+        },
+        {
+          label: '瑕疵樣品 (Class ω₂, g < 0)',
+          data: [{ x: 1, y: 2 }],
+          backgroundColor: 'rgba(225, 112, 85, 0.9)',
+          borderColor: '#e17055',
+          borderWidth: 2,
+          pointRadius: 14,
+          pointHoverRadius: 16,
+        },
+        {
+          label: '決策超平面 2x₁+3x₂-12=0',
+          data: x1Range.map((x, i) => ({ x: parseFloat(x), y: x2Line[i] })),
+          type: 'line',
+          borderColor: '#2d3436',
+          borderWidth: 3,
+          pointRadius: 0,
+          fill: false,
+          tension: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#2d3436', font: { size: 14 } },
+        },
+        tooltip: {
+          callbacks: {
+            label: (c) => {
+              if (c.dataset.label.includes('樣品')) {
+                return c.dataset.label + `: (${c.parsed.x}, ${c.parsed.y})`;
+              }
+              return `超平面: (${c.parsed.x.toFixed(1)}, ${c.parsed.y.toFixed(2)})`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          title: { display: true, text: 'x₁ (圓度 · Roundness)', color: '#4a5568', font: { size: 14 } },
+          min: 0, max: 10,
+          ticks: { color: '#4a5568' },
+          grid: { color: 'rgba(214,221,230,.6)' },
+        },
+        y: {
+          title: { display: true, text: 'x₂ (平整度 · Flatness)', color: '#4a5568', font: { size: 14 } },
+          min: 0, max: 10,
+          ticks: { color: '#4a5568' },
+          grid: { color: 'rgba(214,221,230,.6)' },
+        },
+      },
+    },
+    plugins: [{
+      id: 'normalArrow',
+      afterDraw(chart) {
+        const { ctx: c, chartArea, scales } = chart;
+        const x0 = scales.x.getPixelForValue(0);
+        const y0 = scales.y.getPixelForValue(0);
+        const x1 = scales.x.getPixelForValue(arrowEnd.x);
+        const y1 = scales.y.getPixelForValue(arrowEnd.y);
+        c.save();
+        c.strokeStyle = '#0984e3';
+        c.fillStyle = '#0984e3';
+        c.lineWidth = 4;
+        c.beginPath();
+        c.moveTo(x0, y0);
+        c.lineTo(x1, y1);
+        c.stroke();
+        // arrowhead
+        const angle = Math.atan2(y1 - y0, x1 - x0);
+        const headLen = 14;
+        c.beginPath();
+        c.moveTo(x1, y1);
+        c.lineTo(x1 - headLen * Math.cos(angle - Math.PI / 6), y1 - headLen * Math.sin(angle - Math.PI / 6));
+        c.lineTo(x1 - headLen * Math.cos(angle + Math.PI / 6), y1 - headLen * Math.sin(angle + Math.PI / 6));
+        c.closePath();
+        c.fill();
+        // label
+        c.font = 'bold 15px sans-serif';
+        c.fillText('w = [2,3]', x1 + 10, y1 - 6);
+        c.restore();
+      },
+    }],
+  });
+})();
+
+/* Quiz 互動 */
+(function () {
+  const explanations = {
+    'q1': 'Yes — two-step pipeline: extract features, then classify in feature space.',
+    'q2': 'Yes — g(x) = 0 is the decision hyperplane (geometric neutral line).',
+    'q3': 'Yes — g > 0 → class ω₁; |r| = |g| / ‖w‖ gives confidence.',
+    'q4': 'Yes — CAD is the tireless co-pilot that catches 10-30% false negatives.',
+  };
+  document.querySelectorAll('.quiz-card').forEach(card => {
+    const correct = card.dataset.correct;
+    const buttons = card.querySelectorAll('button');
+    const fb = card.querySelector('.feedback');
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        buttons.forEach(b => b.disabled = true);
+        const ok = (btn.dataset.i === correct);
+        if (ok) btn.classList.add('correct');
+        else btn.classList.add('wrong');
+        buttons.forEach(b => { if (b.dataset.i === correct) b.classList.add('correct'); });
+        fb.classList.add('show');
+        fb.classList.add(ok ? 'ok' : 'no');
+        const cards = Array.from(document.querySelectorAll('.quiz-card'));
+        const idx = cards.indexOf(card);
+        const key = 'q' + (idx + 1);
+        fb.innerHTML = (ok ? '✓ 正確！' : '✗ 再想想，') + ' ' + (explanations[key] || '請回到內文回顧。');
+      });
+    });
+  });
+})();
+
+/* 進度條 */
+(function () {
+  const bar = document.getElementById('progressTop');
+  function update() {
+    const h = document.documentElement;
+    bar.style.width = (h.scrollTop / (h.scrollHeight - h.clientHeight) * 100) + '%';
+  }
+  window.addEventListener('scroll', update, { passive: true });
+  update();
+})();
+</script>
+
+</body>
+</html>

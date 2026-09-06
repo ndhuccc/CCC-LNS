@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2.1 生物神經元｜Soma · Dendrites · Synapse</title>
+
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']]
+  },
+  svg: { fontCache: 'global' },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<style>
+:root {
+  --bg: hsl(222, 45%, 98%);
+  --bg-card: #ffffff;
+  --bg-deep: #0a0e27;
+  --ink: #2d3436;
+  --ink-soft: #4a5568;
+  --text-low: #6c7a89;
+  --line: #d6dde6;
+  --primary: hsl(248, 58%, 46%);
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent: #0984e3;
+  --warm: #fdcb6e;
+  --magenta: #e84393;
+  --success: #00b894;
+  --warning: #e17055;
+  --info: #6c5ce7;
+  --t1: 55px;
+  --t2: 34px;
+  --t3: 22px;
+  --t4: 22px;
+  --t5: 13px;
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60,80,140,.08);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC",
+    "Microsoft JhengHei", "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.55;
+}
+body.slide-mode { overflow: hidden; }
+body.scroll-mode { overflow-x: hidden; overflow-y: auto; }
+h1, h2, h3, h4 { margin: 0 0 .4em; color: var(--ink); font-weight: 700; letter-spacing: -.01em; }
+h1 { font-size: var(--t1); line-height: 1.12; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3, h4 { font-size: var(--t3); line-height: 1.25; }
+p, li { font-size: var(--t4); color: var(--ink-soft); }
+p { margin: 0 0 .65em; }
+b { color: var(--ink); }
+.center { text-align: center; }
+.muted { color: var(--text-low); }
+.mono, pre { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+.bilingual-en {
+  display: block;
+  margin-top: 5px;
+  color: var(--ink-soft);
+  font-size: 18px;
+  line-height: 1.45;
+  font-weight: 400;
+  letter-spacing: .01em;
+}
+.bilingual-en-inline { color: var(--ink-soft); font-size: 17px; font-weight: 400; }
+
+.section {
+  width: 100%;
+  max-width: var(--max-w);
+  min-height: 100vh;
+  height: 100vh;
+  margin: 0 auto;
+  padding: var(--pad-section);
+  padding-right: calc(2.2vw + 258px);
+  border-bottom: 1px dashed var(--line);
+  display: none;
+  align-items: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.section.active { display: flex; }
+.section > .slide-content { width: 100%; }
+.section::-webkit-scrollbar { width: 7px; }
+.section::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
+body.scroll-mode .section {
+  display: flex;
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+  scroll-margin-top: 0;
+}
+body.scroll-mode .slide-counter,
+body.scroll-mode .slide-controls { display: none; }
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  background: rgba(255,255,255,.94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  font-size: var(--t5);
+}
+.toc-rail .label {
+  margin-bottom: 14px;
+  color: var(--primary);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: .2em;
+}
+.toc-rail ol { list-style: none; padding: 0; margin: 0; counter-reset: nav; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 7px;
+  padding-left: 10px;
+  border-left: 3px solid transparent;
+}
+.toc-rail li a {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.3;
+  text-decoration: none;
+  border: 0;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 3px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+.toc-rail li.current { border-left-color: var(--magenta); background: rgba(232,67,147,.06); }
+.toc-rail li.current a { color: var(--magenta); font-weight: 700; }
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  width: 0%;
+  height: 4px;
+  z-index: 200;
+  background: var(--primary);
+  transition: width .15s ease;
+}
+.slide-counter, .slide-controls {
+  position: fixed;
+  z-index: 210;
+  padding: 6px 11px;
+  color: var(--ink-soft);
+  background: rgba(255,255,255,.9);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  font-size: var(--t5);
+}
+.slide-counter { left: 18px; bottom: 18px; }
+.slide-controls { right: 258px; bottom: 18px; display: flex; gap: 7px; }
+.slide-controls button {
+  padding: 4px 11px;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 18px;
+  font-family: inherit;
+}
+.slide-controls button:hover { color: var(--primary); }
+
+.sec-tag, .hero .badge {
+  display: inline-block;
+  padding: 4px 12px;
+  margin-bottom: 16px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+.sec-tag.motivate { color: var(--warning); background: rgba(225,112,85,.12); }
+.sec-tag.sustain { color: var(--primary); background: var(--primary-soft); }
+.sec-tag.activate { color: var(--success); background: rgba(0,184,148,.12); }
+.section-title { margin-bottom: 12px; }
+.section-title .en {
+  display: block;
+  margin-top: 5px;
+  color: var(--ink-soft);
+  font-size: 18px;
+  font-weight: 400;
+  font-style: italic;
+}
+.lead { margin-bottom: 18px; }
+
+.hero {
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 38px rgba(10,14,39,.28);
+}
+.hero h1, .hero p { color: #fff; }
+.hero .badge {
+  color: #00d4ff;
+  background: rgba(0,212,255,.15);
+  border: 1px solid #00d4ff;
+}
+.hero .accent { color: #00d4ff; }
+.hero .accent2 { color: #ff006e; }
+.hero .zh-sub { margin-bottom: 5px; font-size: 26px; }
+.hero .zh-sub .bilingual-en { display: block; margin-top: 4px; color: #b0c4de; font-size: 22px; font-style: italic; }
+.hero .en-sub { color: #b0c4de; font-size: 22px; font-style: italic; }
+.hero .meta {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 30px;
+}
+.hero .chip {
+  padding: 7px 15px;
+  color: #00d4ff;
+  border: 1px solid rgba(0,212,255,.45);
+  border-radius: 7px;
+  background: rgba(0,212,255,.10);
+  font-size: 18px;
+}
+.hero .scroll-hint { margin-top: 28px; color: #b0c4de; font-size: 18px; }
+.takahashi {
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 18px auto 22px;
+  padding: 80px 2.2vw;
+  text-align: center;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.takahashi .quote {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1.22;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  margin-top: 18px;
+  color: var(--ink-soft);
+  font-size: 22px;
+  font-weight: 400;
+  -webkit-text-fill-color: var(--ink-soft);
+}
+
+.formula-box, .highlight-box, .intuition-box, .method-box,
+.warning-box, .summary-box, .quote-block, .theorem {
+  margin: 20px 0;
+  padding: 20px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  box-shadow: var(--shadow);
+}
+.formula-box { background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%); border-left-color: var(--warm); }
+.formula-box h4 { color: #b7791f; }
+.formula-box mjx-container { font-size: 1.25em !important; }
+.highlight-box { background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%); border-left-color: var(--primary); }
+.highlight-box h4 { color: var(--primary); }
+.intuition-box { background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%); border-left-color: var(--info); }
+.intuition-box h4 { color: #00695c; }
+.method-box { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-left-color: var(--success); }
+.method-box h4 { color: #2e7d32; }
+.warning-box { background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); border-left-color: var(--warning); }
+.warning-box h4 { color: #c62828; }
+.summary-box { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-left-color: var(--primary); }
+.summary-box h4, .summary-box p, .summary-box li, .summary-box b { color: #fff; }
+.quote-block { background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%); border-left-color: var(--magenta); }
+.quote-block h4 { color: var(--magenta); }
+.theorem { background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%); border-left-color: var(--primary); }
+.theorem h4 { color: var(--primary); }
+.formula-box h4, .highlight-box h4, .intuition-box h4, .method-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4, .theorem h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+}
+
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 22px 0;
+}
+.half-layout .visual {
+  display: block;
+  min-height: auto;
+  padding: 18px;
+  text-align: center;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.half-layout .visual svg, .half-layout .visual img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+}
+.svg-caption {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  color: var(--text-low);
+  font-size: 18px;
+  line-height: 1.4;
+  text-align: center;
+}
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin: 20px 0; }
+.card {
+  padding: 20px 22px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.card h3 { margin-bottom: 6px; color: var(--primary); }
+.card .icon { margin-bottom: 7px; font-size: 30px; }
+.card .sub-en { margin-bottom: 8px; color: var(--ink-soft); font-size: 18px; }
+.card.positive { border-top: 5px solid var(--success); }
+.card.negative { border-top: 5px solid var(--warning); }
+.card.complex { border-top: 5px solid var(--info); }
+.card.uniform { border-top: 5px solid var(--accent); }
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin: 20px 0;
+}
+.steps .step {
+  padding: 20px;
+  background: var(--bg-card);
+  border-top: 5px solid var(--primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px; height: 36px;
+  margin-bottom: 9px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--primary);
+  font-size: 18px;
+  font-weight: 700;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+.steps h4 { margin-bottom: 8px; }
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  margin: 20px 0;
+}
+.compare-layout .col {
+  padding: 22px;
+  background: var(--bg-card);
+  border-top: 6px solid var(--info);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { margin-bottom: 9px; }
+.path-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+.path-node {
+  position: relative;
+  padding: 15px 12px;
+  text-align: center;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.path-node strong { display: block; font-size: 22px; color: var(--primary); }
+.path-node span { display: block; margin-top: 5px; color: var(--ink-soft); font-size: 18px; }
+.chart-wrap {
+  margin: 18px 0;
+  padding: 20px 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { margin-bottom: 12px; color: var(--primary); }
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 10px 0 14px;
+}
+.slider-row label, .slider-row output { font-size: 22px; color: var(--ink); }
+.slider-row input { flex: 1; accent-color: var(--primary); }
+.slider-row output {
+  min-width: 72px;
+  padding: 3px 9px;
+  text-align: center;
+  color: var(--primary);
+  background: var(--primary-soft);
+  border-radius: 7px;
+  font-weight: 700;
+}
+.signal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 14px 0 20px; }
+.signal-card {
+  padding: 16px;
+  text-align: center;
+  background: #f8faff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.signal-card strong { display: block; color: var(--accent); font-size: 28px; }
+.signal-card span { display: block; margin-top: 4px; color: var(--ink-soft); font-size: 18px; }
+.meter {
+  position: relative;
+  height: 58px;
+  margin: 14px 0 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8edf5;
+}
+.meter-fill { height: 100%; width: 64%; background: linear-gradient(90deg, var(--accent), var(--primary)); transition: width .2s ease; }
+.threshold-line {
+  position: absolute;
+  top: 0; bottom: 0; left: 64%;
+  width: 4px;
+  background: var(--magenta);
+  transition: left .2s ease;
+}
+.meter-labels { display: flex; justify-content: space-between; color: var(--text-low); font-size: 18px; }
+.status-pill {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--success);
+  font-size: 22px;
+  font-weight: 700;
+}
+.status-pill.silent { background: var(--warning); }
+.mapping-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.mapping-table th, .mapping-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); font-size: 22px; }
+.mapping-table th { color: var(--primary); background: var(--primary-soft); }
+.mapping-table td:last-child { color: var(--ink-soft); }
+.timeline { position: relative; margin: 20px 0; padding: 8px 0; }
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  margin-bottom: 12px;
+  padding: 12px 0 12px 60px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  top: 22px; left: 14px;
+  width: 18px; height: 18px;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .when { margin-bottom: 3px; color: var(--magenta); font-size: 18px; font-weight: 700; }
+.timeline h4 { margin-bottom: 3px; color: var(--primary); }
+.timeline p { margin: 0; }
+.prompt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 20px 0; }
+.prompt-card {
+  padding: 18px 22px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-top: 5px solid var(--primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.prompt-card h3 { color: var(--primary); }
+.prompt-card pre {
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  color: #243047;
+  background: #f8faff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 22px;
+  line-height: 1.45;
+}
+.quiz-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.quiz-card {
+  padding: 20px;
+  background: var(--bg-card);
+  border-left: 6px solid var(--primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { margin-bottom: 13px; color: var(--ink); font-size: 22px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 9px; }
+.quiz-card button {
+  padding: 11px 13px;
+  text-align: left;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 22px;
+  font-family: inherit;
+}
+.quiz-card button:hover { border-color: var(--primary); background: var(--primary-soft); }
+.quiz-card button.correct { color: #155724; background: #d4edda; border-color: var(--success); }
+.quiz-card button.wrong { color: #721c24; background: #f8d7da; border-color: var(--warning); }
+.quiz-card .feedback {
+  display: none;
+  margin-top: 10px;
+  padding: 10px 13px;
+  border-radius: 8px;
+  color: #155724;
+  background: #d4edda;
+  font-size: 18px;
+}
+.quiz-card .feedback.show { display: block; }
+
+@media (max-width: 1100px) {
+  .section { padding-right: 2.2vw; }
+  .toc-rail { display: none; }
+  .slide-controls { right: 18px; }
+  .takahashi { max-width: 900px; }
+  .half-layout { grid-template-columns: 1.25fr 1fr; }
+}
+@media (max-width: 768px) {
+  :root { --t1: 42px; --t2: 30px; --t3: 22px; --t4: 20px; }
+  .section { padding: 40px 5vw; }
+  .half-layout, .compare-layout, .grid-2, .prompt-grid { grid-template-columns: 1fr; }
+  .card-grid, .quiz-grid { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; }
+  .signal-grid { grid-template-columns: 1fr; }
+  .path-strip { grid-template-columns: repeat(2, 1fr); }
+  .hero .zh-sub { font-size: 22px; }
+  .hero .en-sub { font-size: 18px; }
+}
+</style>
+</head>
+<body class="scroll-mode">
+
+<div class="progress-top" id="progressTop"></div>
+<nav class="toc-rail" aria-label="章節索引 / Outline">
+  <div class="label">2.1 · 章節索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#question">核心問句 · Question</a></li>
+    <li><a href="#structure">構造圖 · Structure</a></li>
+    <li><a href="#parts">五個部件 · Parts</a></li>
+    <li><a href="#threshold">閾值機制 · Threshold</a></li>
+    <li><a href="#interactive">互動門檻 · Interactive</a></li>
+    <li><a href="#abstraction">生物到數學 · Abstraction</a></li>
+    <li><a href="#mapping">對照表 · Mapping</a></li>
+    <li><a href="#mp">MP 雛形 · MP Model</a></li>
+    <li><a href="#prompt">生圖提示詞 · Prompt</a></li>
+    <li><a href="#quiz">提取練習 · Quiz</a></li>
+    <li><a href="#recap">重點回顧 · Recap</a></li>
+  </ol>
+</nav>
+<div class="slide-counter" id="slideCounter">01 / 12</div>
+<div class="slide-controls">
+  <button id="prevBtn" type="button">← 上一頁</button>
+  <button id="nextBtn" type="button">下一頁 →</button>
+</div>
+
+<section class="section hero" id="cover">
+  <div class="slide-content">
+    <span class="badge">人工智慧基礎 · AI FOUNDATIONS</span>
+    <h1>2.1 <span class="accent">生物神經元</span><br><span class="accent2">Soma · Dendrites · Synapse</span></h1>
+    <p class="zh-sub">從一顆活的神經細胞，走向人工神經元
+      <span class="bilingual-en">From a living neuron to an artificial abstraction.</span>
+    </p>
+    <div class="meta">
+      <span class="chip">構造 Structure</span>
+      <span class="chip">閾值 Threshold</span>
+      <span class="chip">抽象 Abstraction</span>
+    </div>
+    <p class="scroll-hint">按 ← → 或空白鍵開始<br><span class="bilingual-en" style="color:#b0c4de;">Use arrow keys or Space to navigate.</span></p>
+  </div>
+</section>
+
+<section class="section" id="question">
+  <div class="slide-content">
+    <span class="sec-tag motivate">S1 · 引起動機</span>
+    <div class="takahashi">
+      <div class="quote">人工神經元，<br>到底在模仿什麼？<small>What is the artificial neuron actually inspired by?</small></div>
+    </div>
+    <p class="center lead">答案不是「一顆迷你大腦」，而是一套從生物機制抽取出的計算直覺。
+      <span class="bilingual-en">It is a computational intuition loosely inspired by biology.</span>
+    </p>
+    <div class="quote-block center">
+      <h4>先看原型 · Start with the prototype</h4>
+      <p>先理解 Soma、Dendrites 與 Synapse 各自做什麼，才看得懂人工版本保留了哪一段因果。
+        <span class="bilingual-en">Understand the parts before reading the abstraction.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="structure">
+  <div class="slide-content">
+    <span class="sec-tag sustain">S2 · 維持注意</span>
+    <h2 class="section-title">從一顆活的神經細胞講起
+      <span class="en">Start with a Living Neuron</span>
+    </h2>
+    <p class="lead">人工神經網路由人工神經元組成；這個名字不是隨便取的，而是鬆散地受到生物神經元啟發。
+      <span class="bilingual-en">Artificial neurons are loosely inspired by biological neurons.</span>
+    </p>
+    <div class="half-layout">
+      <div class="visual">
+        <svg viewBox="0 0 720 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="生物神經元構造圖">
+          <defs>
+            <linearGradient id="somaGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6c5ce7"/><stop offset="1" stop-color="#e84393"/></linearGradient>
+            <linearGradient id="axonGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0984e3"/><stop offset="1" stop-color="#00b894"/></linearGradient>
+            <marker id="neuronArrow" markerWidth="16" markerHeight="12" refX="14" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L16 6 L0 12 Z" fill="#0984e3"/></marker>
+          </defs>
+          <rect width="720" height="480" rx="18" fill="#f8faff"/>
+          <text x="360" y="38" text-anchor="middle" fill="#6c5ce7" font-size="26" font-weight="700">Fig. 1 · 生物神經元主要構造</text>
+          <g fill="none" stroke="#6c5ce7" stroke-width="7" stroke-linecap="round">
+            <path d="M265 242 C205 220 155 185 92 155"/><path d="M260 260 C190 260 135 270 72 300"/>
+            <path d="M275 215 C235 165 215 112 205 72"/><path d="M275 290 C220 330 190 380 170 420"/>
+            <path d="M250 225 C190 205 145 198 112 205"/>
+          </g>
+          <g fill="#e8d5ff" stroke="#6c5ce7" stroke-width="3">
+            <circle cx="300" cy="250" r="92"/><circle cx="300" cy="250" r="43" fill="#fff"/>
+          </g>
+          <text x="300" y="246" text-anchor="middle" fill="#6c5ce7" font-size="24" font-weight="700">Soma</text>
+          <text x="300" y="276" text-anchor="middle" fill="#4a5568" font-size="20">細胞體 · integration</text>
+          <circle cx="300" cy="250" r="14" fill="#e84393"/>
+          <path d="M392 250 C448 250 480 250 548 250" fill="none" stroke="url(#axonGrad)" stroke-width="12" marker-end="url(#neuronArrow)"/>
+          <text x="470" y="222" text-anchor="middle" fill="#0984e3" font-size="23" font-weight="700">Axon · 軸突</text>
+          <g fill="#fdcb6e" stroke="#b7791f" stroke-width="3">
+            <circle cx="553" cy="250" r="12"/><circle cx="585" cy="250" r="12"/><circle cx="617" cy="250" r="12"/>
+          </g>
+          <text x="590" y="296" text-anchor="middle" fill="#b7791f" font-size="20">Synapse · 突觸</text>
+          <text x="590" y="326" text-anchor="middle" fill="#4a5568" font-size="18">化學傳遞 → 下一顆</text>
+          <text x="100" y="455" text-anchor="middle" fill="#6c5ce7" font-size="21" font-weight="700">Dendrites · 樹突</text>
+          <text x="100" y="432" text-anchor="middle" fill="#4a5568" font-size="18">接收訊號</text>
+          <text x="300" y="350" text-anchor="middle" fill="#e84393" font-size="19">Nucleus · 細胞核</text>
+        </svg>
+        <div class="svg-caption">接收 → 整合 → 傳導 → 化學傳遞 · Receive, integrate, transmit, pass on.</div>
+      </div>
+      <div>
+        <div class="highlight-box">
+          <h4>這張圖看什麼？ · Reading the Figure</h4>
+          <p>Dendrites 把鄰居的電化學訊號帶進來，Soma 負責整合，Axon 再把結果往下游傳。
+            <span class="bilingual-en">Dendrites receive; the soma integrates; the axon carries the result.</span>
+          </p>
+        </div>
+        <div class="intuition-box">
+          <h4>鬆散啟發 · Loose Inspiration</h4>
+          <p>人工神經元不是完整複製細胞，而是抓住「多路輸入被整合，再做決策」這條因果線。
+            <span class="bilingual-en">The model keeps a causal pattern, not the whole cell.</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="parts">
+  <div class="slide-content">
+    <span class="sec-tag sustain">S2 · 維持注意</span>
+    <h2 class="section-title">五個關鍵部件，各司其職
+      <span class="en">Five Parts, Five Roles</span>
+    </h2>
+    <div class="card-grid">
+      <div class="card positive">
+        <div class="icon">◎</div>
+        <h3>Soma · 細胞體</h3>
+        <div class="sub-en">The body of the neuron.</div>
+        <p>神經元的本體，把收到的訊號整合起來；像一座城的市中心，訊息最後匯到這裡。
+          <span class="bilingual-en">The soma integrates incoming signals.</span>
+        </p>
+      </div>
+      <div class="card complex">
+        <div class="icon">◉</div>
+        <h3>Nucleus · 細胞核</h3>
+        <div class="sub-en">The control center inside the soma.</div>
+        <p>位於 Soma 內部，存放遺傳物質並調控細胞活動，是細胞的指揮中心。
+          <span class="bilingual-en">The nucleus stores genetic material and regulates activity.</span>
+        </p>
+      </div>
+      <div class="card uniform">
+        <div class="icon">枝</div>
+        <h3>Dendrites · 樹突</h3>
+        <div class="sub-en">Antennae for electrochemical signals.</div>
+        <p>像樹枝一樣延伸，接收其他神經元的訊號，並把它們往 Soma 方向傳送。
+          <span class="bilingual-en">Dendrites receive and route signals inward.</span>
+        </p>
+      </div>
+      <div class="card negative">
+        <div class="icon">⋯</div>
+        <h3>Synapse · 突觸</h3>
+        <div class="sub-en">The chemical gap between neurons.</div>
+        <p>位於一顆神經元的軸突末端與另一顆神經元樹突之間，負責化學傳遞。
+          <span class="bilingual-en">A synapse passes a chemical message across a tiny gap.</span>
+        </p>
+      </div>
+    </div>
+    <div class="method-box">
+      <h4>還有一條傳導線 · The Transmission Path</h4>
+      <p>Axon（軸突）把 Soma 的結果傳向下一個神經元；它把「整合後的結果」送出，而不是重新收集輸入。
+        <span class="bilingual-en">The axon carries the integrated result onward.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="threshold">
+  <div class="slide-content">
+    <span class="sec-tag sustain">S2 · 維持注意</span>
+    <h2 class="section-title">閾值觸發：發火，或不發火
+      <span class="en">Threshold Triggering — Fire or Stay Silent</span>
+    </h2>
+    <p class="lead">構造只是舞臺；真正關鍵是 Soma 如何把多路訊號累積，再和門檻比較。
+      <span class="bilingual-en">The mechanism is accumulation followed by a threshold decision.</span>
+    </p>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <h4>多路訊號進來</h4>
+        <p>樹突與突觸收到鄰居們的電化學訊號，帶進 Soma。
+          <span class="bilingual-en">Inputs arrive through dendrites and synapses.</span>
+        </p>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <h4>在 Soma 累積</h4>
+        <p>細胞體把訊號整合成一個總量，準備和 threshold 比較。
+          <span class="bilingual-en">The soma accumulates one total signal.</span>
+        </p>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <h4>決定是否發火</h4>
+        <p>超過門檻就產生 action potential；沒有超過，就維持沉默。
+          <span class="bilingual-en">Cross the threshold and fire; otherwise stay silent.</span>
+        </p>
+      </div>
+    </div>
+    <div class="formula-box center">
+      <h4>最小因果鏈 · Minimal Causal Chain</h4>
+      $$\text{累積訊號} \;\longrightarrow\; \text{比較門檻 } \theta \;\longrightarrow\; \text{發火或靜默}$$
+      <p>這個「超過就開、沒超過就關」的機制，正是人工神經元最核心的生物靈感。
+        <span class="bilingual-en">A biological threshold becomes a computational switch.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="interactive">
+  <div class="slide-content">
+    <span class="sec-tag sustain">S2 · 維持注意</span>
+    <h2 class="section-title">把門檻拉動：同一組訊號，結果會變嗎？
+      <span class="en">Interactive Threshold — Same Inputs, Different Decision</span>
+    </h2>
+    <p class="lead">三路訊號的總和固定為 $1.6$；拖動門檻 $\theta$，觀察「發火／靜默」由真實比較結果決定。
+      <span class="bilingual-en">The input sum is fixed at 1.6; move the threshold and recompute the decision.</span>
+    </p>
+    <div class="chart-wrap">
+      <h4>訊號累積器 · Signal Accumulator</h4>
+      <div class="signal-grid">
+        <div class="signal-card"><strong>0.7</strong><span>Dendrite A · 訊號</span></div>
+        <div class="signal-card"><strong>0.5</strong><span>Dendrite B · 訊號</span></div>
+        <div class="signal-card"><strong>0.4</strong><span>Dendrite C · 訊號</span></div>
+      </div>
+      <div class="formula-box center" style="margin:12px 0;">
+        $$s=0.7+0.5+0.4=1.6$$
+        <p>累積總和固定，只有門檻在移動。
+          <span class="bilingual-en">The sum stays fixed; only the threshold moves.</span>
+        </p>
+      </div>
+      <div class="slider-row">
+        <label for="thresholdSlider">門檻 $\theta$</label>
+        <input id="thresholdSlider" type="range" min="0.4" max="2.4" step="0.1" value="1.6" aria-label="調整門檻 theta">
+        <output id="thresholdValue">1.6</output>
+      </div>
+      <div class="meter" aria-label="訊號總和與門檻比較">
+        <div class="meter-fill" id="signalFill"></div>
+        <div class="threshold-line" id="thresholdLine"></div>
+      </div>
+      <div class="meter-labels"><span>0</span><span>訊號總和 $s=1.6$</span><span>2.5</span></div>
+      <div class="center"><span class="status-pill" id="fireStatus">⚡ 發火 · Fires</span></div>
+    </div>
+    <div class="intuition-box">
+      <h4>互動結論 · Interactive Takeaway</h4>
+      <p>不是訊號本身突然變了，而是比較標準變嚴格或變寬鬆；這就是閾值如何控制開關。
+        <span class="bilingual-en">The threshold changes the standard, not the incoming signal.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="abstraction">
+  <div class="slide-content">
+    <span class="sec-tag sustain">S2 · 維持注意</span>
+    <h2 class="section-title">從生物到抽象：保留哪一條因果？
+      <span class="en">From Biology to Abstraction</span>
+    </h2>
+    <div class="half-layout">
+      <div class="visual">
+        <svg viewBox="0 0 620 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="從生物神經元到人工神經元的抽象對應">
+          <defs><marker id="absArrow" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0 0 L11 4 L0 8 Z" fill="#e84393"/></marker></defs>
+          <rect width="620" height="340" rx="16" fill="#f8faff"/>
+          <text x="155" y="36" text-anchor="middle" fill="#6c5ce7" font-size="23" font-weight="700">生物語言</text>
+          <text x="465" y="36" text-anchor="middle" fill="#0984e3" font-size="23" font-weight="700">數學語言</text>
+          <g font-size="20" text-anchor="middle">
+            <rect x="35" y="68" width="240" height="48" rx="10" fill="#e8d5ff"/><text x="155" y="99" fill="#4a2d99">多路訊號</text>
+            <rect x="35" y="145" width="240" height="48" rx="10" fill="#d9f7f2"/><text x="155" y="176" fill="#087f5b">累積與整合</text>
+            <rect x="35" y="222" width="240" height="48" rx="10" fill="#ffe8ee"/><text x="155" y="253" fill="#b4235f">發火／靜默</text>
+            <rect x="345" y="68" width="240" height="48" rx="10" fill="#e8d5ff"/><text x="465" y="99" fill="#4a2d99">加權輸入</text>
+            <rect x="345" y="145" width="240" height="48" rx="10" fill="#d9f7f2"/><text x="465" y="176" fill="#087f5b">加權和 + 閾值</text>
+            <rect x="345" y="222" width="240" height="48" rx="10" fill="#ffe8ee"/><text x="465" y="253" fill="#b4235f">輸出 0／1</text>
+          </g>
+          <g stroke="#e84393" stroke-width="3" fill="none" marker-end="url(#absArrow)">
+            <path d="M278 92 L338 92"/><path d="M278 169 L338 169"/><path d="M278 246 L338 246"/>
+          </g>
+          <text x="310" y="316" text-anchor="middle" fill="#e84393" font-size="18" font-weight="700">因果結構被保留 · Causal pattern preserved</text>
+        </svg>
+        <div class="svg-caption">不是複製細胞，而是抽取「累積 → 閾值 → 開關」· Abstract the mechanism.</div>
+      </div>
+      <div>
+        <div class="highlight-box">
+          <h4>三個對應 · Three Mappings</h4>
+          <p>多路訊號變成多個加權輸入；累積總量變成加權和；發火或不發火變成 0 或 1。
+            <span class="bilingual-en">Inputs, accumulation, and firing become a compact computation.</span>
+          </p>
+        </div>
+        <div class="warning-box">
+          <h4>別誤讀 · Do Not Overread</h4>
+          <p>人工模型不是完整的生物模擬；它只保留對計算有用的閾值式決策直覺。
+            <span class="bilingual-en">The abstraction is useful precisely because it is selective.</span>
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="formula-box center">
+      <h4>人工神經元的抽象 · Artificial Abstraction</h4>
+      $$z=\sum_i w_i x_i,\qquad \hat{y}=f(z) \in \{0,1\}$$
+      <p>生物上的「累積 + 閾值 + 開關」，在數學上變成「加權和 + 啟用函式」。
+        <span class="bilingual-en">Accumulation and thresholding become weighted sum and activation.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="mapping">
+  <div class="slide-content">
+    <span class="sec-tag sustain">S2 · 維持注意</span>
+    <h2 class="section-title">一眼看懂：生物部件如何變成計算角色
+      <span class="en">Biological Parts Become Computational Roles</span>
+    </h2>
+    <p class="lead">把名詞放回功能，不要只背一張「名詞連連看」。
+      <span class="bilingual-en">Connect each biological part to the function it contributes.</span>
+    </p>
+    <table class="mapping-table">
+      <thead><tr><th>生物原型 · Biological prototype</th><th>計算直覺 · Computational intuition</th></tr></thead>
+      <tbody>
+        <tr><td>Dendrites · 樹突：接收多路訊號</td><td>多個輸入 $x_i$</td></tr>
+        <tr><td>Synapse · 突觸：化學傳遞的接縫</td><td>輸入之間的連線與影響</td></tr>
+        <tr><td>Soma · 細胞體：整合訊號</td><td>加權和 $\sum_i w_i x_i$</td></tr>
+        <tr><td>Threshold · 門檻：決定是否發火</td><td>啟用函式輸出 $0$ 或 $1$</td></tr>
+        <tr><td>Axon · 軸突：傳導結果</td><td>把輸出 $\hat y$ 傳給下一個單元</td></tr>
+      </tbody>
+    </table>
+    <div class="summary-box">
+      <h4>最短版本 · The Short Version</h4>
+      <p>生物神經元先接收、再整合、最後決定是否發火；人工神經元把這條流程壓縮成可計算的函式。
+        <span class="bilingual-en">Receive, integrate, decide — then transmit.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="mp">
+  <div class="slide-content">
+    <span class="sec-tag sustain">S2 · 維持注意</span>
+    <h2 class="section-title">歷史銜接：McCulloch–Pitts 模型的雛形
+      <span class="en">The McCulloch–Pitts Bridge</span>
+    </h2>
+    <div class="timeline">
+      <div class="event">
+        <div class="when">01 · 生物觀察 · Biological observation</div>
+        <h4>訊號不是各自獨立</h4>
+        <p>多個鄰居同時影響一顆神經元；Soma 必須把這些輸入整合起來。
+          <span class="bilingual-en">Many neighbors contribute to one integrated state.</span>
+        </p>
+      </div>
+      <div class="event">
+        <div class="when">02 · 抽象選擇 · Abstraction</div>
+        <h4>把連續細節壓成開關</h4>
+        <p>早期模型先抓住超過門檻就開、沒有超過就關的邏輯。
+          <span class="bilingual-en">The early abstraction keeps the threshold logic.</span>
+        </p>
+      </div>
+      <div class="event">
+        <div class="when">03 · 1950 年代前後 · 1950s</div>
+        <h4>數學神經元浮現</h4>
+        <p>這條「累積 + 閾值 + 開關」的想法，成為 kp3 McCulloch–Pitts 模型的雛形。
+          <span class="bilingual-en">It becomes a seed for the McCulloch–Pitts model.</span>
+        </p>
+      </div>
+    </div>
+    <div class="theorem">
+      <h4>關鍵理解 · Key Understanding</h4>
+      <p>人工神經網路的故事不是突然從電腦裡冒出來；它先把生物機制轉成一個可重複計算的最小單元。
+        <span class="bilingual-en">The history begins by turning a biological mechanism into a repeatable unit.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="prompt">
+  <div class="slide-content">
+    <span class="sec-tag activate">S3 · 喚起行動</span>
+    <h2 class="section-title">把 Fig. 1 說給生圖模型聽
+      <span class="en">A Structured Prompt for Re-drawing Fig. 1</span>
+    </h2>
+    <p class="lead">如果要用 AI 重繪示意圖，先把構造、流程與視覺限制說清楚。
+      <span class="bilingual-en">A useful image prompt specifies anatomy, causal flow, and visual constraints.</span>
+    </p>
+    <div class="prompt-grid">
+      <div class="prompt-card">
+        <h3>主體 · Subject</h3>
+        <pre>educational scientific diagram,
+one biological neuron,
+show Soma, Nucleus,
+Dendrites, Axon, Synapse</pre>
+        <p>主體是一顆清楚、可標註的生物神經元，而不是抽象腦部照片。
+          <span class="bilingual-en">Show one labeled neuron, not a brain photograph.</span>
+        </p>
+      </div>
+      <div class="prompt-card">
+        <h3>流程 · Causal Flow</h3>
+        <pre>multiple signals → dendrites
+→ soma integration
+→ threshold decision
+→ action potential → next neuron</pre>
+        <p>箭頭必須讓觀眾看出訊號從哪裡來、在哪裡整合、如何往下游傳。
+          <span class="bilingual-en">Make the signal path and decision point explicit.</span>
+        </p>
+      </div>
+      <div class="prompt-card">
+        <h3>標註 · Labels</h3>
+        <pre>clean bilingual labels:
+Soma, Nucleus,
+Dendrites, Axon, Synapse,
+threshold, fires / silent</pre>
+        <p>使用清晰的中英雙語標註，讓 Fig. 1 同時支援構造與機制教學。
+          <span class="bilingual-en">Use readable bilingual labels for structure and mechanism.</span>
+        </p>
+      </div>
+      <div class="prompt-card">
+        <h3>風格 · Style Constraints</h3>
+        <pre>flat vector style,
+white background, high contrast,
+no photorealism,
+no decorative clutter,
+lecture-slide friendly</pre>
+        <p>優先可讀性與因果方向，不要讓裝飾搶走教學訊息。
+          <span class="bilingual-en">Prioritize legibility and causal clarity.</span>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="quiz">
+  <div class="slide-content">
+    <span class="sec-tag activate">S3 · 喚起行動</span>
+    <h2 class="section-title">換你試試看：把機制說回來
+      <span class="en">Retrieval Practice — Explain the Mechanism</span>
+    </h2>
+    <p class="lead">點選答案，確認你抓住「構造 → 累積 → 閾值 → 抽象」的因果鏈。
+      <span class="bilingual-en">Test the chain from anatomy to threshold abstraction.</span>
+    </p>
+    <div class="quiz-grid">
+      <div class="quiz-card" data-correct="1">
+        <div class="q">Q1. 哪個部件主要接收其他神經元的訊號？<span class="bilingual-en">Which part mainly receives incoming signals?</span></div>
+        <div class="options">
+          <button type="button" data-i="0">Axon：把結果送出去 <span class="bilingual-en">Carries the result onward</span></button>
+          <button type="button" data-i="1">Dendrites：接收訊號 <span class="bilingual-en">Receives inputs</span></button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+      <div class="quiz-card" data-correct="0">
+        <div class="q">Q2. 訊號超過 threshold 時會怎樣？<span class="bilingual-en">What happens above the threshold?</span></div>
+        <div class="options">
+          <button type="button" data-i="0">產生 action potential，發火 <span class="bilingual-en">An action potential fires</span></button>
+          <button type="button" data-i="1">立刻消失，保持沉默 <span class="bilingual-en">The neuron stays silent</span></button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+      <div class="quiz-card" data-correct="1">
+        <div class="q">Q3. 生物「累積 + 閾值」在數學上對應什麼？<span class="bilingual-en">What is the mathematical abstraction?</span></div>
+        <div class="options">
+          <button type="button" data-i="0">只保留細胞核的遺傳物質 <span class="bilingual-en">Only the genetic material</span></button>
+          <button type="button" data-i="1">加權和 + 啟用函式 <span class="bilingual-en">Weighted sum plus activation</span></button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+    </div>
+    <div class="intuition-box center">
+      <h4>提示 · Hint</h4>
+      <p>先問「訊號在哪裡被整合」，再問「門檻如何把連續總量變成開關」。
+        <span class="bilingual-en">Locate integration first, then locate the threshold switch.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="recap">
+  <div class="slide-content">
+    <span class="sec-tag activate">S3 · 喚起行動</span>
+    <h2 class="section-title">四句話帶走 2.1
+      <span class="en">Four Sentences to Take Away</span>
+    </h2>
+    <div class="timeline">
+      <div class="event">
+        <div class="when">01 · Structure</div>
+        <h4>Soma 整合，Dendrites 接收</h4>
+        <p>神經元的構造分工，讓訊號有清楚的進入與整合路徑。
+          <span class="bilingual-en">Structure creates a path for receiving and integrating signals.</span>
+        </p>
+      </div>
+      <div class="event">
+        <div class="when">02 · Synapse</div>
+        <h4>突觸是神經元之間的接縫</h4>
+        <p>化學訊號跨過微小間隙，把一顆細胞的結果交給下一顆。
+          <span class="bilingual-en">Synapses pass chemical messages across a tiny gap.</span>
+        </p>
+      </div>
+      <div class="event">
+        <div class="when">03 · Threshold</div>
+        <h4>累積超過門檻，就發火</h4>
+        <p>超過 threshold 產生 action potential；沒超過就保持沉默。
+          <span class="bilingual-en">Cross the threshold to fire; otherwise stay silent.</span>
+        </p>
+      </div>
+      <div class="event">
+        <div class="when">04 · Abstraction</div>
+        <h4>生物直覺成為數學積木</h4>
+        <p>「累積 + 閾值 + 開關」成為「加權和 + 啟用」，銜接 McCulloch–Pitts 模型雛形。
+          <span class="bilingual-en">A biological switch becomes a mathematical building block.</span>
+        </p>
+      </div>
+    </div>
+    <div class="summary-box center">
+      <h4>本節主線 · The Main Line</h4>
+      <p><b>Soma／Dendrites／Synapse → 累積 → threshold → 發火／靜默 → 人工神經元</b>
+        <span class="bilingual-en">Anatomy becomes computation through thresholded integration.</span>
+      </p>
+    </div>
+    <p class="center muted" style="margin-top:22px;">
+      ── 2.1 Complete · 本節結束 ──
+      <span class="bilingual-en">Next: formal neuron models and learnable weights.</span>
+    </p>
+  </div>
+</section>
+
+<script>
+(function () {
+  const slides = Array.from(document.querySelectorAll('.section'));
+  const navItems = Array.from(document.querySelectorAll('.toc-rail li'));
+  const counter = document.getElementById('slideCounter');
+  const progress = document.getElementById('progressTop');
+  const scrollMode = document.body.classList.contains('scroll-mode');
+  let current = 0;
+  function updateUI(index) {
+    current = Math.max(0, Math.min(index, slides.length - 1));
+    slides.forEach((slide, i) => slide.classList.toggle('active', i === current));
+    navItems.forEach((item, i) => item.classList.toggle('current', i === current));
+    counter.textContent = String(current + 1).padStart(2, '0') + ' / ' + String(slides.length).padStart(2, '0');
+    if (!scrollMode) progress.style.width = ((current + 1) / slides.length * 100) + '%';
+  }
+  function updateScrollState() {
+    let nearest = 0;
+    let nearestDistance = Infinity;
+    slides.forEach((slide, i) => {
+      const distance = Math.abs(slide.getBoundingClientRect().top);
+      if (distance < nearestDistance) { nearest = i; nearestDistance = distance; }
+    });
+    updateUI(nearest);
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    progress.style.width = Math.min(100, Math.max(0, window.scrollY / maxScroll * 100)) + '%';
+  }
+  function show(index) {
+    updateUI(index);
+    if (scrollMode) slides[current].scrollIntoView({ block: 'start', behavior: 'smooth' });
+    else slides[current].scrollTop = 0;
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([slides[current]]).catch(() => {});
+  }
+  window.show = show;
+  window.nextSlide = () => show(current + 1);
+  window.prevSlide = () => show(current - 1);
+  document.getElementById('nextBtn').addEventListener('click', window.nextSlide);
+  document.getElementById('prevBtn').addEventListener('click', window.prevSlide);
+  navItems.forEach((item, i) => item.querySelector('a').addEventListener('click', event => {
+    event.preventDefault(); show(i);
+  }));
+  document.addEventListener('keydown', event => {
+    if (['ArrowRight', 'PageDown', ' '].includes(event.key)) { event.preventDefault(); window.nextSlide(); }
+    else if (['ArrowLeft', 'PageUp'].includes(event.key)) { event.preventDefault(); window.prevSlide(); }
+    else if (event.key === 'Home') { event.preventDefault(); show(0); }
+    else if (event.key === 'End') { event.preventDefault(); show(slides.length - 1); }
+  });
+  if (scrollMode) {
+    window.addEventListener('scroll', updateScrollState, { passive: true });
+    window.addEventListener('resize', updateScrollState);
+  }
+  show(0);
+})();
+
+(function () {
+  const slider = document.getElementById('thresholdSlider');
+  const thresholdValue = document.getElementById('thresholdValue');
+  const thresholdLine = document.getElementById('thresholdLine');
+  const fireStatus = document.getElementById('fireStatus');
+  const signalFill = document.getElementById('signalFill');
+  if (!slider) return;
+  const signalSum = 0.7 + 0.5 + 0.4;
+  function update() {
+    const threshold = Number(slider.value);
+    const fired = signalSum >= threshold;
+    const scaleMax = 2.5;
+    thresholdValue.value = threshold.toFixed(1);
+    thresholdLine.style.left = Math.min(100, threshold / scaleMax * 100) + '%';
+    signalFill.style.width = (signalSum / scaleMax * 100) + '%';
+    fireStatus.textContent = fired ? '⚡ 發火 · Fires' : '○ 靜默 · Silent';
+    fireStatus.classList.toggle('silent', !fired);
+  }
+  slider.addEventListener('input', update);
+  update();
+})();
+
+(function () {
+  document.querySelectorAll('.quiz-card').forEach(card => {
+    const correct = card.dataset.correct;
+    const feedback = card.querySelector('.feedback');
+    card.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
+      if (card.classList.contains('answered')) return;
+      card.classList.add('answered');
+      const ok = button.dataset.i === correct;
+      button.classList.add(ok ? 'correct' : 'wrong');
+      card.querySelectorAll('button').forEach(other => {
+        other.disabled = true;
+        if (other.dataset.i === correct) other.classList.add('correct');
+      });
+      feedback.classList.add('show');
+      feedback.textContent = ok ? '✓ 答對了！觀念已接上。 · Correct!' : '✗ 再想想，請回到構造與閾值機制。 · Review the mechanism.';
+    }));
+  });
+})();
+</script>
+
+</body>
+</html>

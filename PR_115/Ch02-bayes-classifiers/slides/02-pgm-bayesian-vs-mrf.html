@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PGM 雙雄對決 — 貝氏網路 vs 馬可夫隨機場 · Bayesian Network vs MRF</title>
+
+<!-- MathJax 3 -->
+<script>
+MathJax = {
+  tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<style>
+/* ============================================================
+   Design Tokens — 冰晶簡約亮色主題（SlidePro 規範）
+   ============================================================ */
+:root {
+  --bg:        hsl(222, 45%, 98%);
+  --bg-card:   #ffffff;
+  --bg-deep:   #0a0e27;
+  --bg-soft:   #f8faff;
+  --ink:       #2d3436;
+  --ink-soft:  #4a5568;
+  --text-low:  #6c7a89;
+  --line:      #d6dde6;
+
+  --primary:   hsl(248, 58%, 46%);
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;
+  --warm:      #fdcb6e;
+  --magenta:   #e84393;
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  --t1: 55px;
+  --t2: 34px;
+  --t3: 22px;
+  --t4: 22px;
+  --t5: 13px;
+
+  --pad-section: 64px 6vw;
+  --max-w: 1600px;
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   Section wrapper
+   ============================================================ */
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* ============================================================
+   Hero / Cover — 深底漸層保留
+   ============================================================ */
+.hero {
+  padding: 96px 6vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+.hero .meta {
+  margin-top: 36px;
+  display: flex; gap: 18px; justify-content: center; flex-wrap: wrap;
+}
+.hero .meta .chip {
+  padding: 6px 14px;
+  background: rgba(0,212,255,.10);
+  border: 1px solid rgba(0,212,255,.4);
+  border-radius: 6px;
+  font-size: var(--t5);
+  color: #00d4ff;
+  letter-spacing: .08em;
+}
+
+/* ============================================================
+   高橋柳
+   ============================================================ */
+.takahashi {
+  text-align: center;
+  padding: 80px 6vw;
+  max-width: 900px;
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -.02em;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  -webkit-text-fill-color: var(--ink-soft);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* ============================================================
+   Content boxes
+   ============================================================ */
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+.formula-box { background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%); border-left-color: var(--warm); }
+.formula-box h4 { color: #b7791f; }
+.formula-box mjx-container { font-size: 1.25em !important; }
+.highlight-box { background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%); border-left-color: var(--primary); }
+.highlight-box h4 { color: var(--primary); }
+.intuition-box { background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%); border-left-color: var(--info); }
+.intuition-box h4 { color: #00695c; }
+.method-box { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-left-color: var(--success); }
+.method-box h4 { color: #2e7d32; }
+.warning-box { background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); border-left-color: var(--warning); }
+.warning-box h4 { color: #c62828; }
+.summary-box { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; border-left-color: var(--primary); }
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+.summary-box p, .summary-box ul li { font-size: 22px; line-height: 1.7; }
+.quote-block { background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%); border-left-color: var(--magenta); font-style: italic; }
+.quote-block h4 { color: var(--magenta); }
+.quote-block p { color: var(--ink); font-size: var(--t4); }
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.method-box h4, .warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   Half layout
+   ============================================================ */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 28px;
+  align-items: stretch;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 30px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: flex; align-items: center; justify-content: center;
+}
+.half-layout .visual svg { width: 100%; height: auto; max-height: 360px; }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   Compare layout
+   ============================================================ */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--accent); }
+.compare-layout .col.right { border-top-color: var(--info); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   Steps
+   ============================================================ */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin: 28px 0;
+}
+.steps .step {
+  position: relative;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border-top: 5px solid var(--primary);
+}
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary); color: #fff;
+  font-weight: 700; font-size: 18px; margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+.steps .step h4 { font-size: var(--t3); margin: 6px 0 12px 0; color: var(--ink); }
+.steps .step p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   Timeline
+   ============================================================ */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ============================================================
+   Comparison table
+   ============================================================ */
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table tbody tr:hover { background: var(--primary-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ============================================================
+   Quiz
+   ============================================================ */
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg-soft);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ============================================================
+   SVG stage
+   ============================================================ */
+.svg-stage {
+  background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ============================================================
+   Chart wrap
+   ============================================================ */
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ============================================================
+   TOC rail
+   ============================================================ */
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label {
+  color: var(--primary); letter-spacing: .2em; margin-bottom: 14px;
+  font-weight: 700; font-size: 16px;
+}
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft); text-decoration: none; display: block;
+  font-size: 14px; line-height: 1.4; border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary); font-weight: 700; margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ============================================================
+   Progress + sec-tag
+   ============================================================ */
+.progress-top {
+  position: fixed; top: 0; left: 0;
+  height: 4px; width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ============================================================
+   Utility
+   ============================================================ */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字體略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+}
+
+/* 行內短版（條列內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  margin: 32px 0;
+  opacity: .4;
+}
+
+/* TOC rail 240px → 內容右側 padding 補償（精簡版：固定 240px，確保 chart-wrap 在 1400 視窗下 ≥ 1000px） */
+.section { padding: var(--pad-section); padding-right: 240px; }
+@media (max-width: 1100px) { .section { padding-right: 6vw; } }
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<!-- TOC -->
+<nav class="toc-rail" aria-label="章節索引">
+  <div class="label">CH · 章節索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Question</a></li>
+    <li><a href="#b2"><span class="sec-tag motivate">S1</span> 圖的語言 · Graph Language</a></li>
+    <li><a href="#b3"><span class="sec-tag sustain">S2</span> 參數對決 · Parameter Showdown</a></li>
+    <li><a href="#b4"><span class="sec-tag sustain">S2</span> 雙雄對決 · Two Camps</a></li>
+    <li><a href="#b6"><span class="sec-tag sustain">S2</span> BM 戶籍 · BM's Identity</a></li>
+    <li><a href="#b7"><span class="sec-tag activate">S3</span> 下章預告 · Roadmap</a></li>
+    <li><a href="#quiz"><span class="sec-tag activate">S3</span> 思考題 · Quiz</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================
+     1. COVER — 引起動機
+     ============================================================ -->
+<section class="section hero" id="cover">
+  <span class="badge">CH · 機率圖模型 · LESSON 03</span>
+  <h1>PGM 雙雄對決<br/>有向 vs 無向</h1>
+  <div class="zh-sub">用一張圖搞定千軍萬馬 — 貝氏網路 vs 馬可夫隨機場</div>
+  <div class="en-sub">Probabilistic Graphical Models — Bayesian Network vs Markov Random Field</div>
+  <div class="meta">
+    <div class="chip">PGM 條件獨立 · Conditional Independence</div>
+    <div class="chip">Bayesian DAG · 有向無環圖</div>
+    <div class="chip">MRF 能量函數 · Energy Function</div>
+    <div class="chip">BM / RBM 定位 · Classification</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     2. BIG QUESTION — 高橋柳
+     ============================================================ -->
+<section class="takahashi" id="q1">
+  <div class="quote">
+    30 個變數就會爆炸成 10 億種情況，<br/>怎麼辦？
+    <small>30 binary variables = 1 billion joint states — How to tame the curse of dimensionality?</small>
+  </div>
+</section>
+
+<div class="section">
+  <div class="quote-block">
+    <h4>教授開場 · Professor's Opening</h4>
+    <p>
+      想像一下，如果你今天想預測一個人會不會感冒，你可能要考慮 30 個變數：有沒有淋雨、有沒有戴口罩、昨晚睡幾小時、室友有沒有咳嗽、維他命 C 吃了沒……
+      <span class="bilingual-en">Predict cold? 30 binary variables.</span>
+    </p>
+    <p>
+      如果每個問題只有簡單的「<b>是（1）</b>」或「<b>否（0）</b>」兩種可能，這 30 個變數同時出現的所有可能排列組合有多少種？
+      <span class="bilingual-en">Each yes/no, how many joint combinations?</span>
+    </p>
+    <p>
+      答案是 $2^{30}$ 種！也就是超過 <b style="color:var(--warning)">10 億種情況</b>！
+      <span class="bilingual-en">Answer: over <b style="color:var(--warning)">1 billion</b>.</span>
+    </p>
+    <p>
+      這時候，救世主誕生了——它就是 <b style="color:var(--primary)">機率圖模型 (Probabilistic Graphical Models, PGM)</b>！
+      <span class="bilingual-en">Enter: <b style="color:var(--primary)">PGM</b>, the savior.</span>
+    </p>
+  </div>
+</div>
+
+<!-- ============================================================
+     3. S1 · 圖的語言
+     ============================================================ -->
+<section class="section" id="b2">
+  <span class="sec-tag motivate">S1 · 引起動機</span>
+  <h2 class="section-title">什麼是 PGM？「關係圖」就是變數的社交邊界
+    <span class="en">What is a PGM? The graph encodes variable relationships</span>
+  </h2>
+
+  <p>
+    PGM 的核心哲學只有一句話：<b style="color:var(--primary)">「別把所有人綁在一起，看關係說話！」</b>
+      <span class="bilingual-en">Speak by relationships, not by bind-all.</span>
+  </p>
+
+  <div class="half-layout">
+    <!-- Visual: 三規則示意 -->
+    <div class="visual">
+      <svg viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg" aria-label="PGM node and edge diagram">
+        <defs>
+          <marker id="ar1" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#0984e3"/>
+          </marker>
+        </defs>
+        <!-- 三個節點 -->
+        <circle cx="80"  cy="60"  r="26" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2.5"/>
+        <text x="80"  y="66"  text-anchor="middle" font-size="16" font-weight="bold" fill="#581c87">A</text>
+
+        <circle cx="200" cy="60"  r="26" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2.5"/>
+        <text x="200" y="66"  text-anchor="middle" font-size="16" font-weight="bold" fill="#581c87">B</text>
+
+        <circle cx="140" cy="170" r="26" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2.5"/>
+        <text x="140" y="176" text-anchor="middle" font-size="16" font-weight="bold" fill="#581c87">C</text>
+
+        <!-- 有邊（有牽連）-->
+        <line x1="100" y1="60"  x2="180" y2="60" stroke="#7c3aed" stroke-width="3"/>
+        <text x="140" y="50" text-anchor="middle" font-size="11" fill="#581c87">有邊 = 有牽連</text>
+
+        <!-- 無邊（條件獨立）-->
+        <text x="80"  y="120" text-anchor="middle" font-size="11" fill="#4a5568">A, C 無邊</text>
+        <text x="200" y="120" text-anchor="middle" font-size="11" fill="#4a5568">B, C 無邊</text>
+        <text x="140" y="215" text-anchor="middle" font-size="11" fill="#2e7d32" style="font-weight:700;">條件獨立</text>
+
+        <!-- 標題 -->
+        <text x="160" y="20" text-anchor="middle" font-size="13" fill="#4a5568" font-family="monospace">Node = 隨機變數；Edge = 有牽連</text>
+      </svg>
+    </div>
+
+    <!-- 三規則 -->
+    <div>
+      <div class="highlight-box">
+        <h4>節點 (Node) · Variable</h4>
+        <p>
+          就是一個<b>隨機變數</b>（例：$A$ 昨晚熬夜、$B$ 免疫力下降、$C$ 喉嚨痛）。
+          <span class="bilingual-en">Node = random variable.</span>
+        </p>
+      </div>
+      <div class="intuition-box">
+        <h4>邊 (Edge) · Dependency</h4>
+        <p>
+          表示兩個變數之間<b>有牽連、不獨立</b>。邊存在 = 兩者有直接關聯。
+          <span class="bilingual-en">Edge = directly related.</span>
+        </p>
+      </div>
+      <div class="warning-box">
+        <h4>沒有邊 (No Edge) · Conditional Independence</h4>
+        <p>
+          代表兩個變數在特定條件下<b>互不相干（條件獨立）</b>。這才是 PGM 省記憶體的關鍵！
+          <span class="bilingual-en">No edge = conditionally independent.</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="intuition-box">
+    <h4>直覺總結 · Key Insight</h4>
+    <p>
+      你不用去管那 10 億種複雜的排列組合，只要畫出一張關係圖，大自然直接幫你把龐大的機率分佈切成一塊塊小積木！
+      <span class="bilingual-en">Sketch one graph — nature factorizes for you.</span>
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================
+     4. S2 · 參數對決（傳統全聯合 vs PGM 鏈式）
+     ============================================================ -->
+<section class="section" id="b3">
+  <span class="sec-tag sustain">S2 · 維持注意</span>
+  <h2 class="section-title">參數對決：PGM 幫我們省了多少記憶體？
+    <span class="en">Parameter Showdown — Full Joint vs Chain Factorization</span>
+  </h2>
+
+  <p>
+    用最簡單的 4 個二元變數（$A, B, C, D \in \{0, 1\}$）來算一筆帳：
+    <span class="bilingual-en">4 binary variables; let's count.</span>
+  </p>
+
+  <!-- ① 傳統全聯合（單欄滿版） -->
+  <div class="warning-box">
+    <h4>① 傳統硬幹 · Full Joint Table</h4>
+    <p>
+      4 個變數有 $2^4 = 16$ 種狀態，扣掉機率總和 = 1：
+      <span class="bilingual-en">16 states; subtract $\sum P = 1$:</span>
+    </p>
+    <p style="font-size:var(--t3);text-align:center;color:var(--warning);">
+      $$\text{自由參數} = 2^4 - 1 = \mathbf{15\ 個}$$
+    </p>
+    <p>
+      變數變成 30 個時，需要 $2^{30} - 1 = \mathbf{1{,}073{,}741{,}823\ 個參數}$ — <b>直接當機爆記憶體</b>！
+      <span class="bilingual-en">30 vars: $\sim$1 billion params — <b>memory explosion</b>!</span>
+    </p>
+  </div>
+
+  <!-- ② 鏈式分解（單欄滿版，避免長公式撐爆 grid-2） -->
+  <div class="method-box" style="margin-top:18px;">
+    <h4>② 鏈式分解 · Chain Factorization</h4>
+    <p>
+      假設 $A \to B \to C \to D$（單向傳遞鏈），龐大的聯合機率化整為零：
+      <span class="bilingual-en">Chain $A\to B\to C\to D$ factorizes neatly:</span>
+    </p>
+    <p style="font-size:var(--t3);text-align:center;color:#2e7d32;">
+      $$P(A,B,C,D) = P(A)\cdot P(B\mid A)\cdot P(C\mid B)\cdot P(D\mid C)$$
+    </p>
+  </div>
+
+  <!-- 參數拆解 -->
+  <div class="formula-box">
+    <h4>📊 參數數量拆解 · Parameter Breakdown</h4>
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>機率項 (Term)</th>
+          <th>計算方式 (Calculation)</th>
+          <th>所需參數 (Parameters)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>$P(A)$</td>
+          <td>只需記錄 $P(A=1)$；$P(A=0) = 1 - P(A=1)$</td>
+          <td class="mono">1 個</td>
+        </tr>
+        <tr>
+          <td>$P(B \mid A)$</td>
+          <td>給定 $A=0$ 與 $A=1$，各自需一個 $P(B=1 \mid A)$</td>
+          <td class="mono">2 個</td>
+        </tr>
+        <tr>
+          <td>$P(C \mid B)$</td>
+          <td>給定 $B$ 的兩種可能</td>
+          <td class="mono">2 個</td>
+        </tr>
+        <tr>
+          <td>$P(D \mid C)$</td>
+          <td>給定 $C$ 的兩種可能</td>
+          <td class="mono">2 個</td>
+        </tr>
+        <tr style="background:linear-gradient(90deg,#fff8e1 0%,#fff3c4 100%);font-weight:700;color:#b7791f;">
+          <td colspan="2"><b>總參數 (Total) (n=4 鏈)</b></td>
+          <td class="mono bad"><b>1 + 2 + 2 + 2 = 7 個</b></td>
+        </tr>
+        <tr style="background:linear-gradient(90deg,#fff8e1 0%,#fff3c4 100%);font-weight:700;color:#b7791f;">
+          <td colspan="2"><b>總參數 (Total) (n=30 鏈)</b></td>
+          <td class="mono bad"><b>1 + 29 × 2 = 59 個</b></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="summary-box">
+    <h4>🎯 結論 · Result</h4>
+    <p>
+      n=4 從 <b>15 個</b> 縮減到 <b>7 個</b>，省下 53% 儲存！
+      <span class="bilingual-en">n=4: 15 → <b>7</b> params; 53% saved.</span>
+    </p>
+    <p>
+      n=30 從 <b>10 億個</b> 縮減到 <b>59 個</b>！這就是圖模型的威力——用圖的結構，<b>粉碎了維度詛咒</b>！
+      <span class="bilingual-en">n=30: 1B → <b>59</b>! PGM <b>shatters dimensionality</b>.</span>
+    </p>
+  </div>
+
+  <!-- 對數圖 -->
+  <div class="chart-wrap">
+    <h4>參數數量隨變數維度 n 的增長 · Parameter Growth vs Dimension (log scale)</h4>
+    <canvas id="paramChart"></canvas>
+    <p class="ui-text center" style="margin-top:8px;">橘線 (orange)：全聯合 $2^n - 1$ 指數暴增；綠線 (green)：PGM 鏈式分解維持 $O(n)$ 線性</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     5. S2 · 雙雄對決（Bayesian vs MRF）
+     ============================================================ -->
+<section class="section" id="b4">
+  <span class="sec-tag sustain">S2 · 維持注意</span>
+  <h2 class="section-title">雙雄對決：有向圖（貝氏網路）vs 無向圖（馬可夫網路）
+    <span class="en">Two Camps — Bayesian Network (DAG) vs Markov Random Field (MRF)</span>
+  </h2>
+
+  <p>
+    在 PGM 的江湖裡，主要有兩大門派，差別全在於那條線<b>有沒有長「箭頭」</b>：
+    <span class="bilingual-en">Two camps: <b>does the edge carry an arrow?</b></span>
+  </p>
+
+  <div class="compare-layout">
+    <!-- 左：有向 -->
+    <div class="col left">
+      <h3>① 有向圖 — 貝氏網路 (Bayesian Network / DAG)</h3>
+      <ul>
+        <li><b>特徵</b>：邊上有<b>箭頭</b>（單向通行）。<span class="bilingual-en">Edges have <b>arrows</b>.</span></li>
+        <li><b>語意</b>：<b>因果關係非常明確</b>。箭頭從「因」指向「果」，誰是爸爸誰是兒子清清楚楚。<span class="bilingual-en"><b>Causation</b>: cause → effect.</span></li>
+        <li><b>拓撲限制</b>：禁止形成有向迴圈，必須是 <b>DAG (Directed Acyclic Graph)</b>。<span class="bilingual-en">Topology: <b>no cycles</b> = DAG.</span></li>
+        <li><b>分解方式</b>：像骨牌一樣乘下去，每個節點只跟它的「父母節點」算條件機率。<span class="bilingual-en">Factorize: each node | its <b>parents</b>.</span></li>
+      </ul>
+      <div class="intuition-box" style="margin-top:14px;">
+        <h4>特性 · Property</h4>
+        <p style="margin:0;">
+          <b>天然局部歸一化</b>，無須全局配分函數 $Z$。
+          <span class="bilingual-en"><b>Locally normalized</b>; no $Z$ needed.</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- 右：無向 -->
+    <div class="col right">
+      <h3>② 無向圖 — 馬可夫網路 (Markov Random Field, MRF)</h3>
+      <ul>
+        <li><b>特徵</b>：邊上<b>沒有箭頭</b>（純粹直線）。<span class="bilingual-en">Edges have <b>no arrows</b>.</span></li>
+        <li><b>語意</b>：<b>對等互毆、相互拉扯</b>，不論誰因誰果。就像拔河比賽或磁鐵引力——純粹是耦合強度。<span class="bilingual-en"><b>Symmetric coupling</b>; no order.</span></li>
+        <li><b>拓撲容許</b>：容許環狀拓撲，如物理晶格、全連接網。<span class="bilingual-en">Topology: <b>cycles allowed</b>.</span></li>
+        <li><b>分解方式</b>：既然沒有因果先後，不能寫條件機率，而看相鄰節點搭在一起舒不舒服（位能函數）。<span class="bilingual-en">Factorize via <b>clique potentials</b>.</span></li>
+      </ul>
+      <div class="warning-box" style="margin-top:14px;">
+        <h4>代價 · Cost</h4>
+        <p style="margin:0;">
+          沒有箭頭維持局部機率守恆，分母必須<b>強制除以配分函數 Z</b> 重新標準化。
+          <span class="bilingual-en">Need global <b>$Z$</b> to renormalize.</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 公式獨立滿版展示（單欄直排，避免被兩欄 grid 撐爆） -->
+  <div class="formula-box" style="margin-top:18px;">
+    <h4>📐 兩大門派機率分解公式 · Probability Factorization Formulas</h4>
+    <div style="background:rgba(255,255,255,.55);padding:14px 18px;border-radius:8px;margin-top:8px;">
+      <p style="font-size:var(--t5);color:#0984e3;margin:0 0 6px 0;font-weight:700;letter-spacing:.05em;">① 有向 DAG · Directed Acyclic Graph — 條件機率鏈式乘積 (Chain Rule)</p>
+      <p style="font-size:var(--t3);margin:0;">
+        $$P(X_1, \dots, X_n) = \prod_{i=1}^n P\bigl(X_i \mid \text{Parents}(X_i)\bigr)$$
+      </p>
+    </div>
+    <div style="background:rgba(255,255,255,.55);padding:14px 18px;border-radius:8px;margin-top:10px;">
+      <p style="font-size:var(--t5);color:#7c3aed;margin:0 0 6px 0;font-weight:700;letter-spacing:.05em;">② 無向 MRF · Markov Random Field — 波茲曼能量指數 (Boltzmann Distribution)</p>
+      <p style="font-size:var(--t3);margin:0;">
+        $$P(x) = \frac{1}{Z}\exp\bigl(-E(x)\bigr) = \frac{1}{Z}\prod_{(i,j)} \psi(x_i, x_j)$$
+      </p>
+    </div>
+    <p style="margin-top:10px;font-size:var(--t4);color:var(--ink-soft);">
+      上式是兩大門派的核心差異：有向用條件機率乘積、無向用能量指數配分函數。
+      <span class="bilingual-en">Directed = products; undirected = energy/$Z$.</span>
+    </p>
+  </div>
+
+  <!-- 雙方概念對比 SVG（白底） -->
+  <div class="svg-stage">
+    <svg viewBox="0 0 960 500" width="100%" height="100%" role="img" aria-label="有向圖 vs 無向圖雙雄對決">
+      <defs>
+        <linearGradient id="blueCard" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#3182ce"/>
+          <stop offset="100%" stop-color="#1e3a8a"/>
+        </linearGradient>
+        <linearGradient id="purpleCard" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#805ad5"/>
+          <stop offset="100%" stop-color="#4c1d95"/>
+        </linearGradient>
+        <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+          <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.12"/>
+        </filter>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#0284c7"/>
+        </marker>
+      </defs>
+
+      <rect width="960" height="500" rx="16" fill="#f8fafc"/>
+
+      <text x="480" y="40" font-family="sans-serif" font-size="20" font-weight="bold" fill="#0f172a" text-anchor="middle">
+        機率圖模型雙雄對決：有向貝氏網路 vs 無向馬可夫隨機場
+      </text>
+      <text x="480" y="62" font-family="sans-serif" font-size="11" fill="#64748b" text-anchor="middle">
+        箭頭承載單向因果傳遞，直線代表對稱相互影響 —— BM 與 RBM 堅實坐落在右側陣營
+      </text>
+
+      <!-- 左卡：Bayesian -->
+      <g transform="translate(50, 90)" filter="url(#dropShadow)">
+        <rect width="405" height="365" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+        <rect width="405" height="40" rx="12" fill="url(#blueCard)"/>
+        <rect y="28" width="405" height="12" fill="#1e3a8a"/>
+        <text x="202.5" y="25" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">
+          有向圖：貝氏網路 (Bayesian Network / DAG)
+        </text>
+        <g transform="translate(60, 60)">
+          <circle cx="40" cy="30" r="18" fill="#e0f2fe" stroke="#0284c7" stroke-width="2.5"/>
+          <text x="40" y="36" font-size="13" font-weight="bold" fill="#0369a1" text-anchor="middle">A</text>
+          <circle cx="140" cy="30" r="18" fill="#e0f2fe" stroke="#0284c7" stroke-width="2.5"/>
+          <text x="140" y="36" font-size="13" font-weight="bold" fill="#0369a1" text-anchor="middle">B</text>
+          <circle cx="240" cy="30" r="18" fill="#e0f2fe" stroke="#0284c7" stroke-width="2.5"/>
+          <text x="240" y="36" font-size="13" font-weight="bold" fill="#0369a1" text-anchor="middle">C</text>
+          <circle cx="140" cy="95" r="18" fill="#e0f2fe" stroke="#0284c7" stroke-width="2.5"/>
+          <text x="140" y="101" font-size="13" font-weight="bold" fill="#0369a1" text-anchor="middle">D</text>
+          <line x1="58" y1="30" x2="118" y2="30" stroke="#0284c7" stroke-width="2.5" marker-end="url(#arrow)"/>
+          <line x1="158" y1="30" x2="218" y2="30" stroke="#0284c7" stroke-width="2.5" marker-end="url(#arrow)"/>
+          <line x1="140" y1="48" x2="140" y2="73" stroke="#0284c7" stroke-width="2.5" marker-end="url(#arrow)"/>
+          <line x1="53" y1="42" x2="124" y2="86" stroke="#0284c7" stroke-width="2.5" marker-end="url(#arrow)"/>
+        </g>
+        <g transform="translate(24, 195)" font-family="sans-serif" font-size="11" fill="#334155">
+          <text x="0" y="0" font-weight="bold" fill="#0f172a" font-size="12">邊的本質：有方向的箭頭 (→)</text>
+          <text x="10" y="22">• 代表明確的因果依賴 (Cause → Effect)</text>
+          <text x="10" y="42">• 禁止形成有向迴圈（必須是 DAG）</text>
+          <text x="0" y="72" font-weight="bold" fill="#0f172a" font-size="12">機率分解：條件機率鏈式乘積</text>
+          <rect x="0" y="82" width="355" height="28" rx="6" fill="#f0f9ff" stroke="#bae6fd"/>
+          <text x="177" y="101" font-family="monospace" font-size="10" font-weight="bold" fill="#0369a1" text-anchor="middle">
+            P(A,B,C,D) = P(A) · P(B|A) · P(C|B) · P(D|A,B)
+          </text>
+          <text x="0" y="135" font-weight="bold" fill="#15803d" font-size="11">特性：天然局部歸一化，無須全局配分函數 Z</text>
+        </g>
+      </g>
+
+      <!-- 右卡：MRF -->
+      <g transform="translate(505, 90)" filter="url(#dropShadow)">
+        <rect width="405" height="365" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+        <rect width="405" height="40" rx="12" fill="url(#purpleCard)"/>
+        <rect y="28" width="405" height="12" fill="#4c1d95"/>
+        <text x="202.5" y="25" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">
+          無向圖：馬可夫隨機場 (MRF / Markov Network)
+        </text>
+        <g transform="translate(60, 60)">
+          <line x1="40" y1="30" x2="140" y2="30" stroke="#7c3aed" stroke-width="2.5"/>
+          <line x1="140" y1="30" x2="240" y2="30" stroke="#7c3aed" stroke-width="2.5"/>
+          <line x1="140" y1="30" x2="140" y2="95" stroke="#7c3aed" stroke-width="2.5"/>
+          <line x1="40" y1="30" x2="140" y2="95" stroke="#7c3aed" stroke-width="2.5"/>
+          <circle cx="40" cy="30" r="18" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2.5"/>
+          <text x="40" y="36" font-size="13" font-weight="bold" fill="#581c87" text-anchor="middle">A</text>
+          <circle cx="140" cy="30" r="18" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2.5"/>
+          <text x="140" y="36" font-size="13" font-weight="bold" fill="#581c87" text-anchor="middle">B</text>
+          <circle cx="240" cy="30" r="18" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2.5"/>
+          <text x="240" y="36" font-size="13" font-weight="bold" fill="#581c87" text-anchor="middle">C</text>
+          <circle cx="140" cy="95" r="18" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2.5"/>
+          <text x="140" y="101" font-size="13" font-weight="bold" fill="#581c87" text-anchor="middle">D</text>
+        </g>
+        <g transform="translate(24, 195)" font-family="sans-serif" font-size="11" fill="#334155">
+          <text x="0" y="0" font-weight="bold" fill="#0f172a" font-size="12">邊的本質：無箭頭的直線 (—)</text>
+          <text x="10" y="22">• 代表純粹相互影響、對稱關聯（無因果先後）</text>
+          <text x="10" y="42">• 容許環狀拓撲結構（晶格、全連接網）</text>
+          <text x="0" y="72" font-weight="bold" fill="#0f172a" font-size="12">機率分解：波茲曼分佈 / 能量指數</text>
+          <rect x="0" y="82" width="355" height="28" rx="6" fill="#faf5ff" stroke="#e9d5ff"/>
+          <text x="177" y="101" font-family="monospace" font-size="10" font-weight="bold" fill="#6b21a8" text-anchor="middle">
+            P(x) = (1/Z) · exp(-E(x)) = (1/Z) · ∏ ψ(c)
+          </text>
+          <rect x="0" y="120" width="355" height="26" rx="6" fill="#fdf2f8" stroke="#f472b6" stroke-width="1.2"/>
+          <text x="177" y="137" font-weight="bold" fill="#be185d" font-size="11" text-anchor="middle">
+            ⭐ Boltzmann Machine (BM) 與 RBM 均隸屬於此範式！
+          </text>
+        </g>
+      </g>
+    </svg>
+    <div class="svg-caption">圖解：有向 DAG 的箭頭 vs 無向 MRF 的對稱直線</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     6. S2 · BM 戶籍
+     ============================================================ -->
+<section class="section" id="b6">
+  <span class="sec-tag sustain">S2 · 維持注意</span>
+  <h2 class="section-title">一錘定音：BM 與 RBM 到底坐在哪裡？
+    <span class="en">Where do BM &amp; RBM belong? — Answer: Right side, MRF</span>
+  </h2>
+
+  <div class="summary-box">
+    <h4>⭐ 請記住這一句話 · Key Takeaway</h4>
+    <p style="font-size:var(--t3);text-align:center;">BM 與 RBM，<b style="color:#00d4ff;">百分之百屬於無向圖 — 馬可夫隨機場 (MRF / Markov Random Field)</b>！</p>
+  </div>
+
+  <div class="half-layout">
+    <!-- Visual: RBM 雙向直線 -->
+    <div class="visual">
+      <svg viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg" aria-label="RBM bipartite undirected">
+        <defs>
+          <radialGradient id="vN" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#0984e3"/>
+            <stop offset="100%" stop-color="#0a3d5e"/>
+          </radialGradient>
+          <radialGradient id="hN" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#7c3aed"/>
+            <stop offset="100%" stop-color="#3b0764"/>
+          </radialGradient>
+        </defs>
+        <!-- connections (undirected lines, NO arrows) -->
+        <g stroke="#7c3aed" stroke-width="1.5" opacity="0.7">
+          <line x1="60" y1="60"  x2="240" y2="50"/>
+          <line x1="60" y1="60"  x2="240" y2="110"/>
+          <line x1="60" y1="60"  x2="240" y2="170"/>
+          <line x1="60" y1="120" x2="240" y2="50"/>
+          <line x1="60" y1="120" x2="240" y2="110"/>
+          <line x1="60" y1="120" x2="240" y2="170"/>
+          <line x1="60" y1="180" x2="240" y2="50"/>
+          <line x1="60" y1="180" x2="240" y2="110"/>
+          <line x1="60" y1="180" x2="240" y2="170"/>
+        </g>
+        <!-- visible nodes -->
+        <circle cx="60" cy="60"  r="18" fill="url(#vN)"/>
+        <circle cx="60" cy="120" r="18" fill="url(#vN)"/>
+        <circle cx="60" cy="180" r="18" fill="url(#vN)"/>
+        <text x="60" y="215" text-anchor="middle" font-size="13" fill="#0a3d5e" font-weight="bold">v</text>
+        <!-- hidden nodes -->
+        <circle cx="240" cy="50"  r="18" fill="url(#hN)"/>
+        <circle cx="240" cy="110" r="18" fill="url(#hN)"/>
+        <circle cx="240" cy="170" r="18" fill="url(#hN)"/>
+        <text x="240" y="200" text-anchor="middle" font-size="13" fill="#3b0764" font-weight="bold">h</text>
+        <text x="160" y="20" text-anchor="middle" font-size="12" fill="#4a5568" font-family="monospace">對稱權重 W_{ij}（無箭頭）</text>
+      </svg>
+    </div>
+
+    <div>
+      <div class="intuition-box">
+        <h4>為什麼 BM / RBM 是 MRF？ · Why MRF?</h4>
+        <p>
+          RBM 的結構：可見層 $v_i$ 跟隱藏層 $h_j$ 之間，連的是一根<b>沒有箭頭的對稱直線</b>（權重 $W_{ij}$）。
+          <span class="bilingual-en">RBM: $v \leftrightarrow h$ via <b>$W_{ij}$</b>.</span>
+        </p>
+        <p>
+          $v$ 會影響 $h$，<b>同時</b> $h$ 也會反過來影響 $v$。
+          <span class="bilingual-en">$v \leftrightarrow h$: bidirectional.</span>
+        </p>
+      </div>
+      <div class="warning-box">
+        <h4>數學必然 · Mathematical Necessity</h4>
+        <p>
+          既然是<b>互相影響、雙向奔赴的無向圖</b>，它的聯合機率分佈就<b>絕對不可能</b>寫成貝氏網路那種條件機率乘積鏈。
+          <span class="bilingual-en"><b>Undirected</b> $\Rightarrow$ no chain product.</span>
+        </p>
+        <p>
+          它<b>生來就必須用能量函數 $E(v, h)$ 與波茲曼分佈來表達</b>！
+          <span class="bilingual-en">Must use <b>energy $E(v,h)$</b> + Boltzmann!</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="quote-block">
+    <h4>教授總結 · Professor's Closing</h4>
+    <p>
+      這就是為什麼 Hinton 要借用統計物理學的能量公式——因為在圖模型的<b>血統</b> 裡，BM 和 RBM 的戶籍謄本上，清清楚楚寫著它們是<b style="color:var(--magenta)">「無向馬可夫隨機場 (MRF)」的子孫</b>啊！
+      <span class="bilingual-en">BM &amp; RBM = <b style="color:var(--magenta)">MRF family</b>.</span>
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================
+     7. S3 · 下章預告 (Timeline)
+     ============================================================ -->
+<section class="section" id="b7">
+  <span class="sec-tag activate">S3 · 喚起行動</span>
+  <h2 class="section-title">後續章節路線
+    <span class="en">Roadmap — What's Coming Next</span>
+  </h2>
+
+  <p>
+    記住這張 PGM 雙雄對決圖，後續章節便能各就其位：
+    <span class="bilingual-en">Remember this; upcoming chapters fall into place.</span>
+  </p>
+
+  <div class="timeline">
+    <div class="event">
+      <div class="when">§ 2</div>
+      <h4>背景知識 · Background</h4>
+      <p>
+        重溫統計物理的<b>波茲曼分佈</b>、<b>Ising 模型</b>與 <b>Hopfield 聯想記憶</b>的能量本質。
+        <span class="bilingual-en">Revisit <b>Boltzmann</b>, <b>Ising</b>, <b>Hopfield</b>.</span>
+      </p>
+    </div>
+    <div class="event">
+      <div class="when">§ 3</div>
+      <h4>RBM 深入 · Deep Dive</h4>
+      <p>
+        深入 <b>RBM 二分圖條件分佈</b>、<b>吉布斯取樣</b> (Gibbs Sampling) 與 <b>對比散度</b> (Contrastive Divergence, CD-k) 演算法。
+        <span class="bilingual-en">Dive into <b>bipartite dist.</b>, <b>Gibbs</b>, <b>CD-k</b>.</span>
+      </p>
+    </div>
+    <div class="event">
+      <div class="when">§ 4</div>
+      <h4>分布拓展 · Distributions</h4>
+      <p>
+        探討可見層與隱藏層在不同資料型態下的分佈拓展（如 <b>高斯分佈</b>、<b>二元分佈</b>）。
+        <span class="bilingual-en">Distributions: <b>Gaussian</b>, <b>Bernoulli</b>, ...</span>
+      </p>
+    </div>
+    <div class="event">
+      <div class="when">§ 5</div>
+      <h4>CRBM · 條件式 RBM (Conditional RBM)</h4>
+      <p>
+        引入時序與歷史條件依賴的 <b>Conditional RBM</b>，處理序列資料。
+        <span class="bilingual-en"><b>Conditional RBM</b>: temporal deps.</span>
+      </p>
+    </div>
+    <div class="event">
+      <div class="when">§ 6</div>
+      <h4>DBN 整合 · Integration</h4>
+      <p>
+        徹底解構如何把多個 RBM 堆疊起來，實現強大的<b>深度生成模型</b>。
+        <span class="bilingual-en">Stack RBMs into <b>deep generative models</b>.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     8. S3 · 思考題 (Quiz)
+     ============================================================ -->
+<section class="section" id="quiz">
+  <span class="sec-tag activate">S3 · 喚起行動</span>
+  <h2 class="section-title">思考題 · 提取練習
+    <span class="en">Reflection — Test Your Understanding</span>
+  </h2>
+
+  <p>
+    回答下列問題，看看自己有沒有把這場雙雄對決摸清楚。
+    <span class="bilingual-en">Test your grasp of the two-camps showdown.</span>
+  </p>
+
+  <!-- Q1 -->
+  <div class="quiz-card" data-correct="1">
+    <div class="q">Q1. PGM 為什麼能把 $2^n$ 的天文參數壓縮下來？(How does PGM compress the astronomical $2^n$ parameters?)</div>
+    <div class="options">
+      <button data-i="0">因為 PGM 把所有變數都當成獨立，丟掉所有資訊 (treats all variables as independent, drops all info)</button>
+      <button data-i="1">因為 PGM 利用圖的拓撲結構<b>編碼條件獨立性 (encodes conditional independence via graph topology)</b>，讓聯合機率可分解為小塊</button>
+      <button data-i="2">因為 PGM 把變數全部換成連續型，壓縮儲存 (switches all variables to continuous type)</button>
+      <button data-i="3">因為 PGM 只考慮二維以下的變數 (only considers ≤ 2-D variables)</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="quiz-card" data-correct="2">
+    <div class="q">Q2. 4 個二元變數的鏈式分解 $A \to B \to C \to D$ 需要多少參數？(How many parameters for the chain factorization of 4 binary variables?)</div>
+    <div class="options">
+      <button data-i="0">15 個（與全聯合相同 / same as full joint）</button>
+      <button data-i="1">16 個 (16 params)</button>
+      <button data-i="2">7 個（$1 + 2 + 2 + 2$ / 7 params）</button>
+      <button data-i="3">4 個（每個變數一個 / one per variable）</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="quiz-card" data-correct="0">
+    <div class="q">Q3. 貝氏網路 (Bayesian Network / DAG) 與馬可夫隨機場 (MRF) 的關鍵差別是什麼？(Key difference between Bayesian Network and MRF?)</div>
+    <div class="options">
+      <button data-i="0">DAG 用<b>有向箭頭 (directed arrows)</b> 表達因果、可寫成條件機率鏈式乘積、<b>無須配分函數 Z (no partition function Z needed)</b>；MRF 用<b>無向直線</b> 表達對稱耦合、用<b>能量函數 (energy function)</b> 分解、必須除以 Z</button>
+      <button data-i="1">DAG 只能用於二元變數；MRF 可以用任意變數 (DAG only for binary, MRF for any)</button>
+      <button data-i="2">DAG 是監督式學習；MRF 是非監督式學習 (DAG = supervised, MRF = unsupervised)</button>
+      <button data-i="3">DAG 用 CPU 計算；MRF 用 GPU 計算 (DAG on CPU, MRF on GPU)</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Q4 -->
+  <div class="quiz-card" data-correct="1">
+    <div class="q">Q4. 波茲曼機 (BM) 與受限波茲曼機 (RBM) 在 PGM 譜系中屬於？(Where do BM and RBM belong in the PGM family tree?)</div>
+    <div class="options">
+      <button data-i="0">貝氏網路（有向 DAG / directed DAG）</button>
+      <button data-i="1">馬可夫隨機場（MRF / 無向圖 / undirected）— 因為神經元間是對稱權重 (symmetric weights)、無箭頭 (no arrows)</button>
+      <button data-i="2">兩者皆是（有向與無向的混合 / hybrid of directed and undirected）</button>
+      <button data-i="3">兩者皆非（BM/RBM 不屬於 PGM / BM/RBM don't belong to PGM）</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <div class="summary-box">
+    <h4>本節收穫 · Takeaways</h4>
+    <ul style="margin:.4em 0;padding-left:1.2em;">
+      <li>
+        <b>PGM 的初衷</b>：用圖的拓撲編碼<b>條件獨立性</b>，把高維機率化整為零
+        <span class="bilingual-en">Encode <b>conditional independence</b>.</span>
+      </li>
+      <li>
+        <b>箭頭 vs 直線</b>：DAG = 因果 + 條件鏈；MRF = 對稱耦合 + 能量函數
+        <span class="bilingual-en">DAG = chain; MRF = energy.</span>
+      </li>
+      <li>
+        <b>BM / RBM 的血統</b>：因對稱權重而屬於 <b>MRF</b>，數學上必須用波茲曼分佈
+        <span class="bilingual-en">Symmetric weights $\Rightarrow$ <b>MRF</b> + Boltzmann.</span>
+      </li>
+    </ul>
+  </div>
+
+  <p class="center muted" style="margin-top:48px;">
+    ── End of Lesson 03 · 第三課結束 ──<br/>
+    <span style="font-size:var(--t5);">下一課 · Next Lesson: §3 RBM 深入 — Gibbs 取樣與對比散度 (Gibbs Sampling &amp; Contrastive Divergence)</span>
+  </p>
+  <p class="center muted" style="margin-top:8px;">
+    學完這一課，你已經掌握 PGM 的核心思想。
+    <span class="bilingual-en">After this lesson, you've mastered the core ideas of PGM.</span>
+  </p>
+</section>
+
+<!-- ============================================================
+     Chart.js CDN + JS
+     ============================================================ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+/* Chart 1: 參數對數圖 */
+(function () {
+  const ctx = document.getElementById('paramChart');
+  if (!ctx) return;
+  const n = [];
+  for (let i = 1; i <= 25; i++) n.push(i);
+  const fullJoint = n.map(v => Math.pow(2, v) - 1);
+  const chain = n.map(v => 1 + (v - 1) * 2);
+  const bayesian4 = [15, 15, 15, 15];  // placeholder for visual contrast
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: n,
+      datasets: [
+        {
+          label: '全聯合 2ⁿ − 1（指數暴增）',
+          data: fullJoint,
+          borderColor: '#e17055',
+          backgroundColor: 'rgba(225,112,85,.15)',
+          borderWidth: 3,
+          pointRadius: 3,
+          pointBackgroundColor: '#e17055',
+          fill: true,
+          tension: .2,
+        },
+        {
+          label: 'PGM 鏈式分解 O(n)',
+          data: chain,
+          borderColor: '#00b894',
+          backgroundColor: 'rgba(0,184,148,.10)',
+          borderWidth: 3,
+          pointRadius: 3,
+          pointBackgroundColor: '#00b894',
+          fill: false,
+          tension: 0,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#2d3436', font: { size: 14 } } },
+        tooltip: {
+          callbacks: {
+            label: (c) => c.dataset.label + ': ' + (c.parsed.y >= 1000000 ? c.parsed.y.toExponential(2) : c.parsed.y)
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: '變數數量 n', color: '#4a5568', font: { size: 14 } },
+          ticks: { color: '#4a5568' },
+          grid: { color: 'rgba(214,221,230,.6)' }
+        },
+        y: {
+          type: 'logarithmic',
+          title: { display: true, text: '參數數量 (log₁₀)', color: '#4a5568', font: { size: 14 } },
+          min: 1,
+          ticks: { color: '#4a5568', callback: v => v.toExponential(0) },
+          grid: { color: 'rgba(214,221,230,.6)' }
+        }
+      }
+    }
+  });
+})();
+
+/* Quiz 互動 */
+(function () {
+  const explanations = {
+    'q1': 'PGM 利用圖的拓撲結構編碼條件獨立性，把龐大聯合機率拆解為小塊的條件機率或勢函數乘積，n=30 從 10 億個參數壓縮到 59 個。',
+    'q2': '鏈式分解 $P(A) \\cdot P(B|A) \\cdot P(C|B) \\cdot P(D|C)$ 各需要 1 + 2 + 2 + 2 = 7 個參數，比全聯合 15 個省 53%。',
+    'q3': '這是兩大門派的核心差別：箭頭 vs 直線、條件機率鏈 vs 能量函數、是否需要配分函數 Z。',
+    'q4': 'BM 與 RBM 的神經元之間是對稱權重 $W_{ij}$、沒有箭頭，因此屬於馬可夫隨機場（MRF），必須用波茲曼分佈表達。'
+  };
+  document.querySelectorAll('.quiz-card').forEach(card => {
+    const correct = card.dataset.correct;
+    const buttons = card.querySelectorAll('button');
+    const fb = card.querySelector('.feedback');
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        buttons.forEach(b => b.disabled = true);
+        const ok = (btn.dataset.i === correct);
+        if (ok) btn.classList.add('correct');
+        else btn.classList.add('wrong');
+        buttons.forEach(b => { if (b.dataset.i === correct) b.classList.add('correct'); });
+        fb.classList.add('show');
+        fb.classList.add(ok ? 'ok' : 'no');
+        // 統一用 q1/q2/q3/q4 索引（依 card 順序），不論答對答錯都顯示對應題目的解析
+        const cards = Array.from(document.querySelectorAll('.quiz-card'));
+        const idx = cards.indexOf(card);
+        const key = 'q' + (idx + 1);
+        fb.innerHTML = (ok ? '✓ 正確！' : '✗ 再想想，') + ' ' + (explanations[key] || '請回到內文回顧。');
+      });
+    });
+  });
+})();
+
+/* 進度條 */
+(function () {
+  const bar = document.getElementById('progressTop');
+  function update() {
+    const h = document.documentElement;
+    bar.style.width = (h.scrollTop / (h.scrollHeight - h.clientHeight) * 100) + '%';
+  }
+  window.addEventListener('scroll', update, { passive: true });
+  update();
+})();
+</script>
+
+</body>
+</html>

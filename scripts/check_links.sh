@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 用途：檢查上線的網站有沒有 404——每個課程/章節頁本身，以及頁內引用的每張圖片。
+# 用途：檢查上線的網站有沒有 404——根頁、每個課程/章節頁、投影片，以及頁內引用的每張圖片。
 # 用法：scripts/check_links.sh [課程資料夾]   （不給參數就檢查全部課程）
 set -euo pipefail
 shopt -s nullglob
@@ -33,13 +33,20 @@ for course_dir in */ ; do
     continue
   fi
   for chapter_dir in "$course_dir"*/ ; do
-    [ -f "${chapter_dir}index.html" ] || continue
+    slide_paths=( "${chapter_dir}slides"/*.html )
+    [ -f "${chapter_dir}index.html" ] || [ "${#slide_paths[@]}" -gt 0 ] || continue
     chapter="$(basename "$chapter_dir")"
-    check "$BASE_URL/$course/$chapter/index.html"
-    while IFS= read -r rel; do
-      [ -z "$rel" ] && continue
-      check "$BASE_URL/$course/$chapter/$rel"
-    done < <(grep -oE 'src="assets/[^"]+"' "${chapter_dir}index.html" 2>/dev/null | sed -E 's/src="([^"]+)"/\1/')
+    if [ -f "${chapter_dir}index.html" ]; then
+      check "$BASE_URL/$course/$chapter/index.html"
+      while IFS= read -r rel; do
+        [ -z "$rel" ] && continue
+        check "$BASE_URL/$course/$chapter/$rel"
+      done < <(grep -oE 'src="assets/[^"]+"' "${chapter_dir}index.html" 2>/dev/null | sed -E 's/src="([^"]+)"/\1/')
+    fi
+    for slide_path in "${slide_paths[@]}"; do
+      slide="$(basename "$slide_path")"
+      check "$BASE_URL/$course/$chapter/slides/$slide"
+    done
   done
 done
 

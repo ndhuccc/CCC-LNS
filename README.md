@@ -10,7 +10,7 @@ https://ndhuccc.github.io/CCC-LNS/
 
 ## 1. 這個 repo 是什麼、不是什麼
 
-**是**：GitHub Pages 的靜態發布站。每個課程一個頂層資料夾，每章一個子資料夾，子資料夾裡只有兩樣東西——`index.html`（唯一播放檔，單檔內嵌 CSS/JS/SVG）與 `assets/`（該章引用的圖片）。根目錄 `index.html` 是導覽首頁，列出「課程 → 章節」的連結。
+**是**：GitHub Pages 的靜態發布站。每個課程一個頂層資料夾，每章一個子資料夾，子資料夾包含 `index.html`（章節講義，單檔內嵌 CSS/JS/SVG）、`assets/`（該章引用的圖片），以及可選的 `slides/`（課堂投影片 HTML）。根目錄 `index.html` 是導覽首頁，列出「課程 → 章節 → 講義／投影片」的入口。
 
 **不是**：講義的生產線。原始教材、抽取的 Markdown、逐知識點的組裝腳本（`build_phaseA.py`）、圖解產生腳本（`gen_diagram*.py`）、demo 原始碼、教授祕笈的原始 Markdown（`guides/*.md`）、`agent.md` 交接文件、`__pycache__`——這些全部留在**私有的生產線 repo** 裡（例如 PR 115 對應的是 `LNS` repo），**絕對不進這個 repo**。原因：
 
@@ -27,12 +27,16 @@ CCC-LNS/
 ├─ PR_115/                          ← 課程：Pattern Recognition（來源 repo：LNS）
 │   └─ ChNN-xxx/
 │       ├─ index.html
-│       └─ assets/
-└─ IDL_115/                         ← 課程：Elements of Deep Learning
+│       ├─ assets/
+│       └─ slides/                 ← 可選：該章的課堂投影片 HTML
+└─ IDL_115/                         ← 課程：Introductory Deep Learning
     └─ ChNN-xxx/
         ├─ index.html
-        └─ assets/
+        ├─ assets/
+        └─ slides/                 ← 可選：該章的課堂投影片 HTML
 ```
+
+`slides/` 裡的每個 HTML 都是可直接開啟的單檔投影片；根目錄入口會把它們列在對應章節卡片下。沒有投影片的章節仍只提供講義入口，入口頁會標示「投影片待加入」。
 
 課程資料夾命名慣例：`<課程代號>_<學年度>`（如 `PR_115`、`IDL_115`）；章節資料夾沿用生產線 repo 的命名（如 `Ch01-introduction`）。
 
@@ -66,6 +70,8 @@ scripts/publish.sh "Add PR_115 Ch17"
 # 以 PR_115 Ch03 為例，SRC 是對應的私有生產線 repo
 cp <SRC>/PR_115/Ch03-linear-classifiers/index.html   PR_115/Ch03-linear-classifiers/index.html
 cp -r <SRC>/PR_115/Ch03-linear-classifiers/assets/.  PR_115/Ch03-linear-classifiers/assets/
+# 若該章有課堂投影片，再同步複製 slides/ 內的 HTML
+cp -r <SRC>/PR_115/Ch03-linear-classifiers/slides/.  PR_115/Ch03-linear-classifiers/slides/
 git add PR_115/Ch03-linear-classifiers
 git commit -m "Update PR_115 Ch03"
 git push
@@ -75,7 +81,7 @@ git push
 
 ### 3.2 幫既有課程新增一章
 
-1. 從生產線 repo 複製整章，**只取 `index.html` 與 `assets/`**，其餘檔案（`agent.md`、`*.py`、`guides/*.md`、`parts/`、`demos/`、`diagrams/`、`__pycache__`、`PHASE_*_SPEC.md`……）一律不複製。
+1. 從生產線 repo 複製整章，**只取 `index.html`、`assets/`，以及可選的 `slides/`**，其餘檔案（`agent.md`、`*.py`、`guides/*.md`、`parts/`、`demos/`、`diagrams/`、`__pycache__`、`PHASE_*_SPEC.md`……）一律不複製。
 2. 貼到 `<課程資料夾>/<章節資料夾>/` 底下。
 3. 打開根目錄 `index.html`，在對應課程的 `<div class="grid">` 區塊裡加一張 `<a class="card">` 連結卡片（照抄同一區塊裡其他章節的格式，換掉 `href`、`badge`、`title` 即可）。
 4. `git add -A && git commit -m "..." && git push`。
@@ -89,7 +95,7 @@ git push
 
 ### 3.4 收工前務必檢查
 
-**清乾淨檢查**：複製新章節進來後，`ls` 一下該章資料夾，確認裡面只有 `index.html` 和 `assets/` 兩樣東西，沒有夾帶 `.py`、`.md`（`README.md` 除外）、`__pycache__` 等生產線檔案。
+**清乾淨檢查**：複製新章節進來後，`ls` 一下該章資料夾，確認裡面只有 `index.html`、`assets/`，以及有投影片時才存在的 `slides/`，沒有夾帶 `.py`、`.md`（`README.md` 除外）、`__pycache__` 等生產線檔案。
 
 **沒有 404 檢查**：push 後等 GitHub Pages 重新部署完成（可用 `gh api repos/ndhuccc/CCC-LNS/pages/builds/latest --jq '.status'` 查，變成 `built` 才算完成），再逐一檢查：
 
