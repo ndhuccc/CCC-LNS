@@ -21,9 +21,9 @@
 	};
 	</script>	
     <style>
-/* CSS è¨­è¨ˆç³»çµ± - å›ºå®šéƒ¨ä»½ */
+/* CSS 設計系統 - 固定部份 */
         :root {
-            /* è‰²å½©ç³»çµ± - æŽ¨è–¦æ–°æ–¹æ¡ˆ: "å„ªé›…ç´«ç¾…è˜­ (Elegant Violet)" */
+            /* 色彩系統 - 推薦新方案: "優雅紫羅蘭 (Elegant Violet)" */
             --color-primary: hsl(260, 65%, 20%);
             --color-success: hsl(145, 65%, 45%);
             --color-warning: hsl(38, 92%, 55%);
@@ -36,7 +36,7 @@
             --color-text: hsl(240, 25%, 20%);
             --color-text-secondary: rgba(0, 180, 0, 1.0);
             
-			/* å­—é«”ç³»çµ±ï¼ˆæ•™å®¤æŠ•å½±å„ªåŒ–ï¼‰ - å·²æ”¾å¤§ */
+			/* 字體系統（教室投影優化） - 已放大 */
 			--text-ssm: 1.2rem;
 			--text-sm: 1.5rem;
 			--text-base: 1.75rem;
@@ -46,7 +46,7 @@
 			--text-3xl: 3.25rem;
 			--text-4xl: 4.25rem;
             
-            /* é–“è·ç³»çµ± */
+            /* 間距系統 */
             --space-xs: 0.5rem;
             --space-sm: 1rem;
             --space-md: 1.5rem;
@@ -54,41 +54,41 @@
             --space-xl: 3rem;
             --space-2xl: 4rem;
             
-            /* åœ“è§’ç³»çµ± */
+            /* 圓角系統 */
             --radius-sm: 6px;
             --radius-md: 10px;
             --radius-lg: 14px;
             --radius-xl: 18px;
             --radius-full: 9999px;
             
-            /* é™°å½±ç³»çµ± (èª¿æ•´ç‚ºæ›´æŸ”å’Œçš„ç´«è‰²èª¿é™°å½±) */
+            /* 陰影系統 (調整為更柔和的紫色調陰影) */
             --shadow-sm: 0 2px 4px hsla(260, 50%, 30%, 0.07);
             --shadow-md: 0 4px 8px hsla(260, 50%, 30%, 0.1);
             --shadow-lg: 0 8px 16px hsla(260, 50%, 30%, 0.12);
             
-            /* å‹•ç•«ç³»çµ± */
+            /* 動畫系統 */
             --duration-fast: 0.15s;
             --duration-normal: 0.3s;
             --duration-slow: 0.5s;
             --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* æ·±è‰²æ¨¡å¼ (é«˜å°æ¯”åº¦è¨­è¨ˆ) */
+        /* 深色模式 (高對比度設計) */
         [data-theme="dark"] {
             --color-primary: hsl(260, 75%, 70%);
             --color-success: hsl(145, 60%, 60%);
             --color-warning: hsl(38, 95%, 65%);
             --color-error: hsl(0, 90%, 70%);
             --color-info: hsl(220, 85%, 70%);
-            --color-background: hsl(250, 20%, 12%); /* æ¥µæ·±çš„åˆå¤œç´« */
+            --color-background: hsl(250, 20%, 12%); /* 極深的午夜紫 */
             --color-surface: hsl(250, 18%, 18%);
             --color-surface-variant: hsl(250, 15%, 22%);
             --color-border: hsl(250, 15%, 30%);
-            --color-text: hsl(240, 10%, 90%); /* éžå¸¸æ˜Žäº®çš„æ·ºç°æ–‡å­—ï¼Œç¢ºä¿é«˜å°æ¯”åº¦ */
+            --color-text: hsl(240, 10%, 90%); /* 非常明亮的淺灰文字，確保高對比度 */
             --color-text-secondary: hsl(240, 8%, 70%);
         }
 
-        /* åŸºç¤Žæ¨£å¼ */
+        /* 基礎樣式 */
         * {
             margin: 0;
             padding: 0;
@@ -111,7 +111,7 @@
             padding: var(--space-xl);
         }
 
-        /* å°Žèˆªç³»çµ± */
+        /* 導航系統 */
         .nav-dots {
             position: fixed;
             right: var(--space-lg);
@@ -197,7 +197,7 @@
             transform: scale(1.1);
         }
 
-        /* åŸºç¤Žå€å¡Šæ¨£å¼ */
+        /* 基礎區塊樣式 */
         .section {
             margin-bottom: var(--space-2xl);
             padding: var(--space-xl);
@@ -240,7 +240,7 @@
             margin-right: var(--space-md);
         }
 
-        /* é«˜å…‰æ•ˆæžœç³»çµ± */
+        /* 高光效果系統 */
         .highlight { 
             background: linear-gradient(120deg, #ffeaa7 0%, #fab1a0 100%);
             padding: 2px 6px; 
@@ -301,7 +301,7 @@
         }
 
         .key-concept::before {
-            content: 'ðŸ’¡';
+            content: '💡';
             position: absolute;
             top: -10px;
             left: var(--space-md);
@@ -312,7 +312,7 @@
             font-size: var(--text-base);
         }
 
-        /* å‹•ç•«æ•ˆæžœ */
+        /* 動畫效果 */
         @keyframes glow {
             from {
                 text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #e60073;
@@ -337,9 +337,9 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* å®Œæ•´è¦–è¦ºå…ƒç´ ç³»çµ± CSS */
+        /* 完整視覺元素系統 CSS */
 
-        /* 1. å¡ç‰‡ç³»çµ± */
+        /* 1. 卡片系統 */
         .card-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -368,7 +368,7 @@
             margin-bottom: var(--space-sm);
         }
 
-        /* 2. ç¶²æ ¼å¸ƒå±€ */
+        /* 2. 網格布局 */
         .grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -391,7 +391,7 @@
 
         .grid-item:hover { transform: translateY(-2px); }
 
-        /* 3. æµç¨‹åœ– */
+        /* 3. 流程圖 */
         .flow-chart {
             display: flex;
             align-items: center;
@@ -419,7 +419,7 @@
             border-bottom: 15px solid transparent;
         }
 
-        /* 4. æ™‚é–“è»¸ */
+        /* 4. 時間軸 */
         .timeline {
             position: relative;
             max-width: 800px;
@@ -462,7 +462,7 @@
         .timeline-item:nth-child(odd)::after { right: -30px; }
         .timeline-item:nth-child(even)::after { left: -30px; }
 
-        /* 5. ç‰¹è‰²æ¡† */
+        /* 5. 特色框 */
         .feature-box {
             background: linear-gradient(135deg, rgba(116, 185, 255, 0.1) 0%, rgba(9, 132, 227, 0.05) 100%);
             border: 2px solid var(--color-primary);
@@ -482,7 +482,7 @@
             background: linear-gradient(90deg, var(--color-primary), var(--color-info));
         }
 
-        /* 6. æ¨™ç±¤é ç³»çµ± */
+        /* 6. 標籤頁系統 */
         .tab-container {
             background: var(--color-surface);
             border-radius: var(--radius-lg);
@@ -525,7 +525,7 @@
             display: block;
         }
 
-        /* 7. æ¯”è¼ƒè¡¨æ ¼ */
+        /* 7. 比較表格 */
         .comparison-table {
             width: 100%;
             border-collapse: collapse;
@@ -553,7 +553,7 @@
             background: var(--color-surface-variant);
         }
 
-        /* 8. æ‰‹é¢¨ç´æŠ˜ç–Š */
+        /* 8. 手風琴折疊 */
         .accordion {
             border: 2px solid var(--color-border);
             border-radius: var(--radius-lg);
@@ -611,7 +611,7 @@
             padding: var(--space-lg);
         }
 
-        /* 9. çµ±è¨ˆåœ–è¡¨æ¡† */
+        /* 9. 統計圖表框 */
         .stats-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -644,7 +644,7 @@
             opacity: 0.9;
         }
 
-        /* 10. å¼•ç”¨å€å¡Š */
+        /* 10. 引用區塊 */
         .quote-block {
             background: linear-gradient(135deg, rgba(116, 185, 255, 0.1) 0%, rgba(9, 132, 227, 0.05) 100%);
             border-left: 6px solid var(--color-primary);
@@ -674,7 +674,7 @@
             font-style: normal;
         }
 
-        /* 11. é€²åº¦æ¢ */
+        /* 11. 進度條 */
         .progress-item {
             margin-bottom: var(--space-lg);
         }
@@ -712,7 +712,7 @@
             font-size: var(--text-base);
         }
 
-        /* 12. åœ–æ¨™åˆ—è¡¨ */
+        /* 12. 圖標列表 */
         .icon-list {
             list-style: none;
             padding: 0;
@@ -743,7 +743,7 @@
             flex-shrink: 0;
         }
 
-        /* 13. å…©æ¬„å°æ¯” */
+        /* 13. 兩欄對比 */
         .two-column-comparison {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -774,7 +774,7 @@
             text-align: center;
         }
 
-        /* 14. éšŽå±¤æ¨¹ç‹€åœ– */
+        /* 14. 階層樹狀圖 */
         .hierarchy-tree {
             display: flex;
             flex-direction: column;
@@ -804,7 +804,7 @@
             color: white;
         }
 
-        /* 15. æ•¸å­—æ­¥é©Ÿåœ“åœˆ */
+        /* 15. 數字步驟圓圈 */
         .numbered-steps {
             display: flex;
             flex-wrap: wrap;
@@ -851,11 +851,11 @@
 
         /*
         / / / / / / / / / / / / / / / / / / / / / /
-        / / START: æ–°å¢žçš„è¦–è¦ºå…ƒç´  CSS
+        / / START: 新增的視覺元素 CSS
         / / / / / / / / / / / / / / / / / / / / / /
         */
 
-        /* 16. çŸ¥è­˜åœ°åœ– */
+        /* 16. 知識地圖 */
         .knowledge-map {
             position: relative;
             background: linear-gradient(135deg, rgba(116, 185, 255, 0.05) 0%, rgba(9, 132, 227, 0.02) 100%);
@@ -895,7 +895,7 @@
             opacity: 0.6;
         }
 
-        /* 17. å°è©±æ¡†ç³»çµ± */
+        /* 17. 對話框系統 */
         .dialogue-container {
             display: flex;
             flex-direction: column;
@@ -971,7 +971,7 @@
             right: -80px;
         }
 
-        /* 18. å¤šåª’é«”åµŒå…¥æ¡† */
+        /* 18. 多媒體嵌入框 */
         .media-frame {
             background: var(--color-surface);
             border-radius: var(--radius-lg);
@@ -1028,7 +1028,7 @@
             color: var(--color-text-secondary);
         }
 
-        /* 19. è©•åˆ†ç³»çµ± */
+        /* 19. 評分系統 */
         .rating-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -1080,11 +1080,11 @@
         
         /*
         / / / / / / / / / / / / / / / / / / / / / /
-        / / END: æ–°å¢žçš„è¦–è¦ºå…ƒç´  CSS
+        / / END: 新增的視覺元素 CSS
         / / / / / / / / / / / / / / / / / / / / / /
         */
 
-        /* ç¨‹å¼ç¢¼å±•ç¤ºç³»çµ± */
+        /* 程式碼展示系統 */
         .code-block {
             background: #1e1e1e;
             color: #d4d4d4;
@@ -1115,7 +1115,7 @@
             margin-top: 0;
         }
 
-        /* èªžæ³•é«˜äº® */
+        /* 語法高亮 */
         .keyword { color: #569cd6; font-weight: bold; }
         .string { color: #ce9178; }
         .comment { color: #6a9955; font-style: italic; }
@@ -1128,52 +1128,52 @@
 		/* --- Custom Pseudocode Block Style --- */
 
 		.pseudocode-block {
-			background-color: hsl(210, 20%, 96%); /* A light grey background | æ·ºç°è‰²èƒŒæ™¯ */
-			color: hsl(210, 10%, 25%);            /* Dark grey text | æ·±ç°è‰²æ–‡å­— */
-			font-family: 'Segoe UI', 'Roboto', sans-serif; /* A more readable sans-serif font | ä½¿ç”¨æ›´æ˜“è®€çš„ç„¡è¥¯ç·šå­—é«” */
+			background-color: hsl(210, 20%, 96%); /* A light grey background | 淺灰色背景 */
+			color: hsl(210, 10%, 25%);            /* Dark grey text | 深灰色文字 */
+			font-family: 'Segoe UI', 'Roboto', sans-serif; /* A more readable sans-serif font | 使用更易讀的無襯線字體 */
 			padding: var(--space-lg);
 			border-radius: var(--radius-md);
-			border-left: 5px solid var(--color-info); /* Blue left border for emphasis | å·¦å´æœ‰è—è‰²é‚Šæ¡†ä½œç‚ºæ¨™è­˜ */
+			border-left: 5px solid var(--color-info); /* Blue left border for emphasis | 左側有藍色邊框作為標識 */
 			line-height: 1.7;
 			font-size: var(--text-base);
 			margin: var(--space-lg) 0;
 			box-shadow: var(--shadow-sm);
 		}
 
-		/* Style for dark mode | åœ¨æ·±è‰²æ¨¡å¼ä¸‹çš„æ¨£å¼ */
+		/* Style for dark mode | 在深色模式下的樣式 */
 		[data-theme="dark"] .pseudocode-block {
-			background-color: hsl(220, 15%, 20%); /* A darker background for dark mode | æ·±è‰²æ¨¡å¼ä¸‹çš„èƒŒæ™¯ */
-			color: hsl(210, 15%, 85%);            /* Lighter text for contrast | äº®è‰²æ–‡å­— */
+			background-color: hsl(220, 15%, 20%); /* A darker background for dark mode | 深色模式下的背景 */
+			color: hsl(210, 15%, 85%);            /* Lighter text for contrast | 亮色文字 */
 			border-left-color: var(--color-primary);
 		}
 
-		/* Keywords within the pseudocode | å½ä»£ç¢¼ä¸­çš„é—œéµå­— */
+		/* Keywords within the pseudocode | 偽代碼中的關鍵字 */
 		.ps-keyword {
-			color: hsl(230, 60%, 55%); /* Primary blue color | ä¸»è¦è—è‰² */
-			font-weight: 700;         /* Bold font weight | ç²—é«” */
+			color: hsl(230, 60%, 55%); /* Primary blue color | 主要藍色 */
+			font-weight: 700;         /* Bold font weight | 粗體 */
 		}
 
-		/* Brighter keyword color for dark mode | æ·±è‰²æ¨¡å¼ä¸‹æ›´äº®çš„è—è‰² */
+		/* Brighter keyword color for dark mode | 深色模式下更亮的藍色 */
 		[data-theme="dark"] .ps-keyword {
 			color: hsl(230, 70%, 75%); 
 		}
 
-		/* Indented blocks within the pseudocode | å½ä»£ç¢¼ä¸­çš„ç¸®æŽ’å€å¡Š */
+		/* Indented blocks within the pseudocode | 偽代碼中的縮排區塊 */
 		.ps-indent {
 			padding-left: var(--space-lg);
-			border-left: 2px dashed hsla(210, 10%, 25%, 0.2); /* Dashed line to show structure | è™›ç·šä»¥é¡¯ç¤ºçµæ§‹ */
+			border-left: 2px dashed hsla(210, 10%, 25%, 0.2); /* Dashed line to show structure | 虛線以顯示結構 */
 			margin-left: var(--space-sm);
 			margin-top: var(--space-xs);
 			margin-bottom: var(--space-xs);
 		}
 
-		/* Lighter border color for indentation in dark mode | æ·±è‰²æ¨¡å¼ä¸‹è¼ƒæ·ºçš„ç¸®æŽ’é‚Šæ¡†é¡è‰² */
+		/* Lighter border color for indentation in dark mode | 深色模式下較淺的縮排邊框顏色 */
 		[data-theme="dark"] .ps-indent {
 			border-left-color: hsla(210, 15%, 85%, 0.2);
 		}
 		
 
-        /* çŸ¥è­˜æª¢å®šç³»çµ± */
+        /* 知識檢定系統 */
         .quiz-section {
             background: var(--color-surface-variant);
             border: 2px solid var(--color-info);
@@ -1246,7 +1246,7 @@
             transition: transform var(--duration-normal) var(--easing-standard);
         }
 
-        /* äº’å‹•å¼æ¸¬é©—å¡ */
+        /* 互動式測驗卡 */
         .quiz-card {
             background: var(--color-surface);
             border-radius: var(--radius-lg);
@@ -1346,7 +1346,7 @@
             cursor: not-allowed;
         }
 
-        /* éŸ¿æ‡‰å¼è¨­è¨ˆ */
+        /* 響應式設計 */
         @media (max-width: 1200px) {
             .container {
                 max-width: 100%;
@@ -1421,7 +1421,7 @@
                 font-size: var(--text-3xl);
             }
             
-            /* æ–°å¢žéƒ¨åˆ†çš„éŸ¿æ‡‰å¼èª¿æ•´ */
+            /* 新增部分的響應式調整 */
             .knowledge-map { padding: var(--space-lg); }
             .map-node { position: relative !important; margin: var(--space-md); display: inline-block; }
             .map-connection { display: none; }
@@ -1448,7 +1448,7 @@
             }
         }
 
-        /* åˆ—å°æ¨£å¼ */
+        /* 列印樣式 */
         @media print {
             .nav-dots,
             .progress-indicator,
@@ -1469,7 +1469,7 @@
             }
         }
 
-        /* ç„¡éšœç¤™æ”¯æ´ */
+        /* 無障礙支援 */
         .sr-only {
             position: absolute;
             width: 1px;
@@ -1482,7 +1482,7 @@
             border: 0;
         }
 
-        /* ç„¦é»žç‹€æ…‹ */
+        /* 焦點狀態 */
         .tab-button:focus,
         .quiz-option:focus,
         .quiz-toggle:focus,
@@ -1491,7 +1491,7 @@
             outline-offset: 2px;
         }
 
-        /* é«˜å°æ¯”æ¨¡å¼æ”¯æ´ */
+        /* 高對比模式支援 */
         @media (prefers-contrast: high) {
             :root {
                 --color-primary: hsl(230, 100%, 40%);
@@ -1501,7 +1501,7 @@
             }
         }
 
-        /* å‹•ç•«åå¥½è¨­å®š */
+        /* 動畫偏好設定 */
         @media (prefers-reduced-motion: reduce) {
             *,
             *::before,
@@ -1537,12 +1537,12 @@ MathJax = {
     <div class="nav-dots">
         </div>
 
-    <button class="back-to-top" onclick="scrollToTop()" aria-label="å›žåˆ°é ‚éƒ¨">
-        â†‘
+    <button class="back-to-top" onclick="scrollToTop()" aria-label="回到頂部">
+        ↑
     </button>
 
-    <button class="theme-toggle" onclick="toggleTheme()" aria-label="åˆ‡æ›ä¸»é¡Œ">
-        ðŸŒ“
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="切換主題">
+        🌓
     </button>
 
 <div class="container">
@@ -1701,9 +1701,9 @@ MathJax = {
 </div>
 </div>
     <script>
-        // JavaScript åŠŸèƒ½ - å›ºå®šéƒ¨ä»½
+        // JavaScript 功能 - 固定部份
         
-        // ä¸»é¡Œåˆ‡æ›åŠŸèƒ½
+        // 主題切換功能
         function toggleTheme() {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
@@ -1711,11 +1711,11 @@ MathJax = {
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
             
-            // ç„¡éšœç¤™å…¬å‘Š
-            announceToScreenReader(`å·²åˆ‡æ›åˆ°${newTheme === 'dark' ? 'æš—è‰²' : 'äº®è‰²'}æ¨¡å¼`);
+            // 無障礙公告
+            announceToScreenReader(`已切換到${newTheme === 'dark' ? '暗色' : '亮色'}模式`);
         }
 
-        // æ¨™ç±¤é åˆ‡æ›åŠŸèƒ½
+        // 標籤頁切換功能
         function showTab(tabId, buttonElement) {
             const container = buttonElement.closest('.tab-container');
             const allTabs = container.querySelectorAll('.tab-content');
@@ -1727,10 +1727,10 @@ MathJax = {
             container.querySelector(`#${tabId}`).classList.add('active');
             buttonElement.classList.add('active');
             
-            announceToScreenReader('æ¨™ç±¤é å·²åˆ‡æ›');
+            announceToScreenReader('標籤頁已切換');
         }
 
-        // æ‰‹é¢¨ç´æŠ˜ç–ŠåŠŸèƒ½
+        // 手風琴折疊功能
         function toggleAccordion(headerElement) {
             const content = headerElement.nextElementSibling;
             const icon = headerElement.querySelector('.accordion-icon');
@@ -1739,15 +1739,15 @@ MathJax = {
             content.classList.toggle('active');
             
             if (content.classList.contains('active')) {
-                icon.textContent = 'â–²';
-                announceToScreenReader('å…§å®¹å·²å±•é–‹');
+                icon.textContent = '▲';
+                announceToScreenReader('內容已展開');
             } else {
-                icon.textContent = 'â–¼';
-                announceToScreenReader('å…§å®¹å·²æ”¶èµ·');
+                icon.textContent = '▼';
+                announceToScreenReader('內容已收起');
             }
         }
 
-        // ç¨‹å¼ç¢¼åˆ‡æ›åŠŸèƒ½
+        // 程式碼切換功能
         function showCode(language, buttonElement) {
             const container = buttonElement.closest('.interactive-code');
             const allContents = container.querySelectorAll('.code-content');
@@ -1761,11 +1761,11 @@ MathJax = {
         }
 
         /* / / / / / / / / / / / / / / / / / / / / / /
-        / / START: æ–°å¢žçš„ JavaScript åŠŸèƒ½
+        / / START: 新增的 JavaScript 功能
         / / / / / / / / / / / / / / / / / / / / / /
         */
 
-        // äº’å‹•å¼æ¸¬é©—å¡åŠŸèƒ½
+        // 互動式測驗卡功能
         window.selectOption = function(optionElement, isCorrect) {
             const allOptions = optionElement.parentElement.querySelectorAll('.quiz-option');
             allOptions.forEach(option => {
@@ -1795,18 +1795,18 @@ MathJax = {
             
             feedback.classList.add('show');
             buttonElement.disabled = true;
-            buttonElement.textContent = 'å·²æäº¤';
+            buttonElement.textContent = '已提交';
             
             const isCorrect = quizCard.querySelector('.quiz-option.selected')?.dataset.correct === 'true';
-            announceToScreenReader(isCorrect ? 'å›žç­”æ­£ç¢ºï¼' : 'å›žç­”éŒ¯èª¤ï¼Œè«‹æŸ¥çœ‹æ­£ç¢ºç­”æ¡ˆ');
+            announceToScreenReader(isCorrect ? '回答正確！' : '回答錯誤，請查看正確答案');
         }
 
         /* / / / / / / / / / / / / / / / / / / / / / /
-        / / END: æ–°å¢žçš„ JavaScript åŠŸèƒ½
+        / / END: 新增的 JavaScript 功能
         / / / / / / / / / / / / / / / / / / / / / /
         */
 
-        // çŸ¥è­˜æª¢å®šç³»çµ±
+        // 知識檢定系統
         function toggleAnswer(answerId) {
             const answer = document.getElementById(answerId);
             const button = answer.previousElementSibling;
@@ -1814,17 +1814,17 @@ MathJax = {
             if (answer.classList.contains('collapsed')) {
                 answer.classList.remove('collapsed');
                 answer.classList.add('expanded');
-                button.innerHTML = '<span>éš±è—ç­”æ¡ˆ</span><span class="quiz-toggle__icon">â–²</span>';
-                announceToScreenReader('ç­”æ¡ˆå·²é¡¯ç¤º');
+                button.innerHTML = '<span>隱藏答案</span><span class="quiz-toggle__icon">▲</span>';
+                announceToScreenReader('答案已顯示');
             } else {
                 answer.classList.remove('expanded');
                 answer.classList.add('collapsed');
-                button.innerHTML = '<span>æŸ¥çœ‹ç­”æ¡ˆ</span><span class="quiz-toggle__icon">â–¼</span>';
-                announceToScreenReader('ç­”æ¡ˆå·²éš±è—');
+                button.innerHTML = '<span>查看答案</span><span class="quiz-toggle__icon">▼</span>';
+                announceToScreenReader('答案已隱藏');
             }
         }
 
-        // å°Žèˆªç³»çµ±
+        // 導航系統
         function scrollToSection(index) {
             const sections = document.querySelectorAll('.section');
             if (sections[index]) {
@@ -1837,7 +1837,7 @@ MathJax = {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // é€²åº¦è¿½è¹¤
+        // 進度追蹤
         function updateProgress() {
             const sections = document.querySelectorAll('.section');
             const progressBar = document.querySelector('.progress-bar');
@@ -1856,7 +1856,7 @@ MathJax = {
             progressBar.style.width = Math.min(progress, 100) + '%';
         }
 
-        // å°Žèˆªé»žæ›´æ–°
+        // 導航點更新
         function updateNavigation() {
             const sections = document.querySelectorAll('.section');
             const navDots = document.querySelectorAll('.nav-dot');
@@ -1874,7 +1874,7 @@ MathJax = {
             });
         }
 
-        // å›žåˆ°é ‚éƒ¨æŒ‰éˆ•é¡¯ç¤ºæŽ§åˆ¶
+        // 回到頂部按鈕顯示控制
         function updateBackToTop() {
             const backToTop = document.querySelector('.back-to-top');
             if (window.pageYOffset > 300) {
@@ -1884,7 +1884,7 @@ MathJax = {
             }
         }
 
-        // ç„¡éšœç¤™æ”¯æ´
+        // 無障礙支援
         function announceToScreenReader(message) {
             const announcement = document.createElement('div');
             announcement.setAttribute('aria-live', 'polite');
@@ -1898,7 +1898,7 @@ MathJax = {
             }, 1000);
         }
 
-        // åˆå§‹åŒ–å°Žèˆªé»ž
+        // 初始化導航點
         function initNavigation() {
             const sections = document.querySelectorAll('.section');
             const navDots = document.querySelector('.nav-dots');
@@ -1906,21 +1906,21 @@ MathJax = {
             sections.forEach((section, index) => {
                 const dot = document.createElement('div');
                 dot.className = 'nav-dot';
-                dot.setAttribute('aria-label', `è·³è‡³ç¬¬${index + 1}ç« ç¯€`);
+                dot.setAttribute('aria-label', `跳至第${index + 1}章節`);
                 dot.addEventListener('click', () => scrollToSection(index));
                 navDots.appendChild(dot);
             });
         }
 
-        // éµç›¤å°Žèˆª
+        // 鍵盤導航
         function handleKeyboardNavigation(e) {
-            // Ctrl + Space åˆ‡æ›ä¸»é¡Œ
+            // Ctrl + Space 切換主題
             if (e.code === 'Space' && e.ctrlKey) {
                 e.preventDefault();
                 toggleTheme();
             }
             
-            // æ–¹å‘éµå°Žèˆª
+            // 方向鍵導航
             if (e.code === 'ArrowUp' && e.ctrlKey) {
                 e.preventDefault();
                 const sections = document.querySelectorAll('.section');
@@ -1939,7 +1939,7 @@ MathJax = {
                 }
             }
             
-            // Home/End éµ
+            // Home/End 鍵
             if (e.code === 'Home' && e.ctrlKey) {
                 e.preventDefault();
                 scrollToTop();
@@ -1966,7 +1966,7 @@ MathJax = {
             return currentIndex;
         }
 
-        // åˆå§‹åŒ–ä¸»é¡Œ
+        // 初始化主題
         function initTheme() {
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme) {
@@ -1976,7 +1976,7 @@ MathJax = {
             }
         }
 
-        // é é¢è¼‰å…¥æ™‚åˆå§‹åŒ–
+        // 頁面載入時初始化
         document.addEventListener('DOMContentLoaded', function() {
             initTheme();
             initNavigation();
@@ -1984,7 +1984,7 @@ MathJax = {
             updateNavigation();
             updateBackToTop();
             
-            // äº‹ä»¶ç›£è½å™¨
+            // 事件監聽器
             window.addEventListener('scroll', function() {
                 updateProgress();
                 updateNavigation();
@@ -1993,7 +1993,7 @@ MathJax = {
             
             document.addEventListener('keydown', handleKeyboardNavigation);
             
-            // ç‚ºçµ±è¨ˆæ¡†æ·»åŠ è¼‰å…¥å‹•ç•«
+            // 為統計框添加載入動畫
             const statBoxes = document.querySelectorAll('.stat-box');
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach((entry, index) => {
@@ -2010,7 +2010,7 @@ MathJax = {
                 observer.observe(box);
             });
             
-            // ç‚ºé€²åº¦æ¢æ·»åŠ å‹•ç•«æ•ˆæžœ
+            // 為進度條添加動畫效果
             const progressBars = document.querySelectorAll('.progress-bar-item');
             const progressObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
@@ -2031,7 +2031,7 @@ MathJax = {
             });
         });
 
-        // è¦–çª—èª¿æ•´å¤§å°æ™‚é‡æ–°è¨ˆç®—
+        // 視窗調整大小時重新計算
         window.addEventListener('resize', function() {
             updateProgress();
             updateNavigation();
