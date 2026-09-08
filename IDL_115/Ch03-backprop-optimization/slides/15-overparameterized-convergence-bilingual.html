@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch03 · KP15 過參數化網路的收斂保證：Prop 4、Prop 5 與 Fig. 7 — Convergence Guarantees in Overparameterized Networks</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(37,99,235,.25), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(16,185,129,.20), transparent 30%),
+              linear-gradient(135deg, #0a0e27 0%, #111d4a 50%, #0d273a 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(10, 14, 39, .25);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(34px, 4.2vw, 62px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(18px, 2.0vw, 28px);
+  color: #93c5fd;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #38bdf8;
+  border-radius: 999px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 920px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.65;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #38bdf8, #10b981);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #7dd3fc !important; fill: #7dd3fc !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #cbd5e1; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg, mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  display: block;
+}
+.half-layout .visual > svg {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  display: block;
+}
+.half-layout .visual .svg-caption {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+  font-size: var(--t5);
+  color: var(--text-low);
+  letter-spacing: .05em;
+}
+@media (max-width: 1100px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+
+/* 高橋流置中修復：卡片居中於內容閱讀區 (831px 中心軸，左右邊距各 231px) */
+.section .takahashi {
+  text-align: center;
+  padding: 80px 36px;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+}
+
+/* 表格包裝層（防止橫向溢位） */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 24px 0;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  background: var(--bg-card);
+}
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin: 28px 0;
+}
+.lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  color: var(--ink);
+}
+.lab-ctrl input[type="range"] {
+  width: 115px;
+}
+.lab-ctrl span.val {
+  min-width: 44px;
+  font-family: var(--mono);
+  color: var(--primary);
+  font-weight: bold;
+}
+.lab-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all .2s;
+}
+.lab-btn:hover {
+  background: hsl(248, 58%, 38%);
+  transform: translateY(-1px);
+}
+.lab-btn.secondary {
+  background: #64748b;
+}
+.lab-btn.secondary:hover {
+  background: #475569;
+}
+.lab-btn.accent {
+  background: #0ea5e9;
+}
+.lab-btn.accent:hover {
+  background: #0284c7;
+}
+.lab-btn.success {
+  background: #10b981;
+}
+.lab-btn.success:hover {
+  background: #059669;
+}
+.lab-display {
+  display: grid;
+  grid-template-columns: 1.38fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 950px) {
+  .lab-display { grid-template-columns: 1fr; }
+}
+.lab-canvas-container {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.lab-readout {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+.lab-readout .status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.status-badge.stuck { background: #fef2f2; color: #b91c1c; }
+.status-badge.saddle { background: #fef3c7; color: #b45309; }
+.status-badge.converged { background: #dcfce7; color: #15803d; }
+.status-badge.running { background: #e0f2fe; color: #0369a1; }
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP15 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Core Question</a></li>
+    <li><a href="#overparam-puzzle">核心謎題 · Overparameterization</a></li>
+    <li><a href="#prop4-shallow">淺層理論 · Proposition 4</a></li>
+    <li><a href="#prop5-deep">深層收斂 · Proposition 5</a></li>
+    <li><a href="#landscape-insight">地景幾何 · Fig. 7 Insight</a></li>
+    <li><a href="#svg-landscape">視覺對比 · Visual Comparison</a></li>
+    <li><a href="#theory-vs-gen">理論辨析 · Optimization vs Generalization</a></li>
+    <li><a href="#comparison">體系對比 · Comparative Matrix</a></li>
+    <li><a href="#master-maxims">四大鐵律 · Master Maxims</a></li>
+    <li><a href="#lab">模擬實驗室 · Interactive Lab</a></li>
+    <li><a href="#quiz">觀念測驗 · Checkpoint</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">IDL 115 · CHAPTER 3 · KP-15 · TEACHING DECK</span>
+    <h1>過參數化網路的收斂保證：Prop 4、Prop 5 與 Fig. 7
+      <span class="hero-title-en">Convergence Guarantees in Overparameterized Networks: Propositions 4, 5, and Landscape Geometry</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      嚴重過參數化（參數遠多於訓練樣本）的網路為何在實務上能順利訓練？本單元剖析淺層二次網路的無假局部極小與鞍點負曲率逃逸（Proposition 4），深層 ReLU 網路在全批次 GD 與 SGD 下的多項式時間收斂保證（Proposition 5），並以 Fig. 7 揭示平坦等高全域盆地的幾何奧秘。
+    </p>
+    <p class="bilingual-en" style="color: #cbd5e1; max-width: 900px; margin: 10px auto 0;">
+      Why do heavily overparameterized networks train with such unexpected ease? This unit examines shallow quadratic networks with no spurious minima (Proposition 4), deep ReLU networks converging in polynomial steps under GD and SGD (Proposition 5), and the geometric insight of equal-depth basins illustrated in Fig. 7.
+    </p>
+  </div>
+</section>
+
+<!-- 2. 大問句 -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="sec-tag inquiry">01 / 核心提問 · Core Question</div>
+    <div class="quote">
+      「參數比資料還多，理應嚴重過擬合與卡在假坑，為何梯度法總能完美收斂？」
+      <small>古典統計預言高維非凸地景充斥致命陷阱，現代深度學習卻揭示奇蹟：過參數化使所有局部極小皆為全域解！<br/>
+        <span class="bilingual-en-inline">Classical statistics warns of severe overfitting and local trap nightmares, yet modern deep learning reveals a miracle: overparameterization flattens the landscape so that all local minima become global!</span>
+      </small>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 核心謎題 -->
+<section class="section" id="overparam-puzzle">
+  <div class="sec-tag motivate">02 / 核心謎題 · The Overparameterization Puzzle</div>
+  <h2 class="section-title">過參數化之謎：參數多於樣本，為何未見過擬合且最佳化成功？
+    <span class="en">The Overparameterization Puzzle: Why Having More Parameters Than Samples Succeeds</span>
+  </h2>
+
+  <div class="intuition-box">
+    <h4>古典統計的警示 vs 現代深度學習的實務突破</h4>
+    <p>
+      深度學習最令人驚訝的現象之一，就是<strong>嚴重過參數化（Overparameterized，可學參數量 $p \gg n$ 遠多於訓練樣本數）</strong>的網路，往往不只完美記住訓練集，還能在未見過的測試集上展現出色的泛化能力。
+    </p>
+    <ul>
+      <li><strong>古典統計預期（Classical View）：</strong>根據傳統偏差-變異數權衡（Bias-Variance Tradeoff），模型自由度過大必然引發慘烈的過擬合（Overfitting）；且高維非凸目標函式理應充斥大量次優的局部假坑（Spurious Local Minima），梯度法幾乎註定停滯。</li>
+      <li><strong>深度學習實務（Modern Reality）：</strong>過參數化無論來自「寬度（每層神經元多）」、「深度（層數多）」或兩者兼備，在適當初始化與一階最佳化演算法（GD / SGD）下，<strong>訓練損失均能順利下降至全域或近全域極小值</strong>。</li>
+    </ul>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>1. 寬度維度的過參數化</h3>
+      <div class="sub-en">Over-Width Regime</div>
+      <p>每一層具備極多隱藏神經元（如神經切線核 NTK 區間）。高維度提供了充裕的擬合自由度，各神經元僅需微幅微調即可將輸出匹配真實標籤。</p>
+    </div>
+    <div class="card positive">
+      <h3>2. 深度維度的過參數化</h3>
+      <div class="sub-en">Over-Depth Regime</div>
+      <p>多層非線性變換具備強大表徵能力。層數的增加使得函式空間具備更優良的流形平滑性與豐富的鞍點逃逸通道。</p>
+    </div>
+    <div class="card positive">
+      <h3>3. 最佳化成功不等同於泛化保證</h3>
+      <div class="sub-en">Optimization vs. Generalization</div>
+      <p>理論已嚴密證明過參數化網路的<strong>訓練損失可在多項式時間內降至零</strong>。本章聚焦「最佳化能否成功」，暫將「泛化之謎」作為獨立命題探討。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 4. 淺層網路：Proposition 4 -->
+<section class="section" id="prop4-shallow">
+  <div class="sec-tag sustain">03 / 淺層理論 · Proposition 4 (Shallow Networks)</div>
+  <h2 class="section-title">淺層網路收斂保證：Proposition 4 與三大核心性質
+    <span class="en">Proposition 4: Shallow Networks with Quadratic Activation Guarantee Global Optimality</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>Proposition 4 的架構與數學設定（Du &amp; Lee, 2018 / Soltanolkotabi et al.）</h4>
+    <p>考慮單隱藏層神經網路架構：</p>
+    <p>$$ \boldsymbol{x} \mapsto \boldsymbol{v}^{\top}\sigma(\boldsymbol{W}\boldsymbol{x}) $$</p>
+    <p>其中權重矩陣 $\boldsymbol{W}\in\mathbb{R}^{k\times d}$、固定輸出向量 $\boldsymbol{v}\in\mathbb{R}^{k}$，訓練集包含 $n$ 筆樣本 $\{(\boldsymbol{x}_i, y_i)\}_{i=1}^n$。最佳化目標為均方誤差（MSE）損失：</p>
+    <p>$$ \mathcal{L}(\boldsymbol{W})=\frac{1}{2n}\sum_{i=1}^{n}\bigl(y_i-\boldsymbol{v}^{\top}\sigma(\boldsymbol{W}\boldsymbol{x}_i)\bigr)^2 $$</p>
+    <p><strong>定理前提條件（Premises）：</strong></p>
+    <ul>
+      <li>啟用函式為二次啟用：$\sigma(z)=z^2$。</li>
+      <li>隱藏層寬度滿足過參數化門檻：$k\geq 2d$。</li>
+      <li>輸出層權重 $\boldsymbol{v}$ 中至少包含 $d$ 個正數與 $d$ 個負數（正負符號平衡）。</li>
+    </ul>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>性質 1：無 Spurious Local Minima</h3>
+      <div class="sub-en">No Bad Local Minima</div>
+      <p>損失函式的地景中<strong>所有局部極小值都是全域極小值</strong>！曲面上完全不存在「梯度為零但損失劣於全域」的假解（Spurious Solution）。</p>
+      <span class="bilingual-en">Every local minimum is a global minimum; there are no suboptimal stationary basins.</span>
+    </div>
+    <div class="card positive">
+      <h3>性質 2：鞍點具備嚴格負曲率方向</h3>
+      <div class="sub-en">Strict Negative Curvature at Saddles</div>
+      <p>任一鞍點 $\boldsymbol{W}_s$ 必存在逃逸方向 $\boldsymbol{U}$，使得：
+        $$\mathrm{vec}(\boldsymbol{U})^{\top}\nabla^{2}\mathcal{L}(\boldsymbol{W}_s)\,\mathrm{vec}(\boldsymbol{U})\lt 0$$
+        Hessian 矩陣有嚴格負特徵值，隨機初始化的 GD 或擾動梯度法必能迅速逃離鞍點！
+      </p>
+    </div>
+    <div class="card positive">
+      <h3>性質 3：零訓練損失保證可達</h3>
+      <div class="sub-en">Exact Zero Training Loss</div>
+      <p>當訓練樣本數滿足 $d\leq n\leq cd^2$（$c\gt 0$ 為常數）時，全域最優解達到 $\mathcal{L}(\boldsymbol{W}^*)=0$。模型能完美無瑕地擬合所有訓練資料！</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 深層網路：Proposition 5 -->
+<section class="section" id="prop5-deep">
+  <div class="sec-tag sustain">04 / 深層理論 · Proposition 5 (Deep ReLU Networks)</div>
+  <h2 class="section-title">深層 ReLU 網路收斂界：全批次 GD (式 58) 與 Mini-batch SGD (式 59)
+    <span class="en">Proposition 5: Polynomial Convergence Rates for Deep ReLU Networks</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>Proposition 5 的架構與數學設定（Allen-Zhu, Li &amp; Song, 2019）</h4>
+    <p>考慮 $l$ 層全連線 ReLU 網路，採用均方誤差（MSE）損失：</p>
+    <ul>
+      <li><strong>資料正規化（Data Normalization）：</strong>所有輸入滿足 $\|\boldsymbol{x}_i\|_2=1$，且最後一維固定填充為 $1/\sqrt{2}$。</li>
+      <li><strong>樣本分離度（Sample Separation）：</strong>任意兩筆不同訓練樣本的歐氏間距不小於 $\delta$，即 $\min_{i\neq j}\|\boldsymbol{x}_i-\boldsymbol{x}_j\|_2\geq\delta\gt 0$。</li>
+      <li><strong>初始化：</strong>所有權重矩陣採高斯隨機初始化 $\boldsymbol{W}^{(h)} \sim \mathcal{N}(0, \frac{2}{m})$。</li>
+    </ul>
+    
+    <p><strong>1. 全批次梯度下降（Full-Batch GD）收斂保證：</strong></p>
+    <p>若隱藏層寬度滿足 $m\geq\Omega(\mathrm{poly}(n,l,\delta^{-1})d)$，設定學習率 $\eta=\Theta\!\bigl(\frac{d\delta}{\mathrm{poly}(n,l)m}\bigr)$，則經過迭代步數：</p>
+    <p>$$ T=\Theta\!\Bigl(\frac{\mathrm{poly}(n,l)\log(\epsilon^{-1})}{\delta^{2}}\Bigr) \tag{58} $$</p>
+    <p>後，以極高機率 $1-e^{-\Omega(\log^2 m)}$ 使得訓練損失 $\mathcal{L}(\boldsymbol{W}_T) \lt \epsilon$。</p>
+
+    <p><strong>2. 隨機小批次梯度下降（Mini-batch SGD，Batch 大小 $b$）收斂保證：</strong></p>
+    <p>若寬度滿足 $m\geq\Omega\!\bigl(\frac{\mathrm{poly}(n,l,\delta^{-1})d}{b}\bigr)$，設定學習率 $\eta=\Theta\!\bigl(\frac{bd\delta}{\mathrm{poly}(n,l)m\log^2 m}\bigr)$，則經過迭代步數：</p>
+    <p>$$ T=\Theta\!\Bigl(\frac{\mathrm{poly}(n,l)\log(\epsilon^{-1})\log^2 m}{\delta^{2}b}\Bigr) \tag{59} $$</p>
+    <p>後，同樣以極高機率 $1-e^{-\Omega(\log^2 m)}$ 使得訓練損失 $\mathcal{L}(\boldsymbol{W}_T) \lt \epsilon$。</p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>核心意義：多項式時間全域收斂</h3>
+      <div class="sub-en">Polynomial Complexity</div>
+      <p>儘管目標函式極度高度非凸，只要寬度足夠且樣本可分離，最佳化演算法<strong>並不需要指數級時間</strong>，而是在多項式步數內精確逼近全域最優解！</p>
+    </div>
+    <div class="card positive">
+      <h3>資料分離度 $\delta$ 的關鍵角色</h3>
+      <div class="sub-en">Separation Parameter $\delta$</div>
+      <p>收斂步數反比於 $\delta^2$。若存在兩筆不同標籤卻幾乎重疊的樣本（$\delta \to 0$），收斂時間將趨於無窮，突顯了資料分離幾何的重要性。</p>
+    </div>
+    <div class="card positive">
+      <h3>對數依賴精度 $\log(\epsilon^{-1})$</h3>
+      <div class="sub-en">Linear Convergence Rate</div>
+      <p>步數 $T$ 僅對精度 $\epsilon$ 呈現對數依賴（$\log(\epsilon^{-1})$），這意味著在過參數化設定下，GD 展現出類似強凸最佳化的<strong>線性收斂速度（Linear Convergence）</strong>！</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6. Fig. 7 與地景幾何 -->
+<section class="section" id="landscape-insight">
+  <div class="sec-tag sustain">05 / 地景幾何 · Fig. 7 Insight</div>
+  <h2 class="section-title">Fig. 7 的深刻寓意：從「崎嶇高低假坑」到「等高平坦全域盆地」
+    <span class="en">Fig. 7 Philosophy: Why Overparameterization Eliminates Suboptimal Traps</span>
+  </h2>
+
+  <div class="intuition-box">
+    <h4>為什麼高維過參數化能消除劣質局部極小？</h4>
+    <p>
+      在低維欠參數模型中，參數自由度匱乏，參數空間被非凸的非線性邊界割裂成大量獨立的高低峽谷。初始化一旦落入劣質盆地，梯度便無法跨越山脊。<br/>
+      然而，<strong>過參數化從根本上重塑了損失地景（Loss Landscape）</strong>：
+    </p>
+    <ul>
+      <li><strong>所有局部極小值表現幾乎等同全域極小（Choromanska et al., 2015）：</strong>在高維過參數化下，幾乎所有臨界點（Critical Points）聚集於底層相同的能級！正如 Fig. 7 所示，不同盆地的底部皆坐落在同一水平線上。</li>
+      <li><strong>鞍點逃逸維度隨維度暴增：</strong>在高維空間中，某方向向上彎曲（正曲率）並不妨礙另一方向向下彎曲（負曲率）。極值點被「困死」在假坑的機率隨維度呈指數級衰減。</li>
+      <li><strong>隱式 RKHS 對映效應（Jacot et al., 2018）：</strong>深度神經網路在寬度趨於無窮時，實質上將資料對映到再生核希爾伯特空間（RKHS），非凸地景在參數軌跡周圍呈現驚人的凸性與光滑性。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 7. 視覺對比 SVG 向量圖 -->
+<section class="section" id="svg-landscape">
+  <div class="sec-tag visual">06 / 視覺對比 · Visual Landscape Comparison</div>
+  <h2 class="section-title">古典崎嶇曲面 vs 過參數化等高盆地
+    <span class="en">Classical Landscape with Spurious Minima vs. Overparameterized Basins (Fig. 7)</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg viewBox="0 0 1080 500" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background -->
+        <rect x="0" y="0" width="1080" height="500" fill="#ffffff"/>
+
+        <!-- Left Panel: Classical Low-Capacity -->
+        <rect x="25" y="25" width="500" height="380" rx="12" fill="#fafafa" stroke="#e5e7eb" stroke-width="1.5"/>
+        <text x="50" y="60" font-family="Arial, sans-serif" font-size="19" font-weight="bold" fill="#1f2937">古典欠參數 / 淺層低維 (Underparameterized)</text>
+        <text x="50" y="85" font-family="Arial, sans-serif" font-size="14" fill="#6b7280">非凸地景充斥高低不一的假坑 (Spurious Minima)</text>
+        
+        <!-- Axes -->
+        <line x1="60" y1="360" x2="490" y2="360" stroke="#cbd5e1" stroke-width="1.5"/>
+        <line x1="60" y1="110" x2="60" y2="360" stroke="#cbd5e1" stroke-width="1.5"/>
+        <text x="495" y="365" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">權重 w</text>
+        <text x="50" y="105" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">損失 L(w)</text>
+
+        <!-- Classical Loss Curve (Uneven with high traps) -->
+        <path d="M 75 160 C 105 180, 120 280, 150 280 C 180 280, 200 200, 230 200 C 260 200, 280 250, 310 250 C 340 250, 370 140, 400 140 C 430 140, 440 355, 465 355 C 480 355, 490 220, 500 210" 
+              fill="none" stroke="#ea580c" stroke-width="3.5" stroke-linecap="round"/>
+
+        <!-- Spurious Minima (Orange dots) -->
+        <circle cx="150" cy="280" r="7" fill="#ea580c"/>
+        <text x="110" y="306" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#c2410c">假坑 1 (Spurious)</text>
+        <text x="85" y="324" font-family="Arial, sans-serif" font-size="12" fill="#ea580c">⚠️ 初始化不對會卡住</text>
+
+        <circle cx="310" cy="250" r="7" fill="#ea580c"/>
+        <text x="270" y="276" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#c2410c">假坑 2 (Spurious)</text>
+        <text x="260" y="294" font-family="Arial, sans-serif" font-size="12" fill="#9a3412">∇L=0 但損失依然高</text>
+
+        <!-- True Minimum (Green dot) -->
+        <circle cx="465" cy="355" r="8" fill="#16a34a"/>
+        <text x="415" y="382" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#15803d">全域極小 (Global Min)</text>
+
+        <!-- Right Panel: Overparameterized Regime (Fig. 7) -->
+        <rect x="555" y="25" width="500" height="380" rx="12" fill="#f0f9ff" stroke="#bae6fd" stroke-width="1.5"/>
+        <text x="580" y="60" font-family="Arial, sans-serif" font-size="19" font-weight="bold" fill="#0369a1">過參數化網路地景 (Overparameterized / Fig. 7)</text>
+        <text x="580" y="85" font-family="Arial, sans-serif" font-size="14" fill="#0284c7">多個等高盆地坐落在同一水平線上，幾乎所有解皆等同全域</text>
+
+        <!-- Axes -->
+        <line x1="590" y1="360" x2="1020" y2="360" stroke="#cbd5e1" stroke-width="1.5"/>
+        <line x1="590" y1="110" x2="590" y2="360" stroke="#cbd5e1" stroke-width="1.5"/>
+        <text x="1025" y="365" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">權重 w</text>
+        <text x="580" y="105" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">損失 L(w)</text>
+
+        <!-- Horizontal Blue Dashed Line: Zero Loss Line -->
+        <line x1="590" y1="350" x2="1030" y2="350" stroke="#2563eb" stroke-width="2.2" stroke-dasharray="8 5"/>
+        <text x="880" y="342" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#2563eb">全域零損失線 L(w) = 0</text>
+
+        <!-- Overparameterized Loss Curve (Equal Depth Valleys) -->
+        <path d="M 605 160 C 625 180, 645 350, 675 350 C 705 350, 725 240, 755 240 C 785 240, 805 350, 835 350 C 865 350, 885 220, 915 220 C 945 220, 965 350, 995 350 C 1015 350, 1025 210, 1035 170" 
+              fill="none" stroke="#2563eb" stroke-width="3.5" stroke-linecap="round"/>
+
+        <!-- All Equal Minima (Green dots on horizontal line) -->
+        <circle cx="675" cy="350" r="7.5" fill="#16a34a"/>
+        <circle cx="835" cy="350" r="7.5" fill="#16a34a"/>
+        <circle cx="995" cy="350" r="7.5" fill="#16a34a"/>
+
+        <!-- Saddle points with negative curvature escape arrow -->
+        <circle cx="755" cy="240" r="4.5" fill="#f59e0b"/>
+        <path d="M 755 248 L 755 275 M 750 270 L 755 278 L 760 270" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round"/>
+        <text x="710" y="230" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#d97706">鞍點 (負曲率逃逸)</text>
+
+        <!-- Badges on Right -->
+        <rect x="645" y="105" width="225" height="28" rx="6" fill="#dbeafe" stroke="#93c5fd" stroke-width="1"/>
+        <text x="655" y="124" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#1d4ed8">Prop 4 (淺層) / Prop 5 (深層)</text>
+
+        <rect x="635" y="375" width="375" height="24" rx="4" fill="#dcfce7"/>
+        <text x="645" y="392" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#15803d">綠點皆為全域級解 · 幾乎所有局部解夠好、等同全域解</text>
+
+        <!-- Bottom Banner -->
+        <rect x="25" y="420" width="1030" height="65" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+        <text x="45" y="445" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1e293b">💡 核心奧秘：參數多於資料 ($m \gg n$) 創造大量多餘自由度，高維地景等高平滑，梯度法多項式時間成功！</text>
+        <text x="45" y="470" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#dc2626">⚠️ 關鍵轉折：本章理論保證的是「訓練損失 (Train Loss $\to 0$)」，零訓練損失不自動保證「測試泛化 (Test Generalization)」！</text>
+      </svg>
+      <div class="svg-caption">圖 7 原理示意：左側古典模型受制於假局部極小（橘點）；右側過參數化模型使所有局部極小均降至零損失水平線（綠點），鞍點具嚴格負曲率方向。</div>
+    </div>
+
+    <div>
+      <h3 style="color: var(--primary);">地景重塑的四大幾何轉變</h3>
+      <div class="card-grid" style="grid-template-columns: 1fr; gap: 14px;">
+        <div class="card" style="padding: 16px 20px;">
+          <h4 style="margin: 0 0 6px 0; color: #ea580c;">① 假極小被徹底消除（No Spurious Minima）</h4>
+          <p style="margin: 0; font-size: 15px;">在古典模型中，梯度法常陷於高損失假坑。而在 Prop 4（$k \ge 2d$）與 Prop 5（$m \ge \Omega(\text{poly})$）下，所有局部極小皆為全域最優。</p>
+        </div>
+        <div class="card" style="padding: 16px 20px;">
+          <h4 style="margin: 0 0 6px 0; color: #16a34a;">② 鞍點具備嚴格負曲率（Negative Curvature）</h4>
+          <p style="margin: 0; font-size: 15px;">鞍點不是死衚衕！Hessian 矩陣必存在負特徵值 $\nabla^2 \mathcal{L} \prec 0$，一階法在微小擾動下沿負曲率方向滑脫。</p>
+        </div>
+        <div class="card" style="padding: 16px 20px;">
+          <h4 style="margin: 0 0 6px 0; color: #2563eb;">③ 盆地等高共振（Equal-Depth Basins）</h4>
+          <p style="margin: 0; font-size: 15px;">呼應 Fig. 7 的洞見：不同隨機初始化找到的解，在訓練集上的損失表現完全一致，達到近乎零損失的完美擬合。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. 理論收斂保證 vs 測試泛化 -->
+<section class="section" id="theory-vs-gen">
+  <div class="sec-tag sustain">07 / 關鍵辨析 · Theory vs Generalization</div>
+  <h2 class="section-title">理論收斂保證 vs 測試泛化：零訓練損失不等於泛化良好
+    <span class="en">Optimization Success vs. Generalization Mystery: Zero Train Loss Does Not Equal Test Performance</span>
+  </h2>
+
+  <div class="warning-box">
+    <h4>⚠️ 重要觀念釐清：最佳化可行性 $\neq$ 泛化保證</h4>
+    <p>
+      Proposition 4 的性質 3 與 Proposition 5 均給出了極強的<strong>訓練損失保證（$\mathcal{L}_{\mathrm{train}} \lt \epsilon$）</strong>。但在機器學習中，訓練表現與測試表現是截然不同的兩個命題：
+    </p>
+    <ul>
+      <li><strong>最佳化理論回答「能不能練成」：</strong>非凸深度神經網路在梯度法下，是否會被局部極小或鞍點阻礙？答案是：只要足夠過參數化且樣本可分離，<strong>最佳化必然成功，多項式時間內達標</strong>。</li>
+      <li><strong>泛化理論回答「練成之後好不好」：</strong>完美擬合所有訓練資料（甚至擬合了標籤雜訊），在未知測試集上是否會發生過擬合？答案取決於<strong>隱式正則化（Implicit Regularization）、平坦度（Flatness）、良性過擬合（Benign Overfitting）</strong>等更深層的機制。</li>
+    </ul>
+  </div>
+
+  <p>
+    因此，學習本章的 Prop 4、Prop 5 與 Fig. 7 時，務必銘記：<strong>過參數化理論主要解決了「非凸最佳化收斂」的理論死結，為現代神經網路的訓練成功提供了堅實的數學後盾，但並未直接回答泛化之謎</strong>。
+    <span class="bilingual-en">Propositions 4 and 5 establish rigorous polynomial convergence guarantees on empirical training loss. However, achieving zero training loss does not automatically imply superior generalization on unseen data—this remains one of deep learning's most profound frontiers.</span>
+  </p>
+</section>
+
+<!-- 9. 體系對比矩陣 -->
+<section class="section" id="comparison">
+  <div class="sec-tag sustain">08 / 體系對比 · Comparative Matrix</div>
+  <h2 class="section-title">淺層 Prop 4 vs 深層 Prop 5 vs 古典非凸最佳化
+    <span class="en">Comparative Matrix: Shallow Prop 4, Deep Prop 5, and Classical Non-Convex Optimization</span>
+  </h2>
+
+  <div class="table-wrap">
+    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 15px;">
+      <thead>
+        <tr style="background: #f1f5f9; border-bottom: 2px solid var(--line);">
+          <th style="padding: 14px 18px;">比較維度</th>
+          <th style="padding: 14px 18px; color: #ea580c;">古典低維非凸最佳化</th>
+          <th style="padding: 14px 18px; color: #2563eb;">Proposition 4（淺層網路）</th>
+          <th style="padding: 14px 18px; color: #16a34a;">Proposition 5（深層 ReLU 網路）</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid var(--line);">
+          <td style="padding: 14px 18px; font-weight: bold;">網路結構</td>
+          <td style="padding: 14px 18px;">任意低容量非凸模型</td>
+          <td style="padding: 14px 18px;">1 隱藏層，$\sigma(z)=z^2$ 二次啟用</td>
+          <td style="padding: 14px 18px;">$l$ 層全連線，ReLU 啟用</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--line); background: #fafafa;">
+          <td style="padding: 14px 18px; font-weight: bold;">寬度門檻要求</td>
+          <td style="padding: 14px 18px;">參數少（欠參數 $p \ll n$）</td>
+          <td style="padding: 14px 18px;">隱藏層寬度 $k \geq 2d$</td>
+          <td style="padding: 14px 18px;">$m \geq \Omega(\mathrm{poly}(n,l,\delta^{-1})d)$</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--line);">
+          <td style="padding: 14px 18px; font-weight: bold;">局部極小性質</td>
+          <td style="padding: 14px 18px;">充斥高低不一的 Spurious Minima</td>
+          <td style="padding: 14px 18px;"><strong>無 Spurious Minima</strong>，全為全域極小</td>
+          <td style="padding: 14px 18px;">高度光滑，最佳化路徑直通全域盆地</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--line); background: #fafafa;">
+          <td style="padding: 14px 18px; font-weight: bold;">鞍點逃逸機制</td>
+          <td style="padding: 14px 18px;">可能存在高階平坦死鞍點</td>
+          <td style="padding: 14px 18px;"><strong>嚴格負曲率方向</strong> $\nabla^2 \mathcal{L} \prec 0$</td>
+          <td style="padding: 14px 18px;">神經切線核（NTK）機制保證平滑滑脫</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--line);">
+          <td style="padding: 14px 18px; font-weight: bold;">收斂步數界 $T$</td>
+          <td style="padding: 14px 18px;">最差情況下呈指數級時間 $O(e^d)$</td>
+          <td style="padding: 14px 18px;">零損失可達（$d \leq n \leq cd^2$）</td>
+          <td style="padding: 14px 18px;">$\Theta\bigl(\frac{\mathrm{poly}(n,l)\log(\epsilon^{-1})}{\delta^2}\bigr)$（式 58）</td>
+        </tr>
+        <tr>
+          <td style="padding: 14px 18px; font-weight: bold;">核心實務意義</td>
+          <td style="padding: 14px 18px;">解釋了傳統最佳化的停滯困境</td>
+          <td style="padding: 14px 18px;">首次從幾何上證明過參數化消除假坑</td>
+          <td style="padding: 14px 18px;">嚴格證明現代深度網路 GD/SGD 必收斂</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 10. 四大核心鐵律 -->
+<section class="section" id="master-maxims">
+  <div class="sec-tag summary">09 / 核心鐵律 · Master Maxims</div>
+  <h2 class="section-title">過參數化收斂保證的四大核心鐵律
+    <span class="en">Four Master Maxims of Overparameterized Convergence</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>鐵律一：無假極小（No Spurious Minima）</h3>
+      <div class="sub-en">All Local Minima Are Global</div>
+      <p>只要寬度跨越臨界閾值（如淺層 $k \ge 2d$），高維度便徹底抹平了次優孤立陷阱，所有局部極小皆達全域最優水準。</p>
+    </div>
+    <div class="card positive">
+      <h3>鐵律二：鞍點必具負曲率（Negative Curvature）</h3>
+      <div class="sub-en">Strict Saddle Property</div>
+      <p>所有非最優的駐點（Critical Points）皆非平坦死角，Hessian 矩陣必具嚴格負曲率逃逸方向，一階擾動法可順利滑脫。</p>
+    </div>
+    <div class="card positive">
+      <h3>鐵律三：深層多項式時間收斂（Polynomial Steps）</h3>
+      <div class="sub-en">Polynomial Time Bound</div>
+      <p>在樣本可分離（$\delta > 0$）與充分過參數化下，深層 ReLU 網路的 GD 與 SGD 步數僅為 $\mathrm{poly}(n,l)\log(\epsilon^{-1})/\delta^2$。</p>
+    </div>
+    <div class="card positive">
+      <h3>鐵律四：訓練成功不等於泛化完成</h3>
+      <div class="sub-en">Optimization $\ne$ Generalization</div>
+      <p>收斂定理保證的是訓練損失歸零（$\mathcal{L}_{\text{train}} \to 0$）；要獲得優異的測試泛化，仍需依賴正則化、平坦度與資料歸納偏置。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 11. 互動實驗室 -->
+<section class="section" id="lab">
+  <div class="sec-tag activate">10 / 互動實驗室 · Interactive Lab</div>
+  <h2 class="section-title">過參數化與收斂模擬器：觀察寬度 $m$ 對損失曲面與 GD 軌跡之影響
+    <span class="en">Overparameterization &amp; Convergence Simulator: Visualizing Surface Smoothening and GD Dynamics</span>
+  </h2>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <div class="lab-ctrl">
+        <label>網路寬度 $m$：</label>
+        <input type="range" id="sim-m" min="2" max="64" step="2" value="4">
+        <span class="val" id="sim-m-v">4</span>
+      </div>
+      <div class="lab-ctrl">
+        <label>樣本分離度 $\delta$：</label>
+        <input type="range" id="sim-delta" min="0.10" max="1.00" step="0.05" value="0.40">
+        <span class="val" id="sim-delta-v">0.40</span>
+      </div>
+      <div class="lab-ctrl">
+        <label>學習率 $\eta$：</label>
+        <input type="range" id="sim-eta" min="0.01" max="0.30" step="0.01" value="0.08">
+        <span class="val" id="sim-eta-v">0.08</span>
+      </div>
+      <button class="lab-btn secondary" id="sim-btn-narrow">窄網路 $m=2$ (卡假坑)</button>
+      <button class="lab-btn" id="sim-btn-overparam">過參數化 $m=32$ (等高平滑)</button>
+      <button class="lab-btn accent" id="sim-btn-step">單步 GD (Step)</button>
+      <button class="lab-btn success" id="sim-btn-autorun">連續執行 (Auto)</button>
+      <button class="lab-btn secondary" id="sim-btn-reset">重設 (Reset)</button>
+    </div>
+
+    <div class="lab-display">
+      <div class="lab-canvas-container">
+        <canvas id="sim-cv" width="580" height="370"></canvas>
+      </div>
+      <div class="lab-readout" id="sim-ro">
+        <!-- Live status injected via JS -->
+      </div>
+    </div>
+
+    <p style="font-size: 14px; color: #475569; margin-top: 14px; line-height: 1.6;">
+      🧪 <strong>實驗探究指南：</strong><br/>
+      1. <strong>窄網路陷阱</strong>：點選「窄網路 $m=2$」，地景充斥高峭的假極小值（Spurious Minima）。點選單步或連續執行，觀察權重卡在 $\mathcal{L} \approx 1.8$ 的假坑中，無法達成零損失。<br/>
+      2. <strong>過參數化平滑效應</strong>：點選「過參數化 $m=32$」，假坑障礙完全消失，地景轉變為多個坐落於 $\mathcal{L}=0$ 水平線的等高全域盆地！GD 迅速滑落至 $\mathcal{L} \lt 10^{-4}$，完美驗證 Prop 4 與 Prop 5！
+    </p>
+  </div>
+</section>
+
+<!-- 12. 隨堂 Checkpoint -->
+<section class="section" id="quiz">
+  <div class="sec-tag activate">11 / 實戰檢驗 · Concept Checkpoint</div>
+  <h2 class="section-title">隨堂 Checkpoint：觀念即時反饋
+    <span class="en">Concept Checkpoint: Master-Level Assessment</span>
+  </h2>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-card" data-ans="B">
+    <h4>題目 1：Proposition 4 中「無 spurious local minima」的意思是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 沒有任何局部極小值</button>
+      <button data-opt="B">B. 所有局部極小值都是全域極小值</button>
+      <button data-opt="C">C. 只有鞍點</button>
+      <button data-opt="D">D. 損失恆為零</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 2：Proposition 4 關於鞍點的結論（Item 2）對一階最佳化意味著什麼？</h4>
+    <div class="options">
+      <button data-opt="A">A. 梯度法必卡在鞍點</button>
+      <button data-opt="B">B. 鞍點有嚴格負曲率方向，隨機初始化下 GD 通常可逃離</button>
+      <button data-opt="C">C. 必須用二階法</button>
+      <button data-opt="D">D. 鞍點即全域最優</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 3：Proposition 5 中，全批次 GD 達損失 $\lt \epsilon$ 所需迭代數（式 58）的量級是？</h4>
+    <div class="options">
+      <button data-opt="A">A. $O(1/\epsilon)$ 指數</button>
+      <button data-opt="B">B. $\Theta(\mathrm{poly}(n,l)\log(\epsilon^{-1})/\delta^{2})$</button>
+      <button data-opt="C">C. $O(n^2)$ 與寬度無關</button>
+      <button data-opt="D">D. 恆為 1 步</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 4：Fig. 7 想傳達的核心訊息是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 只有一個局部解</button>
+      <button data-opt="B">B. 幾乎所有局部解都夠好、等同全域解</button>
+      <button data-opt="C">C. 最佳化一定失敗</button>
+      <button data-opt="D">D. 必須用 SAM</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+</section>
+
+<!-- 總結 -->
+<section class="section" id="summary">
+  <div class="summary-box">
+    <h4>全單元總結：過參數化收斂理論的核心精髓</h4>
+    <p>
+      1. <strong>淺層 Prop 4：</strong>在二次啟用與寬度 $k \ge 2d$ 下，損失曲面無假極小值、鞍點具嚴格負曲率可逃逸、完美擬合零損失可達。<br/>
+      2. <strong>深層 Prop 5：</strong>充分過參數化（寬度 $m \ge \Omega(\text{poly})$）與樣本可分離（$\delta > 0$）使全批次 GD (式 58) 與 Mini-batch SGD (式 59) 能在多項式步數內以極高機率收斂至任意精度 $\epsilon$。<br/>
+      3. <strong>Fig. 7 幾何直覺：</strong>高維過參數化使所有局部極小值高度等高且等同全域解，消除了次優陷阱。<br/>
+      4. <strong>關鍵界線：</strong>理論解答了「非凸最佳化為何能成功收斂」，但零訓練損失不代表自動泛化良好。
+    </p>
+    <p class="bilingual-en" style="color: #cbd5e1;">
+      Propositions 4 and 5 rigorously dismantle the myth that non-convex deep learning is cursed by suboptimal traps. By guaranteeing polynomial-time convergence to zero empirical risk, overparameterization theory solidifies our understanding of optimization success, setting the stage for exploring generalization dynamics.
+    </p>
+  </div>
+</section>
+
+<script>
+// Quiz Interactive Logic with Dynamic MathJax Rendering
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('correct', 'wrong'));
+      const choice = btn.getAttribute('data-opt');
+      if (choice === ans) {
+        btn.classList.add('correct');
+        fb.className = 'feedback show ok';
+        fb.innerHTML = '<strong>✅ 答對了！</strong> ' + getExplanation(card, ans);
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'feedback show no';
+        fb.innerHTML = '<strong>❌ 答錯了！</strong> 請重新思考：' + getExplanation(card, ans);
+      }
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+function getExplanation(card, ans) {
+  const text = card.innerText;
+  if (text.includes('無 spurious') || text.includes('題目 1')) {
+    return '「無 spurious local minima」代表所有局部極小值皆達到全域最優解（All local minima are global minima），地景不存在次優假坑。';
+  } else if (text.includes('鞍點') || text.includes('題目 2')) {
+    return '鞍點處的 Hessian 矩陣存在嚴格負曲率方向（Strict Negative Curvature），隨機初始化的一階梯度下降法能迅速沿負特徵值方向滑脫。';
+  } else if (text.includes('式 58') || text.includes('題目 3')) {
+    return '式 (58) 指出全批次 GD 達到損失 $\\lt\\epsilon$ 的步數為 $\\Theta(\\mathrm{poly}(n,l)\\log(\\epsilon^{-1})/\\delta^{2})$，呈現多項式複雜度與對數精度依賴。';
+  } else if (text.includes('Fig. 7') || text.includes('題目 4')) {
+    return 'Fig. 7 的核心洞見為：在過參數化高維空間中，幾乎所有局部解都聚集在相同的全域能級上，等同於全域解。';
+  }
+  return '';
+}
+
+// Progress Bar
+window.addEventListener('scroll', () => {
+  const top = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  var pb = document.getElementById('progressTop');
+  if (pb && docH > 0) {
+    pb.style.width = (top / docH * 100) + '%';
+  }
+});
+
+// Interactive Lab: Overparameterization and Convergence Simulator
+(function() {
+  var cv = document.getElementById('sim-cv');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var ro = document.getElementById('sim-ro');
+
+  var mSlider = document.getElementById('sim-m');
+  var deltaSlider = document.getElementById('sim-delta');
+  var etaSlider = document.getElementById('sim-eta');
+
+  var mV = document.getElementById('sim-m-v');
+  var deltaV = document.getElementById('sim-delta-v');
+  var etaV = document.getElementById('sim-eta-v');
+
+  var btnNarrow = document.getElementById('sim-btn-narrow');
+  var btnOverparam = document.getElementById('sim-btn-overparam');
+  var btnStep = document.getElementById('sim-btn-step');
+  var btnAuto = document.getElementById('sim-btn-autorun');
+  var btnReset = document.getElementById('sim-btn-reset');
+
+  var currentW = -1.15;
+  var stepCount = 0;
+  var autoTimer = null;
+  var history = [];
+
+  function fmt(val, digits) {
+    return Number(val).toFixed(digits);
+  }
+
+  // Loss function parameterized by width m and separation delta
+  function calcLoss(w, m, delta) {
+    // Overparameterization factor: when m is small, spurious barrier is high
+    var barrier = Math.max(0, 1.0 - (m - 2) / 14.0);
+    // Separation effect: smaller delta narrows the true basins
+    var sepFactor = Math.max(0.2, delta);
+
+    // Global base loss: two equal basins at w = -1.6 and w = +1.6 with zero loss
+    var base = 0.12 * Math.pow(w * w - 2.56, 2);
+
+    // Spurious bumpy ripple for narrow networks
+    var spurious = barrier * (1.1 * Math.cos(3.6 * w + 0.6) + 1.15);
+
+    var loss = base / sepFactor + spurious;
+    return Math.max(0, loss);
+  }
+
+  // Numerical gradient of loss with respect to w
+  function calcGrad(w, m, delta) {
+    var eps = 1e-4;
+    var lPlus = calcLoss(w + eps, m, delta);
+    var lMinus = calcLoss(w - eps, m, delta);
+    return (lPlus - lMinus) / (2 * eps);
+  }
+
+  function toScreenX(w) {
+    // Map w in [-2.8, 2.8] to canvas width [45, 535]
+    return 45 + (w - (-2.8)) / (2.8 - (-2.8)) * (580 - 90);
+  }
+
+  function toScreenY(loss) {
+    // Map loss in [0, 4.0] to canvas height [320, 45]
+    var maxL = 3.6;
+    var clampedL = Math.max(0, Math.min(maxL, loss));
+    return 320 - (clampedL / maxL) * (320 - 45);
+  }
+
+  function draw() {
+    var m = parseInt(mSlider.value, 10);
+    var delta = parseFloat(deltaSlider.value);
+    var eta = parseFloat(etaSlider.value);
+
+    ctx.clearRect(0, 0, cv.width, cv.height);
+
+    // Background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+
+    // Coordinate grid lines
+    ctx.strokeStyle = '#f1f5f9';
+    ctx.lineWidth = 1;
+    for (var l = 0.5; l <= 3.5; l += 0.5) {
+      var yG = toScreenY(l);
+      ctx.beginPath();
+      ctx.moveTo(40, yG);
+      ctx.lineTo(540, yG);
+      ctx.stroke();
+    }
+
+    // Zero Loss Baseline (Horizontal Blue dashed line)
+    var yZero = toScreenY(0);
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(40, yZero);
+    ctx.lineTo(540, yZero);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = '#2563eb';
+    ctx.fillText('全域零損失線 L(w) = 0', 415, yZero - 6);
+
+    // Axes
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(40, yZero);
+    ctx.lineTo(540, yZero);
+    ctx.moveTo(toScreenX(0), 40);
+    ctx.lineTo(toScreenX(0), 330);
+    ctx.stroke();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '11px sans-serif';
+    ctx.fillText('w = 0', toScreenX(0) - 14, 342);
+    ctx.fillText('w = -1.6 (全域)', toScreenX(-1.6) - 30, 342);
+    ctx.fillText('w = +1.6 (全域)', toScreenX(1.6) - 30, 342);
+
+    // Plot Loss Landscape Curve
+    ctx.strokeStyle = m >= 16 ? '#2563eb' : '#ea580c';
+    ctx.lineWidth = 2.8;
+    ctx.beginPath();
+    for (var px = 0; px <= 500; px += 2) {
+      var wVal = -2.8 + (px / 500) * 5.6;
+      var lVal = calcLoss(wVal, m, delta);
+      var sx = toScreenX(wVal);
+      var sy = toScreenY(lVal);
+      if (px === 0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+
+    // Plot History Trail
+    if (history.length > 1) {
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.45)';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      for (var i = 0; i < history.length; i++) {
+        var hx = toScreenX(history[i].w);
+        var hy = toScreenY(history[i].loss);
+        if (i === 0) ctx.moveTo(hx, hy);
+        else ctx.lineTo(hx, hy);
+      }
+      ctx.stroke();
+
+      // Draw faint dots along path
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.6)';
+      for (var j = 0; j < history.length; j += 2) {
+        ctx.beginPath();
+        ctx.arc(toScreenX(history[j].w), toScreenY(history[j].loss), 2.5, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    }
+
+    // Current position
+    var curLoss = calcLoss(currentW, m, delta);
+    var curGrad = calcGrad(currentW, m, delta);
+    var curX = toScreenX(currentW);
+    var curY = toScreenY(curLoss);
+
+    // Gradient Descent Arrow (Direction of -eta * grad)
+    var arrowLen = Math.max(-50, Math.min(50, -curGrad * 28));
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(curX, curY);
+    ctx.lineTo(curX + arrowLen, curY);
+    ctx.stroke();
+
+    // Arrowhead
+    if (Math.abs(arrowLen) > 4) {
+      var dir = arrowLen > 0 ? 1 : -1;
+      ctx.fillStyle = '#10b981';
+      ctx.beginPath();
+      ctx.moveTo(curX + arrowLen, curY);
+      ctx.lineTo(curX + arrowLen - dir * 6, curY - 4);
+      ctx.lineTo(curX + arrowLen - dir * 6, curY + 4);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Current Point Ball
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.arc(curX, curY, 6, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Ball Label
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText('w (' + fmt(currentW, 2) + ')', curX - 18, curY - 12);
+
+    // Status / Mode Legend inside Canvas
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.90)';
+    ctx.fillRect(10, 10, 240, 52);
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(10, 10, 240, 52);
+
+    ctx.font = '11px sans-serif';
+    if (m >= 16) {
+      ctx.fillStyle = '#1e40af';
+      ctx.fillText('● 過參數化地景 (m=' + m + ')：等高全域盆地', 16, 28);
+      ctx.fillStyle = '#15803d';
+      ctx.fillText('✔ 假局部極小已消除，可順利收斂至 L=0', 16, 46);
+    } else {
+      ctx.fillStyle = '#c2410c';
+      ctx.fillText('● 欠參數/窄網路 (m=' + m + ')：存在高假坑障礙', 16, 28);
+      ctx.fillStyle = '#b91c1c';
+      ctx.fillText('⚠️ 梯度受阻，隨機初始易陷於次優解', 16, 46);
+    }
+  }
+
+  function report() {
+    var m = parseInt(mSlider.value, 10);
+    var delta = parseFloat(deltaSlider.value);
+    var eta = parseFloat(etaSlider.value);
+
+    var curLoss = calcLoss(currentW, m, delta);
+    var curGrad = calcGrad(currentW, m, delta);
+
+    // Theoretical Step Bound Estimate (Eq. 58)
+    var epsGoal = 1e-3;
+    var polyNL = 12; // illustrative polynomial scale
+    var theoSteps = Math.round((polyNL * Math.log(1 / epsGoal)) / (delta * delta));
+
+    var statusBadge = '';
+    if (curLoss < 0.01) {
+      statusBadge = '<div class="status-badge converged">🏆 成功收斂至全域極小！L(w) &lt; 0.01（驗證 Prop 4 &amp; 5 零損失可達）</div>';
+    } else if (Math.abs(curGrad) < 0.08 && curLoss > 0.4) {
+      statusBadge = '<div class="status-badge stuck">❌ 卡在 Spurious Local Minimum (假坑)！∇L ≈ 0 但損失極高，一階法受困</div>';
+    } else if (Math.abs(currentW) < 0.15 && Math.abs(curGrad) < 0.15) {
+      statusBadge = '<div class="status-badge saddle">⚡ 鞍點負曲率區域（∇²L &lt; 0）：加入微小擾動即能滑脫！</div>';
+    } else {
+      statusBadge = '<div class="status-badge running">🏃 梯度下降最佳化進行中...</div>';
+    }
+
+    ro.innerHTML =
+      '<strong>當前參數位置 w：</strong> ' + fmt(currentW, 3) + '<br/>' +
+      '<strong>當前訓練損失 L(w)：</strong> <span style="color:' + (curLoss < 0.05 ? '#15803d' : '#b91c1c') + ';font-weight:bold;">' + fmt(curLoss, 4) + '</span><br/>' +
+      '<strong>當前梯度 ∇L(w)：</strong> ' + fmt(curGrad, 3) + '<br/>' +
+      '<strong>網路寬度 m：</strong> ' + m + ' (' + (m >= 16 ? '過參數化區間' : '低維欠參數區間') + ')<br/>' +
+      '<strong>樣本分離度 δ：</strong> ' + fmt(delta, 2) + '<br/>' +
+      '<strong>學習率 η：</strong> ' + fmt(eta, 2) + '<br/>' +
+      '<strong>理論 GD 步數界 (式 58 估計)：</strong> T ~ ' + theoSteps + ' 步<br/>' +
+      '<strong>累計迭代步數：</strong> ' + stepCount + '<br/>' +
+      '<strong>收斂狀態診斷：</strong><br/>' + statusBadge;
+  }
+
+  function sync() {
+    var m = parseInt(mSlider.value, 10);
+    var delta = parseFloat(deltaSlider.value);
+    var eta = parseFloat(etaSlider.value);
+
+    mV.textContent = m;
+    deltaV.textContent = fmt(delta, 2);
+    etaV.textContent = fmt(eta, 2);
+
+    draw();
+    report();
+  }
+
+  function doStep() {
+    var m = parseInt(mSlider.value, 10);
+    var delta = parseFloat(deltaSlider.value);
+    var eta = parseFloat(etaSlider.value);
+
+    var curLoss = calcLoss(currentW, m, delta);
+    var grad = calcGrad(currentW, m, delta);
+
+    history.push({ w: currentW, loss: curLoss });
+    if (history.length > 50) history.shift();
+
+    // Saddle escape noise perturbation if gradient is tiny near saddle
+    if (Math.abs(currentW) < 0.2 && Math.abs(grad) < 0.05) {
+      grad += (Math.random() - 0.5) * 0.1;
+    }
+
+    currentW -= eta * grad;
+    // Boundary clamp
+    currentW = Math.max(-2.7, Math.min(2.7, currentW));
+    stepCount++;
+
+    sync();
+
+    // Stop auto run if converged
+    var newLoss = calcLoss(currentW, m, delta);
+    if (newLoss < 0.005 && autoTimer) {
+      clearInterval(autoTimer);
+      autoTimer = null;
+      btnAuto.textContent = '連續執行 (Auto)';
+      btnAuto.className = 'lab-btn success';
+    }
+  }
+
+  mSlider.addEventListener('input', function() {
+    history = [];
+    sync();
+  });
+  deltaSlider.addEventListener('input', function() {
+    history = [];
+    sync();
+  });
+  etaSlider.addEventListener('input', sync);
+
+  btnNarrow.addEventListener('click', function() {
+    mSlider.value = 2;
+    deltaSlider.value = 0.40;
+    etaSlider.value = 0.08;
+    currentW = -1.15;
+    stepCount = 0;
+    history = [];
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; btnAuto.textContent = '連續執行 (Auto)'; }
+    sync();
+  });
+
+  btnOverparam.addEventListener('click', function() {
+    mSlider.value = 32;
+    deltaSlider.value = 0.40;
+    etaSlider.value = 0.08;
+    currentW = -1.15;
+    stepCount = 0;
+    history = [];
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; btnAuto.textContent = '連續執行 (Auto)'; }
+    sync();
+  });
+
+  btnStep.addEventListener('click', doStep);
+
+  btnAuto.addEventListener('click', function() {
+    if (autoTimer) {
+      clearInterval(autoTimer);
+      autoTimer = null;
+      btnAuto.textContent = '連續執行 (Auto)';
+      btnAuto.className = 'lab-btn success';
+    } else {
+      btnAuto.textContent = '暫停 (Pause)';
+      btnAuto.className = 'lab-btn accent';
+      autoTimer = setInterval(doStep, 80);
+    }
+  });
+
+  btnReset.addEventListener('click', function() {
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; btnAuto.textContent = '連續執行 (Auto)'; }
+    mSlider.value = 4;
+    deltaSlider.value = 0.40;
+    etaSlider.value = 0.08;
+    currentW = -1.15;
+    stepCount = 0;
+    history = [];
+    sync();
+  });
+
+  // Canvas click to pick parameter w
+  cv.addEventListener('click', function(e) {
+    var rect = cv.getBoundingClientRect();
+    var clickX = e.clientX - rect.left;
+    var wPicked = -2.8 + ((clickX - 45) / (580 - 90)) * 5.6;
+    currentW = Math.max(-2.7, Math.min(2.7, wPicked));
+    history = [];
+    sync();
+  });
+
+  sync();
+})();
+</script>
+</body>
+</html>

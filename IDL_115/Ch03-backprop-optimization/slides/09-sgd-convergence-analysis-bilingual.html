@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch03 · KP09 SGD 收斂分析：全梯度 vs 隨機梯度 — SGD Convergence Analysis</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(108,92,231,.24), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(9,132,227,.18), transparent 30%),
+              linear-gradient(135deg, #0a0e27 0%, #131b3e 50%, #1e1338 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(10, 14, 39, .25);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(36px, 4.4vw, 64px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(19px, 2.1vw, 30px);
+  color: #a5b4fc;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #38bdf8;
+  border-radius: 999px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 900px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #38bdf8, #e84393);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #7dd3fc !important; fill: #7dd3fc !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #cbd5e1; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  display: block;
+}
+.half-layout .visual > svg {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  display: block;
+}
+.half-layout .visual .svg-caption {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+  font-size: var(--t5);
+  color: var(--text-low);
+  letter-spacing: .05em;
+}
+@media (max-width: 1100px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+
+/* 高橋流置中修復：卡片居中於內容閱讀區 (831px 中心軸，左右邊距各 231px) */
+.section .takahashi {
+  text-align: center;
+  padding: 80px 36px;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+}
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin: 28px 0;
+}
+.lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  color: var(--ink);
+}
+.lab-ctrl select, .lab-ctrl input[type="range"] {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  font-size: 14px;
+}
+.lab-ctrl input[type="range"] {
+  width: 110px;
+}
+.lab-ctrl span.val {
+  min-width: 44px;
+  font-family: var(--mono);
+  color: var(--primary);
+  font-weight: bold;
+}
+.lab-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all .2s;
+}
+.lab-btn:hover {
+  background: hsl(248, 58%, 38%);
+  transform: translateY(-1px);
+}
+.lab-btn.secondary {
+  background: #64748b;
+}
+.lab-btn.secondary:hover {
+  background: #475569;
+}
+.lab-btn.accent {
+  background: #0ea5e9;
+}
+.lab-btn.accent:hover {
+  background: #0284c7;
+}
+.lab-display {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .lab-display { grid-template-columns: 1fr; }
+}
+.lab-canvas-container {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.lab-readout {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+.lab-readout .status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.status-badge.running { background: #e0f2fe; color: #0369a1; }
+.status-badge.trapped { background: #fee2e2; color: #b91c1c; }
+.status-badge.compressing { background: #fef3c7; color: #b45309; }
+.status-badge.converged { background: #dcfce7; color: #15803d; }
+
+/* 對比表格樣式 */
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+}
+.compare-table th, .compare-table td {
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: 16px;
+}
+.compare-table th {
+  background: #f1f5f9;
+  font-weight: 700;
+  color: var(--ink);
+}
+.compare-table tr:hover td {
+  background: #f8fafc;
+}
+.compare-table tr:last-child td {
+  border-bottom: none;
+}
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP09 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">核心提問 · Core Question</a></li>
+    <li><a href="#why-convergence-analysis">核心動機 · Why Analyze</a></li>
+    <li><a href="#proposition2-full-gradient">命題 2 全梯度 · Proposition 2</a></li>
+    <li><a href="#proposition3-sgd-limits">命題 3 隨機上界 · Proposition 3</a></li>
+    <li><a href="#stagnation-phenomenon">停滯現象解析 · Stagnation</a></li>
+    <li><a href="#stagnation-visual">停滯帶圖解 · Visual Band</a></li>
+    <li><a href="#flattening-the-band">壓扁帶子 · Step Decay</a></li>
+    <li><a href="#cost-accuracy-tradeoff">精度 vs 算力 · Cost Tradeoff</a></li>
+    <li><a href="#stopping-and-monitoring">收斂檢查困境 · Monitoring</a></li>
+    <li><a href="#comparison">全方位矩陣 · Comparison</a></li>
+    <li><a href="#master-maxims">大師四大鐵律 · Master Laws</a></li>
+    <li><a href="#lab">互動實驗室 · Interactive Lab</a></li>
+    <li><a href="#quiz">隨堂評測 · Checkpoint</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">IDL 115 · CHAPTER 3 · KP-09 · TEACHING DECK</span>
+    <h1>SGD 收斂分析：全梯度 vs 隨機梯度
+      <span class="hero-title-en">SGD Convergence Analysis: Full Gradient Monotonic $\mathcal{O}(1/t)$ vs Fixed SGD Stagnation Band $\mathcal{O}(\eta)$</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      全梯度下降以 $\mathcal{O}(1/t)$ 漸進到達精確最小值，固定步長 SGD 卻在最優點附近一個 $\mathcal{O}(\eta)$ 鄰域內永遠停滯漫步。透視命題 2 與命題 3、壓扁噪聲帶的遞減步長（$1/t$ 與 $1/\sqrt{t}$），以及深度學習欣然接受殘差的精度 vs 算力大取捨。
+    </p>
+    <p class="bilingual-en" style="color: #cbd5e1; max-width: 860px; margin: 10px auto 0;">
+      Full gradient descent monotonically approaches exact zero error via an $\mathcal{O}(1/t)$ upper bound, whereas fixed-step SGD permanently stagnates within an $\mathcal{O}(\eta)$ neighborhood of the optimum. Exploring Proposition 2 &amp; 3, band-flattening step decay schedules ($1/t$, $1/\sqrt{t}$), and why modern deep learning gladly trades asymptotic perfection for computational throughput.
+    </p>
+  </div>
+</section>
+
+<!-- 2. 核心大問句 -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="sec-tag inquiry">01 / 核心提問 · Core Question</div>
+    <div class="quote">
+      「SGD 每次都在前進，為何永遠到不了最優解？」
+      <small>全梯度下降保證 $\mathcal{O}(1/t) \to 0$ 精確登頂，固定步長 SGD 卻受困於 $\mathcal{O}(\eta)$ 停滯帶無法自拔——深度學習為何欣然擁抱這份「不精確」？<br/>
+        <span class="bilingual-en-inline">SGD keeps taking active steps, yet never reaches the exact optimum—why does fixed-rate SGD stagnate in an O(η) band, and why does deep learning willingly embrace it?</span>
+      </small>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 為什麼要分析收斂率 -->
+<section class="section" id="why-convergence-analysis">
+  <div class="sec-tag sustain">02 / 核心動機 · Why Convergence Analysis</div>
+  <h2 class="section-title">為什麼要分析收斂率：精度 vs 算力的底層邏輯
+    <span class="en">Why Convergence Analysis: The Foundational Tradeoff Between Numerical Accuracy and Computational Budget</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>實務狂奔之後的理性拷問：它們到底收斂多快？</h4>
+    <p>前面我們介紹了 SGD 與 Mini-batch SGD 在實務中的巨大工程威力，但一個本質上的理論問題尚未回答：<strong>它們到底能收斂得多快？跟傳統的全梯度下降（Full Gradient Descent）在本質上有何不同？</strong></p>
+    <p>本節藉由統計最佳化領域的<strong>命題 2（全梯度收斂性）</strong>與<strong>命題 3（隨機梯度收斂性）</strong>，將兩者的誤差上界並排比較，嚴格揭示固定學習率下 SGD 的「<strong>停滯現象（Stagnation Phenomenon）</strong>」，並為深度學習的學習率排程與工程折衷提供堅實的理論基石。</p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>1. 迭代次數的可預測性</h3>
+      <div class="sub-en">Predictability of Iterations</div>
+      <p>若要讓損失差距 $f(\boldsymbol{w}) - f^* \le \epsilon$，全梯度下降需要多少步？SGD 又需要多少步？收斂率直接決定了訓練時間的理論下界。</p>
+    </div>
+    <div class="card positive">
+      <h3>2. 漸進極限的本質分歧</h3>
+      <div class="sub-en">Divergence in Asymptotic Limits</div>
+      <p>當迭代次數 $t \to \infty$ 時，全梯度下降能到達精確的最優解 $f^*$；而固定步長的 SGD 卻存在一個「無法抹除」的長存誤差下限。</p>
+    </div>
+    <div class="card positive">
+      <h3>3. 隨機噪聲的雙刃代價</h3>
+      <div class="sub-en">The Stochastic Noise Cost</div>
+      <p>單樣本或小批次梯度雖然期望值無偏，但其梯度的非零方差（Variance）會像永不熄滅的隨機擾動，持續在極值點附近引發抖動。</p>
+    </div>
+    <div class="card positive">
+      <h3>4. 算力與精度的世紀天平</h3>
+      <div class="sub-en">Accuracy vs FLOPs Balance</div>
+      <p>在海量資料時代，深度學習為何寧願忍受 SGD 的理論停滯殘差，也不願採用精確無比的全梯度下降？答案全在每次迭代的計算代價之中。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 4. 命題 2：全梯度下降 -->
+<section class="section" id="proposition2-full-gradient">
+  <div class="sec-tag sustain">03 / 經典基準 · Proposition 2 Full GD</div>
+  <h2 class="section-title">命題 2：全梯度下降 $\mathcal{O}(1/t)$ 漸進到達 0 之確切保證
+    <span class="en">Proposition 2: Exact Convergence of Full Gradient Descent with Asymptotic Zero Residual</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>命題 2：光滑凸函式下全梯度下降的收斂上界（式 (31)）</h4>
+    <p>考慮凸且可微的目標函式 $f(\cdot)$，假設其梯度滿足 $L$-Lipschitz 連續（即 $L$-smooth：$\|\nabla f(\boldsymbol{x}) - \nabla f(\boldsymbol{y})\|_2 \leq L \|\boldsymbol{x} - \boldsymbol{y}\|_2$）。設 $f^*$ 為全域最小值、$\boldsymbol{w}^*$ 為對應的最優參數點。從初始點 $\boldsymbol{w}^{(0)}$ 出發，採用適當步長 $\eta \leq 1/L$ 經 $t$ 次全梯度迭代後（式 (31)）：</p>
+    <p>$$ f\left(\boldsymbol{w}^{(t+1)}\right)-f^{*} \leq \frac{2 L\left\|\boldsymbol{w}^{(0)}-\boldsymbol{w}^{*}\right\|_{2}^{2}}{t+1}=\mathcal{O}\left(\frac{1}{t}\right) \tag{31} $$</p>
+    <p><strong>核心重點：</strong>當迭代次數 $t \rightarrow \infty$ 時，分母 $t+1 \to \infty$，使得誤差上界嚴格趨近於 0——<strong>全梯度下降能精確收斂到最優解！</strong></p>
+  </div>
+
+  <p>
+    式 (31) 確立了傳統凸最佳化的黃金準則。全梯度下降在每一步都計算了全體資料集 $n$ 個樣本的合力方向，方向完全確定且無任何隨機性。伴隨著步數累積，損失差距以 $\mathcal{O}(1/t)$ 的速率單調遞減，直到精確抵達理論零誤差。
+    <span class="bilingual-en">Under L-smoothness and convexity, full gradient descent evaluates the true gradient across all n training samples. This deterministic direction guarantees monotonic decay with an O(1/t) bound that asymptotically vanishes to zero as t approaches infinity.</span>
+  </p>
+</section>
+
+<!-- 5. 命題 3：SGD 隨機梯度收斂率 -->
+<section class="section" id="proposition3-sgd-limits">
+  <div class="sec-tag sustain">04 / 隨機約束 · Proposition 3 SGD Bounds</div>
+  <h2 class="section-title">命題 3：SGD 隨機梯度的收斂率（取決於步長）
+    <span class="en">Proposition 3: Convergence Rate of Stochastic Gradient Descent Depends on Step-Size Schedule</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>命題 3：隨機梯度有界方差下的誤差上界分解</h4>
+    <p>設目標函式可拆解為 $n$ 筆樣本損失之和：$f(\boldsymbol{w})=\sum_{i=1}^{n} f_{i}(\boldsymbol{w})$ 且有下界。假設各樣本函式 $f_i$ 皆可微、梯度為 $L$-smooth，且對某常數 $\beta > 0$，隨機梯度的二階矩條件有界：</p>
+    <p>$$ \mathbb{E}\left[\left\|\nabla f_{i}\left(\boldsymbol{w}_{k}\right)\right\|_{2}^{2} \;\middle|\; \boldsymbol{w}_{k}\right] \leq \beta^{2} $$</p>
+    <p>SGD 的收斂行為完全取決於步長序列 $\eta^{(\tau)}$ 的選擇。若各 $f_i$ 額外滿足 $\mu$-強凸（$\mu$-strongly convex），在固定步長 $\eta^{(\tau)} = \eta$ 下，其收斂上界可表述為（式 (34) 與式 (36)）：</p>
+    <p>$$ \mathbb{E}\left[f\left(\boldsymbol{w}^{(t+1)}\right)-f^{*}\right] \leq \mathcal{O}\left(\frac{1}{t} + \eta\right) $$</p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>第一項：瞬態衰減項 $\mathcal{O}(1/t)$</h3>
+      <div class="sub-en">Transient Decaying Term</div>
+      <p>與全梯度下降相似，代表初始階段模型從遙遠的出發點向最優區域前進的速度。隨著 $t$ 增大，這部分誤差會逐漸消散。</p>
+    </div>
+    <div class="card warning">
+      <h3>第二項：長存常數項 $\mathcal{O}(\eta)$</h3>
+      <div class="sub-en">Persistent Constant Error Floor</div>
+      <p>關鍵的分歧點！此項與迭代次數 $t$ 完全無關，大小僅由學習率 $\eta$ 與梯度方差 $\beta^2$ 決定。只要步長固定，這筆誤差永遠不會消失！</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 停滯現象解析 -->
+<section class="section" id="stagnation-phenomenon">
+  <div class="sec-tag sustain">05 / 核心洞察 · The Stagnation Phenomenon</div>
+  <h2 class="section-title">固定步長下的停滯現象：極限 $t \to \infty$ 的 $\mathcal{O}(\eta)$ 震盪鄰域
+    <span class="en">The Stagnation Phenomenon: Asymptotic Limits under Fixed Step Sizes and the Persistent O(η) Neighborhood</span>
+  </h2>
+
+  <div class="highlight-box">
+    <h4>極限對比：精確歸零 vs 永遠停滯</h4>
+    <p>將 $t \to \infty$ 的極限同時施加於命題 2 與命題 3，便能清楚看見兩種最佳化正規化的分水嶺：</p>
+    <p style="font-size: 19px; line-height: 1.8; margin: 12px 0;">
+      <strong>固定步長 SGD 的漸進極限（式 (34) &amp; (36)）：</strong><br/>
+      $$ \lim _{t \rightarrow \infty} \mathbb{E}\left[f\left(\boldsymbol{w}^{(t+1)}\right)-f^{*}\right] \leq \lim _{t \rightarrow \infty} \mathcal{O}\left(\frac{1}{t}+\eta\right)=\mathcal{O}(\eta) $$
+      <strong>全梯度下降的漸進極限（式 (31)）：</strong><br/>
+      $$ \lim _{t \rightarrow \infty} f\left(\boldsymbol{w}^{(t+1)}\right)-f^{*} \leq \lim _{t \rightarrow \infty} \mathcal{O}\left(\frac{1}{t}\right)=0 $$
+    </p>
+    <p>也就是說：<strong>固定步長 SGD 永遠無法精確到達最優解！</strong> 它會在最優點附近一個大小為 $\mathcal{O}(\eta)$ 的鄰域內<strong>停滯（stagnate）</strong>並終身來回震盪。步長 $\eta$ 越大，停滯帶越厚；步長越小，停滯帶越薄，但前期收斂越慢。</p>
+  </div>
+
+  <p>
+    為什麼會發生停滯？因為每一步只抽樣一個（或一小批）資料，計算出的隨機梯度 $\nabla f_i(\boldsymbol{w})$ 雖然在期望值上等於真實梯度 $\nabla f(\boldsymbol{w})$，但當參數逼近最優點 $\boldsymbol{w}^*$ 時，真實梯度 $\|\nabla f(\boldsymbol{w})\| \to 0$，而單樣本梯度範數卻因為個體差異依然保持在 $\beta^2$ 水平。固定步長 $\eta$ 無法消除這份隨機噪聲，直接將其放大成參數空間中的布朗運動，形成永不消逝的停滯震盪帶。
+    <span class="bilingual-en">Why stagnation happens: Near the optimal point, the true gradient vanishes to zero, but the stochastic gradient retains non-zero variance beta squared. With a fixed step size eta, this persistent noise propels the parameter into a permanent random walk inside an O(eta) neighborhood.</span>
+  </p>
+</section>
+
+<!-- 7. 停滯帶圖解視覺化 (SVG) -->
+<section class="section" id="stagnation-visual">
+  <div class="sec-tag sustain">06 / 視覺透視 · Visualizing Stagnation Band</div>
+  <h2 class="section-title">停滯帶圖解：全梯度 vs 隨機梯度軌跡與極限對比
+    <span class="en">Visualizing the Stagnation Band: Full Gradient Monotonic Descent vs Fixed-Step SGD Trapping</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="-apple-system, BlinkMacSystemFont, Arial, sans-serif">
+        <defs>
+          <marker id="m-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#1e3a8a"/>
+          </marker>
+          <marker id="m-arr-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/>
+          </marker>
+        </defs>
+
+        <!-- Background -->
+        <rect x="0" y="0" width="720" height="360" fill="#ffffff" rx="10"/>
+
+        <!-- Main Title -->
+        <text x="360" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#1e3a8a">全梯度 vs 隨機梯度：固定步長停滯帶 O(η) 與漸進極限</text>
+
+        <!-- Axes -->
+        <!-- X Axis (Iteration t) -->
+        <line x1="75" y1="275" x2="685" y2="275" stroke="#1e3a8a" stroke-width="1.8" marker-end="url(#m-arr)"/>
+        <text x="680" y="298" font-size="12" font-weight="bold" fill="#1e3a8a" text-anchor="end">迭代次數 Iteration t</text>
+
+        <!-- Y Axis (Loss Gap) -->
+        <line x1="75" y1="275" x2="75" y2="45" stroke="#1e3a8a" stroke-width="1.8" marker-end="url(#m-arr)"/>
+        <text x="30" y="42" font-size="12" font-weight="bold" fill="#1e3a8a">誤差差距 Loss-Gap f(w) − f*</text>
+
+        <!-- Green Reference Line: y = 0 exact minimum -->
+        <line x1="75" y1="275" x2="675" y2="275" stroke="#16a34a" stroke-width="2.5" stroke-dasharray="6 4"/>
+        <text x="85" y="267" font-size="11" font-weight="bold" fill="#16a34a">y = 0 精確最小 (Exact Minimum f*)</text>
+
+        <!-- Red Stagnation Band: Height eta, from y=215 to y=275 -->
+        <rect x="75" y="215" width="600" height="60" fill="#fee2e2" fill-opacity="0.45"/>
+        <line x1="75" y1="215" x2="675" y2="215" stroke="#dc2626" stroke-width="1.8" stroke-dasharray="5 3"/>
+
+        <!-- Height eta indicator bracket on the right -->
+        <line x1="650" y1="215" x2="650" y2="275" stroke="#dc2626" stroke-width="1.6"/>
+        <line x1="644" y1="215" x2="656" y2="215" stroke="#dc2626" stroke-width="1.6"/>
+        <line x1="644" y1="275" x2="656" y2="275" stroke="#dc2626" stroke-width="1.6"/>
+        <text x="640" y="246" font-size="12" font-weight="bold" fill="#dc2626" text-anchor="end">停滯帶 O(η)</text>
+        <text x="640" y="262" font-size="9.5" fill="#dc2626" text-anchor="end">(厚度取決於步長 η)</text>
+
+        <!-- Blue Monotonic Smooth Curve: Full GD (Proposition 2) -->
+        <path d="M 85 75 C 135 145, 185 220, 275 248 C 375 269, 505 274.5, 670 275" fill="none" stroke="#2563eb" stroke-width="3.2"/>
+        
+        <!-- Full GD Callout Box -->
+        <rect x="375" y="195" width="160" height="42" rx="6" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.2"/>
+        <text x="385" y="213" font-size="10.5" font-weight="bold" fill="#1e3a8a">全梯度 GD: 誤差 O(1/t)</text>
+        <text x="385" y="228" font-size="9.5" fill="#2563eb">t → ∞ 精確收斂至 0</text>
+        <line x1="455" y1="237" x2="475" y2="268" stroke="#3b82f6" stroke-width="1.2" stroke-dasharray="2 2"/>
+
+        <!-- Red Jagged Trajectory: Fixed-Step SGD (Proposition 3) -->
+        <path d="M 85 75 
+                 L 100 95 L 112 82 L 128 125 L 142 108 L 158 152 L 172 138 
+                 L 190 182 L 205 168 L 225 205 L 240 192 L 258 226 
+                 L 275 242 L 292 222 L 310 252 L 328 230 L 345 260 L 365 225 
+                 L 385 255 L 405 232 L 425 265 L 445 228 L 465 258 L 485 235 
+                 L 505 268 L 525 230 L 545 262 L 565 226 L 585 254 L 605 235 
+                 L 625 266 L 645 238 L 665 258 L 675 245" 
+              fill="none" stroke="#dc2626" stroke-width="2"/>
+
+        <!-- Turning point indicator: Once inside the band, cannot escape -->
+        <circle cx="258" cy="226" r="5.5" fill="#dc2626" stroke="#ffffff" stroke-width="2"/>
+        
+        <!-- Callout Box for Stagnation Trap -->
+        <rect x="210" y="125" width="168" height="46" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.2"/>
+        <text x="220" y="144" font-size="11" font-weight="bold" fill="#b91c1c">一進帶子就出不去！</text>
+        <text x="220" y="161" font-size="9.5" fill="#dc2626">殘差下限 = O(η) 永無止境震盪</text>
+        <line x1="285" y1="171" x2="262" y2="220" stroke="#dc2626" stroke-width="1.4" stroke-dasharray="3 3"/>
+
+        <!-- Bottom Banner -->
+        <rect x="20" y="318" width="680" height="32" rx="6" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.2"/>
+        <text x="360" y="339" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#1e3a8a">
+          💡 關鍵破局：遞減步長（η_t = 1/t 或 1/√t）會隨迭代將帶子「壓扁」，長期誤差才能漸進趨近 0！
+        </text>
+      </svg>
+      <span class="svg-caption">圖 3.9：全梯度單調收斂 vs 固定步長 SGD 停滯帶 O(η) 幾何軌跡對比</span>
+    </div>
+
+    <div>
+      <h3 style="margin-top:0;">反直覺因果鏈：為什麼看似一直在動，卻到不了最優？</h3>
+      <p>
+        直覺上，只要最佳化器持續沿著負梯度方向邁步，且步長固定不變，總該能摸到最優谷底。然而，<strong>隨機性徹底顛覆了這個直覺</strong>：
+      </p>
+      <ul style="margin: 8px 0 8px 24px; line-height: 1.8;">
+        <li><strong>每步抽樣的侷限：</strong>每次僅計算一個小批次，隨機梯度包含非零噪聲項 $\boldsymbol{\xi}_t$。</li>
+        <li><strong>噪聲無法平均：</strong>固定步長 $\eta$ 使隨機跳躍步幅維持在 $\mathcal{O}(\eta)$，即便已經身處谷底，也會被隨機噪聲一腳踹出！</li>
+        <li><strong>厚度由步長決定：</strong>停滯帶厚度完全正比於 $\eta$。步長越大，在帶子內震盪的幅度越劇烈。</li>
+        <li><strong>破局唯一解：</strong>若想讓極限誤差真正抵達 0，必須在訓練後期將步長主動衰減，把帶子「壓扁」！</li>
+      </ul>
+      <p class="bilingual-en">
+        Stochastic noise prevents the parameter from resting at the minimum. Monotonic full GD gently descends to zero along O(1/t), while fixed-step SGD plunges rapidly into the O(eta) band and remains trapped indefinitely.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- 8. 壓扁帶子：遞減步長 -->
+<section class="section" id="flattening-the-band">
+  <div class="sec-tag sustain">07 / 破局之道 · Flattening the Band</div>
+  <h2 class="section-title">壓扁帶子：遞減步長 $\eta_t = 1/t$ 或 $1/\sqrt{t}$ 如何壓縮噪聲帶換取收斂
+    <span class="en">Flattening the Band: How Diminishing Step Sizes Compress Stochastic Noise for True Convergence</span>
+  </h2>
+
+  <div class="highlight-box">
+    <h4>將停滯帶壓扁為「收縮漏斗」的數學機制</h4>
+    <p>既然停滯帶的厚度是 $\mathcal{O}(\eta)$，那麼讓長期殘差趨近於 0 的直接思路，就是<strong>讓步長隨迭代次數 $t$ 動態衰減</strong>！經典文獻給出了兩組標準的衰減步長排程策略：</p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 14px;">
+      <div style="background:#ffffff; padding:16px; border-radius:8px; border:1px solid #bfdbfe;">
+        <h4 style="color:#1e40af; margin-bottom:6px;">策略 A：$\eta^{(\tau)} = \frac{\eta_0}{\tau}$（強衰減）</h4>
+        <p style="font-size:15px; margin:0; line-height:1.6;">
+          在強凸（Strongly Convex）目標函式下，步長以 $1/\tau$ 遞減能讓 SGD 的 $1/t$ 項主導整體收斂，壓平噪聲帶，達成 $\mathcal{O}(1/t)$ 的漸進收斂率，長期誤差精確趨近 0。
+        </p>
+      </div>
+      <div style="background:#ffffff; padding:16px; border-radius:8px; border:1px solid #bfdbfe;">
+        <h4 style="color:#1e40af; margin-bottom:6px;">策略 B：$\eta^{(\tau)} = \frac{\eta_0}{\sqrt{\tau}}$（平緩衰減）</h4>
+        <p style="font-size:15px; margin:0; line-height:1.6;">
+          在一般凸（Convex）且 Lipschitz 連續目標函式下，$1/\sqrt{\tau}$ 步長是最穩健的理論選擇，保證收斂率為 $\mathcal{O}(1/\sqrt{t})$，既不會過早凍結參數，又能將殘差帶壓縮至零。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="formula-box" style="margin-top:24px;">
+    <h4>Robbins-Monro 隨機逼近兩大黃金條件（1951）</h4>
+    <p>古典隨機逼近理論證明，遞減步長必須同時滿足「<strong>發散條件</strong>」與「<strong>平方收斂條件</strong>」：</p>
+    <p>$$ \sum_{\tau=1}^{\infty} \eta^{(\tau)} = \infty \quad \text{且} \quad \sum_{\tau=1}^{\infty} \left(\eta^{(\tau)}\right)^2 < \infty $$</p>
+    <p>
+      <strong>條件 1（$\sum \eta = \infty$）：</strong>步長總和必須發散，確保模型有足夠的「續航力」從任何遙遠的初始點出發走完全程抵達最優點。<br/>
+      <strong>條件 2（$\sum \eta^2 < \infty$）：</strong>步長平方和必須收斂，確保累積的隨機噪聲方差最終能被徹底消解，不會在無窮時間裡引發能量爆炸。
+    </p>
+  </div>
+</section>
+
+<!-- 9. 精度 vs 計算成本天平 -->
+<section class="section" id="cost-accuracy-tradeoff">
+  <div class="sec-tag sustain">08 / 工程權衡 · Cost vs Accuracy Tradeoff</div>
+  <h2 class="section-title">精度與計算成本天平：深度學習為何欣然接受 $\mathcal{O}(\eta)$
+    <span class="en">The Cost-Accuracy Tradeoff: Why Deep Learning Gladly Embraces the O(η) Optimization Residual</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>1. 每步計算量：$\mathcal{O}(n)$ vs $\mathcal{O}(B)$</h3>
+      <div class="sub-en">Per-Iteration Computational Asymmetry</div>
+      <p>全梯度每走一步需遍歷全集 $n$ 筆樣本，耗費 $\mathcal{O}(n \cdot d)$ 次浮點運算；當 $n=10^7$ 時，一步需數小時。而 SGD/Mini-batch 每步僅耗費 $\mathcal{O}(B \cdot d)$（$B=128$），在全梯度走 1 步的時間裡，SGD 已經更新了 10 萬步！</p>
+    </div>
+    <div class="card positive">
+      <h3>2. 泛化誤差 vs 最佳化誤差</h3>
+      <div class="sub-en">Generalization Bound Dominance</div>
+      <p>機器學習的目標是測試集泛化能力，而非訓練集數值精確度。統計學習理論指出，有限樣本的泛化誤差下限約為 $\mathcal{O}(1/\sqrt{n}) \approx 10^{-3}$，花費龐大算力把訓練損失從 $10^{-3}$ 最佳化到 $10^{-9}$ 完全是毫無意義的過擬合。</p>
+    </div>
+    <div class="card positive">
+      <h3>3. 隨機噪聲的隱式正則化</h3>
+      <div class="sub-en">Implicit Regularization of Noise</div>
+      <p>在非凸深度神經網路中，固定步長的 $\mathcal{O}(\eta)$ 抖動並非純粹的負面缺陷！它扮演了隨機退火（Simulated Annealing）角色，幫助參數跳出高泛化誤差的尖銳局部極小（Sharp Minima），墜入具備強泛化魯棒性的平坦谷底（Flat Minima）。</p>
+    </div>
+    <div class="card positive">
+      <h3>4. 兩階段工程實踐策略</h3>
+      <div class="sub-en">Two-Stage Practical Workflow</div>
+      <p>現代訓練（如 Cosine Decay、Warmup-Decay）採用混合智慧：前期用較大的固定步長 $\eta$ 快速下潛，享受高速逼近的好處；後期在收斂瓶頸處執行步長退火（LR Decay），將停滯帶順勢壓扁，達成高精度與高效率的完美統一。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 10. 收斂檢查困境與監控 -->
+<section class="section" id="stopping-and-monitoring">
+  <div class="sec-tag sustain">09 / 實務挑戰 · Convergence Diagnostics</div>
+  <h2 class="section-title">收斂檢查困境：單樣本梯度監控與實務策略
+    <span class="en">The Stopping Dilemma: Single-Sample Gradient Monitoring &amp; Practical Stopping Criteria</span>
+  </h2>
+
+  <div class="highlight-box">
+    <h4>SGD 收斂判定難題：全梯度哪裡找？</h4>
+    <p>在古典數值最佳化中，全梯度下降擁有非常優雅的停止條件：檢驗全梯度範數是否小於容許閾值：$\|\nabla f(\boldsymbol{w}^{(t)})\|_2 \le \epsilon$。一旦滿足，即可宣佈演算法精確收斂。然而在 SGD 中：</p>
+    <ul style="margin: 8px 0 8px 24px; line-height: 1.8;">
+      <li><strong>全梯度無法取得：</strong>如果每一步都要遍歷全部 $n$ 筆樣本計算 $\|\nabla f(\boldsymbol{w})\|$ 來檢查是否收斂，就徹底抵消了 SGD 單步輕量的核心優勢！</li>
+      <li><strong>單樣本梯度不可靠：</strong>單一樣本或批次的梯度 $\|\nabla f_i(\boldsymbol{w})\|$ 受隨機噪聲影響劇烈，即便模型早已身處最優點，單樣本梯度範數也不可能為零。</li>
+      <li><strong>實務替代策略：</strong>實務中改為監控<strong>驗證集損失（Validation Loss）平臺期</strong>、對梯度或權重計算<strong>指數移動平均（EMA）</strong>，或搭配學習率排程按固定 Epoch 拍板訓練。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 11. 全方位對比矩陣 -->
+<section class="section" id="comparison">
+  <div class="sec-tag sustain">10 / 全面對比 · Comparison Matrix</div>
+  <h2 class="section-title">全梯度 vs 固定 SGD vs 衰減 SGD 全方位對比矩陣
+    <span class="en">Comprehensive Comparison Matrix: Full GD vs Fixed-Step SGD vs Diminishing-Step SGD</span>
+  </h2>
+
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th style="width: 18%;">維度 / 特性</th>
+        <th style="width: 27%;">全梯度下降 (Full GD)</th>
+        <th style="width: 27%;">固定步長 SGD (Fixed η)</th>
+        <th style="width: 28%;">遞減步長 SGD (Decaying η)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>每步計算代價</strong></td>
+        <td>$\mathcal{O}(n \cdot d)$（極高，需掃描全資料集）</td>
+        <td>$\mathcal{O}(B \cdot d)$（極低，僅需單樣本/小批次）</td>
+        <td>$\mathcal{O}(B \cdot d)$（極低，計算量同固定 SGD）</td>
+      </tr>
+      <tr>
+        <td><strong>理論誤差上界</strong></td>
+        <td>$\mathcal{O}(1/t)$（式 (31)）</td>
+        <td>$\mathcal{O}(1/t + \eta)$（式 (34), (36)）</td>
+        <td>$\mathcal{O}(1/\sqrt{t})$ 或 $\mathcal{O}(1/t)$（Robbins-Monro）</td>
+      </tr>
+      <tr>
+        <td><strong>極限殘差 $t \to \infty$</strong></td>
+        <td>$\lim_{t\to\infty} \text{Error} = 0$（精確最優）</td>
+        <td>$\lim_{t\to\infty} \text{Error} = \mathcal{O}(\eta)$（停滯震盪）</td>
+        <td>$\lim_{t\to\infty} \text{Error} = 0$（壓扁帶子，漸進至 0）</td>
+      </tr>
+      <tr>
+        <td><strong>收斂軌跡型態</strong></td>
+        <td>確定性平滑單調下降</td>
+        <td>初期驟降，後期在 $\mathcal{O}(\eta)$ 帶內隨機漫步</td>
+        <td>動態收窄的漏斗型軌跡，緩慢收斂至點</td>
+      </tr>
+      <tr>
+        <td><strong>收斂判別方法</strong></td>
+        <td>檢驗全梯度 $\|\nabla f(\boldsymbol{w})\| \le \epsilon$</td>
+        <td>無法用全梯度，依賴驗證集平臺或 EMA</td>
+        <td>依賴學習率退火排程（Cosine/Step）</td>
+      </tr>
+      <tr>
+        <td><strong>深度學習適用性</strong></td>
+        <td>極低（巨量資料下無法承受遍歷代價）</td>
+        <td>極高（實務主流，前期高速推進）</td>
+        <td>最高（現代 LLM/視覺模型訓練標配）</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 12. 大師四大鐵律 -->
+<section class="section" id="master-maxims">
+  <div class="sec-tag sustain">11 / 大師哲學 · Master Maxims</div>
+  <h2 class="section-title">大師四大鐵律：隨機最佳化的極限與工程智慧
+    <span class="en">The Four Master Laws of Stochastic Optimization: Limits, Noise, and Practical Wisdom</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>一、極限零度律 (Zero-Limit Law)</h3>
+      <div class="sub-en">Deterministic Asymptotic Perfection</div>
+      <p>全梯度下降擁有確定性的神聖保證：只要函式平滑且凸，步長小於 $1/L$，時間趨近無窮時誤差必然嚴格歸零。這是數值微積分的最高理想。</p>
+    </div>
+    <div class="card warning">
+      <h3>二、殘差帶囚律 (Residual Band Captivity)</h3>
+      <div class="sub-en">Persistent Noise Stagnation</div>
+      <p>固定步長 SGD 終其一生無法突破隨機方差的桎梏。一旦落入 $\mathcal{O}(\eta)$ 停滯帶，任何多餘的迭代都不過是在噪聲囚籠中的布朗漫步。</p>
+    </div>
+    <div class="card positive">
+      <h3>三、衰減收縮律 (Decay Compression Law)</h3>
+      <div class="sub-en">Funnel-Shaped Band Flattening</div>
+      <p>步長是停滯帶的唯一閥門。依循 Robbins-Monro 條件實施步長退火，即是在時空中施展壓縮魔法，將噪聲走廊壓成一條直指最優點的細線。</p>
+    </div>
+    <div class="card positive">
+      <h3>四、代價平衡律 (Cost-Accuracy Balance)</h3>
+      <div class="sub-en">Computational Pragmatism</div>
+      <p>深度學習的核心哲學是「在有限的算力預算內換取最廣泛的泛化能力」。欣然接受 $\mathcal{O}(\eta)$ 的微小殘差，換來十萬倍的更新頻率，是機器學習最偉大的工程妥協。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 13. 互動實驗室 -->
+<section class="section" id="lab">
+  <div class="sec-tag sustain">12 / 互動實驗 · Loss-Gap Simulation Lab</div>
+  <h2 class="section-title">互動實驗室：Loss-Gap 座標系動態模擬器
+    <span class="en">Interactive Lab: Loss-Gap Trajectory Simulator with O(η) Stagnation Band Dynamics</span>
+  </h2>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <div class="lab-ctrl">
+        <label>最佳化策略：</label>
+        <select id="kp9-mode">
+          <option value="fixed" selected>固定步長 SGD (Fixed η · 困於 O(η) 停滯帶)</option>
+          <option value="decay_sqrt">衰減步長 SGD (η_t = η₀ / √t · 壓扁帶子)</option>
+          <option value="decay_t">衰減步長 SGD (η_t = η₀ / t · 快速收縮)</option>
+          <option value="gd">全梯度下降 (Full GD · 無噪聲精確收斂)</option>
+        </select>
+      </div>
+      <div class="lab-ctrl">
+        <label>基準步長 η₀：</label>
+        <input type="range" id="kp9-eta" min="0.05" max="0.4" step="0.05" value="0.2">
+        <span class="val" id="kp9-eta-v">0.20</span>
+      </div>
+      <div class="lab-ctrl">
+        <label>隨機噪聲 σ：</label>
+        <input type="range" id="kp9-sigma" min="0.0" max="1.0" step="0.1" value="0.5">
+        <span class="val" id="kp9-sigma-v">0.50</span>
+      </div>
+      <button class="lab-btn" id="kp9-step">單步探索 (Step)</button>
+      <button class="lab-btn accent" id="kp9-run">連續 20 步 (Run 20)</button>
+      <button class="lab-btn secondary" id="kp9-reset">重設 (Reset)</button>
+    </div>
+
+    <div class="lab-display">
+      <div class="lab-canvas-container">
+        <canvas id="kp9-cv" width="580" height="350"></canvas>
+      </div>
+      <div class="lab-readout" id="kp9-ro">
+        <!-- Live status injected via JS -->
+      </div>
+    </div>
+
+    <p style="font-size: 14px; color: #475569; margin-top: 14px; line-height: 1.6;">
+      🧪 <strong>實測大挑戰：</strong><br/>
+      1. <strong>困於停滯帶</strong>：選擇「固定步長 SGD」，點選「連續 20 步」數次（走滿 60-80 步）。觀察軌跡跌入紅色 $\mathcal{O}(\eta)$ 停滯帶後，即便持續迭代數百步，誤差依然在帶內震盪無法歸零！<br/>
+      2. <strong>壓扁帶子破局</strong>：切換至「衰減步長 SGD (η₀ / √t)」，觀察紅色帶子如何隨迭代次數演進而逐漸「壓扁收縮」，強迫隨機軌跡穿透雜訊阻隔，穩步貼近綠色零點線！<br/>
+      3. <strong>全梯度對照</strong>：選擇「全梯度下降」，觀察藍線平滑單調下降貼零，印證命題 2 的漸進零誤差定理！
+    </p>
+  </div>
+</section>
+
+<!-- 14. 隨堂評測 Checkpoint -->
+<section class="section" id="quiz">
+  <div class="sec-tag activate">13 / 實戰檢驗 · Concept Checkpoint</div>
+  <h2 class="section-title">隨堂 Checkpoint：觀念即時反饋
+    <span class="en">Concept Checkpoint: Master-Level Assessment</span>
+  </h2>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-card" data-ans="B">
+    <h4>題目 1：全梯度下降（命題 2）在 $t \rightarrow \infty$ 時的收斂行為是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 停滯在 $\mathcal{O}(\eta)$ 鄰域</button>
+      <button data-opt="B">B. 精確收斂到 $f^{*}$，誤差趨近 0</button>
+      <button data-opt="C">C. 發散</button>
+      <button data-opt="D">D. 收斂率為 $\mathcal{O}(\log t)$</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 2：SGD 使用固定步長 $\eta^{(\tau)}=\eta$ 時，長期行為是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 精確到達 $f^{*}$</button>
+      <button data-opt="B">B. 在最優點附近 $\mathcal{O}(\eta)$ 鄰域內停滯</button>
+      <button data-opt="C">C. 步長自動歸零</button>
+      <button data-opt="D">D. 比全梯度更快收斂</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 3：下列哪組步長策略能讓 SGD 的 $1/t$ 項主導、使長期誤差趨近 0？</h4>
+    <div class="options">
+      <button data-opt="A">A. 固定 $\eta^{(\tau)}=\eta$</button>
+      <button data-opt="B">B. $\eta^{(\tau)}=1/\tau$ 或 $1/\sqrt{\tau}$</button>
+      <button data-opt="C">C. $\eta^{(\tau)}=\tau$</button>
+      <button data-opt="D">D. 不更新步長</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 4：SGD 相對全梯度下降的主要優勢是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 更高的收斂精度</button>
+      <button data-opt="B">B. 每次迭代的計算成本更低</button>
+      <button data-opt="C">C. 不需要選學習率</button>
+      <button data-opt="D">D. 保證找到全域性最優</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+</section>
+
+<script>
+// Quiz Interactive Logic with Dynamic MathJax Rendering
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('correct', 'wrong'));
+      const choice = btn.getAttribute('data-opt');
+      if (choice === ans) {
+        btn.classList.add('correct');
+        fb.className = 'feedback show ok';
+        fb.innerHTML = '<strong>✅ 答對了！</strong> ' + getExplanation(card, ans);
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'feedback show no';
+        fb.innerHTML = '<strong>❌ 答錯了！</strong> 請重新思考：' + getExplanation(card, ans);
+      }
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+function getExplanation(card, ans) {
+  const text = card.innerText;
+  if (ans === 'B' && text.includes('全梯度下降（命題 2）')) {
+    return '命題 2 式 (31) 保證全梯度下降誤差上界為 $\\mathcal{O}(1/t)$，當 $t \\to \\infty$ 時上界嚴格趨近於 0，能精確收斂到最優解 $f^*$。';
+  } else if (ans === 'B' && text.includes('固定步長')) {
+    return '命題 3 式 (34) 與 (36) 揭示固定步長下誤差包含 $\\mathcal{O}(\\eta)$ 常數項，當 $t \\to \\infty$ 後誤差下限即為 $\\mathcal{O}(\\eta)$，永遠在最優點鄰域內震盪停滯。';
+  } else if (ans === 'B' && text.includes('步長策略能讓 SGD 的 1/t 項主導')) {
+    return '採用遞減步長（如 $\\eta^{(\\tau)}=1/\\tau$ 或 $1/\\sqrt{\\tau}$，滿足 Robbins-Monro 條件）能隨迭代壓縮停滯帶，長期誤差才能趨近 0。';
+  } else if (ans === 'B' && text.includes('SGD 相對全梯度下降的主要優勢')) {
+    return '全梯度每步計算需遍歷全體 $n$ 筆樣本（$\\mathcal{O}(n)$），而 SGD 每步僅計算一個或一小批樣本（$\\mathcal{O}(B)$），計算成本極低，大幅加速迭代頻率。';
+  }
+  return '';
+}
+
+// Progress Bar
+window.addEventListener('scroll', () => {
+  const top = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('progressTop').style.width = (top / docH * 100) + '%';
+});
+
+// Interactive Lab: Loss-gap 座標系動態模擬器
+(function() {
+  var cv = document.getElementById('kp9-cv');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var ro = document.getElementById('kp9-ro');
+
+  var modeSelect = document.getElementById('kp9-mode');
+  var etaSlider = document.getElementById('kp9-eta');
+  var sigmaSlider = document.getElementById('kp9-sigma');
+
+  var baseEta = parseFloat(etaSlider.value);
+  var sigma = parseFloat(sigmaSlider.value);
+
+  // Simulation state
+  // Loss function: f(w) = 0.5 * w^2 => f* = 0, minimizer w* = 0
+  // Loss gap: f(w) - f* = 0.5 * w^2
+  var startW = 1.4;
+  var w = startW;
+  var t = 0;
+  var hist = [{t: 0, w: startW, loss: 0.5 * startW * startW, eta: baseEta, band: 0.5 * baseEta * sigma}];
+
+  function fmt(val, d) {
+    var digits = (d !== undefined) ? d : 3;
+    return (Math.round(val * Math.pow(10, digits)) / Math.pow(10, digits)).toFixed(digits);
+  }
+
+  function getEffectiveEta(step) {
+    var mode = modeSelect.value;
+    if (mode === 'decay_sqrt') {
+      return baseEta / Math.sqrt(step + 1);
+    } else if (mode === 'decay_t') {
+      return baseEta / (step + 1);
+    }
+    return baseEta;
+  }
+
+  function getBandBound(step, curEta) {
+    var mode = modeSelect.value;
+    if (mode === 'gd') return 0;
+    // Theoretical noise floor ~ 0.5 * eta * sigma^2 / (2 - eta) scaled for visualization
+    return Math.max(0.005, 0.35 * curEta * (sigma + 0.1));
+  }
+
+  function draw() {
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    var maxT = Math.max(40, Math.ceil((t + 5) / 10) * 10);
+    var maxLoss = 1.1;
+
+    function toX(valT) { return 60 + (valT / maxT) * (W - 90); }
+    function toY(valLoss) { return (H - 45) - (valLoss / maxLoss) * (H - 75); }
+
+    // Grid lines
+    ctx.strokeStyle = '#f1f5f9';
+    ctx.lineWidth = 1;
+    for (var l = 0.2; l <= 1.0; l += 0.2) {
+      ctx.beginPath();
+      ctx.moveTo(60, toY(l));
+      ctx.lineTo(W - 20, toY(l));
+      ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(60, H - 45); ctx.lineTo(W - 20, H - 45); // X
+    ctx.moveTo(60, H - 45); ctx.lineTo(60, 25);     // Y
+    ctx.stroke();
+
+    // Axis Labels
+    ctx.fillStyle = '#64748b';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('0.0', 52, toY(0) + 4);
+    ctx.fillText('0.5', 52, toY(0.5) + 4);
+    ctx.fillText('1.0', 52, toY(1.0) + 4);
+
+    ctx.textAlign = 'center';
+    ctx.fillText('0', toX(0), H - 28);
+    ctx.fillText(String(Math.floor(maxT / 2)), toX(maxT / 2), H - 28);
+    ctx.fillText(String(maxT), toX(maxT), H - 28);
+
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = '#1e3a8a';
+    ctx.fillText('迭代次數 t', W / 2 + 20, H - 10);
+
+    ctx.save();
+    ctx.translate(18, H / 2 - 10);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Loss-Gap f(w) − f*', 0, 0);
+    ctx.restore();
+
+    // Green Reference line y = 0
+    ctx.strokeStyle = '#16a34a';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(60, toY(0));
+    ctx.lineTo(W - 20, toY(0));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#16a34a';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('y = 0 精確最優 f*', 70, toY(0) - 6);
+
+    // Draw Stagnation Band Shading
+    var mode = modeSelect.value;
+    if (mode !== 'gd') {
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.14)';
+      ctx.beginPath();
+      ctx.moveTo(toX(0), toY(0));
+      for (var st = 0; st <= maxT; st += 2) {
+        var e = getEffectiveEta(st);
+        var b = getBandBound(st, e);
+        ctx.lineTo(toX(st), toY(b));
+      }
+      ctx.lineTo(toX(maxT), toY(0));
+      ctx.closePath();
+      ctx.fill();
+
+      // Top boundary of stagnation band
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      for (var st = 0; st <= maxT; st += 2) {
+        var e = getEffectiveEta(st);
+        var b = getBandBound(st, e);
+        if (st === 0) ctx.moveTo(toX(st), toY(b));
+        else ctx.lineTo(toX(st), toY(b));
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = '#dc2626';
+      ctx.font = '10.5px sans-serif';
+      ctx.textAlign = 'right';
+      if (mode === 'fixed') {
+        ctx.fillText('停滯帶 O(η)', W - 25, toY(getBandBound(0, baseEta)) - 6);
+      } else {
+        ctx.fillText('壓縮中停滯帶 O(η_t) ↓', W - 25, toY(getBandBound(maxT, getEffectiveEta(maxT))) - 6);
+      }
+    }
+
+    // Plot History Trajectory
+    if (hist.length > 1) {
+      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = (mode === 'gd') ? '#2563eb' : '#dc2626';
+      ctx.beginPath();
+      for (var i = 0; i < hist.length; i++) {
+        var px = toX(hist[i].t);
+        var py = toY(Math.min(maxLoss, hist[i].loss));
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      // Draw dots
+      for (var i = 0; i < hist.length; i++) {
+        var px = toX(hist[i].t);
+        var py = toY(Math.min(maxLoss, hist[i].loss));
+        ctx.fillStyle = (mode === 'gd') ? '#2563eb' : '#ef4444';
+        ctx.beginPath();
+        ctx.arc(px, py, (i === hist.length - 1) ? 5 : 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        if (i === hist.length - 1) {
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function report() {
+    var curLoss = 0.5 * w * w;
+    var mode = modeSelect.value;
+    var curEta = getEffectiveEta(t);
+    var curBand = getBandBound(t, curEta);
+
+    var statusBadge = '';
+    if (mode === 'gd') {
+      if (curLoss < 0.005) {
+        statusBadge = '<div class="status-badge converged">✅ 全梯度精確收斂：誤差已貼齊 y=0 (O(1/t))</div>';
+      } else {
+        statusBadge = '<div class="status-badge running">🏃 全梯度單調平滑下降中 (O(1/t) 單調貼零)</div>';
+      }
+    } else if (mode === 'fixed') {
+      if (curLoss <= curBand * 1.35 && t >= 10) {
+        statusBadge = '<div class="status-badge trapped">🔒 陷入 O(η) 停滯帶：在殘差帶內永無止境震盪，無法歸零</div>';
+      } else {
+        statusBadge = '<div class="status-badge running">📉 早期高速陡降階段 (尚未觸及噪聲停滯帶)</div>';
+      }
+    } else {
+      if (curLoss < 0.02) {
+        statusBadge = '<div class="status-badge converged">🎯 壓扁帶子生效：步長衰減壓縮噪聲，逼近零度</div>';
+      } else {
+        statusBadge = '<div class="status-badge compressing">⚡ 步長衰減中：帶子持續被壓扁，強迫隨機軌跡下潛</div>';
+      }
+    }
+
+    var modeName = '';
+    if (mode === 'fixed') modeName = '固定步長 SGD (Fixed Step Size)';
+    else if (mode === 'decay_sqrt') modeName = '衰減步長 SGD (η_0 / √t)';
+    else if (mode === 'decay_t') modeName = '衰減步長 SGD (η_0 / t)';
+    else modeName = '全梯度下降 (Full GD)';
+
+    var gdFlops = t * 10000;
+    var sgdFlops = t * 64;
+
+    ro.innerHTML =
+      '<strong>當前最佳化模式：</strong> ' + modeName + '<br/>' +
+      '<strong>當前迭代步數 t：</strong> ' + t + '<br/>' +
+      '<strong>當前有效步長 η_t：</strong> ' + fmt(curEta, 4) + '<br/>' +
+      '<strong>參數值 w_t：</strong> ' + fmt(w, 4) + '<br/>' +
+      '<strong>Loss-Gap f(w) − f*：</strong> ' + fmt(curLoss, 5) + '<br/>' +
+      '<strong>理論停滯帶界限 O(η_t)：</strong> ' + fmt(curBand, 4) + '<br/>' +
+      '<strong>累計計算樣本數：</strong> ' + (mode === 'gd' ? gdFlops + ' (全量)' : sgdFlops + ' (極輕量)') + '<br/>' +
+      '<strong>收斂動態判定：</strong><br/>' + statusBadge;
+  }
+
+  function stepOnce() {
+    var mode = modeSelect.value;
+    var curEta = getEffectiveEta(t);
+    var curBand = getBandBound(t, curEta);
+
+    var grad = w; // f'(w) = w
+    var noise = 0;
+    if (mode !== 'gd') {
+      // Box-Muller transform for normal distribution
+      var u1 = Math.random() + 1e-12, u2 = Math.random();
+      var z = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+      noise = z * sigma;
+    }
+
+    var stochasticGrad = grad + noise;
+    w = w - curEta * stochasticGrad;
+    t++;
+
+    var curLoss = 0.5 * w * w;
+    hist.push({t: t, w: w, loss: curLoss, eta: curEta, band: curBand});
+    if (hist.length > 200) hist.shift();
+  }
+
+  function sync() {
+    baseEta = parseFloat(etaSlider.value);
+    document.getElementById('kp9-eta-v').textContent = fmt(baseEta, 2);
+    sigma = parseFloat(sigmaSlider.value);
+    document.getElementById('kp9-sigma-v').textContent = fmt(sigma, 2);
+    draw();
+    report();
+  }
+
+  function resetState() {
+    w = startW;
+    t = 0;
+    hist = [{t: 0, w: startW, loss: 0.5 * startW * startW, eta: baseEta, band: getBandBound(0, baseEta)}];
+    sync();
+  }
+
+  modeSelect.addEventListener('change', resetState);
+  etaSlider.addEventListener('input', sync);
+  sigmaSlider.addEventListener('input', sync);
+
+  document.getElementById('kp9-step').addEventListener('click', function() {
+    stepOnce();
+    sync();
+  });
+
+  document.getElementById('kp9-run').addEventListener('click', function() {
+    for (var s = 0; s < 20; s++) {
+      stepOnce();
+    }
+    sync();
+  });
+
+  document.getElementById('kp9-reset').addEventListener('click', resetState);
+
+  resetState();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch03 · KP13 Vanilla SAM：min-max 目標、sharpness 與 epsilon* — Sharpness-Aware Minimization</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(108,92,231,.24), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(9,132,227,.18), transparent 30%),
+              linear-gradient(135deg, #0a0e27 0%, #131b3e 50%, #1e1338 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(10, 14, 39, .25);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(36px, 4.4vw, 64px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(18px, 2.0vw, 28px);
+  color: #a5b4fc;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #38bdf8;
+  border-radius: 999px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 900px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #38bdf8, #e84393);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #7dd3fc !important; fill: #7dd3fc !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #cbd5e1; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  display: block;
+}
+.half-layout .visual > svg {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  display: block;
+}
+.half-layout .visual .svg-caption {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+  font-size: var(--t5);
+  color: var(--text-low);
+  letter-spacing: .05em;
+}
+@media (max-width: 1100px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+
+/* 高橋流置中修復：卡片居中於內容閱讀區 (831px 中心軸，左右邊距各 231px) */
+.section .takahashi {
+  text-align: center;
+  padding: 80px 36px;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+}
+
+/* 表格包裝層（防止橫向溢位） */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 24px 0;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  background: var(--bg-card);
+}
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin: 28px 0;
+}
+.lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  color: var(--ink);
+}
+.lab-ctrl select, .lab-ctrl input[type="range"] {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  font-size: 14px;
+}
+.lab-ctrl input[type="range"] {
+  width: 110px;
+}
+.lab-ctrl span.val {
+  min-width: 48px;
+  font-family: var(--mono);
+  color: var(--primary);
+  font-weight: bold;
+}
+.lab-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all .2s;
+}
+.lab-btn:hover {
+  background: hsl(248, 58%, 38%);
+  transform: translateY(-1px);
+}
+.lab-btn.secondary {
+  background: #64748b;
+}
+.lab-btn.secondary:hover {
+  background: #475569;
+}
+.lab-btn.accent {
+  background: #0ea5e9;
+}
+.lab-btn.accent:hover {
+  background: #0284c7;
+}
+.lab-display {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 950px) {
+  .lab-display { grid-template-columns: 1fr; }
+}
+.lab-canvas-container {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.lab-readout {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+.lab-readout .status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.status-badge.running { background: #e0f2fe; color: #0369a1; }
+.status-badge.ascent { background: #fef2f2; color: #b91c1c; }
+.status-badge.orthogonal { background: #dcfce7; color: #15803d; }
+.status-badge.converged { background: #ede9fe; color: #6b21a8; }
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP13 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Core Question</a></li>
+    <li><a href="#sam-motivation">平坦與泛化 · Motivation</a></li>
+    <li><a href="#minmax-formulation">雙層目標 · Min-Max Objective</a></li>
+    <li><a href="#sharpness-decomposition">銳度分解 · Sharpness Term</a></li>
+    <li><a href="#worst-case-epsilon">最壞擾動 · Worst-Case Epsilon*</a></li>
+    <li><a href="#sam-gradient-twostep">兩階段更新 · Two-Step Gradient</a></li>
+    <li><a href="#computational-cost">算力代價 · Computational Cost</a></li>
+    <li><a href="#svg-landscape">地景俯視 · Landscape View</a></li>
+    <li><a href="#comparison">SGD vs SAM · Comparison</a></li>
+    <li><a href="#master-maxims">四大鐵律 · Master Maxims</a></li>
+    <li><a href="#lab">模擬實驗室 · Interactive Lab</a></li>
+    <li><a href="#quiz">觀念測驗 · Checkpoint</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">IDL 115 · CHAPTER 3 · KP-13 · TEACHING DECK</span>
+    <h1>Vanilla SAM：min-max 目標、銳度與最壞擾動解
+      <span class="hero-title-en">Sharpness-Aware Minimization: Min-Max Formulation, Sharpness Decomposition, and Closed-Form Epsilon*</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      反向傳播能找到極小值，但尖銳極小值泛化脆弱。SAM 突破傳統經驗風險最小化，改寫為 min-max 雙層對抗最佳化：在半徑 $\rho$ 鄰域球內探尋最慘擾動 $\boldsymbol{\epsilon}^*(\boldsymbol{w})$，迫使權重遷移至平坦盆地，實現卓越的測試泛化。
+    </p>
+    <p class="bilingual-en" style="color: #cbd5e1; max-width: 880px; margin: 10px auto 0;">
+      Empirical risk minimization easily falls into sharp minima prone to poor generalization. SAM reformulates optimization into a bi-level min-max game: finding the worst-case perturbation within a $\rho$-ball to simultaneously minimize loss value and geometric sharpness.
+    </p>
+  </div>
+</section>
+
+<!-- 2. 大問句 -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="sec-tag inquiry">01 / 核心提問 · Core Question</div>
+    <div class="quote">
+      「為什麼要故意把訓練損失變差？先找最慘鄰居，才能換來最平坦的解！」
+      <small>傳統 SGD 只顧眼前腳下，SAM 卻說：若周圍 $\rho$ 步內有人摔落懸崖，這裡就絕非安全港！<br/>
+        <span class="bilingual-en-inline">Why intentionally worsen training loss? By seeking the worst-case neighbor within the $\rho$-ball, SAM forces optimization away from fragile sharp chasms into robust flat minima!</span>
+      </small>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 平坦與泛化回顧 -->
+<section class="section" id="sam-motivation">
+  <div class="sec-tag motivate">02 / 動機背景 · Motivation &amp; Generalization</div>
+  <h2 class="section-title">為什麼需要 SAM：平坦極小值可能泛化更好
+    <span class="en">Why SAM Matters: The Hypothesis That Flat Minima Generalize Better</span>
+  </h2>
+
+  <div class="intuition-box">
+    <h4>極小值並不平等：平坦度決定測試穩定性</h4>
+    <p>
+      傳統反向傳播演算法雖然能有效收斂到經驗損失的局部極小值，但不同極小值的泛化能力存在天壤之別。大量實證研究顯示：<strong>較平坦（flat / smooth）的極小值往往比尖銳（sharp）的極小值在未知測試集上表現更佳</strong>。
+    </p>
+    <ul>
+      <li><strong>平坦極小值（Flat Minima）：</strong>在解的周邊鄰域內，目標損失函式幾乎保持不變。即使測試資料分佈微調引發損失地形偏移，測試誤差依然低廉。</li>
+      <li><strong>尖銳極小值（Sharp Minima）：</strong>損失僅在單點極小，其鄰域坡度急劇上升。一旦測試分佈發生微小漂移（Distribution Shift），測試損失將發生災難性暴漲。</li>
+    </ul>
+  </div>
+
+  <p>
+    這個假說在深度學習理論界雖然仍有諸多深刻討論，但已經成功催生了<strong>銳度感知最小化（Sharpness-Aware Minimization，簡稱 SAM）</strong>。SAM 的核心精神不是被動等待運氣，而是在訓練目標中<strong>顯式懲罰鄰域的最大損失漲幅</strong>！
+    <span class="bilingual-en">While standard backprop finds local minima of empirical loss, flat minima consistently yield superior test generalization over sharp ones under distribution shifts. SAM operationalizes this insight into a principled objective.</span>
+  </p>
+</section>
+
+<!-- 4. min-max 雙層目標 -->
+<section class="section" id="minmax-formulation">
+  <div class="sec-tag sustain">03 / 數學形式 · Min-Max Formulation</div>
+  <h2 class="section-title">min-max 雙層目標：式 (47)–(49) 與 $\rho$ 鄰域約束
+    <span class="en">Bi-Level Min-Max Objective: Equations (47)–(49) and Neighborhood Ball Constraint</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>SAM 的數學最佳化問題定義（式 (47)–(49)）</h4>
+    <p>SAM 將標準的單層損失最小化改寫為同時最小化損失、又主動打壓局部尖銳度的 <strong>min-max 雙層最佳化問題</strong>：</p>
+    <p><strong>帶正則化形式：</strong></p>
+    <p>$$ \underset{\boldsymbol{w}}{\operatorname{minimize}}\ \mathcal{L}_{\mathrm{SAM}}(\boldsymbol{w})+\lambda\|\boldsymbol{w}\|_{2}^{2} \tag{47} $$</p>
+    <p>$$ \mathcal{L}_{\mathrm{SAM}}(\boldsymbol{w}):=\operatorname{maximize}_{\boldsymbol{\epsilon}:\|\boldsymbol{\epsilon}\|_{p} \leq \rho}\ \mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon}) \tag{48} $$</p>
+    <p><strong>純 min-max 緊湊形式（省略 L2 權重衰減時）：</strong></p>
+    <p>$$ \underset{\boldsymbol{w}}{\operatorname{minimize}}\ \underset{\boldsymbol{\epsilon}:\|\boldsymbol{\epsilon}\|_{p} \leq \rho}{\operatorname{maximize}}\ \mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon}) \tag{49} $$</p>
+    <p><strong>符號定義與物理直覺：</strong></p>
+    <ul>
+      <li>$\boldsymbol{w} \in \mathbb{R}^d$：神經網路的全部可學習權重。</li>
+      <li>$\mathcal{L}(\cdot)$：訓練集上的經驗損失函式（Empirical Loss）。</li>
+      <li>$\rho \ge 0$：<strong>鄰域半徑超參數</strong>，定義探索擾動的安全球空間。</li>
+      <li>$p \in [1, \infty]$：擾動範數階數，實務與理論上<strong>強烈推薦 $p=2$（歐氏範數）</strong>。</li>
+    </ul>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>1. 內層最大化 (Inner Maximize)</h3>
+      <div class="sub-en">Adversarial Search in $\rho$-Ball</div>
+      <p>給定當前權重 $\boldsymbol{w}$，在半徑為 $\rho$ 的封閉球體 $\{\boldsymbol{\epsilon} : \|\boldsymbol{\epsilon}\|_p \le \rho\}$ 內，搜尋能讓損失激增到最高的最壞擾動 $\boldsymbol{\epsilon}^*$。</p>
+    </div>
+    <div class="card positive">
+      <h3>2. 外層最小化 (Outer Minimize)</h3>
+      <div class="sub-en">Robust Minimization of Worst Loss</div>
+      <p>調整權重 $\boldsymbol{w}$，目標是最小化那個「最慘鄰居」處的損失值。迫使權重遠離任何一側存在懸崖峭壁的危險地帶。</p>
+    </div>
+    <div class="card positive">
+      <h3>3. 幾何直覺：強迫整個鄰域平坦</h3>
+      <div class="sub-en">Whole Neighborhood Uniformity</div>
+      <p>若某個極小點極其尖銳，其周圍 $\rho$ 步內的鄰居損失必大幅飆高，從而被外層最佳化無情拋棄；只有整片平坦的寬谷才能存活。</p>
+    </div>
+    <div class="card positive">
+      <h3>4. 超參數 $\rho$ 的權衡哲學</h3>
+      <div class="sub-en">Radius Trade-off</div>
+      <p>$\rho \to 0$ 時 SAM 退化為常規 SGD；$\rho$ 過大則可能越過多個盆地、抹平有效特徵結構。實務常設 $\rho \in [0.01, 0.1]$。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 損失與銳度分解 -->
+<section class="section" id="sharpness-decomposition">
+  <div class="sec-tag sustain">04 / 結構分解 · Sharpness Decomposition</div>
+  <h2 class="section-title">分解：經驗損失 + sharpness 銳度項 — 式 (50)
+    <span class="en">Decomposing SAM Loss: Empirical Risk Plus Neighborhood Sharpness Penalty (Eq. 50)</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>式 (50) 核心分解式</h4>
+    <p>式 (48) 定義的 SAM 目標函式，可精確重寫為經驗損失與銳度項之和：</p>
+    <p>$$ \mathcal{L}_{\mathrm{SAM}}(\boldsymbol{w})=\underbrace{\mathcal{L}(\boldsymbol{w})}_{\text{經驗損失}}+\underbrace{\operatorname{maximize}_{\boldsymbol{\epsilon}:\|\boldsymbol{\epsilon}\|_{p} \leq \rho}\bigl(\mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon})-\mathcal{L}(\boldsymbol{w})\bigr)}_{\text{sharpness（銳度）}} \tag{50} $$</p>
+  </div>
+
+  <div class="method-box">
+    <h4>兩項的物理分工與協同</h4>
+    <ul>
+      <li><strong>第一項：常規經驗損失 $\mathcal{L}(\boldsymbol{w})$</strong><br/>
+        負責保證模型在訓練資料上的擬合精度，確保預測準確度與特徵抽取能力。
+      </li>
+      <li><strong>第二項：鄰域最大漲幅 $\operatorname{maximize}_{\|\boldsymbol{\epsilon}\|_p \le \rho}\bigl(\mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon})-\mathcal{L}(\boldsymbol{w})\bigr)$（Sharpness 銳度）</strong><br/>
+        直接量測<strong>「在以 $\boldsymbol{w}$ 為中心的 $\rho$-鄰域球內，損失最多能上漲多少」</strong>。銳度越大，代表地形越尖峭；銳度越小，代表局部幾何越接近扁平桌狀。
+      </li>
+    </ul>
+    <p style="margin-top: 12px; margin-bottom: 0;">
+      由此可見，SAM 本質上是一種<strong>以幾何平坦度為正則化項（Sharpness Regularization）</strong>的現代最佳化正規化，直接將泛化界（PAC-Bayes 泛化誤差界）中的平坦度先驗融入損失目標中。
+    </p>
+  </div>
+</section>
+
+<!-- 6. 最壞擾動閉式解推導 -->
+<section class="section" id="worst-case-epsilon">
+  <div class="sec-tag sustain">05 / 閉式推導 · Deriving Epsilon*</div>
+  <h2 class="section-title">內層最大化推導：一階泰勒展開與最壞擾動 $\boldsymbol{\epsilon}^*$ 閉式解
+    <span class="en">Solving the Inner Maximization: First-Order Taylor &amp; Closed-Form Epsilon* (Eqs. 51–52)</span>
+  </h2>
+
+  <p>
+    內層問題看似複雜，因為神經網路的損失函式非凸且高度非線性。但只要擾動半徑 $\rho$ 足夠微小，即可在 $\boldsymbol{w}$ 處進行<strong>一階泰勒展開（First-Order Taylor Expansion）</strong>：
+    <span class="bilingual-en">By linearizing loss in a small neighborhood via first-order Taylor approximation, the inner maximization reduces to a classical dual norm optimization.</span>
+  </p>
+
+  <div class="highlight-box">
+    <h4>推導步驟：一階近似化為對偶範數問題</h4>
+    <p>$$ \mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon}) \approx \mathcal{L}(\boldsymbol{w}) + \boldsymbol{\epsilon}^{\top}\nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w}) $$</p>
+    <p>代入內層最大化問題，常數項 $\mathcal{L}(\boldsymbol{w})$ 與 $\boldsymbol{\epsilon}$ 無關可忽略，問題轉化為：</p>
+    <p>$$ \boldsymbol{\epsilon}^*(\boldsymbol{w}) \approx \arg\max_{\|\boldsymbol{\epsilon}\|_p \le \rho} \boldsymbol{\epsilon}^{\top}\nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w}) $$</p>
+    <p>這是泛函分析與凸最佳化中的古典<strong>對偶範數（Dual Norm）極值問題</strong>（Hölder 不等式等號成立條件）。其一般解析解為式 (51)：</p>
+    <p>$$ \boldsymbol{\epsilon}^{*}(\boldsymbol{w})=\rho\,\operatorname{sign}\!\bigl(\nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w})\bigr)\,\frac{\bigl|\nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w})\bigr|^{q-1}}{\bigl(\|\nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w})\|_{q}^{q}\bigr)^{1/p}} \tag{51} $$</p>
+    <p>其中 $q$ 滿足對偶指數關係：$\frac{1}{p} + \frac{1}{q} = 1$。運算子 $|\cdot|$ 與 $\operatorname{sign}(\cdot)$ 為逐元素運算。</p>
+  </div>
+
+  <div class="formula-box">
+    <h4>黃金特例：$p=2$（歐氏範數）時的極簡閉式解（式 (52)）</h4>
+    <p>當 $p=2$ 時，其對偶指數 $q=2$，式 (51) 大幅化簡為令人驚嘆的優雅向量公式：</p>
+    <p>$$ \boldsymbol{\epsilon}^{*}(\boldsymbol{w})=\rho\,\frac{\nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w})}{\|\nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w})\|_{2}} \tag{52} $$</p>
+    <p><strong>直觀物理意涵：</strong></p>
+    <ul>
+      <li>$\frac{\nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w})}{\|\nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w})\|_{2}}$：當前點梯度的<strong>單位方向向量</strong>（代表局部上升速度最陡峭的方向）。</li>
+      <li>$\rho$：擾動步長半徑。</li>
+      <li><strong>結論：最壞擾動 $\boldsymbol{\epsilon}^*$ 就是沿當前梯度方向，前進長度嚴格等於 $\rho$ 的對抗向量！</strong></li>
+    </ul>
+  </div>
+</section>
+
+<!-- 7. 兩階段更新流程 -->
+<section class="section" id="sam-gradient-twostep">
+  <div class="sec-tag sustain">06 / 演算法實作 · Two-Step Execution</div>
+  <h2 class="section-title">SAM 梯度：式 (53) 近似與 Ascent / Descent 兩階段實作
+    <span class="en">SAM Gradient: Equation (53) Approximation &amp; The Two-Step Ascent/Descent Algorithm</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>外層梯度推導與忽略項近似（式 (53)）</h4>
+    <p>將最壞擾動閉式解 $\boldsymbol{\epsilon}^*(\boldsymbol{w})$ 代回外層最佳化目標式 (49)，並對 $\boldsymbol{w}$ 應用多元複合函式微分鏈式法則：</p>
+    <p>$$ \nabla_{\boldsymbol{w}} \mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon}^*(\boldsymbol{w})) = \left( \boldsymbol{I} + \frac{d\boldsymbol{\epsilon}^*(\boldsymbol{w})}{d\boldsymbol{w}} \right) \nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w})\Big|_{\boldsymbol{w}+\boldsymbol{\epsilon}^*(\boldsymbol{w})} $$</p>
+    <p>式中 $\frac{d\boldsymbol{\epsilon}^*(\boldsymbol{w})}{d\boldsymbol{w}}$ 包含複雜的 Hessian 矩陣二階微分項 $\nabla^2 \mathcal{L}(\boldsymbol{w})$。為了計算效率，SAM <strong>果斷忽略次要二階項</strong>，得到實用的近似梯度式 (53)：</p>
+    <p>$$ \nabla_{\boldsymbol{w}}\mathcal{L}\bigl(\boldsymbol{w}+\boldsymbol{\epsilon}^{*}(\boldsymbol{w})\bigr)\approx \nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w})\big|_{\boldsymbol{w}+\boldsymbol{\epsilon}^{*}(\boldsymbol{w})} \tag{53} $$</p>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="num">1</div>
+      <h3>計算基底梯度</h3>
+      <p>在當前權重 $\boldsymbol{w}^{(t)}$ 處執行前向傳播與反向傳播，計算經驗損失的一階梯度 $\boldsymbol{g}_1 = \nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w}^{(t)})$。</p>
+    </div>
+    <div class="step">
+      <div class="num">2</div>
+      <h3>第一階段：Ascent 尋找最慘鄰居</h3>
+      <p>利用式 (52) 計算最壞擾動 $\boldsymbol{\epsilon}^* = \rho \frac{\boldsymbol{g}_1}{\|\boldsymbol{g}_1\|_2}$，前進至擾動點 $\boldsymbol{w}_{\mathrm{adv}} = \boldsymbol{w}^{(t)} + \boldsymbol{\epsilon}^*$。</p>
+    </div>
+    <div class="step">
+      <div class="num">3</div>
+      <h3>第二階段：Descent 在最慘點更新原權重</h3>
+      <p>在最慘鄰居處重新前傳並反傳求梯度 $\boldsymbol{g}_2 = \nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w}_{\mathrm{adv}})$，以此梯度反向更新出發點權重：$\boldsymbol{w}^{(t+1)} = \boldsymbol{w}^{(t)} - \eta \boldsymbol{g}_2$。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 8. 算力代價與權衡 -->
+<section class="section" id="computational-cost">
+  <div class="sec-tag sustain">07 / 實務代價 · Computational Overhead</div>
+  <h2 class="section-title">算力代價：每步約 $2\times$ 反向傳播計算量之實務權衡
+    <span class="en">The Computational Price: ~2× Backprop Overhead for Superior Generalization</span>
+  </h2>
+
+  <div class="compare-layout">
+    <div class="col left">
+      <h3>傳統 SGD / Adam 運算開銷</h3>
+      <ul>
+        <li><strong>前向傳播（Forward Pass）：</strong>每步 1 次。</li>
+        <li><strong>反向傳播（Backward Pass）：</strong>每步 1 次（計算 $\nabla\mathcal{L}(\boldsymbol{w})$）。</li>
+        <li><strong>記憶體暫存：</strong>常規啟用值快取。</li>
+        <li><strong>訓練時間基準：</strong>$1.0\times$ 基準耗時。</li>
+      </ul>
+    </div>
+
+    <div class="col right">
+      <h3>Vanilla SAM 運算開銷</h3>
+      <ul>
+        <li><strong>前向傳播（Forward Pass）：</strong>每步 2 次（出發點 $\boldsymbol{w}$ + 最慘點 $\boldsymbol{w}+\boldsymbol{\epsilon}^*$）。</li>
+        <li><strong>反向傳播（Backward Pass）：</strong>每步 2 次（算擾動方向 + 算更新梯度）。</li>
+        <li><strong>時間代價：</strong>牆上時間（Wall-clock time）約增加 <strong>$1.9\times \sim 2.0\times$</strong>。</li>
+        <li><strong>回報：</strong>在 ImageNet、CIFAR、ViT、NLP 等任務上穩定提升 1%~3% 準確率！</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="warning-box">
+    <h4>實務權衡與後續加速演算法演進</h4>
+    <p>
+      每步兩次反向傳播是 Vanilla SAM 最顯著的工程痛點。文獻後續提出了多種高效改進方案：
+    </p>
+    <ul>
+      <li><strong>LookSAM：</strong>每隔 $k$ 步才做一次昂貴的 SAM 擾動，其餘步沿用歷史擾動方向投影，大幅逼近 $1\times$ SGD 速度。</li>
+      <li><strong>ESAM（Efficient SAM）：</strong>結合資料取樣修剪（Data Dropping）與權重隨機取樣擾動，在維持泛化增益的同時節省 50% 以上浮點運算。</li>
+      <li><strong>GSAM / ASAM：</strong>針對參數尺度自適應調整 $\rho$（Adaptive SAM），並改善幾何梯度正交性。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 9. 損失地形俯檢視 -->
+<section class="section" id="svg-landscape">
+  <div class="sec-tag sustain">08 / 幾何圖解 · Loss Landscape Geometry</div>
+  <h2 class="section-title">損失地景俯檢視：最慘鄰居探索與平坦谷底遷移
+    <span class="en">Loss Landscape Bird's Eye View: Adversarial Neighbor Search &amp; Flat Basin Migration</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg viewBox="0 0 760 400" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+        <defs>
+          <marker id="m-ascent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#dc2626"/>
+          </marker>
+          <marker id="m-descent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb"/>
+          </marker>
+        </defs>
+
+        <!-- Background -->
+        <rect width="760" height="400" fill="#ffffff" rx="10"/>
+
+        <!-- Title -->
+        <text x="380" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#1e3a8a">
+          SAM 機制俯視：在 ρ-球內 Ascent 找最慘點，再 Descent 移向平坦盆地
+        </text>
+
+        <!-- Left Landscape: Sharp Minima (Dense Contours) -->
+        <g id="sharp-region">
+          <text x="175" y="52" text-anchor="middle" font-size="12" font-weight="bold" fill="#dc2626">左側：尖銳峽谷（等高線密，泛化差）</text>
+          <ellipse cx="175" cy="190" rx="145" ry="95" fill="none" stroke="#fee2e2" stroke-width="1.2"/>
+          <ellipse cx="175" cy="190" rx="115" ry="75" fill="none" stroke="#fca5a5" stroke-width="1.3"/>
+          <ellipse cx="175" cy="190" rx="85" ry="55" fill="none" stroke="#f87171" stroke-width="1.4"/>
+          <ellipse cx="175" cy="190" rx="55" ry="35" fill="none" stroke="#ef4444" stroke-width="1.5"/>
+          <ellipse cx="175" cy="190" rx="25" ry="15" fill="none" stroke="#dc2626" stroke-width="1.6"/>
+        </g>
+
+        <!-- Right Landscape: Flat Minima (Sparse Contours) -->
+        <g id="flat-region">
+          <text x="565" y="52" text-anchor="middle" font-size="12" font-weight="bold" fill="#16a34a">右側：平坦盆地（等高線稀疏，泛化優）</text>
+          <ellipse cx="565" cy="190" rx="175" ry="115" fill="none" stroke="#dcfce7" stroke-width="1.2"/>
+          <ellipse cx="565" cy="190" rx="130" ry="85" fill="none" stroke="#86efac" stroke-width="1.4"/>
+          <ellipse cx="565" cy="190" rx="80" ry="52" fill="none" stroke="#4ade80" stroke-width="1.6"/>
+          <ellipse cx="565" cy="190" rx="35" ry="22" fill="none" stroke="#16a34a" stroke-width="1.8"/>
+        </g>
+
+        <!-- SAM Action Diagram around w (located around (260, 230)) -->
+        <g id="sam-action">
+          <!-- Orange Dashed Circle: radius rho -->
+          <circle cx="250" cy="225" r="54" fill="none" stroke="#ea580c" stroke-width="2" stroke-dasharray="5 4"/>
+          <text x="210" y="292" font-size="11" font-weight="bold" fill="#ea580c">鄰域半徑 ρ 球</text>
+
+          <!-- Blue Dot: current w -->
+          <circle cx="250" cy="225" r="6" fill="#2563eb"/>
+          <text x="230" y="220" font-size="12" font-weight="bold" fill="#2563eb">w</text>
+
+          <!-- Red Dot: Worst-case neighbor w + eps* on circle boundary -->
+          <circle cx="218" cy="182" r="6" fill="#dc2626"/>
+          <text x="135" y="174" font-size="11" font-weight="bold" fill="#dc2626">最慘鄰居 w + ε*</text>
+
+          <!-- Red Arrow ①: Ascent from w to w+eps* -->
+          <line x1="250" y1="225" x2="221" y2="186" stroke="#dc2626" stroke-width="2.6" marker-end="url(#m-ascent)"/>
+          <text x="250" y="196" font-size="11" font-weight="bold" fill="#dc2626">① Ascent (+ρ)</text>
+
+          <!-- Formula callout for eps* -->
+          <rect x="18" y="210" width="168" height="34" rx="5" fill="#fff7ed" stroke="#ea580c" stroke-width="1.2"/>
+          <text x="102" y="232" text-anchor="middle" font-size="11" font-weight="bold" fill="#c2410c">ε* = ρ · ∇L / ||∇L||₂</text>
+
+          <!-- Blue Arrow ②: Descent from worst neighbor towards flat region -->
+          <path d="M 218 182 Q 300 130 392 201" fill="none" stroke="#2563eb" stroke-width="2.6" marker-end="url(#m-descent)"/>
+          <text x="305" y="145" font-size="11" font-weight="bold" fill="#2563eb">② Descent (在最慘點求梯度更新)</text>
+
+          <!-- Green New Weight: w_new in flat region -->
+          <circle cx="395" cy="205" r="6" fill="#16a34a"/>
+          <text x="408" y="210" font-size="12" font-weight="bold" fill="#16a34a">新解 w (平坦)</text>
+
+          <!-- Green Dashed Ellipse around new w showing flatter basin -->
+          <ellipse cx="395" cy="205" rx="38" ry="18" fill="none" stroke="#16a34a" stroke-width="1.6" stroke-dasharray="4 3"/>
+        </g>
+
+        <!-- Bottom Warning Banner (Required by prompt) -->
+        <g id="bottom-banner" transform="translate(16, 320)">
+          <rect width="728" height="66" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2"/>
+          <text x="364" y="26" text-anchor="middle" font-size="13" font-weight="bold" fill="#b91c1c">
+            反直覺核心：訓練損失會先被抬高（Ascent 故意找最慘鄰居）！
+          </text>
+          <text x="364" y="48" text-anchor="middle" font-size="12" fill="#334155">
+            若鄰域裡有人損失極高，解就太尖必須被重罰。以每步約 2× 反向傳播為代價，成功換取平坦谷底與高泛化力。
+          </text>
+        </g>
+      </svg>
+      <div class="svg-caption">圖 1：SAM 損失地景俯檢視——最慘鄰居探索與平坦谷底遷移機制</div>
+    </div>
+
+    <div>
+      <div class="method-box">
+        <h4>SAM 不是單純多走幾步，而是幾何懲罰</h4>
+        <p>很多初學者誤以為 SAM 只是普通的學習率微調或多走半步。從圖中可直觀洞悉 SAM 的精妙幾何邏輯：</p>
+        <ul>
+          <li><strong>左側尖銳陷阱：</strong>等高線密集，常規 SGD 極易在此停駐。但只要在 $\rho$-球內向最陡方向探尋，損失立刻爆炸，迫使更新向量強力將參數推離！</li>
+          <li><strong>右側平坦盆地：</strong>等高線寬鬆疏朗，無論在 $\rho$-球內如何擾動，損失增幅始終微乎其微，SAM 的銳度懲罰降為最低，安全駐留在最耐擾動的寬谷。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. 標準 SGD vs SAM 對照表 -->
+<section class="section" id="comparison">
+  <div class="sec-tag sustain">09 / 總體對照 · Comparison Matrix</div>
+  <h2 class="section-title">標準 SGD vs SAM 全方位特徵對照表
+    <span class="en">Comprehensive Comparison: Standard Empirical SGD vs Sharpness-Aware Minimization</span>
+  </h2>
+
+  <div class="table-wrap">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>維度 / 特徵</th>
+          <th>標準 SGD / Adam (ERM)</th>
+          <th>Vanilla SAM (銳度感知最小化)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>最佳化核心目標</strong></td>
+          <td>僅最小化當前點經驗損失 $\min \mathcal{L}(\boldsymbol{w})$</td>
+          <td>min-max 雙層目標：損失值 + 局部銳度 $\min_{\boldsymbol{w}}\max_{\boldsymbol{\epsilon}} \mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon})$</td>
+        </tr>
+        <tr>
+          <td><strong>每步反向傳播</strong></td>
+          <td>$1\times$（一次 Backward Pass）</td>
+          <td>$2\times$（Ascent 求方向 + Descent 求更新梯度）</td>
+        </tr>
+        <tr>
+          <td><strong>鄰域感知能力</strong></td>
+          <td>無（僅看單點一階導數，對周圍陡峭度盲目）</td>
+          <td>高（主動掃描半徑 $\rho$ 鄰域內的最慘情況）</td>
+        </tr>
+        <tr>
+          <td><strong>解的幾何特性</strong></td>
+          <td>可能陷入極為尖銳的局部極小值（Sharp Minima）</td>
+          <td>主動避開尖銳峽谷，收斂至平坦寬廣的盆地（Flat Minima）</td>
+        </tr>
+        <tr>
+          <td><strong>測試集泛化表現</strong></td>
+          <td>容易在過參數化網路中過擬合，對分佈漂移脆弱</td>
+          <td>測試誤差顯著降低，對噪聲標籤與分佈偏移魯棒性強</td>
+        </tr>
+        <tr>
+          <td><strong>超參數依賴</strong></td>
+          <td>學習率 $\eta$、動量 $\beta$、權重衰減 $\lambda$</td>
+          <td>額外引入擾動半徑 $\rho$（通常設 0.05 左右）</td>
+        </tr>
+        <tr>
+          <td><strong>訓練時間成本</strong></td>
+          <td>基準耗時（$1.0\times$）</td>
+          <td>約 $2.0\times$ 耗時（算力換取泛化增益）</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 11. 大師四大鐵律 -->
+<section class="section" id="master-maxims">
+  <div class="sec-tag sustain">10 / 智慧結晶 · Master Maxims</div>
+  <h2 class="section-title">大師四大鐵律：SAM 最佳化哲學
+    <span class="en">The Four Inviolable Laws of Sharpness-Aware Minimization</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>一、雙層極小極大律：不求單點極小，只求鄰域平坦</h3>
+      <div class="sub-en">Bi-Level Min-Max Principle</div>
+      <p>單點極小如同懸崖鋼絲，隨風即墜。將目標提升為 $\min_{\boldsymbol{w}}\max_{\|\boldsymbol{\epsilon}\|\le\rho}\mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon})$，寧可犧牲微不足道的訓練損失數值，也要換取整片鄰域的平坦寬容。</p>
+    </div>
+    <div class="card positive">
+      <h3>二、最慘鄰居對偶律：一階對偶閉式解，梯度長度化為半徑 $\rho$</h3>
+      <div class="sub-en">Adversarial Dual Norm Law</div>
+      <p>在 $p=2$ 範數約束下，最壞擾動無須多步迭代，藉由一階泰勒展開直接解析求解：$\boldsymbol{\epsilon}^* = \rho \frac{\nabla\mathcal{L}}{\|\nabla\mathcal{L}\|_2}$，精確推向最陡峭的懸崖邊界。</p>
+    </div>
+    <div class="card positive">
+      <h3>三、兩步反傳代價律：兩次梯度兩重天，時間換空間與泛化</h3>
+      <div class="sub-en">Two-Pass Computation Trade-off</div>
+      <p>第一次反傳只為問路（找最慘點），第二次反傳方才邁步（求新梯度）。天下沒有免費的午餐，以兩倍反傳算力為代價，換取過參數化模型的頂級泛化防禦。</p>
+    </div>
+    <div class="card positive">
+      <h3>四、平坦泛化平衡律：$\rho$ 拿捏是關鍵，過大失真過小退化</h3>
+      <div class="sub-en">Perturbation Radius Balance</div>
+      <p>$\rho \to 0$ 則退化為普通盲目 SGD；$\rho$ 太大則跨出有效鄰域，導致一階近似失效與特徵模糊。精準微調 $\rho$ 是駕馭 SAM 威力不可違背的黃金平衡。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 12. 互動探索實驗室 -->
+<section class="section" id="lab">
+  <div class="sec-tag activate">11 / 實戰模擬 · Interactive Simulation Lab</div>
+  <h2 class="section-title">互動探索實驗室：2D 擾動模擬器與最壞擾動 $\boldsymbol{\epsilon}^*$ 幾何動態驗證
+    <span class="en">Interactive Lab: 2D Perturbation Simulator, Epsilon* Norm Invariance &amp; Ascent/Descent Trajectories</span>
+  </h2>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <div class="lab-ctrl">
+        <label>擾動半徑 $\rho$：</label>
+        <input type="range" id="sam-rho" min="0.05" max="0.50" step="0.01" value="0.20">
+        <span class="val" id="sam-rho-v">0.20</span>
+      </div>
+      <div class="lab-ctrl">
+        <label>梯度分量 $g_1$：</label>
+        <input type="range" id="sam-g1" min="-15" max="15" step="0.5" value="5.0">
+        <span class="val" id="sam-g1-v">5.0</span>
+      </div>
+      <div class="lab-ctrl">
+        <label>梯度分量 $g_2$：</label>
+        <input type="range" id="sam-g2" min="-15" max="15" step="0.5" value="12.0">
+        <span class="val" id="sam-g2-v">12.0</span>
+      </div>
+      <div class="lab-ctrl">
+        <label>學習率 $\eta$：</label>
+        <input type="range" id="sam-eta" min="0.05" max="0.40" step="0.01" value="0.15">
+        <span class="val" id="sam-eta-v">0.15</span>
+      </div>
+      <button class="lab-btn" id="sam-btn-default">設為 (5, 12)</button>
+      <button class="lab-btn accent" id="sam-btn-step">單步更新 (Step)</button>
+      <button class="lab-btn secondary" id="sam-btn-reset">重設 (Reset)</button>
+    </div>
+
+    <div class="lab-display">
+      <div class="lab-canvas-container">
+        <canvas id="sam-cv" width="560" height="360"></canvas>
+      </div>
+      <div class="lab-readout" id="sam-ro">
+        <!-- Live status injected via JS -->
+      </div>
+    </div>
+
+    <p style="font-size: 14px; color: #475569; margin-top: 14px; line-height: 1.6;">
+      🧪 <strong>實測大挑戰：</strong><br/>
+      1. <strong>式 (52) 長度不變性驗證</strong>：點選「設為 (5, 12)」，此時梯度長度為 $\sqrt{5^2+12^2}=13$。觀察最壞擾動 $\boldsymbol{\epsilon}^*$ 的數值，驗證其範數 $\|\boldsymbol{\epsilon}^*\|_2$ <strong>嚴格等於半徑 $\rho=0.200$</strong>！<br/>
+      2. <strong>Ascent ➡ Descent 雙階段連動</strong>：紅向量為 ① Ascent（將當前點 $w$ 推向最慘點 $w+\boldsymbol{\epsilon}^*$），藍向量為 ② Descent（在最慘點計算新梯度更新回原權重）！
+    </p>
+  </div>
+</section>
+
+<!-- 13. 隨堂 Checkpoint -->
+<section class="section" id="quiz">
+  <div class="sec-tag activate">12 / 實戰檢驗 · Concept Checkpoint</div>
+  <h2 class="section-title">隨堂 Checkpoint：觀念即時反饋
+    <span class="en">Concept Checkpoint: Master-Level Assessment</span>
+  </h2>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-card" data-ans="A">
+    <h4>題目 1：SAM 的 min-max 目標式 (49) 中，內層 maximize 在做什麼？</h4>
+    <div class="options">
+      <button data-opt="A">A. 在 $\boldsymbol{w}$ 的 $\rho$-鄰域內找使損失最大的擾動 $\boldsymbol{\epsilon}$</button>
+      <button data-opt="B">B. 最小化 L2 正則化權重懲罰項</button>
+      <button data-opt="C">C. 對 mini-batch 隨機樣本取平均梯度</button>
+      <button data-opt="D">D. 固定擾動 $\boldsymbol{\epsilon}=\boldsymbol{0}$ 進行常規更新</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 2：式 (50) 中 sharpness（銳度）項的精確數學定義是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 經驗損失 $\mathcal{L}(\boldsymbol{w})$ 本身</button>
+      <button data-opt="B">B. $\max_{\|\boldsymbol{\epsilon}\|_p\leq\rho}\bigl(\mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon})-\mathcal{L}(\boldsymbol{w})\bigr)$</button>
+      <button data-opt="C">C. 權重二次範數 $\|\boldsymbol{w}\|_2^2$</button>
+      <button data-opt="D">D. 當前點梯度的歐氏範數 $\|\nabla\mathcal{L}(\boldsymbol{w})\|_2$</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 3：當 $p=2$ 時，最優擾動 $\boldsymbol{\epsilon}^*(\boldsymbol{w})$（式 (52)）的閉式解為？</h4>
+    <div class="options">
+      <button data-opt="A">A. $\rho\,\nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w})$</button>
+      <button data-opt="B">B. $\rho\,\frac{\nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w})}{\|\nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w})\|_2}$</button>
+      <button data-opt="C">C. 零向量 $\boldsymbol{0}$</button>
+      <button data-opt="D">D. $-\rho\,\nabla_{\boldsymbol{w}}\mathcal{L}(\boldsymbol{w})$</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 4：Vanilla SAM 每步更新權重時，式 (53) 的梯度應在何處計算？</h4>
+    <div class="options">
+      <button data-opt="A">A. 只在原始出發點 $\boldsymbol{w}$ 處計算</button>
+      <button data-opt="B">B. 在擾動點 $\boldsymbol{w}+\boldsymbol{\epsilon}^*(\boldsymbol{w})$ 處計算</button>
+      <button data-opt="C">C. 在反向擾動點 $\boldsymbol{w}-\boldsymbol{\epsilon}^*$ 處計算</button>
+      <button data-opt="D">D. 在隨機初始化的權重點計算</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+</section>
+
+<script>
+// Quiz Interactive Logic with Dynamic MathJax Rendering
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('correct', 'wrong'));
+      const choice = btn.getAttribute('data-opt');
+      if (choice === ans) {
+        btn.classList.add('correct');
+        fb.className = 'feedback show ok';
+        fb.innerHTML = '<strong>✅ 答對了！</strong> ' + getExplanation(card, ans);
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'feedback show no';
+        fb.innerHTML = '<strong>❌ 答錯了！</strong> 請重新思考：' + getExplanation(card, ans);
+      }
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+function getExplanation(card, ans) {
+  const text = card.innerText;
+  if (text.includes('內層 maximize') || text.includes('題目 1')) {
+    return '式 (49) 的內層最大化正是尋找在 $\\boldsymbol{w}$ 的 $\\rho$-球鄰域內使損失達到最高的最壞擾動 $\\boldsymbol{\\epsilon}^*$。';
+  } else if (text.includes('sharpness') || text.includes('題目 2')) {
+    return '式 (50) 的銳度項定義為鄰域內損失的最大漲幅 $\\max_{\\|\\boldsymbol{\\epsilon}\\|_p\\le\\rho}(\\mathcal{L}(\\boldsymbol{w}+\\boldsymbol{\\epsilon})-\\mathcal{L}(\\boldsymbol{w}))$。';
+  } else if (text.includes('最優擾動') || text.includes('題目 3') || text.includes('p = 2') || text.includes('p=2')) {
+    return '在歐氏範數 $p=2$ 下，對偶問題解為沿梯度方向單位化後乘以半徑 $\\rho$，即 $\\rho\\frac{\\nabla\\mathcal{L}}{\\|\\nabla\\mathcal{L}\\|_2}$。';
+  } else if (text.includes('式 (53)') || text.includes('題目 4')) {
+    return '式 (53) 的梯度在最慘擾動點 $\\boldsymbol{w}+\\boldsymbol{\\epsilon}^*(\\boldsymbol{w})$ 處計算，再以此梯度更新原始點 $\\boldsymbol{w}$。';
+  }
+  return '';
+}
+
+// Progress Bar
+window.addEventListener('scroll', () => {
+  const top = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('progressTop').style.width = (top / docH * 100) + '%';
+});
+
+// Interactive Lab: SAM 2D Perturbation Simulator
+(function() {
+  var cv = document.getElementById('sam-cv');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var ro = document.getElementById('sam-ro');
+
+  var rhoSlider = document.getElementById('sam-rho');
+  var g1Slider = document.getElementById('sam-g1');
+  var g2Slider = document.getElementById('sam-g2');
+  var etaSlider = document.getElementById('sam-eta');
+
+  var rhoValSpan = document.getElementById('sam-rho-v');
+  var g1ValSpan = document.getElementById('sam-g1-v');
+  var g2ValSpan = document.getElementById('sam-g2-v');
+  var etaValSpan = document.getElementById('sam-eta-v');
+
+  var btnDefault = document.getElementById('sam-btn-default');
+  var btnStep = document.getElementById('sam-btn-step');
+  var btnReset = document.getElementById('sam-btn-reset');
+
+  // Coordinates of w in normalized space
+  var wPos = { x: -0.6, y: 0.5 };
+  var stepCount = 0;
+
+  function fmt(val, d) {
+    var digits = (d !== undefined) ? d : 3;
+    return (Math.round(val * Math.pow(10, digits)) / Math.pow(10, digits)).toFixed(digits);
+  }
+
+  function draw() {
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    var rho = parseFloat(rhoSlider.value);
+    var g1 = parseFloat(g1Slider.value);
+    var g2 = parseFloat(g2Slider.value);
+    var eta = parseFloat(etaSlider.value);
+
+    // Coordinate mapping
+    var originX = W / 2, originY = H / 2;
+    var scale = 140; // pixels per unit
+
+    function toCvX(x) { return originX + x * scale; }
+    function toCvY(y) { return originY - y * scale; }
+
+    // Grid lines
+    ctx.strokeStyle = '#f1f5f9';
+    ctx.lineWidth = 1;
+    for (var gx = -2.0; gx <= 2.0; gx += 0.5) {
+      ctx.beginPath();
+      ctx.moveTo(toCvX(gx), 0);
+      ctx.lineTo(toCvX(gx), H);
+      ctx.stroke();
+    }
+    for (var gy = -1.5; gy <= 1.5; gy += 0.5) {
+      ctx.beginPath();
+      ctx.moveTo(0, toCvY(gy));
+      ctx.lineTo(W, toCvY(gy));
+      ctx.stroke();
+    }
+
+    // Draw background contour rings of loss landscape f(w1, w2) = 0.5*(w1^2 + 4*w2^2)
+    var levels = [0.1, 0.4, 0.9, 1.6, 2.5, 3.6];
+    for (var i = 0; i < levels.length; i++) {
+      var lev = levels[i];
+      var rx = Math.sqrt(2 * lev) * scale;
+      var ry = Math.sqrt(2 * lev / 3.5) * scale;
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(originX, originY, rx, ry, 0, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+
+    // Center minima dot
+    ctx.fillStyle = '#10b981';
+    ctx.beginPath();
+    ctx.arc(originX, originY, 4, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = '#059669';
+    ctx.fillText('極小點 (0, 0)', originX + 8, originY + 4);
+
+    // Current point w
+    var wx = toCvX(wPos.x);
+    var wy = toCvY(wPos.y);
+
+    // Orange dashed circle with radius rho
+    var rPix = rho * scale;
+    ctx.strokeStyle = '#ea580c';
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.arc(wx, wy, rPix, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Gradient norm & epsilon* calculation
+    var gNorm = Math.sqrt(g1 * g1 + g2 * g2);
+    var eps1 = gNorm > 1e-7 ? rho * (g1 / gNorm) : 0;
+    var eps2 = gNorm > 1e-7 ? rho * (g2 / gNorm) : 0;
+    var epsNorm = Math.sqrt(eps1 * eps1 + eps2 * eps2);
+
+    // Worst-case neighbor point w_adv = w + eps*
+    var advPos = { x: wPos.x + eps1, y: wPos.y + eps2 };
+    var advX = toCvX(advPos.x);
+    var advY = toCvY(advPos.y);
+
+    // ① Ascent Vector (Red arrow from w to w+eps*)
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(wx, wy);
+    ctx.lineTo(advX, advY);
+    ctx.stroke();
+
+    // Arrowhead for Ascent
+    var angleAsc = Math.atan2(advY - wy, advX - wx);
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.moveTo(advX, advY);
+    ctx.lineTo(advX - 9 * Math.cos(angleAsc - Math.PI / 6), advY - 9 * Math.sin(angleAsc - Math.PI / 6));
+    ctx.lineTo(advX - 9 * Math.cos(angleAsc + Math.PI / 6), advY - 9 * Math.sin(angleAsc + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+
+    // ② Simulated gradient at worst-case neighbor: g_adv = (adv.x, 3.5 * adv.y)
+    var gAdvX = advPos.x * 2.0;
+    var gAdvY = advPos.y * 5.0;
+    var newPos = { x: wPos.x - eta * gAdvX, y: wPos.y - eta * gAdvY };
+    var newX = toCvX(newPos.x);
+    var newY = toCvY(newPos.y);
+
+    // ② Descent Vector (Blue line from w to new w)
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(wx, wy);
+    ctx.lineTo(newX, newY);
+    ctx.stroke();
+
+    // Arrowhead for Descent
+    var angleDesc = Math.atan2(newY - wy, newX - wx);
+    ctx.fillStyle = '#2563eb';
+    ctx.beginPath();
+    ctx.moveTo(newX, newY);
+    ctx.lineTo(newX - 9 * Math.cos(angleDesc - Math.PI / 6), newY - 9 * Math.sin(angleDesc - Math.PI / 6));
+    ctx.lineTo(newX - 9 * Math.cos(angleDesc + Math.PI / 6), newY - 9 * Math.sin(angleDesc + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+
+    // Draw Points
+    // w (Blue)
+    ctx.fillStyle = '#2563eb';
+    ctx.beginPath();
+    ctx.arc(wx, wy, 5.5, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#1e3a8a';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText('w', wx - 18, wy + 4);
+
+    // w_adv (Red)
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.arc(advX, advY, 5, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#991b1b';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText('w+ε*', advX + 8, advY - 4);
+
+    // w_new preview (Green)
+    ctx.fillStyle = '#16a34a';
+    ctx.beginPath();
+    ctx.arc(newX, newY, 4.5, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#15803d';
+    ctx.font = '11px sans-serif';
+    ctx.fillText('w(t+1)', newX + 7, newY + 12);
+
+    // Legend on Canvas
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+    ctx.fillRect(10, 10, 220, 68);
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(10, 10, 220, 68);
+
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = '#dc2626';
+    ctx.fillText('● ① Ascent: 擾動到最慘點 (+ε*)', 16, 28);
+    ctx.fillStyle = '#2563eb';
+    ctx.fillText('● ② Descent: 在最慘點求梯度更新原點', 16, 48);
+    ctx.fillStyle = '#ea580c';
+    ctx.fillText('--- 半徑 ρ 鄰域約束圓', 16, 68);
+  }
+
+  function report() {
+    var rho = parseFloat(rhoSlider.value);
+    var g1 = parseFloat(g1Slider.value);
+    var g2 = parseFloat(g2Slider.value);
+    var eta = parseFloat(etaSlider.value);
+
+    var gNorm = Math.sqrt(g1 * g1 + g2 * g2);
+    var eps1 = gNorm > 1e-7 ? rho * (g1 / gNorm) : 0;
+    var eps2 = gNorm > 1e-7 ? rho * (g2 / gNorm) : 0;
+    var epsNorm = Math.sqrt(eps1 * eps1 + eps2 * eps2);
+
+    var statusBadge = '';
+    var diff = Math.abs(epsNorm - rho);
+    if (diff < 1e-5) {
+      statusBadge = '<div class="status-badge orthogonal">⚡ 驗證透過：‖ε*‖ = ' + fmt(epsNorm, 3) + ' 嚴格等於半徑 ρ (長度保持不變)</div>';
+    } else {
+      statusBadge = '<div class="status-badge running">🏃 正在計算中...</div>';
+    }
+
+    ro.innerHTML =
+      '<strong>當前位置 w：</strong> (' + fmt(wPos.x, 3) + ', ' + fmt(wPos.y, 3) + ')<br/>' +
+      '<strong>鄰域半徑 ρ：</strong> ' + fmt(rho, 3) + '<br/>' +
+      '<strong>出發點梯度 ∇L(w)：</strong> (' + fmt(g1, 1) + ', ' + fmt(g2, 1) + ')<br/>' +
+      '<strong>梯度歐氏長度 ‖∇L‖₂：</strong> ' + fmt(gNorm, 3) + '<br/>' +
+      '<strong>最壞擾動 ε*(w)：</strong> (' + fmt(eps1, 3) + ', ' + fmt(eps2, 3) + ')<br/>' +
+      '<strong>最壞擾動長度 ‖ε*‖₂：</strong> <span style="color:#15803d;font-weight:bold;">' + fmt(epsNorm, 3) + '</span> (驗證長度 = ρ)<br/>' +
+      '<strong>累計 SAM 更新步數：</strong> ' + stepCount + '<br/>' +
+      '<strong>狀態判定：</strong><br/>' + statusBadge;
+  }
+
+  function sync() {
+    var rho = parseFloat(rhoSlider.value);
+    var g1 = parseFloat(g1Slider.value);
+    var g2 = parseFloat(g2Slider.value);
+    var eta = parseFloat(etaSlider.value);
+
+    rhoValSpan.textContent = fmt(rho, 2);
+    g1ValSpan.textContent = fmt(g1, 1);
+    g2ValSpan.textContent = fmt(g2, 1);
+    etaValSpan.textContent = fmt(eta, 2);
+
+    draw();
+    report();
+  }
+
+  function doStep() {
+    var rho = parseFloat(rhoSlider.value);
+    var g1 = parseFloat(g1Slider.value);
+    var g2 = parseFloat(g2Slider.value);
+    var eta = parseFloat(etaSlider.value);
+
+    var gNorm = Math.sqrt(g1 * g1 + g2 * g2);
+    var eps1 = gNorm > 1e-7 ? rho * (g1 / gNorm) : 0;
+    var eps2 = gNorm > 1e-7 ? rho * (g2 / gNorm) : 0;
+
+    var advX = wPos.x + eps1;
+    var advY = wPos.y + eps2;
+
+    var gAdvX = advX * 2.0;
+    var gAdvY = advY * 5.0;
+
+    wPos.x -= eta * gAdvX;
+    wPos.y -= eta * gAdvY;
+    stepCount++;
+
+    // Update gradient sliders to reflect new local gradient
+    g1Slider.value = fmt(wPos.x * 3.0, 1);
+    g2Slider.value = fmt(wPos.y * 6.0, 1);
+    sync();
+  }
+
+  rhoSlider.addEventListener('input', sync);
+  g1Slider.addEventListener('input', sync);
+  g2Slider.addEventListener('input', sync);
+  etaSlider.addEventListener('input', sync);
+
+  btnDefault.addEventListener('click', function() {
+    rhoSlider.value = 0.20;
+    g1Slider.value = 5.0;
+    g2Slider.value = 12.0;
+    sync();
+  });
+
+  btnStep.addEventListener('click', doStep);
+
+  btnReset.addEventListener('click', function() {
+    wPos = { x: -0.6, y: 0.5 };
+    stepCount = 0;
+    rhoSlider.value = 0.20;
+    g1Slider.value = 5.0;
+    g2Slider.value = 12.0;
+    etaSlider.value = 0.15;
+    sync();
+  });
+
+  sync();
+})();
+</script>
+</body>
+</html>

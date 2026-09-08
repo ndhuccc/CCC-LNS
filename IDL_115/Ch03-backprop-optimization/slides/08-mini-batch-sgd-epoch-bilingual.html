@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch03 · KP08 Mini-Batch SGD 與 Epoch — Mini-Batch SGD &amp; Epochs</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(37,99,235,.28), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(124,58,237,.22), transparent 30%),
+              linear-gradient(135deg, #0a0e27 0%, #0d1e4a 50%, #1a1638 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(10, 14, 39, .25);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(36px, 4.4vw, 64px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(18px, 2.0vw, 30px);
+  color: #93c5fd;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #38bdf8;
+  border-radius: 999px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 880px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #7dd3fc !important; fill: #7dd3fc !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #cbd5e1; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  display: block;
+}
+.half-layout .visual > svg {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  display: block;
+}
+.half-layout .visual .svg-caption {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+  font-size: var(--t5);
+  color: var(--text-low);
+  letter-spacing: .05em;
+}
+@media (max-width: 1100px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+
+/* 高橋流置中修復：卡片居中於內容閱讀區 (831px 中心軸，左右邊距各 231px) 坑 W */
+.section .takahashi {
+  text-align: center;
+  padding: 80px 36px;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+}
+
+/* 矩陣比較表格樣式 */
+.matrix-table-wrap {
+  overflow-x: auto;
+  margin: 24px 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  background: var(--bg-card);
+}
+.matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 15px;
+}
+.matrix-table th, .matrix-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.matrix-table th {
+  background: #f1f5f9;
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 15px;
+}
+.matrix-table tr:last-child td {
+  border-bottom: none;
+}
+.matrix-table tr:hover {
+  background: #f8fafc;
+}
+.tag-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+.tag-badge.red { background: #fee2e2; color: #dc2626; }
+.tag-badge.blue { background: #dbeafe; color: #2563eb; }
+.tag-badge.green { background: #dcfce7; color: #16a34a; }
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin: 28px 0;
+}
+.lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  color: var(--ink);
+}
+.lab-ctrl select, .lab-ctrl button.opt-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  font-size: 14px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.lab-ctrl button.opt-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  font-weight: 700;
+}
+.lab-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all .2s;
+}
+.lab-btn:hover {
+  background: hsl(248, 58%, 38%);
+  transform: translateY(-1px);
+}
+.lab-btn.secondary {
+  background: #64748b;
+}
+.lab-btn.secondary:hover {
+  background: #475569;
+}
+.lab-btn.accent {
+  background: #0284c7;
+}
+.lab-btn.accent:hover {
+  background: #0369a1;
+}
+.lab-display {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .lab-display { grid-template-columns: 1fr; }
+}
+.lab-canvas-container {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.lab-readout {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+.lab-readout .status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.status-badge.noisy { background: #fee2e2; color: #b91c1c; }
+.status-badge.moderate { background: #fef3c7; color: #b45309; }
+.status-badge.optimal { background: #dbeafe; color: #1d4ed8; }
+.status-badge.saturated { background: #dcfce7; color: #15803d; }
+
+/* 測驗區塊樣式 */
+.quiz-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+@media (max-width: 900px) {
+  .quiz-grid { grid-template-columns: 1fr; }
+}
+.quiz-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+}
+.quiz-card h3 {
+  font-size: 17px;
+  margin-bottom: 16px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.quiz-card .options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.quiz-card .options button {
+  text-align: left;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1.5px solid var(--line);
+  background: #f8fafc;
+  color: var(--ink);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all .2s;
+  line-height: 1.4;
+}
+.quiz-card .options button:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+.quiz-card .options button.correct {
+  background: #dcfce7 !important;
+  border-color: #22c55e !important;
+  color: #15803d !important;
+  font-weight: 700;
+}
+.quiz-card .options button.wrong {
+  background: #fee2e2 !important;
+  border-color: #ef4444 !important;
+  color: #b91c1c !important;
+}
+.quiz-card .feedback {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  display: none;
+  line-height: 1.6;
+  margin-top: auto;
+}
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+.quiz-card .feedback.no { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP08 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Core Question</a></li>
+    <li><a href="#dilemma-compromise">黃金折衷 · Dilemma &amp; Tradeoff</a></li>
+    <li><a href="#partitioning">無放回劃分 · Partitioning (23)–(24)</a></li>
+    <li><a href="#epoch-definition">Epoch 定義 · Definition 1</a></li>
+    <li><a href="#minibatch-formula">更新式與 GPU · Update Eq (25)</a></li>
+    <li><a href="#proposition1-convergence">命題 1 收斂界 · Proposition 1</a></li>
+    <li><a href="#variance-analysis">方差期望分析 · Variance Eq (29)–(30)</a></li>
+    <li><a href="#spectrum-tradeoff">Batch 光譜 · Spectrum Tradeoff</a></li>
+    <li><a href="#comparison">三大策略對比 · Comparison Matrix</a></li>
+    <li><a href="#master-maxims">大師四大鐵律 · Master Maxims</a></li>
+    <li><a href="#lab">互動實驗室 · Interactive Lab</a></li>
+    <li><a href="#quiz">思考題 · Checkpoint Quiz</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">IDL 115 · CHAPTER 3 · KP-08 · TEACHING DECK</span>
+    <h1>Mini-Batch SGD 與 Epoch：單筆太吵、全批太慢的黃金折衷
+      <span class="hero-title-en">Mini-Batch SGD &amp; Epochs: Variance Reduction, GPU Matrix Vectorization, and Epoch Traversal</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      單樣本更新方差劇烈如醉漢，全批次計算巨慢且視訊記憶體崩潰！Mini-Batch SGD 每次隨機抽取 $b$ 筆樣本取均值，兼具隨機探索性與硬體並行效率。深度剖析無放回劃分式 (23)–(24)、Epoch 定義、命題 1 誤差界 $\mathcal{O}(1/t + \|e_t\|^2)$ 及方差衰減定理 $(1 - b/n)\frac{\sigma^2}{b}$。
+    </p>
+    <p class="bilingual-en" style="color: #cbd5e1; max-width: 860px; margin: 10px auto 0;">
+      Single-sample SGD exhibits chaotic variance, whereas full-batch gradient descent is computationally prohibitive and memory-bound. Mini-Batch SGD establishes the industry standard by trading off variance via sample averaging and unlocking tensor-core parallelization.
+    </p>
+  </div>
+</section>
+
+<!-- 2. 大問句 (高橋流置中 坑 W) -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="sec-tag inquiry">01 / 核心提問 · Core Question</div>
+    <div class="quote">
+      「單筆太吵、全批太慢：Mini-Batch 如何成為深度學習的黃金折衷？」
+      <small>單樣本步步隨機振盪，全批次視訊記憶體爆炸計算龜速！Mini-batch 結合 GPU 矩陣向量化與常數方差衰減，橫掃現代 AI 訓練架構！<br/>
+        <span class="bilingual-en-inline">Single-sample SGD suffers extreme variance while full-batch gradient descent is computationally prohibitive; Mini-Batch SGD achieves the golden compromise between variance reduction and GPU throughput!</span>
+      </small>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 單筆太吵 vs 全批太慢之黃金折衷 -->
+<section class="section" id="dilemma-compromise">
+  <div class="sec-tag sustain">02 / 核心動機 · Motivation &amp; Dilemma</div>
+  <h2 class="section-title">兩難抉擇與黃金折衷：為什麼需要 Mini-Batch SGD？
+    <span class="en">The Optimization Dilemma: Why Mini-Batch SGD Dominates Modern Deep Learning</span>
+  </h2>
+
+  <div class="compare-layout">
+    <div class="col left">
+      <h3>🔴 極端一：Single-Sample SGD ($b=1$)</h3>
+      <div class="sub-en">High Variance, Underutilized Hardware</div>
+      <ul>
+        <li><strong>方差極大：</strong>每步只抽 1 筆樣本，梯度隨機噪聲高達 $\sigma^2$，軌跡如醉漢漫步，極度抖動。</li>
+        <li><strong>硬體浪費：</strong>無法填滿 GPU 數千核心，計算受限於記憶體頻寬（Memory Bandwidth Bound），算力利用率常低於 5%。</li>
+        <li><strong>優勢：</strong>單步計算成本極低，且劇烈噪聲具備極強的逃離鞍點與尖銳局部極小值能力。</li>
+      </ul>
+    </div>
+    <div class="col right">
+      <h3>🟢 極端二：Full-Batch GD ($b=n$)</h3>
+      <div class="sub-en">Deterministic Descent, Prohibitive Cost</div>
+      <ul>
+        <li><strong>計算龜速：</strong>每更新一步必須完整遍歷資料集全體 $n$ 筆樣本，在海量資料集（如百萬影像或百億文字）下每步極度昂貴。</li>
+        <li><strong>視訊記憶體爆炸：</strong>全資料集啟用值與梯度無法一次性塞入顯示卡 VRAM，直接引發 Out-Of-Memory (OOM)。</li>
+        <li><strong>泛化欠佳：</strong>完全無噪聲的精確梯度容易收斂到平坦度較差的尖銳極小值（Sharp Minima）。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="highlight-box">
+    <h4>黃金折衷：Mini-Batch SGD ($1 < b < n$)</h4>
+    <p>每次隨機抽取 $b$ 筆資料（Batch Size，批次大小），以這小批樣本的<strong>平均梯度</strong>進行參數更新！</p>
+    <p><strong>核心成效：</strong>一方面利用大數法則將梯度方差壓低至約 $\sigma^2/b$，收斂更穩定；另一方面將 $b$ 筆前向與反向運算打包為高吞吐矩陣乘法（Batch GEMM），發揮 GPU 龐大並行算力。因此文獻中所稱的「SGD」，實務上九成九皆指 Mini-Batch SGD！</p>
+  </div>
+</section>
+
+<!-- 4. 資料怎麼切：式 (23)–(24) -->
+<section class="section" id="partitioning">
+  <div class="sec-tag sustain">03 / 數學基礎 · Data Partitioning</div>
+  <h2 class="section-title">資料怎麼切：式 (23)–(24) 無放回劃分 vs Bootstrapping
+    <span class="en">Dataset Partitioning: Disjoint Partitions (23)–(24) vs. Bootstrapping</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>無放回劃分的集合論定義（式 (23)–(24)）</h4>
+    <p>在進入最佳化迴圈前，標準做法是將大小為 $n$ 的訓練資料集 $\mathcal{D}$ 隨機置換打亂（Shuffle），然後切分為 $\lfloor n/b \rfloor$ 個大小為 $b$ 的互斥子集 $\mathcal{B}_i$（Simple random sampling without replacement）：</p>
+    <p>$$ \begin{align*} & \bigcup_{i=1}^{\lfloor n / b\rfloor} \mathcal{B}_{i}=\mathcal{D}, \tag{23}\\ & \mathcal{B}_{i} \cap \mathcal{B}_{j}=\varnothing, \quad \forall i, j \in\{1, \ldots,\lfloor n / b\rfloor\}, i \neq j . \tag{24} \end{align*} $$</p>
+    <p><strong>物理意義：</strong>所有子集聯集完整覆蓋整個訓練集 $\mathcal{D}$（式 23），且任意兩批次之間交集為空集（式 24）。這保證了在一個週期內，每個訓練樣本恰好被模型「看過且僅看過一次」！</p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>1. 無放回抽樣 (Without Replacement)</h3>
+      <div class="sub-en">Standard Deep Learning Practice</div>
+      <p>先對整個資料集進行全域隨機重排（Random Permutation），再依序切分成固定大小塊。保證資料利用完全均勻，杜絕偏差。</p>
+    </div>
+    <div class="card positive">
+      <h3>2. 有放回抽樣 (Bootstrapping)</h3>
+      <div class="sub-en">Sampling with Replacement</div>
+      <p>每步獨立均勻地從 $\mathcal{D}$ 抽 $b$ 筆。批次間不再互斥（$\mathcal{B}_i \cap \mathcal{B}_j \neq \varnothing$），式 (24) 失效。約有 $1 - 1/e \approx 63.2\%$ 獨特樣本被抽中，其餘被遺漏。</p>
+    </div>
+    <div class="card positive">
+      <h3>3. 為什麼深度學習偏好無放回？</h3>
+      <div class="sub-en">Information Uniformity &amp; Cache Efficiency</div>
+      <p>無放回能確保每筆珍貴資料獲得平等的梯度貢獻，避免特定樣本被反覆過度訓練，同時有利於循序記憶體讀取與 DataLoader 預取快取。</p>
+    </div>
+    <div class="card positive">
+      <h3>4. 若 $n$ 不能被 $b$ 整除怎麼辦？</h3>
+      <div class="sub-en">Drop Last vs. Smaller Final Batch</div>
+      <p>最後剩餘的 $n - b\lfloor n/b \rfloor$ 筆資料，常見處理方式為：保留為尺寸較小的最後一批，或在 DataLoader 中設定 <code>drop_last=True</code> 直接捨棄，避免批次大小動態變化損害 GPU 運算元編譯效益。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5. Epoch 是什麼？(Definition 1) -->
+<section class="section" id="epoch-definition">
+  <div class="sec-tag sustain">04 / 核心概念 · Epoch Definition</div>
+  <h2 class="section-title">Epoch 是什麼？Definition 1 與週期遍歷的本質
+    <span class="en">What is an Epoch? Definition 1 and the Anatomy of Full Dataset Traversal</span>
+  </h2>
+
+  <div class="highlight-box">
+    <h4>定義 1（Epoch，訓練週期）</h4>
+    <p><strong>Definition 1：</strong>一個 Epoch 定義為最佳化演算法將全部 $\lfloor n/b \rfloor$ 個不相交批次（Batches）<strong>各使用過一次</strong>做參數更新的完整過程。實務訓練通常會執行數十至數百個 Epoch，直到驗證集損失收斂。</p>
+    <p><strong>口語涵義：</strong>「把整份訓練資料由頭到尾完整掃一輪」。</p>
+  </div>
+
+  <div class="half-layout">
+    <div class="visual">
+      <!-- 嚴格依據提示詞規範繪製的 SVG: 720x360, flat vector, blue theme, white bg, Arial, red/green/blue cues -->
+      <svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, -apple-system, sans-serif">
+        <!-- Background -->
+        <rect x="0" y="0" width="720" height="360" fill="#ffffff" rx="10"/>
+
+        <!-- Top Title -->
+        <text x="360" y="26" text-anchor="middle" font-size="15" font-weight="bold" fill="#1e40af">Epoch 全景架構：無放回遍歷、光譜折衷與深度學習反直覺</text>
+
+        <!-- Epoch Large Outer Frame -->
+        <rect x="24" y="44" width="672" height="136" rx="10" fill="#f8fafc" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,4"/>
+        <rect x="36" y="34" width="220" height="20" rx="4" fill="#1e40af"/>
+        <text x="146" y="48" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">EPOCH 完整遍歷框 (整份資料集 D 掃一輪)</text>
+
+        <!-- Batch Cards inside Epoch -->
+        <!-- B1: Active / Highlighted -->
+        <g transform="translate(48, 64)">
+          <rect x="0" y="0" width="168" height="96" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/>
+          <rect x="0" y="0" width="168" height="24" rx="8" fill="#2563eb"/>
+          <text x="84" y="16" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">批次 B1 (正在更新 ★)</text>
+          <text x="84" y="46" text-anchor="middle" font-size="11" fill="#1e40af">大小 b 筆樣本 (互斥)</text>
+          <text x="84" y="66" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">w^(k+1) := w^(k) - η g_B1</text>
+          <text x="84" y="84" text-anchor="middle" font-size="10" fill="#2563eb">GPU 向量化前向/反向</text>
+        </g>
+
+        <!-- Arrow B1 -> B2 -->
+        <path d="M 226 112 L 254 112" stroke="#2563eb" stroke-width="3" marker-end="none"/>
+        <polygon points="254,107 262,112 254,117" fill="#2563eb"/>
+
+        <!-- B2: Dimmer -->
+        <g transform="translate(272, 64)">
+          <rect x="0" y="0" width="156" height="96" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.4"/>
+          <rect x="0" y="0" width="156" height="24" rx="8" fill="#64748b"/>
+          <text x="78" y="16" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">批次 B2 (排隊中)</text>
+          <text x="78" y="46" text-anchor="middle" font-size="11" fill="#475569">大小 b 筆樣本</text>
+          <text x="78" y="66" text-anchor="middle" font-size="11" fill="#64748b">B2 ∩ B1 = ∅</text>
+          <text x="78" y="84" text-anchor="middle" font-size="10" fill="#94a3b8">等待下一拍 step 更新</text>
+        </g>
+
+        <!-- Ellipsis -->
+        <text x="456" y="116" text-anchor="middle" font-size="20" font-weight="bold" fill="#64748b">···</text>
+
+        <!-- B_last: Labeled Last Batch -->
+        <g transform="translate(488, 64)">
+          <rect x="0" y="0" width="188" height="96" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.4"/>
+          <rect x="0" y="0" width="188" height="24" rx="8" fill="#475569"/>
+          <text x="94" y="16" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">最後批次 B_last (第 ⌊n/b⌋ 批)</text>
+          <text x="94" y="46" text-anchor="middle" font-size="11" fill="#475569">大小 b 筆樣本 (掃完本輪)</text>
+          <text x="94" y="66" text-anchor="middle" font-size="11" font-weight="bold" fill="#16a34a">完成此批即達成 1 Epoch！</text>
+          <text x="94" y="84" text-anchor="middle" font-size="10" fill="#64748b">下輪 Epoch 前重新 Shuffle</text>
+        </g>
+
+        <!-- Middle: Spectrum Bar (b=1 red, mini blue, b=n green) -->
+        <g transform="translate(24, 196)">
+          <text x="0" y="14" font-size="12" font-weight="bold" fill="#1e40af">Batch Size 權衡光譜：</text>
+          
+          <!-- Spectrum track -->
+          <rect x="130" y="2" width="542" height="18" rx="9" fill="#e2e8f0"/>
+          <!-- Segment 1: Red -->
+          <rect x="130" y="2" width="120" height="18" rx="9" fill="#e53e3e"/>
+          <!-- Segment 2: Blue -->
+          <rect x="240" y="2" width="280" height="18" fill="#2563eb"/>
+          <!-- Segment 3: Green -->
+          <rect x="510" y="2" width="162" height="18" rx="9" fill="#16a34a"/>
+
+          <!-- Labels on Spectrum -->
+          <text x="175" y="15" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">b = 1 (太吵)</text>
+          <text x="380" y="15" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">Mini-Batch (黃金折衷 · 主流)</text>
+          <text x="600" y="15" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">b = n (太慢 / OOM)</text>
+
+          <!-- Annotations under Spectrum -->
+          <text x="175" y="34" text-anchor="middle" font-size="10" fill="#e53e3e">方差大 · 軌跡抖 · GPU閒置</text>
+          <text x="380" y="34" text-anchor="middle" font-size="10" fill="#2563eb">方差低 · GPU加速 · 泛化好</text>
+          <text x="600" y="34" text-anchor="middle" font-size="10" fill="#16a34a">每步貴 · 視訊記憶體爆 · 無逃逸噪聲</text>
+        </g>
+
+        <!-- Bottom: Two Counter-Intuitive Insights (Separated) -->
+        <g transform="translate(24, 256)">
+          <!-- Box 1: Counter-intuitive 1 -->
+          <rect x="0" y="0" width="326" height="88" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.2"/>
+          <text x="14" y="22" font-size="12" font-weight="bold" fill="#1e40af">反直覺一：名為 SGD，實為 Mini-Batch</text>
+          <text x="14" y="44" font-size="11" fill="#334155">文獻與 PyTorch 中所稱的「SGD」，實務上九成九</text>
+          <text x="14" y="62" font-size="11" fill="#334155">皆指 Mini-Batch SGD（b 通常為 32~256），</text>
+          <text x="14" y="80" font-size="11" fill="#2563eb">而非純單樣本（b=1）更新！</text>
+
+          <!-- Box 2: Counter-intuitive 2 -->
+          <rect x="346" y="0" width="326" height="88" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.2"/>
+          <text x="360" y="22" font-size="12" font-weight="bold" fill="#1e40af">反直覺二：穩不等於快，大 Batch 有代價</text>
+          <text x="360" y="44" font-size="11" fill="#334155">Batch 越大雜訊越小、越像全梯度，但每步計算更昂貴，</text>
+          <text x="360" y="62" font-size="11" fill="#334155">且每個 Epoch 參數更新步數成反比銳減（僅 ⌊n/b⌋ 步）——</text>
+          <text x="360" y="80" font-size="11" fill="#16a34a">盲目擴大 Batch 並不能縮短總訓練壁鐘時間！</text>
+        </g>
+      </svg>
+      <div class="svg-caption">圖 1：Epoch 無放回劃分架構、Batch Size 光譜與深度學習兩大反直覺觀念</div>
+    </div>
+
+    <div>
+      <h3>Epoch、Batch 與 Step 的關係</h3>
+      <div class="sub-en">Hierarchy of Optimization Units</div>
+      <p>理解深度學習訓練程序，需釐清三個維度：</p>
+      <ul>
+        <li><strong>Step（迭代步）：</strong>執行一次式 (25) 更新，消耗 1 個 Batch。</li>
+        <li><strong>Batch Size ($b$)：</strong>單步內同時參與梯度計算的樣本數量。</li>
+        <li><strong>Epoch（週期）：</strong>消耗 $\lfloor n/b \rfloor$ 個 Step，將全部資料集遍歷一次。</li>
+      </ul>
+      <p>若資料量 $n=60,000$、批次 $b=64$，則 1 個 Epoch 包含 $\lfloor 60000/64 \rfloor = 937$ 次更新。訓練 50 個 Epoch 等同進行 $46,850$ 次參數迭代！</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 更新規則：式 (25) 與 GPU 加速 -->
+<section class="section" id="minibatch-formula">
+  <div class="sec-tag sustain">05 / 運算機制 · Update Rule &amp; Hardware</div>
+  <h2 class="section-title">更新規則：式 (25) 與 GPU 矩陣向量化加速
+    <span class="en">Mini-Batch SGD Update Rule (25) and GPU Tensor Core Acceleration</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>Mini-Batch SGD 核心更新公式（式 (25)）</h4>
+    <p>設在第 $k$ 步迭代中，最佳化演算法選取的批次記為 $\mathcal{B}_{k'}$（包含 $b$ 個樣本索引）：</p>
+    <p>$$ \boldsymbol{w}^{(k+1)}:=\boldsymbol{w}^{(k)}-\eta^{(k)} \frac{1}{b} \sum_{i \in \mathcal{B}_{k^{\prime}}} \nabla f_{i}\left(\boldsymbol{w}^{(k)}\right) \tag{25} $$</p>
+    <p><strong>工程註記：</strong>實務中因子 $1/b$ 有時會被直接吸納入學習率 $\eta$ 當中，其梯度下降幾何方向完全等價。</p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>1. 為什麼 GPU 特別青睞 Mini-Batch？</h3>
+      <div class="sub-en">High Arithmetic Intensity (GEMM)</div>
+      <p>單樣本前向傳播是矩陣與向量乘法（GEMV），運算受限於記憶體頻寬；Mini-batch 將 $b$ 個輸入拼接為矩陣 $\boldsymbol{X} \in \mathbb{R}^{b \times d}$，前向與反向全轉換為通用矩陣相乘（GEMM），大幅提升運算強度與 Tensor Core 吞吐量。</p>
+    </div>
+    <div class="card positive">
+      <h3>2. 記憶體容量 vs 批次大小瓶頸</h3>
+      <div class="sub-en">VRAM Footprint &amp; Activation Memory</div>
+      <p>批次大小 $b$ 越大，反向傳播需暫存的前向啟用值（Activations）體積呈線性正比增加。當 $b$ 超過顯示卡 VRAM 上限時即引發 OOM，促使實務常採用梯度累積（Gradient Accumulation）在邏輯上擴大有效批次。</p>
+    </div>
+    <div class="card positive">
+      <h3>3. 步長調整的線性縮放規律</h3>
+      <div class="sub-en">Linear Scaling Rule (Goyal et al.)</div>
+      <p>當硬體算力允許將批次大小從 $b$ 擴大為 $k \cdot b$ 時，為了保持每個 Epoch 的總更新強度對齊，學習率通常需同步放大：$\eta \leftarrow k \cdot \eta$，並搭配學習率預熱（Warmup）防止訓練初期散逸。</p>
+    </div>
+    <div class="card positive">
+      <h3>4. 軟體實作：DataLoader 預取快取</h3>
+      <div class="sub-en">Asynchronous Multi-Worker Prefetching</div>
+      <p>現代框架使用多執行緒（Multi-worker）在 CPU 背景預先打亂、切塊並將批次資料非同步傳輸至 GPU 視訊記憶體（Pinned Memory），徹底消除 GPU 等待磁碟 I/O 的管線停頓。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7. Proposition 1：收斂率與梯度誤差 -->
+<section class="section" id="proposition1-convergence">
+  <div class="sec-tag sustain">06 / 理論收斂界 · Proposition 1</div>
+  <h2 class="section-title">命題 1：收斂率界與梯度近似誤差 $\|e_t\|_2^2$
+    <span class="en">Proposition 1: Convergence Rates under Gradient Approximation Error</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>梯度近似分解（式 (26)）與命題 1（式 (27)–(28)）</h4>
+    <p>將小批次平均梯度視為全資料集真實梯度 $\nabla f(\boldsymbol{w}^{(t)})$ 與隨機近似誤差向量 $e_t$ 的疊加：</p>
+    <p>$$ \frac{1}{b} \sum_{i \in \mathcal{B}_{t^{\prime}}} \nabla f_{i}\left(\boldsymbol{w}^{(t)}\right)=\nabla f\left(\boldsymbol{w}^{(t)}\right)+e_{t} \tag{26} $$</p>
+    <p>當使用固定步長 $\eta^{(k)}=\eta$ 時，演算法收斂率界（Proposition 1）分為兩大情境：</p>
+    <ul>
+      <li><strong>一般凸或非凸函式 $f$（式 (27)）：</strong>
+        $$ \min_{0 \le k \le t-1} \|\nabla f(\boldsymbol{w}^{(k)})\|_2^2 \le \mathcal{O}\left(\frac{1}{t}+\left\|e_{t}\right\|_{2}^{2}\right) \tag{27} $$
+      </li>
+      <li><strong>$\mu$-強凸且 $L$-平滑目標函式 $f_i$（式 (28)）：</strong>
+        $$ \mathbb{E}\left[f(\boldsymbol{w}^{(t)})-f^*\right] \le \mathcal{O}\left(\left(1-\frac{\mu}{L}\right)^{t}+\left\|e_{t}\right\|_{2}^{2}\right) \tag{28} $$
+      </li>
+    </ul>
+  </div>
+
+  <div class="compare-layout">
+    <div class="col left">
+      <h3>第一項：決定性收斂速度</h3>
+      <div class="sub-en">Deterministic Convergence Term</div>
+      <p>凸函式下以亞線性速度 $\mathcal{O}(1/t)$ 衰減；強凸條件下以幾何級數線性速度 $\mathcal{O}((1-\mu/L)^t)$ 快速收縮。隨著迭代步數 $t \to \infty$，第一項必然衰減歸零。</p>
+    </div>
+    <div class="col right">
+      <h3>第二項：隨機方差底噪 $\|e_t\|_2^2$</h3>
+      <div class="sub-en">Variance Noise Floor &amp; Oscillation</div>
+      <p>代表 Mini-Batch 取樣噪聲所造成的不可消除極限底噪。在固定步長 $\eta$ 下，參數無法精確收斂到最優點 $w^*$，而是在極小值周圍半徑正比於 $\|e_t\|_2^2$ 的方差球內持續振盪！</p>
+    </div>
+  </div>
+
+  <p>
+    <strong>核心推論：</strong>增大批次大小 $b$ 能夠直接壓低誤差範數期望 $\mathbb{E}[\|e_t\|_2^2]$，使收斂界逼近 Full-batch 梯度下降的極限（式 (31)）。若要徹底消減此誤差底噪，必須配合學習率衰減排程（Learning Rate Decay）或 Polyak 平均。
+    <span class="bilingual-en">Increasing batch size b shrinks the gradient approximation error norm ||e_t||^2, pulling convergence closer to full-batch rates at the cost of heavier per-step computation.</span>
+  </p>
+</section>
+
+<!-- 8. 梯度誤差期望分析：式 (29)–(30) -->
+<section class="section" id="variance-analysis">
+  <div class="sec-tag sustain">07 / 方差分析 · Variance Bounds</div>
+  <h2 class="section-title">梯度誤差期望分析：式 (29)–(30) 抽樣方差定理
+    <span class="en">Expected Gradient Error Norm: Finite Population Correction in (29)–(30)</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>兩種抽樣機制下的誤差方差期望（式 (29)–(30)）</h4>
+    <p>設母體資料集梯度方差為 $\sigma^2 = \frac{1}{n}\sum_{i=1}^n \|\nabla f_i(w) - \nabla f(w)\|_2^2$：</p>
+    <p>$$ \begin{align*} & \mathbb{E}\left[\left\|e_{t}\right\|_{2}^{2}\right]=\left(1-\frac{b}{n}\right) \frac{\sigma^{2}}{b}, \quad \text{（without replacement，無放回抽樣）} \tag{29}\\ & \mathbb{E}\left[\left\|e_{t}\right\|_{2}^{2}\right]=\frac{\sigma^{2}}{b}, \quad \text{（with replacement，有放回抽樣）} \tag{30} \end{align*} $$</p>
+    <p><strong>關鍵因子：有限母體校正係數（Finite Population Correction, FPC）$(1 - b/n)$</strong></p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>1. 有放回抽樣：標準 $1/b$ 獨立衰減</h3>
+      <div class="sub-en">i.i.d. Independent Sampling</div>
+      <p>每次抽樣相互獨立，由獨立同分布大數法則可知，平均梯度的方差嚴格等於母體方差除以樣本數 $\sigma^2/b$。即使 $b \to n$，方差仍有 $\sigma^2/n > 0$。</p>
+    </div>
+    <div class="card positive">
+      <h3>2. 無放回抽樣：$b=n$ 時方差嚴格歸零</h3>
+      <div class="sub-en">Finite Population Annihilation</div>
+      <p>在無放回抽樣下，當 $b=n$ 時，係數 $(1 - b/n) = 0$，誤差方差嚴格歸零！此時小批次梯度與母體全梯度完全重合，不存在任何隨機性。</p>
+    </div>
+    <div class="card positive">
+      <h3>3. 實務情境：巨量資料下兩者近乎等同</h3>
+      <div class="sub-en">Asymptotic Equivalence ($n \gg b$)</div>
+      <p>現代深度學習訓練集規模龐大（例如 $n = 10^6, b = 128$），此時 $b/n \approx 0.000128$，$(1 - b/n) \approx 0.99987 \approx 1$。兩者方差數值極為接近，但無放回確保了每個樣本在週期內不重複被取樣。</p>
+    </div>
+    <div class="card positive">
+      <h3>4. 邊際方差效益遞減律</h3>
+      <div class="sub-en">Diminishing Returns of Scaling b</div>
+      <p>方差隨 $1/b$ 雙曲線下降：將 $b$ 從 1 提升至 32 可將方差降低 96.8%；但若要將方差再降一半，必須將 $b$ 再翻倍至 64。盲目追求低噪聲會耗費極其龐大的運算開銷。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 9. Batch Size 光譜：b=1 vs b=n -->
+<section class="section" id="spectrum-tradeoff">
+  <div class="sec-tag sustain">08 / 參數權衡 · Spectrum Tradeoff</div>
+  <h2 class="section-title">Batch Size 光譜：從微觀噪聲到宏觀吞吐的權衡
+    <span class="en">The Batch Size Spectrum: Microscopic Noise vs. Macroscopic Throughput</span>
+  </h2>
+
+  <div class="highlight-box">
+    <h4>深度學習中 Batch Size 的四個關鍵區間</h4>
+    <ol style="margin: 8px 0 8px 24px; line-height: 1.8;">
+      <li><strong>微批次區間 ($b = 1 \sim 8$)：</strong>噪聲極大，具備最強的隨機跳出局部極小能力；但 GPU 算力利用率極低，每步耗時大部分浪費在核心啟動（Kernel Launch Overhead）與記憶體傳輸。</li>
+      <li><strong>甜蜜黃金區間 ($b = 32 \sim 256$)：</strong>工業界最主流設定。完美契合 GPU Warp（32 執行緒）與 Tensor Core 瓦片尺寸，計算達到 compute-bound，兼備平滑梯度與足夠噪聲。</li>
+      <li><strong>大批次並行區間 ($b = 512 \sim 8192$)：</strong>多卡分散式資料並行（DDP）常用。可大幅提升總體吞吐量，但需搭配動態學習率線性縮放與 LARS/LAMB 等最佳化器，否則泛化能力嚴重退化。</li>
+      <li><strong>極限全批次區間 ($b = n$)：</strong>梯度精確確定，可使用高階牛頓類演算法；但在現代大模型中無法實施（視訊記憶體 OOM），且缺乏隨機噪聲導致模型容易卡死在尖銳鞍點。</li>
+    </ol>
+  </div>
+</section>
+
+<!-- 10. 單樣本 vs Mini-Batch vs Full-Batch 橫向矩陣表 -->
+<section class="section" id="comparison">
+  <div class="sec-tag sustain">09 / 橫向對比 · Comparison Matrix</div>
+  <h2 class="section-title">三大梯度下降策略全維度橫向矩陣對比
+    <span class="en">Comprehensive Comparison Matrix: Single-Sample vs. Mini-Batch vs. Full-Batch</span>
+  </h2>
+
+  <div class="matrix-table-wrap">
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th>比較維度</th>
+          <th>Single-Sample SGD ($b=1$)</th>
+          <th>Mini-Batch SGD ($1 < b < n$)</th>
+          <th>Full-Batch GD ($b=n$)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>抽樣方式</strong></td>
+          <td>每次隨機抽 1 筆樣本</td>
+          <td><span class="tag-badge blue">無放回劃分 $\lfloor n/b \rfloor$ 個批次</span></td>
+          <td>完整使用資料集全體 $n$ 筆</td>
+        </tr>
+        <tr>
+          <td><strong>單步計算代價</strong></td>
+          <td><span class="tag-badge green">極低 $\mathcal{O}(d)$</span></td>
+          <td>中等 $\mathcal{O}(b \cdot d)$（矩陣平行加速）</td>
+          <td><span class="tag-badge red">極高 $\mathcal{O}(n \cdot d)$</span></td>
+        </tr>
+        <tr>
+          <td><strong>梯度方差 $\|e_t\|^2$</strong></td>
+          <td><span class="tag-badge red">極大 $\sigma^2$（隨機漫步）</span></td>
+          <td>受控衰減 $(1 - b/n)\frac{\sigma^2}{b}$</td>
+          <td><span class="tag-badge green">嚴格為 0（精確無偏）</span></td>
+        </tr>
+        <tr>
+          <td><strong>GPU 硬體並行度</strong></td>
+          <td>極差（Memory-bound，利用率 &lt; 5%）</td>
+          <td><span class="tag-badge green">極佳（GEMM 密集，利用率 &gt; 80%）</span></td>
+          <td>極佳（受限於單卡記憶體上限）</td>
+        </tr>
+        <tr>
+          <td><strong>視訊記憶體佔用 (VRAM)</strong></td>
+          <td><span class="tag-badge green">極小（僅存單樣本啟用值）</span></td>
+          <td>中等（與 $b$ 線性正比，可調）</td>
+          <td><span class="tag-badge red">極大（大資料集必爆視訊記憶體 OOM）</span></td>
+        </tr>
+        <tr>
+          <td><strong>鞍點與極值逃逸</strong></td>
+          <td><span class="tag-badge green">極強（噪聲助攻跳出局部坑）</span></td>
+          <td>良好（適度噪聲誘導平坦極小）</td>
+          <td><span class="tag-badge red">極弱（容易受困於鞍點或尖銳坑）</span></td>
+        </tr>
+        <tr>
+          <td><strong>測試集泛化表現</strong></td>
+          <td>良好但收斂波動劇烈</td>
+          <td><span class="tag-badge green">最優（平坦極小值泛化最佳）</span></td>
+          <td>容易過度擬合尖銳極小值</td>
+        </tr>
+        <tr>
+          <td><strong>每 Epoch 更新次數</strong></td>
+          <td>$n$ 次頻繁更新</td>
+          <td>$\lfloor n/b \rfloor$ 次高質量更新</td>
+          <td>僅 1 次更新</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 11. 大師四大鐵律 -->
+<section class="section" id="master-maxims">
+  <div class="sec-tag sustain">10 / 設計原則 · Master Maxims</div>
+  <h2 class="section-title">大師四大鐵律：Mini-Batch 與 Epoch 實踐憲章
+    <span class="en">Master Maxims: Four Inviolable Principles of Mini-Batch Optimization</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>鐵律一：GPU 契合律（Hardware Alignment）</h3>
+      <div class="sub-en">Power of Two &amp; Tensor Core Tiles</div>
+      <p>Batch Size 務必設定為 2 的冪次（32、64、128、256）或硬體架構瓦片尺寸倍數。這能確保 GPU Warp（32 threads）與 Tensor Core 矩陣單元對齊，杜絕執行緒閒置與記憶體跨行浪費。</p>
+    </div>
+    <div class="card positive">
+      <h3>鐵律二：方差縮放律（Variance Scaling Law）</h3>
+      <div class="sub-en">Diminishing Returns of Low Variance</div>
+      <p>梯度估計方差以 $1/b$ 衰減。過度追求大批次帶來的降噪邊際收益遞減，卻會成倍犧牲每 Epoch 的更新次數與視訊記憶體；「適度噪聲」是模型訓練不可或缺的探索動力。</p>
+    </div>
+    <div class="card positive">
+      <h3>鐵律三：週期遍歷律（Epoch Traversal Rule）</h3>
+      <div class="sub-en">Shuffle at Every Epoch Boundary</div>
+      <p>嚴格執行無放回劃分式 (23)–(24)，且在每個 Epoch 開始前重新進行隨機置換（Shuffle）。防止固定批次組合產生週期性系統偏差，確保所有樣本均勻參與梯度回饋。</p>
+    </div>
+    <div class="card positive">
+      <h3>鐵律四：泛化平坦律（Flat Minima Principle）</h3>
+      <div class="sub-en">Implicit Regularization of Mini-Batch Noise</div>
+      <p>Mini-Batch 隨機梯度噪聲扮演了強大的隱式正則化（Implicit Regularization）角色，能夠自動篩除泛化極差的尖銳極小值（Sharp Minima），引導參數收斂至寬廣平坦的優質低谷。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 12. 互動實驗室 -->
+<section class="section" id="lab">
+  <div class="sec-tag sustain">11 / 動態模擬 · Interactive Lab</div>
+  <h2 class="section-title">互動實驗室：Batch Size 調節器與隨機最佳化動態對比
+    <span class="en">Interactive Lab: Batch Size Regulator, Gradient Variance, and GPU Compute Efficiency</span>
+  </h2>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <div class="lab-ctrl">
+        <label>批次大小 $b$：</label>
+        <button class="opt-btn" data-b="1">b = 1</button>
+        <button class="opt-btn" data-b="4">b = 4</button>
+        <button class="opt-btn active" data-b="16">b = 16</button>
+        <button class="opt-btn" data-b="64">b = 64</button>
+      </div>
+
+      <div class="lab-ctrl">
+        <label for="kp8-sampling">抽樣模式：</label>
+        <select id="kp8-sampling">
+          <option value="wor">無放回劃分 (Without Replacement, 式 29)</option>
+          <option value="wr">有放回抽樣 (With Replacement, 式 30)</option>
+        </select>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-left:auto;">
+        <button class="lab-btn" id="kp8-step">單步迭代 (Step)</button>
+        <button class="lab-btn accent" id="kp8-run">連續 10 步 (Run 10)</button>
+        <button class="lab-btn secondary" id="kp8-reset">重置 (Reset)</button>
+      </div>
+    </div>
+
+    <div class="lab-display">
+      <div class="lab-canvas-container">
+        <canvas id="kp8-cv" width="680" height="420"></canvas>
+      </div>
+      <div class="lab-readout" id="kp8-ro">
+        載入模擬器中...
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 13. 思考題 -->
+<section class="section" id="quiz">
+  <div class="sec-tag check">12 / 檢驗點 · Checkpoint Quiz</div>
+  <h2 class="section-title">隨堂自我檢測：精準掌握 Mini-Batch 與 Epoch 關鍵
+    <span class="en">Checkpoint Quiz: Testing Core Comprehension of Mini-Batch SGD and Epoch Properties</span>
+  </h2>
+
+  <div class="quiz-grid">
+    <!-- Q1 -->
+    <div class="quiz-card" data-ans="B">
+      <h3>1. 在 Definition 1 中，一個「Epoch」代表什麼？</h3>
+      <div class="options">
+        <button data-opt="A">A. 只更新模型最後輸出層一次</button>
+        <button data-opt="B">B. 所有 $\lfloor n/b \rfloor$ 個不相交批次各用過一次</button>
+        <button data-opt="C">C. 只隨機跑一個批次的梯度更新</button>
+        <button data-opt="D">D. 等同於一次精確的 Full-Batch 梯度下降步</button>
+      </div>
+      <div class="feedback"></div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="quiz-card" data-ans="B">
+      <h3>2. 式 (25) Mini-Batch 更新與單樣本 SGD 式 (22) 最核心的數學差別是？</h3>
+      <div class="options">
+        <button data-opt="A">A. 運算過程中完全不計算梯度</button>
+        <button data-opt="B">B. 對批次內 $b$ 筆樣本的個別梯度取算術平均</button>
+        <button data-opt="C">C. 強制固定學習率 $\eta = 1$ 不允許衰減</button>
+        <button data-opt="D">D. 僅更新神經網路的偏置項（Bias）</button>
+      </div>
+      <div class="feedback"></div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="quiz-card" data-ans="A">
+      <h3>3. 根據 Proposition 1，當批次大小 $b$ 增大時，梯度近似誤差範數 $\|e_t\|_2^2$ 通常如何變化？</h3>
+      <div class="options">
+        <button data-opt="A">A. 顯著減小，使收斂速度與軌跡更逼近 Full-Batch</button>
+        <button data-opt="B">B. 呈指數級放大，引發訓練散逸</button>
+        <button data-opt="C">C. 恆為精確之零向量</button>
+        <button data-opt="D">D. 與批次大小 $b$ 完全無關</button>
+      </div>
+      <div class="feedback"></div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="quiz-card" data-ans="A">
+      <h3>4. 關於梯度誤差期望式 (29) 與 (30)，分別對應哪種抽樣機制？</h3>
+      <div class="options">
+        <button data-opt="A">A. 式 (29) 為無放回抽樣 (without replacement)；式 (30) 為有放回抽樣 (with replacement)</button>
+        <button data-opt="B">B. 兩者皆為有放回抽樣 (with replacement)</button>
+        <button data-opt="C">C. 式 (29) 為單樣本抽樣；式 (30) 為全批次抽樣</button>
+        <button data-opt="D">D. 兩者在數學上完全恆等且抽樣方式相同</button>
+      </div>
+      <div class="feedback"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 互動與測驗 JS 指令碼 -->
+<script>
+// 測驗點選互動邏輯
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('correct', 'wrong'));
+      const choice = btn.getAttribute('data-opt');
+      if (choice === ans) {
+        btn.classList.add('correct');
+        fb.className = 'feedback show ok';
+        fb.innerHTML = '<strong>✅ 答對了！</strong> ' + getQuizExplanation(card, ans);
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'feedback show no';
+        fb.innerHTML = '<strong>❌ 答錯了！</strong> 請重新思考：' + getQuizExplanation(card, ans);
+      }
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+function getQuizExplanation(card, ans) {
+  const text = card.innerText;
+  if (ans === 'B' && text.includes('Definition 1')) {
+    return '一個 Epoch 的嚴格定義為將全部 $\\lfloor n/b \\rfloor$ 個不相交批次各使用過一次進行參數更新，相當於完整掃過一次訓練集。';
+  } else if (ans === 'B' && text.includes('式 (25)')) {
+    return 'Mini-Batch SGD 每次計算批次內 $b$ 個樣本的平均梯度 $\\frac{1}{b}\\sum_{i \\in \\mathcal{B}} \\nabla f_i(w)$，有效壓低了單樣本更新的高方差。';
+  } else if (ans === 'A' && text.includes('Proposition 1')) {
+    return '批次 $b$ 越大，小批次梯度越接近母體全梯度，近似誤差項 $\\|e_t\\|_2^2$ 依 $1/b$ 比例縮小，收斂漸進行為越逼近 Full-Batch。';
+  } else if (ans === 'A' && (text.includes('(29)') || text.includes('抽樣機制'))) {
+    return '式 (29) 含有有限母體校正因子 $(1 - b/n)$，對應無放回抽樣；式 (30) 為標準獨立同分布之有放回抽樣 $\\sigma^2/b$。';
+  }
+  return '';
+}
+
+// 頂部閱讀進度條
+window.addEventListener('scroll', () => {
+  const top = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('progressTop').style.width = (top / docH * 100) + '%';
+});
+
+// 互動實驗室：Mini-Batch 隨機最佳化與硬體模擬器
+(function() {
+  const cv = document.getElementById('kp8-cv');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const ro = document.getElementById('kp8-ro');
+  const samplingSelect = document.getElementById('kp8-sampling');
+  const optBtns = document.querySelectorAll('.opt-btn');
+
+  const N = 256;          // 模擬母體樣本數
+  let batchSize = 16;     // 當前 Batch Size
+  const sigmaPop = 2.4;   // 母體梯度基準方差
+  const eta = 0.08;       // 學習率
+
+  // 初始最佳化點
+  const startX = -3.2, startY = 2.6;
+  let curX = startX, curY = startY;
+  let stepCount = 0;
+  let epochCount = 0;
+  let batchInEpoch = 0;
+
+  // 歷史路徑
+  let traj = [{x: startX, y: startY, noiseNorm: 0}];
+
+  // 預先生成母體各樣本的固定噪聲偏移量（確保全體平均偏移為 0）
+  const popOffsets = [];
+  let sumOx = 0, sumOy = 0;
+  for (let i = 0; i < N; i++) {
+    const ox = (Math.random() - 0.5) * sigmaPop * 2.0;
+    const oy = (Math.random() - 0.5) * sigmaPop * 2.0;
+    popOffsets.push({ox, oy});
+    sumOx += ox;
+    sumOy += oy;
+  }
+  // 嚴格中心化
+  for (let i = 0; i < N; i++) {
+    popOffsets[i].ox -= sumOx / N;
+    popOffsets[i].oy -= sumOy / N;
+  }
+
+  // 無放回抽樣洗牌索引池
+  let shuffledIndices = [];
+  function reshuffle() {
+    shuffledIndices = [];
+    for (let i = 0; i < N; i++) shuffledIndices.push(i);
+    for (let i = N - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = shuffledIndices[i];
+      shuffledIndices[i] = shuffledIndices[j];
+      shuffledIndices[j] = tmp;
+    }
+    batchInEpoch = 0;
+  }
+  reshuffle();
+
+  // 橢圓損失函式 f(x, y) = 0.5 * (2.8 * x^2 + y^2)
+  function f(x, y) {
+    return 0.5 * (2.8 * x * x + y * y);
+  }
+
+  // 母體真實全梯度
+  function trueGrad(x, y) {
+    return { gx: 2.8 * x, gy: 1.0 * y };
+  }
+
+  // 單樣本個體梯度
+  function sampleGrad(x, y, idx) {
+    const tg = trueGrad(x, y);
+    return {
+      gx: tg.gx + popOffsets[idx].ox,
+      gy: tg.gy + popOffsets[idx].oy
+    };
+  }
+
+  // 批次抽樣與梯度計算
+  function computeBatchGrad(x, y) {
+    const mode = samplingSelect.value;
+    let chosenIndices = [];
+
+    if (mode === 'wor') {
+      // 無放回抽樣
+      if (batchInEpoch + batchSize > N) {
+        reshuffle();
+        epochCount++;
+      }
+      for (let i = 0; i < batchSize; i++) {
+        chosenIndices.push(shuffledIndices[batchInEpoch + i]);
+      }
+      batchInEpoch += batchSize;
+      if (batchInEpoch >= N) {
+        reshuffle();
+        epochCount++;
+      }
+    } else {
+      // 有放回抽樣
+      for (let i = 0; i < batchSize; i++) {
+        chosenIndices.push(Math.floor(Math.random() * N));
+      }
+      batchInEpoch += batchSize;
+      if (batchInEpoch >= N) {
+        batchInEpoch = 0;
+        epochCount++;
+      }
+    }
+
+    let bgx = 0, bgy = 0;
+    for (let k = 0; k < batchSize; k++) {
+      const sg = sampleGrad(x, y, chosenIndices[k]);
+      bgx += sg.gx;
+      bgy += sg.gy;
+    }
+    bgx /= batchSize;
+    bgy /= batchSize;
+
+    const tg = trueGrad(x, y);
+    const ex = bgx - tg.gx;
+    const ey = bgy - tg.gy;
+    const errNorm = Math.sqrt(ex * ex + ey * ey);
+
+    return { bgx, bgy, errNorm };
+  }
+
+  function fmt(v, d = 3) {
+    return (Math.round(v * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d);
+  }
+
+  // 繪圖
+  function draw() {
+    const W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    const xRange = 4.2, yRange = 3.4;
+    function toCvX(px) { return W * 0.46 + (px / xRange) * (W * 0.40); }
+    function toCvY(py) { return H * 0.52 - (py / yRange) * (H * 0.40); }
+
+    // 繪製座標軸
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(20, toCvY(0)); ctx.lineTo(W * 0.88, toCvY(0));
+    ctx.moveTo(toCvX(0), 20); ctx.lineTo(toCvX(0), H - 20);
+    ctx.stroke();
+
+    // 繪製損失等高線 0.5 * (2.8 * x^2 + y^2) = C
+    const levels = [0.3, 1.2, 3.0, 6.0, 11.0, 18.0];
+    for (let i = 0; i < levels.length; i++) {
+      const C = levels[i];
+      const rx = Math.sqrt(2 * C / 2.8);
+      const ry = Math.sqrt(2 * C);
+      const cx = toCvX(0), cy = toCvY(0);
+      const radX = (rx / xRange) * (W * 0.40);
+      const radY = (ry / yRange) * (H * 0.40);
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, radX, radY, 0, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+
+    // 谷底目標點
+    ctx.fillStyle = '#16a34a';
+    ctx.beginPath();
+    ctx.arc(toCvX(0), toCvY(0), 4.5, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.font = '11px sans-serif';
+    ctx.fillText('最優點 w* (0, 0)', toCvX(0) + 8, toCvY(0) + 14);
+
+    // 軌跡連線
+    if (traj.length > 1) {
+      ctx.strokeStyle = batchSize === 1 ? '#ef4444' : (batchSize <= 8 ? '#f59e0b' : '#2563eb');
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      for (let j = 0; j < traj.length; j++) {
+        const tx = toCvX(traj[j].x), ty = toCvY(traj[j].y);
+        if (j === 0) ctx.moveTo(tx, ty);
+        else ctx.lineTo(tx, ty);
+      }
+      ctx.stroke();
+    }
+
+    // 軌跡錨點
+    for (let m = 0; m < traj.length; m++) {
+      const isCur = (m === traj.length - 1);
+      ctx.beginPath();
+      ctx.arc(toCvX(traj[m].x), toCvY(traj[m].y), isCur ? 5.5 : 3.0, 0, 2 * Math.PI);
+      ctx.fillStyle = isCur ? '#dc2626' : (m === 0 ? '#1e40af' : '#64748b');
+      ctx.fill();
+    }
+
+    // 畫布內部右上角：方差與 GPU 效率迷你指示條
+    ctx.fillStyle = '#f8fafc';
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.fillRect(W - 200, 16, 186, 92);
+    ctx.strokeRect(W - 200, 16, 186, 92);
+
+    ctx.fillStyle = '#1e40af';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText('即時狀態指示 (HUD)', W - 190, 32);
+
+    // GPU 利用率條
+    const gpuEff = getGpuEfficiency(batchSize);
+    ctx.fillStyle = '#475569';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('GPU 算力利用率: ' + gpuEff + '%', W - 190, 50);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(W - 190, 56, 166, 8);
+    ctx.fillStyle = gpuEff > 80 ? '#16a34a' : (gpuEff > 40 ? '#2563eb' : '#ef4444');
+    ctx.fillRect(W - 190, 56, 166 * (gpuEff / 100), 8);
+
+    // 方差等級條
+    const varRatio = Math.max(0.02, (1 - (batchSize / N)) / batchSize);
+    ctx.fillStyle = '#475569';
+    ctx.fillText('理論相對方差: ' + fmt(varRatio, 3), W - 190, 80);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(W - 190, 86, 166, 8);
+    ctx.fillStyle = varRatio > 0.3 ? '#ef4444' : (varRatio > 0.05 ? '#f59e0b' : '#16a34a');
+    ctx.fillRect(W - 190, 86, Math.min(166, 166 * (varRatio / 1.0)), 8);
+  }
+
+  function getGpuEfficiency(b) {
+    if (b === 1) return 6;
+    if (b === 4) return 28;
+    if (b === 16) return 76;
+    return 98;
+  }
+
+  function report() {
+    const curLoss = f(curX, curY);
+    const tg = trueGrad(curX, curY);
+    const tgNorm = Math.sqrt(tg.gx * tg.gx + tg.gy * tg.gy);
+    const mode = samplingSelect.value;
+    const lastPoint = traj[traj.length - 1];
+
+    // 理論方差
+    const theoVar = (mode === 'wor') ? ((1 - batchSize / N) * (sigmaPop * sigmaPop) / batchSize)
+                                     : ((sigmaPop * sigmaPop) / batchSize);
+    const gpuEff = getGpuEfficiency(batchSize);
+    const totalBatchesPerEpoch = Math.floor(N / batchSize);
+    const curBatchInEpoch = Math.floor(batchInEpoch / batchSize);
+
+    let badge = '';
+    if (batchSize === 1) {
+      badge = '<div class="status-badge noisy">🔴 極端噪聲 · 醉漢隨機遊走 (GPU利用率極低)</div>';
+    } else if (batchSize === 4) {
+      badge = '<div class="status-badge moderate">🟡 中度抖動 · 震盪探索 (邊際GPU並行)</div>';
+    } else if (batchSize === 16) {
+      badge = '<div class="status-badge optimal">🔵 黃金折衷 · 穩定高效收斂 (Tensor Core滿意)</div>';
+    } else {
+      badge = '<div class="status-badge saturated">🟢 平滑筆直 · 近乎確定性下降 (GPU滿載)</div>';
+    }
+
+    ro.innerHTML =
+      '<strong>當前 Batch Size b：</strong> ' + batchSize + '<br/>' +
+      '<strong>抽樣機制：</strong> ' + (mode === 'wor' ? '無放回劃分 (Without Replacement)' : '有放回抽樣 (With Replacement)') + '<br/>' +
+      '<strong>理論方差 E[‖e_t‖²]：</strong> ' + fmt(theoVar, 4) + '<br/>' +
+      '<strong>本步取樣噪聲 ‖e_t‖：</strong> ' + fmt(lastPoint.noiseNorm, 4) + '<br/>' +
+      '<strong>GPU 算力利用率估算：</strong> ' + gpuEff + '%<br/>' +
+      '<strong>當前損失值 f(w)：</strong> ' + fmt(curLoss, 4) + '<br/>' +
+      '<strong>真實梯度範數 ‖∇f‖：</strong> ' + fmt(tgNorm, 3) + '<br/>' +
+      '<strong>累計迭代步數 (Step)：</strong> ' + stepCount + '<br/>' +
+      '<strong>Epoch 進度：</strong> 第 ' + epochCount + ' Epoch (' + curBatchInEpoch + '/' + totalBatchesPerEpoch + ' 批次)<br/>' +
+      '<strong>狀態判定：</strong><br/>' + badge;
+  }
+
+  function stepOnce() {
+    const res = computeBatchGrad(curX, curY);
+    curX -= eta * res.bgx;
+    curY -= eta * res.bgy;
+    stepCount++;
+    traj.push({x: curX, y: curY, noiseNorm: res.errNorm});
+    if (traj.length > 70) traj.shift();
+  }
+
+  function resetState() {
+    curX = startX;
+    curY = startY;
+    stepCount = 0;
+    epochCount = 0;
+    batchInEpoch = 0;
+    reshuffle();
+    traj = [{x: startX, y: startY, noiseNorm: 0}];
+    draw();
+    report();
+  }
+
+  // 繫結事件
+  optBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      optBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      batchSize = parseInt(btn.getAttribute('data-b'), 10);
+      resetState();
+    });
+  });
+
+  samplingSelect.addEventListener('change', () => {
+    resetState();
+  });
+
+  document.getElementById('kp8-step').addEventListener('click', () => {
+    stepOnce();
+    draw();
+    report();
+  });
+
+  document.getElementById('kp8-run').addEventListener('click', () => {
+    for (let s = 0; s < 10; s++) {
+      stepOnce();
+    }
+    draw();
+    report();
+  });
+
+  document.getElementById('kp8-reset').addEventListener('click', resetState);
+
+  // 初始化
+  resetState();
+})();
+</script>
+</body>
+</html>

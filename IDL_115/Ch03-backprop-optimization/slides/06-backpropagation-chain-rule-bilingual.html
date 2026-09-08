@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch03 · KP06 反向傳播：鏈式法則逐層算梯度 — Backpropagation &amp; Chain Rule</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(124,58,237,.24), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(37,99,235,.20), transparent 30%),
+              linear-gradient(135deg, #0a0e27 0%, #151a3d 50%, #201740 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(10, 14, 39, .25);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(38px, 4.6vw, 66px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(18px, 2.0vw, 30px);
+  color: #a5b4fc;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #38bdf8;
+  border-radius: 999px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 880px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #38bdf8, #818cf8, #e84393);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #7dd3fc !important; fill: #7dd3fc !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #cbd5e1; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  display: block;
+}
+.half-layout .visual > svg {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  display: block;
+}
+.half-layout .visual .svg-caption {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+  font-size: var(--t5);
+  color: var(--text-low);
+  letter-spacing: .05em;
+}
+@media (max-width: 1100px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+
+/* 高橋流置中修復：卡片居中於內容閱讀區 (坑 W) */
+.section .takahashi {
+  text-align: center;
+  padding: 80px 36px;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+}
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin: 28px 0;
+}
+.lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 88px;
+}
+.lab-ctrl input[type="range"] {
+  width: 130px;
+}
+.lab-ctrl span.val {
+  min-width: 48px;
+  font-family: var(--mono);
+  color: var(--primary);
+  font-weight: bold;
+}
+.lab-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all .2s;
+}
+.lab-btn:hover {
+  background: hsl(248, 58%, 38%);
+  transform: translateY(-1px);
+}
+.lab-btn.secondary {
+  background: #64748b;
+}
+.lab-btn.secondary:hover {
+  background: #475569;
+}
+.lab-btn.accent {
+  background: #0ea5e9;
+}
+.lab-btn.accent:hover {
+  background: #0284c7;
+}
+.lab-display {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .lab-display { grid-template-columns: 1fr; }
+}
+.lab-canvas-container {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+  padding: 10px;
+}
+.lab-readout {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--ink);
+  min-height: 240px;
+}
+.lab-readout .status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.status-badge.info { background: #e0f2fe; color: #0369a1; }
+.status-badge.highlight { background: #ede9fe; color: #6d28d9; }
+.status-badge.success { background: #dcfce7; color: #15803d; }
+.status-badge.warn { background: #fef3c7; color: #b45309; }
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP06 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Core Question</a></li>
+    <li><a href="#backprop-motivation">梯度黑盒挑戰 · Motivation</a></li>
+    <li><a href="#forward-pass">前向加權與啟用 · Forward Pass</a></li>
+    <li><a href="#delta-definition">敏感度 δ 定義 · Delta Def</a></li>
+    <li><a href="#hidden-delta">隱藏層鏈式倒灌 · Hidden Delta</a></li>
+    <li><a href="#weight-updates">權重更新律對比 · Updates</a></li>
+    <li><a href="#algorithm2">Algorithm 2 流程 · Algorithm</a></li>
+    <li><a href="#computational-graph">計算圖訊號流 · Graph Flow</a></li>
+    <li><a href="#comparison">前向 vs 反向對比 · Comparison</a></li>
+    <li><a href="#master-maxims">大師四大鐵律 · Master Laws</a></li>
+    <li><a href="#lab">互動模擬器 · Interactive Lab</a></li>
+    <li><a href="#quiz">思考題 · Checkpoint</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">IDL 115 · CHAPTER 3 · KP-06 · TEACHING DECK</span>
+    <h1>反向傳播：鏈式法則逐層算梯度
+      <span class="hero-title-en">Backpropagation &amp; Chain Rule: Layer-by-Layer Gradient Computation</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      隱藏層神經元深居黑盒內部、看不見真實標籤，如何得知自身對最終損失的問責？微積分鏈式法則如何化腐朽為神奇，將誤差敏感度 $\delta_i$ 逐層倒灌，以 $O(W)$ 線性代價完成全網參數更新？
+    </p>
+    <p class="bilingual-en" style="color: #cbd5e1; max-width: 840px; margin: 10px auto 0;">
+      Demystifying the credit assignment dilemma in multilayer feedforward networks: How backward propagation of error sensitivities ($\delta_i = \partial e / \partial a_i$) achieves exact analytical gradients with linear complexity.
+    </p>
+  </div>
+</section>
+
+<!-- 2. 大問句 (坑 W 置中結構) -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="sec-tag inquiry">01 / 核心提問 · Core Question</div>
+    <div class="quote">
+      「隱藏層神經元根本看不見標籤，它怎麼知道自己該往哪裡改？」
+      <small>中間層沒有標準答案可對，但誤差訊號能藉由鏈式法則從輸出層倒灌回來！<br/>
+        <span class="bilingual-en-inline">How can hidden neurons update without seeing ground truth? The error signal propagates backwards via the chain rule!</span>
+      </small>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 多層網路梯度黑盒挑戰 -->
+<section class="section" id="backprop-motivation">
+  <div class="sec-tag sustain">02 / 問題脈絡 · Motivation &amp; Credit Assignment</div>
+  <h2 class="section-title">多層神經網路的梯度黑盒：中間層如何問責？
+    <span class="en">The Gradient Black Box in Deep Networks: Credit Assignment to Hidden Layers</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card negative">
+      <h3>單層網路 vs 多層網路的鴻溝</h3>
+      <div class="sub-en">The Single-Layer Simplicity vs Deep Black-Box Dilemma</div>
+      <p>在單層感知器或線性迴歸中，輸出直接與真實目標 $t$ 比較產生誤差 $e$，梯度求導一步到位。但多層前饋網路中，權重 $w_{i\ell}$ 散落在各個隱藏層中，中間神經元只把輸出傳給下游，完全看不到最終的標籤與損失！</p>
+    </div>
+    <div class="card negative">
+      <h3>數值微擾的災難：$O(W^2)$ 算力爆炸</h3>
+      <div class="sub-en">The Curse of Numerical Differentiation</div>
+      <p>若對每個權重進行有限差分微擾 $\frac{e(w+\epsilon)-e(w)}{\epsilon}$，每算一根權重就要重新做一次完整的前向傳播。網路有一百萬個參數時，更新一步需跑一百萬次前向預測，在工程上完全不可能實現！</p>
+    </div>
+  </div>
+
+  <div class="summary-box" style="margin-top: 24px;">
+    <h4>Rumelhart 等人的破局：反向傳播（Backpropagation）</h4>
+    <p>
+      1986 年由 Rumelhart, Hinton &amp; Williams 系統化普及的<strong>反向傳播演算法</strong>，本質就是<strong>「分層系統裡的梯度下降 + 遞迴求導」</strong>。
+      運用微積分的<strong>鏈式法則（Chain Rule）</strong>，只需<strong>一次前向傳播（算啟用並保留快照）+ 一次反向倒灌（由後往前算梯度）</strong>，就能以 $O(W)$ 線性時間複雜度精確算出所有參數的解析梯度！
+    </p>
+    <span class="bilingual-en">
+      Backpropagation solves the credit assignment problem in $O(W)$ time by propagating sensitivities backwards using multivariable calculus, replacing computationally prohibitive $O(W^2)$ numerical perturbations.
+    </span>
+  </div>
+</section>
+
+<!-- 4. 前向傳播：加權輸入與啟用輸出 -->
+<section class="section" id="forward-pass">
+  <div class="sec-tag sustain">03 / 前向基礎 · Forward Propagation Mechanics</div>
+  <h2 class="section-title">單一神經元前向計算：加權總和 $a_i$ 與非線性啟用 $z_i$
+    <span class="en">Neuron Forward Pass: Pre-Activation Weighted Sum $a_i$ and Activation Output $z_i$</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg viewBox="0 0 720 340" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, sans-serif">
+        <rect width="720" height="340" fill="#ffffff" rx="10"/>
+        <text x="360" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#1e40af">圖 5：單一神經元 i 的內部運算與訊號流拆解</text>
+        
+        <!-- Inputs on the left -->
+        <g transform="translate(60, 40)">
+          <!-- z1 -->
+          <circle cx="40" cy="40" r="22" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+          <text x="40" y="45" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e40af">z₁</text>
+          
+          <!-- z_ell -->
+          <circle cx="40" cy="130" r="22" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+          <text x="40" y="135" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e40af">z_ℓ</text>
+          
+          <!-- zm -->
+          <circle cx="40" cy="220" r="22" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+          <text x="40" y="225" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e40af">z_m</text>
+          
+          <text x="40" y="90" text-anchor="middle" font-size="14" fill="#94a3b8">⋮</text>
+          <text x="40" y="180" text-anchor="middle" font-size="14" fill="#94a3b8">⋮</text>
+        </g>
+
+        <!-- Synaptic connections with weights -->
+        <path d="M 122 80 L 290 170" stroke="#3b82f6" stroke-width="2" marker-end="url(#m-blue)"/>
+        <path d="M 122 170 L 290 170" stroke="#2563eb" stroke-width="3" marker-end="url(#m-blue)"/>
+        <path d="M 122 260 L 290 170" stroke="#3b82f6" stroke-width="2" marker-end="url(#m-blue)"/>
+
+        <!-- Weight labels -->
+        <rect x="180" y="105" width="55" height="20" rx="4" fill="#dbeafe" stroke="#93c5fd"/>
+        <text x="207" y="119" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">w_{i1}</text>
+        
+        <rect x="180" y="152" width="55" height="20" rx="4" fill="#bfdbfe" stroke="#60a5fa"/>
+        <text x="207" y="166" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">w_{iℓ}</text>
+
+        <rect x="180" y="215" width="55" height="20" rx="4" fill="#dbeafe" stroke="#93c5fd"/>
+        <text x="207" y="229" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">w_{im}</text>
+
+        <!-- Neuron core: two halves (Summation and Activation) -->
+        <g transform="translate(300, 110)">
+          <rect width="180" height="120" rx="14" fill="#f8fafc" stroke="#6366f1" stroke-width="2.5"/>
+          
+          <!-- Sum part -->
+          <circle cx="48" cy="60" r="32" fill="#e0e7ff" stroke="#4f46e5" stroke-width="2"/>
+          <text x="48" y="67" text-anchor="middle" font-size="22" font-weight="bold" fill="#4338ca">∑</text>
+          <text x="48" y="106" text-anchor="middle" font-size="10" font-weight="bold" fill="#4338ca">加權和 a_i</text>
+          
+          <!-- Arrow inside neuron -->
+          <line x1="82" y1="60" x2="108" y2="60" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#m-indigo)"/>
+          
+          <!-- Activation part -->
+          <circle cx="138" cy="60" r="32" fill="#fae8ff" stroke="#a855f7" stroke-width="2"/>
+          <text x="138" y="66" text-anchor="middle" font-size="16" font-weight="bold" fill="#7e22ce">σ(·)</text>
+          <text x="138" y="106" text-anchor="middle" font-size="10" font-weight="bold" fill="#7e22ce">啟用輸出 z_i</text>
+        </g>
+
+        <!-- Output Arrow -->
+        <line x1="482" y1="170" x2="600" y2="170" stroke="#9333ea" stroke-width="3" marker-end="url(#m-purple)"/>
+        
+        <!-- Next layer node -->
+        <circle cx="635" cy="170" r="30" fill="#f3e8ff" stroke="#9333ea" stroke-width="2.5"/>
+        <text x="635" y="168" text-anchor="middle" font-size="13" font-weight="bold" fill="#6b21a8">z_i</text>
+        <text x="635" y="184" text-anchor="middle" font-size="9" fill="#7e22ce">下游輸入</text>
+
+        <!-- Markers -->
+        <defs>
+          <marker id="m-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb"/>
+          </marker>
+          <marker id="m-indigo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#4f46e5"/>
+          </marker>
+          <marker id="m-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#9333ea"/>
+          </marker>
+        </defs>
+
+        <!-- Bottom highlight bar -->
+        <rect x="20" y="295" width="680" height="32" rx="6" fill="#f1f5f9"/>
+        <text x="360" y="316" text-anchor="middle" font-size="11" fill="#475569">
+          前向計算兩大步：式 (9) 啟用前加權和 a_i = ∑ w_{iℓ} z_ℓ ➔ 式 (10) 啟用後輸出 z_i = σ_i(a_i)
+        </text>
+      </svg>
+      <span class="svg-caption">圖 5：單一神經元 i 的內部運算與訊號流拆解</span>
+    </div>
+
+    <div>
+      <div class="formula-box">
+        <h4>前向計算兩大基石公式（式 (9)–(10)）</h4>
+        <p>$$ a_i = \sum_{\ell=1}^{m} w_{i\ell} z_\ell \tag{9} $$</p>
+        <p>$$ z_i := \sigma_i(a_i) \tag{10} $$</p>
+      </div>
+      <p>
+        <strong>符號嚴格定義：</strong><br/>
+        • $z_\ell$：前一層神經元 $\ell$ 的輸出（若是第 1 隱藏層，則為輸入特徵 $x_\ell$）。<br/>
+        • $w_{i\ell}$：前層神經元 $\ell$ 連線到當前神經元 $i$ 的突觸權重。<br/>
+        • $a_i$：<strong>啟用前加權輸入總和</strong>（Pre-activation net input）。<br/>
+        • $\sigma_i(\cdot)$：可微的非線性啟用函式（Sigmoid, ReLU 等）。<br/>
+        • $z_i$：神經元 $i$ <strong>啟用後的輸出</strong>，準備送往下一層下游神經元。
+      </p>
+      <span class="bilingual-en">
+        A single neuron performs an affine linear combination $a_i = \sum w_{i\ell} z_\ell$ followed by a non-linear activation $z_i = \sigma_i(a_i)$.
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 誤差敏感度定義 -->
+<section class="section" id="delta-definition">
+  <div class="sec-tag sustain">04 / 核心概念 · Error Sensitivity Definition</div>
+  <h2 class="section-title">誤差敏感度 $\delta_i$：鏈式法則的中樞紐帶
+    <span class="en">Error Sensitivity $\delta_i$: The Central Nexus of the Chain Rule</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>鏈式法則展開與敏感度 $\delta_i$ 定義（式 (11)–(12)）</h4>
+    <p>對任意突觸權重 $w_{i\ell}$，根據單變數微積分鏈式法則，總損失 $e$ 對該權重的偏導可精確拆解為：</p>
+    <p>$$ \frac{\partial e}{\partial w_{i\ell}} = \frac{\partial e}{\partial a_i} \times \frac{\partial a_i}{\partial w_{i\ell}} \stackrel{(a)}{=} \delta_i \times z_\ell \tag{11} $$</p>
+    <p>其中關鍵中間變數 $\delta_i$ 定義為<strong>總損失對啟用前加權和的敏感度</strong>：</p>
+    <p>$$ \delta_i := \frac{\partial e}{\partial a_i} \tag{12} $$</p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>為什麼定義在 $a_i$ 而非 $z_i$？</h3>
+      <div class="sub-en">Why Net Input $a_i$ Yields Clean Local Gradients</div>
+      <p>
+        由式 (9) $a_i = \sum_\ell w_{i\ell} z_\ell$，可立即求得：
+        $$\frac{\partial a_i}{\partial w_{i\ell}} = z_\ell$$
+        這是一個極度乾淨、毫不拖泥帶水的常數！只要把 $\frac{\partial e}{\partial a_i}$ 封裝成 $\delta_i$，權重梯度就直接寫成乘積。
+      </p>
+    </div>
+    <div class="card positive">
+      <h3>通用權重梯度黃金定律</h3>
+      <div class="sub-en">Gradient = Local Sensitivity × Incoming Signal</div>
+      <p>
+        無論神經元處於輸出層還是第十層隱藏層：
+        $$\text{權重梯度 } \frac{\partial e}{\partial w_{i\ell}} = \delta_i \times z_\ell$$
+        <strong>「梯度 = 當前神經元的誤差敏感度 $\delta_i \times$ 流入該連線的前層啟用訊號 $z_\ell$」</strong>！
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 隱藏層的敏感度遞推式 (15) -->
+<section class="section" id="hidden-delta">
+  <div class="sec-tag sustain">05 / 遞推核心 · Hidden Layer Delta Recursion</div>
+  <h2 class="section-title">隱藏層的敏感度遞推：全微分鏈式倒灌
+    <span class="en">Hidden Layer Delta: Backpropagating Downstream Error via Multivariable Chain Rule</span>
+  </h2>
+
+  <div class="half-layout">
+    <div>
+      <p>
+        若神經元 $i$ 位於<strong>隱藏層</strong>（非輸出層），它不直接接觸標籤與損失 $e$。
+        但神經元 $i$ 的輸入 $a_i$ 改變時，會先影響 $z_i = \sigma(a_i)$，再透過下游連線權重 $w_{ji}$ 同步影響所有下游神經元 $j$ 的輸入 $a_j$！
+      </p>
+      <div class="formula-box">
+        <h4>下游局部導航關係（式 (14)）</h4>
+        <p>$$ \frac{\partial a_j}{\partial a_i} = \frac{\partial a_j}{\partial z_i} \frac{\partial z_i}{\partial a_i} = w_{ji} \, \sigma'(a_i) \tag{14} $$</p>
+        <h4>多元微積分全微分倒灌（式 (15)）</h4>
+        <p>$$ \delta_i = \frac{\partial e}{\partial a_i} = \sum_j \left( \frac{\partial e}{\partial a_j} \times \frac{\partial a_j}{\partial a_i} \right) = \sigma'(a_i) \sum_j \left( \delta_j w_{ji} \right) \tag{15} $$</p>
+        <h4>隱藏層權重梯度完整解析式（式 (16)）</h4>
+        <p>$$ \frac{\partial e}{\partial w_{i\ell}} = z_\ell \, \sigma'(a_i) \sum_j \left( \delta_j w_{ji} \right) \tag{16} $$</p>
+      </div>
+    </div>
+
+    <div class="visual">
+      <svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, sans-serif">
+        <rect width="720" height="360" fill="#ffffff" rx="10"/>
+        <text x="360" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#c2410c">隱藏層敏感度 $\delta_i$ 的倒灌機制：下游加權迴流</text>
+
+        <!-- Downstream neurons j1, j2 on the right -->
+        <g transform="translate(560, 40)">
+          <!-- Node j1 -->
+          <circle cx="40" cy="50" r="28" fill="#fee2e2" stroke="#dc2626" stroke-width="2.5"/>
+          <text x="40" y="48" text-anchor="middle" font-size="13" font-weight="bold" fill="#b91c1c">神經元 j₁</text>
+          <text x="40" y="65" text-anchor="middle" font-size="10" font-weight="bold" fill="#dc2626">δ_{j1}</text>
+          
+          <!-- Node j2 -->
+          <circle cx="40" cy="210" r="28" fill="#fee2e2" stroke="#dc2626" stroke-width="2.5"/>
+          <text x="40" y="208" text-anchor="middle" font-size="13" font-weight="bold" fill="#b91c1c">神經元 j₂</text>
+          <text x="40" y="225" text-anchor="middle" font-size="10" font-weight="bold" fill="#dc2626">δ_{j2}</text>
+        </g>
+
+        <!-- Hidden neuron i in the center -->
+        <g transform="translate(180, 100)">
+          <circle cx="80" cy="70" r="45" fill="#e0e7ff" stroke="#4f46e5" stroke-width="3"/>
+          <text x="80" y="62" text-anchor="middle" font-size="14" font-weight="bold" fill="#312e81">神經元 i</text>
+          <text x="80" y="80" text-anchor="middle" font-size="11" fill="#4338ca">z_i = σ(a_i)</text>
+          
+          <!-- Local gate label -->
+          <rect x="25" y="125" width="110" height="24" rx="5" fill="#fef3c7" stroke="#f59e0b"/>
+          <text x="80" y="141" text-anchor="middle" font-size="10" font-weight="bold" fill="#92400e">閘門：× σ′(a_i)</text>
+        </g>
+
+        <!-- Backward red arrows from j to i -->
+        <path d="M 570 85 L 305 160" stroke="#dc2626" stroke-width="3" stroke-dasharray="6,4" marker-end="url(#m-red)"/>
+        <path d="M 570 245 L 305 180" stroke="#dc2626" stroke-width="3" stroke-dasharray="6,4" marker-end="url(#m-red)"/>
+
+        <!-- Feedback labels -->
+        <rect x="375" y="95" width="115" height="24" rx="4" fill="#fef2f2" stroke="#fca5a5"/>
+        <text x="432" y="111" text-anchor="middle" font-size="11" font-weight="bold" fill="#dc2626">δ_{j1} × w_{j1, i}</text>
+
+        <rect x="375" y="210" width="115" height="24" rx="4" fill="#fef2f2" stroke="#fca5a5"/>
+        <text x="432" y="226" text-anchor="middle" font-size="11" font-weight="bold" fill="#dc2626">δ_{j2} × w_{j2, i}</text>
+
+        <!-- Sum bubble -->
+        <circle cx="260" cy="170" r="16" fill="#fee2e2" stroke="#ef4444" stroke-width="1.8"/>
+        <text x="260" y="175" text-anchor="middle" font-size="14" font-weight="bold" fill="#b91c1c">∑</text>
+
+        <!-- Upstream input arrow -->
+        <line x1="30" y1="170" x2="215" y2="170" stroke="#2563eb" stroke-width="2.5" marker-end="url(#m-blue)"/>
+        <text x="90" y="160" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563eb">前向 z_ℓ →</text>
+        
+        <!-- Resulting delta i -->
+        <rect x="35" y="275" width="650" height="55" rx="8" fill="#fff7ed" stroke="#fdba74"/>
+        <text x="360" y="298" text-anchor="middle" font-size="12" font-weight="bold" fill="#c2410c">
+          問責總結：下游誤差責任沿著前向突觸倒灌 ∑ δ_j w_{ji}，經由自身局部啟用斜率 σ′(a_i) 濾波
+        </text>
+        <text x="360" y="318" text-anchor="middle" font-size="11" fill="#ea580c">
+          若啟用函式飽和導致 σ′(a_i) ≈ 0，下游誤差再大也傳不進去（梯度消失現象）
+        </text>
+
+        <defs>
+          <marker id="m-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#dc2626"/>
+          </marker>
+        </defs>
+      </svg>
+      <span class="svg-caption">圖解式 (15)：下游誤差加權倒灌與局部啟用閘門</span>
+    </div>
+  </div>
+</section>
+
+<!-- 7. 權重更新律對比：輸出層 vs 隱藏層 -->
+<section class="section" id="weight-updates">
+  <div class="sec-tag sustain">06 / 規則對比 · Output vs Hidden Updates</div>
+  <h2 class="section-title">權重更新律對比：輸出層 vs 隱藏層
+    <span class="en">Weight Update Comparison: Output Layer Equation (18) vs Hidden Layer Equation (19)</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>通用梯度下降權重更新律（式 (17)）</h4>
+    <p>$$ w_{i\ell}^{(k+1)} := w_{i\ell}^{(k)} - \eta^{(k)} \frac{\partial e}{\partial w_{i\ell}}, \quad \forall i, \ell \tag{17} $$</p>
+  </div>
+
+  <div class="compare-layout">
+    <div class="col left">
+      <h3>輸出層權重更新（式 (18)）</h3>
+      <div class="sub-en">Direct Loss Feedback for Terminal Layer</div>
+      <p>$$ w_{i\ell}^{(k+1)} := w_{i\ell}^{(k)} - \eta^{(k)} z_\ell \frac{\partial e}{\partial a_i} \tag{18} $$</p>
+      <ul>
+        <li><strong>直面損失：</strong>神經元 $i$ 處於最後一層，輸出 $z_i$ 直接與真實標籤 $t_i$ 產生誤差 $e$。</li>
+        <li><strong>鏈式最短：</strong>$\delta_i = \frac{\partial e}{\partial a_i}$ 僅需一層求導，例如 MSE 損失下 $\delta_i = (z_i - t_i) \sigma'(a_i)$。</li>
+        <li><strong>更新直截：</strong>更新量正比於前層輸入 $z_\ell$ 與當前殘差敏感度 $\delta_i$。</li>
+      </ul>
+    </div>
+
+    <div class="col right">
+      <h3>隱藏層權重更新（式 (19)）</h3>
+      <div class="sub-en">Recursive Backpropagated Feedback for Internal Layers</div>
+      <p>$$ w_{i\ell}^{(k+1)} := w_{i\ell}^{(k)} - \eta^{(k)} z_\ell \, \sigma'(a_i) \sum_j \left(\delta_j w_{ji}\right) \tag{19} $$</p>
+      <ul>
+        <li><strong>黑盒深處：</strong>神經元 $i$ 看不見標籤，不能直接對 loss 求導。</li>
+        <li><strong>下游倒灌：</strong>必須先等待所有下游神經元 $j$ 計算出 $\delta_j$，再透過突觸權重 $w_{ji}$ 逆向加權回傳 $\sum_j \delta_j w_{ji}$。</li>
+        <li><strong>雙重調控：</strong>既受前層輸入 $z_\ell$ 驅動，又受本節點啟用斜率 $\sigma'(a_i)$ 嚴格閘門把關。</li>
+      </ul>
+    </div>
+  </div>
+
+  <p>
+    <strong>本質差異一句話總結：</strong>
+    輸出層 $\delta_i$ 可直接由損失函式匯出；隱藏層則必須多乘自身啟用函式的導數 $\sigma'(a_i)$，並將下游所有 $\delta_j$ 依突觸權重倒灌回流。
+    <span class="bilingual-en">
+      The terminal layer calculates $\delta_i$ directly from the loss function, while hidden layers recursively propagate $\delta_j$ back through downstream weights $w_{ji}$ and scale by the local derivative $\sigma'(a_i)$.
+    </span>
+  </p>
+</section>
+
+<!-- 8. Algorithm 2 流程全貌 -->
+<section class="section" id="algorithm2">
+  <div class="sec-tag sustain">07 / 演算法架構 · Algorithm 2 Blueprint</div>
+  <h2 class="section-title">Algorithm 2 流程全貌：反向傳播六步迴圈
+    <span class="en">Algorithm 2 Complete Blueprint: The 6-Step Loop of Backpropagation</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>Step 1 &amp; Step 2：初始化與步長配置</h3>
+      <div class="sub-en">Initialization &amp; Learning Rate Scheduling</div>
+      <p>
+        <strong>1. 初始化權重</strong> $\boldsymbol{w}^{(0)}$（使用隨機小數打破對稱性，避免所有神經元學出相同特徵）。<br/>
+        <strong>2. 設定每輪學習率</strong> $\eta^{(k)}$（可配合學習率衰減排程或自適應最佳化器）。
+      </p>
+    </div>
+    <div class="card positive">
+      <h3>Step 3：前向傳播（Forward Pass）</h3>
+      <div class="sub-en">Compute Net Inputs and Activations Layer by Layer</div>
+      <p>
+        由第一層至最後一層依序計算各神經元之加權輸入 $a_i$ 與啟用輸出 $z_i$（式 (9)–(10)）。在最後一層計算總體損失 $e$。<strong>關鍵：所有中間啟用值 $z_\ell$ 必須完整快取至記憶體中！</strong>
+      </p>
+    </div>
+    <div class="card positive">
+      <h3>Step 4：反向倒灌（Backward Pass）</h3>
+      <div class="sub-en">Backward Traversal from Output Layer r to First Layer</div>
+      <p>
+        <strong>由最後一層往回遞推：</strong><br/>
+        • 若當前層為最後一層（輸出層）：直接根據損失計算 $\delta_i$，套用式 (18) 更新權重。<br/>
+        • 若當前層為隱藏層：根據下游已求得的 $\delta_j$，套用式 (15) 倒灌計算 $\delta_i$，套用式 (19) 更新權重。
+      </p>
+    </div>
+    <div class="card positive">
+      <h3>Step 5 &amp; Step 6：收斂檢驗與迭代迴圈</h3>
+      <div class="sub-en">Convergence Verification &amp; Step Adaptation</div>
+      <p>
+        <strong>5. 檢查收斂準則：</strong>檢驗梯度範數 $\|\nabla e\| \le \epsilon$、相鄰輪損失變化或 Epoch 預算。<br/>
+        <strong>6. 動態調整：</strong>若未收斂，調整學習率 $\eta^{(k)}$ 進入下一輪迭代，直至收斂。
+      </p>
+    </div>
+  </div>
+
+  <div class="intuition-box" style="margin-top: 20px;">
+    <h4>口語口訣版四部曲</h4>
+    <p>
+      <strong>① 前向算：</strong>從輸入層一路往右算 $a$ 與 $z$，算出總 loss；<br/>
+      <strong>② 終點標：</strong>在輸出層比對標籤算輸出 $\delta_{\text{out}}$；<br/>
+      <strong>③ 逆向灌：</strong>從輸出層一層層往回傳 $\delta$，隱藏層加權加總再乘 $\sigma'$；<br/>
+      <strong>④ 梯步移：</strong>用 $\Delta w = -\eta \cdot \delta_i z_\ell$ 更新每一根權重！
+    </p>
+  </div>
+</section>
+
+<!-- 9. 計算圖訊號流拆解 -->
+<section class="section" id="computational-graph">
+  <div class="sec-tag sustain">08 / 視覺架構 · Computational Graph &amp; Signal Flow</div>
+  <h2 class="section-title">計算圖訊號流：前向藍流 vs 反向紅流
+    <span class="en">Computational Graph: Blue Forward Signals vs Red Backward Gradients</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg style="width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="-apple-system, BlinkMacSystemFont, sans-serif">
+        <defs>
+          <marker id="m6b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/>
+          </marker>
+          <marker id="m6r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#e53e3e"/>
+          </marker>
+        </defs>
+
+        <rect x="0" y="0" width="720" height="360" fill="#ffffff" rx="10"/>
+        <text x="360" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#1e40af">反向傳播訊號流：隱藏層看不見標籤，靠 δ 從輸出倒灌回來</text>
+
+        <text x="110" y="44" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">輸入層</text>
+        <text x="360" y="44" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">隱藏層</text>
+        <text x="610" y="44" text-anchor="middle" font-size="12" font-weight="bold" fill="#c53030">輸出層</text>
+
+        <!-- Sibling neurons -->
+        <circle cx="110" cy="72" r="12" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.2"/>
+        <circle cx="110" cy="188" r="12" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.2"/>
+        <circle cx="360" cy="70" r="12" fill="#dbeafe" stroke="#60a5fa" stroke-width="1.2"/>
+        <circle cx="360" cy="190" r="12" fill="#dbeafe" stroke="#60a5fa" stroke-width="1.2"/>
+        <circle cx="610" cy="72" r="12" fill="#fee2e2" stroke="#fca5a5" stroke-width="1.2"/>
+        <circle cx="610" cy="188" r="12" fill="#fee2e2" stroke="#fca5a5" stroke-width="1.2"/>
+        <path d="M122 74 L348 72" stroke="#bfdbfe" stroke-width="1"/>
+        <path d="M122 184 L348 186" stroke="#bfdbfe" stroke-width="1"/>
+        <path d="M372 72 L598 74" stroke="#bfdbfe" stroke-width="1"/>
+        <path d="M372 186 L598 184" stroke="#bfdbfe" stroke-width="1"/>
+
+        <!-- FORWARD arrows top -->
+        <path d="M156 96 H308" stroke="#2563eb" stroke-width="3" marker-end="url(#m6b)"/>
+        <path d="M412 96 H564" stroke="#2563eb" stroke-width="3" marker-end="url(#m6b)"/>
+        <text x="232" y="88" text-anchor="middle" font-size="11" font-weight="bold" fill="#2563eb">forward z →</text>
+        <text x="488" y="88" text-anchor="middle" font-size="11" font-weight="bold" fill="#2563eb">forward z →</text>
+
+        <!-- Three main neurons -->
+        <circle cx="110" cy="128" r="42" fill="#dbeafe" stroke="#2563eb" stroke-width="2.4"/>
+        <text x="110" y="122" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e40af">z_ℓ</text>
+        <text x="110" y="139" text-anchor="middle" font-size="10" fill="#2563eb">輸入特徵</text>
+        <text x="110" y="216" text-anchor="middle" font-size="9.5" fill="#64748b">看得見資料 x</text>
+
+        <circle cx="360" cy="128" r="50" fill="#bfdbfe" stroke="#1e40af" stroke-width="2.6"/>
+        <text x="360" y="112" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e40af">z_i = σ(a_i)</text>
+        <text x="360" y="128" text-anchor="middle" font-size="10" fill="#1e40af">隱藏神經元</text>
+        <rect x="300" y="138" width="120" height="20" rx="4" fill="#fef3c7" stroke="#d69e2e" stroke-width="1.2"/>
+        <text x="360" y="152" text-anchor="middle" font-size="9" font-weight="bold" fill="#975a16">看不見真實標籤</text>
+        <text x="360" y="216" text-anchor="middle" font-size="9.5" fill="#b45309">中間層沒有答案可對</text>
+
+        <circle cx="610" cy="128" r="42" fill="#fecaca" stroke="#e53e3e" stroke-width="2.8"/>
+        <text x="610" y="122" text-anchor="middle" font-size="14" font-weight="bold" fill="#c53030">z_out</text>
+        <text x="610" y="139" text-anchor="middle" font-size="10" fill="#c53030">輸出預測</text>
+        <text x="610" y="216" text-anchor="middle" font-size="9.5" fill="#c53030">直面損失 e 與目標 t</text>
+
+        <!-- BACKWARD delta arrows -->
+        <path d="M564 168 H412" stroke="#e53e3e" stroke-width="3" marker-end="url(#m6r)"/>
+        <path d="M308 168 H156" stroke="#e53e3e" stroke-width="3" marker-end="url(#m6r)"/>
+        <text x="488" y="188" text-anchor="middle" font-size="11" font-weight="bold" fill="#c53030">← backward δ</text>
+        <text x="232" y="188" text-anchor="middle" font-size="11" font-weight="bold" fill="#c53030">← backward δ</text>
+
+        <!-- Weight labels -->
+        <rect x="198" y="100" width="68" height="16" rx="3" fill="#eff6ff" stroke="#93c5fd"/>
+        <text x="232" y="112" text-anchor="middle" font-size="9" fill="#1e40af">w_{iℓ}</text>
+        <rect x="454" y="100" width="68" height="16" rx="3" fill="#eff6ff" stroke="#93c5fd"/>
+        <text x="488" y="112" text-anchor="middle" font-size="9" fill="#1e40af">w_{ji}</text>
+
+        <!-- Delta bubbles on reverse path -->
+        <circle cx="488" cy="168" r="11" fill="#fee2e2" stroke="#e53e3e" stroke-width="1.4"/>
+        <text x="488" y="172" text-anchor="middle" font-size="8" font-weight="bold" fill="#c53030">δ_j</text>
+        <circle cx="232" cy="168" r="11" fill="#fee2e2" stroke="#e53e3e" stroke-width="1.4"/>
+        <text x="232" y="172" text-anchor="middle" font-size="8" font-weight="bold" fill="#c53030">δ_i</text>
+
+        <!-- BOTTOM cards -->
+        <rect x="14" y="232" width="344" height="92" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/>
+        <text x="186" y="253" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">輸出層權重更新</text>
+        <text x="186" y="271" text-anchor="middle" font-size="11" fill="#1e40af">δ 可直接由損失算出</text>
+        <text x="186" y="289" text-anchor="middle" font-size="11" fill="#2563eb">Δw = −η · z_ℓ · δ_out</text>
+        <text x="186" y="308" text-anchor="middle" font-size="10" fill="#64748b">看得到 e，鏈式法則最短</text>
+
+        <rect x="362" y="232" width="344" height="92" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="1.6"/>
+        <text x="534" y="253" text-anchor="middle" font-size="12" font-weight="bold" fill="#c2410c">隱藏層權重更新</text>
+        <text x="534" y="271" text-anchor="middle" font-size="11" fill="#c2410c">多乘 σ′ 並加總下游 δ</text>
+        <text x="534" y="289" text-anchor="middle" font-size="11" fill="#ea580c">Δw = −η · z_ℓ · σ′ · ∑ δ_j w_{ji}</text>
+        <text x="534" y="308" text-anchor="middle" font-size="10" fill="#9a3412">答案是倒灌進來的，不是直接看見的</text>
+
+        <rect x="14" y="332" width="692" height="20" rx="4" fill="#fef2f2"/>
+        <text x="360" y="346" text-anchor="middle" font-size="10" fill="#c53030">反直覺：隱藏層沒看見標籤，卻能學會——學習訊號是從輸出用鏈式法則倒灌回來的。</text>
+      </svg>
+      <span class="svg-caption">反向傳播：前向藍、δ 迴流紅；隱藏層看不見標籤</span>
+    </div>
+
+    <div>
+      <div class="highlight-box">
+        <h4>反直覺哲學：看不見答案，卻能被精準修正</h4>
+        <p>
+          學生常問：「中間層又沒看過貓或狗的照片標籤，它是怎麼學會抽取貓耳特徵的？」
+        </p>
+        <p>
+          答案正是<strong>反向傳播的數學美感</strong>：
+          雖然隱藏層沒有標籤，但最後一層的預測誤差會被「逆轉的權重矩陣」層層向下投影。
+          <strong>每一根突觸權重，前向時貢獻了多少訊號，反向時就必須承擔多少問責！</strong>
+        </p>
+      </div>
+      <p>
+        計算圖（Computational Graph）將複雜的多層網路分解為局部節點。每個節點只需掌握自己的局部雅可比（Local Jacobian）運算，即可無縫拼接出全域梯度。
+        <span class="bilingual-en">
+          Computational graphs decouple deep networks into modular nodes. Each node only needs its local gradient to seamlessly assemble the global derivative chain.
+        </span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- 10. 前向 vs 反向維度與複雜度對比 -->
+<section class="section" id="comparison">
+  <div class="sec-tag sustain">09 / 維度縱覽 · Forward vs Backward Comparison</div>
+  <h2 class="section-title">前向傳播 vs 反向傳播：維度、方向與資源開銷對比
+    <span class="en">Forward Pass vs Backward Pass: Dimension, Direction, and Resource Trade-offs</span>
+  </h2>
+
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>比較維度</th>
+        <th>前向傳播 (Forward Pass)</th>
+        <th>反向傳播 (Backward Pass)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>資訊傳播方向</strong></td>
+        <td>輸入層 $\to$ 隱藏層 $\to$ 輸出層（由左向右）</td>
+        <td>輸出層 $\to$ 隱藏層 $\to$ 輸入層（由右向左）</td>
+      </tr>
+      <tr>
+        <td><strong>核心載流變數</strong></td>
+        <td>神經元啟用輸出 $z_i = \sigma(a_i) \in \mathbb{R}$</td>
+        <td>誤差敏感度 $\delta_i = \frac{\partial e}{\partial a_i} \in \mathbb{R}$</td>
+      </tr>
+      <tr>
+        <td><strong>局部運算機制</strong></td>
+        <td>輸入加權總和：$a_i = \sum w_{i\ell} z_\ell$，過啟用 $\sigma$</td>
+        <td>下游敏感度加權倒灌：$\sum \delta_j w_{ji}$，乘導數 $\sigma'$</td>
+      </tr>
+      <tr>
+        <td><strong>輸出目標產物</strong></td>
+        <td>預測標籤 $\hat{y}$ 與總損失純量 $e$</td>
+        <td>所有突觸權重梯度 $\frac{\partial e}{\partial w_{i\ell}} = \delta_i z_\ell$</td>
+      </tr>
+      <tr>
+        <td><strong>時間複雜度</strong></td>
+        <td>$O(W)$（$W$ 為網路所有突觸權重總數）</td>
+        <td>$O(W)$（與前向同階，高效對稱！）</td>
+      </tr>
+      <tr>
+        <td><strong>視訊記憶體 (VRAM) 開銷</strong></td>
+        <td>瞬時運算，僅需維護層間暫存區</td>
+        <td class="bad">必須完整保留前向傳播的所有中間啟用快照 $z_\ell$！</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    這張對比表揭示了現代深度學習架構的關鍵約束：<strong>反向傳播的時間極省（與前向同為 $O(W)$），但記憶體極耗</strong>。
+    訓練大型語言模型（LLM）時所面臨的視訊記憶體瓶頸，本質正是源自於必須快取前向啟用 $z_\ell$ 以便反向計算 $\delta_i z_\ell$！
+    <span class="bilingual-en">
+      While backpropagation matches the forward pass in linear time complexity $O(W)$, its memory footprint requires caching all forward activations for gradient evaluation.
+    </span>
+  </p>
+</section>
+
+<!-- 11. 大師四大鐵律 -->
+<section class="section" id="master-maxims">
+  <div class="sec-tag sustain">10 / 智慧結晶 · Master Laws of Backprop</div>
+  <h2 class="section-title">大師箴言：反向傳播四大鐵律
+    <span class="en">The Four Inviolable Laws of Backpropagation</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>一、倒灌問責律：權重多大，責任就有多大</h3>
+      <div class="sub-en">Upstream Accountability via Synaptic Feedback</div>
+      <p>中間層神經元無需直面標籤。下游誤差沿著突觸前向連線逆向折返，前向放大倍率越大的連線，反向承擔的問責份額就越高。</p>
+    </div>
+    <div class="card positive">
+      <h3>二、線性對稱律：反向求導時間等同前向傳播</h3>
+      <div class="sub-en">Linear Computational Symmetry $O(W)$</div>
+      <p>反向傳播的時間複雜度嚴格等於前向傳播的常數倍。這種線形時間對稱性，粉碎了數值微擾的維度高牆，奠定了深度學習的基石。</p>
+    </div>
+    <div class="card positive">
+      <h3>三、啟用閘門律：導數為零則反向訊號湮滅</h3>
+      <div class="sub-en">Activation Gatekeeping &amp; Vanishing Gradients</div>
+      <p>隱藏層 $\delta_i$ 必乘 $\sigma'(a_i)$。若啟用函式落入飽和區（如 Sigmoid 極值處 $\sigma' \to 0$），下游倒灌訊號將被徹底截斷，導致梯度消失！</p>
+    </div>
+    <div class="card positive">
+      <h3>四、快取依存律：視訊記憶體本質上是在買前向記憶</h3>
+      <div class="sub-en">Memory Overhead of Activation Caching</div>
+      <p>計算權重梯度必須用到前向輸入 $z_\ell$。沒有前向啟用快照，反向傳播就無法求導。深度神經網路的視訊記憶體瓶頸本質是「記憶的代價」。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 12. 互動探索實驗室 -->
+<section class="section" id="lab">
+  <div class="sec-tag activate">11 / 實戰模擬 · Interactive Simulation Lab</div>
+  <h2 class="section-title">互動探索實驗室：兩層神經網路前向啟用、反向 $\delta$ 與權重梯度數值連動模擬器
+    <span class="en">Interactive Lab: Two-Layer Network Forward Pass, Backward Delta &amp; Gradient Simulator</span>
+  </h2>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <div class="lab-ctrl">
+        <label>入口 z_ℓ：</label>
+        <input type="range" id="kp6-z" min="0.2" max="2.0" step="0.1" value="1.0">
+        <span class="val" id="kp6-z-v">1.000</span>
+      </div>
+      <div class="lab-ctrl">
+        <label>隱藏 w_{iℓ}：</label>
+        <input type="range" id="kp6-wi" min="-1.0" max="2.0" step="0.1" value="1.0">
+        <span class="val" id="kp6-wi-v">1.000</span>
+      </div>
+      <div class="lab-ctrl">
+        <label>出口 w_{ji}：</label>
+        <input type="range" id="kp6-wj" min="-1.0" max="2.0" step="0.1" value="1.0">
+        <span class="val" id="kp6-wj-v">1.000</span>
+      </div>
+      <div class="lab-ctrl">
+        <label>目標 t：</label>
+        <input type="range" id="kp6-t" min="-1.0" max="3.0" step="0.1" value="0.0">
+        <span class="val" id="kp6-t-v">0.000</span>
+      </div>
+      <button class="lab-btn" id="kp6-reset">預設基準 (Reset)</button>
+      <button class="lab-btn accent" id="kp6-target-match">零誤差驗證 (t=1)</button>
+    </div>
+
+    <div class="lab-display">
+      <div class="lab-canvas-container">
+        <canvas id="kp6-cv" width="560" height="300"></canvas>
+      </div>
+      <div class="lab-readout" id="kp6-ro">
+        <!-- Live status injected via JS -->
+      </div>
+    </div>
+
+    <div class="method-box" style="margin-top: 18px;">
+      <h4>實驗室設計架構與數值基準 (Mathematical Specifications)</h4>
+      <p>
+        <strong>網路設定：</strong>單輸入 $z_\ell$、單隱藏神經元 $i$（啟用函式採二次方 $\sigma(a)=a^2$，故導數 $\sigma'(a)=2a$）、單輸出神經元 $j$（線性啟用 $z_j=a_j$）。<br/>
+        <strong>損失函式：</strong>均方誤差 $e = \frac{1}{2}(z_j - t)^2$。<br/>
+        <strong>出口敏感度：</strong>$\delta_j = z_j - t$，出口權重梯度 $\frac{\partial e}{\partial w_{ji}} = \delta_j \times z_i$。<br/>
+        <strong>隱藏敏感度：</strong>$\delta_i = \delta_j \cdot w_{ji} \cdot \sigma'(a_i) = \delta_j \cdot w_{ji} \cdot (2a_i)$，隱藏權重梯度 $\frac{\partial e}{\partial w_{i\ell}} = \delta_i \times z_\ell$。<br/>
+        <strong>基準檢驗：</strong>預設值 $z_\ell=1, w_{i\ell}=1, w_{ji}=1, t=0$ 時，前向 $a_i=1, z_i=1, z_j=1, e=0.5$；反向 $\delta_j=1, \delta_i=2$；出口梯度 $=1.000$，隱藏梯度 $=2.000$！
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- 13. 隨堂 Checkpoint -->
+<section class="section" id="quiz">
+  <div class="sec-tag activate">12 / 實戰檢驗 · Concept Checkpoint</div>
+  <h2 class="section-title">隨堂 Checkpoint：觀念即時反饋
+    <span class="en">Concept Checkpoint: Master-Level Assessment</span>
+  </h2>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q">題目 1：在深層神經網路中，為什麼不能直接用數值微擾（如 $\frac{e(w+\epsilon)-e(w)}{\epsilon}$）求導，而必須採用反向傳播？</div>
+    <div class="options">
+      <button data-opt="A">A. 數值微擾會破壞神經網路的非線性啟用能力</button>
+      <button data-opt="B">B. 數值微擾每微擾一個權重需重新做一次完整前向傳播，複雜度高達 $O(W^2)$；反向傳播僅需一次前向 + 一次反向即可在 $O(W)$ 內求出所有梯度</button>
+      <button data-opt="C">C. 數值微擾無法處理負數權重與零值偏置</button>
+      <button data-opt="D">D. 數值微擾會使學習率 $\eta$ 強制衰減為零</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-card" data-ans="A" style="margin-top: 24px;">
+    <div class="q">題目 2：反向傳播中，神經元 $i$ 的誤差敏感度為何定義為 $\delta_i = \frac{\partial e}{\partial a_i}$（對加權和求導），而非對啟用後輸出 $\frac{\partial e}{\partial z_i}$ 求導？</div>
+    <div class="options">
+      <button data-opt="A">A. 因為 $\frac{\partial a_i}{\partial w_{i\ell}} = z_\ell$，使權重梯度直接簡化為極為乾淨的乘積 $\delta_i \times z_\ell$</button>
+      <button data-opt="B">B. 因為啟用後輸出 $z_i$ 的導數在數學上恆為零</button>
+      <button data-opt="C">C. 為了避免計算海森矩陣（Hessian Matrix）的特徵值</button>
+      <button data-opt="D">D. 純屬歷史筆誤，在計算複雜度上兩者沒有任何差異</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <div class="q">題目 3：若神經元 $i$ 處於隱藏層，其誤差敏感度 $\delta_i$ 如何從下游神經元集合 $\{j\}$ 計算得出？</div>
+    <div class="options">
+      <button data-opt="A">A. $\delta_i = \sum_j \delta_j$ 直接將下游敏感度相加</button>
+      <button data-opt="B">B. $\delta_i = \sigma'(a_i) \sum_j (\delta_j w_{ji})$，即下游敏感度經突觸加權回傳總和，再乘上本節點局部啟用函式導數</button>
+      <button data-opt="C">C. $\delta_i = \frac{1}{\sum_j w_{ji}} \sum_j \delta_j$</button>
+      <button data-opt="D">D. $\delta_i = \delta_{\text{out}} \times w_{i\ell}$</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-card" data-ans="C" style="margin-top: 24px;">
+    <div class="q">題目 4：比較輸出層權重更新式 (18) 與隱藏層權重更新式 (19)，本質上的最關鍵差別為何？</div>
+    <div class="options">
+      <button data-opt="A">A. 輸出層不使用學習率 $\eta$，只有隱藏層才需要設定步長</button>
+      <button data-opt="B">B. 隱藏層權重更新方向與梯度符號相同，輸出層相反</button>
+      <button data-opt="C">C. 輸出層直面真實標籤與損失函式，敏感度一步可得；隱藏層因「看不見標籤」，必須依賴下游誤差經由權重矩陣倒灌，並受局部啟用導數 $\sigma'(a_i)$ 濾波</button>
+      <button data-opt="D">D. 輸出層權重更新完全不需要輸入啟用值 $z_\ell$</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+</section>
+
+<script>
+// Progress Bar
+window.addEventListener('scroll', () => {
+  const top = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('progressTop').style.width = (top / docH * 100) + '%';
+});
+
+// Quiz Interactive Logic with Dynamic MathJax Rendering
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('correct', 'wrong'));
+      const choice = btn.getAttribute('data-opt');
+      if (choice === ans) {
+        btn.classList.add('correct');
+        fb.className = 'feedback show ok';
+        fb.innerHTML = '<strong>✅ 答對了！</strong> ' + getExplanation(card, ans);
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'feedback show no';
+        fb.innerHTML = '<strong>❌ 答錯了！</strong> 請重新思考：' + getExplanation(card, ans);
+      }
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+function getExplanation(card, ans) {
+  const text = card.innerText;
+  if (ans === 'B' && text.includes('數值微擾')) {
+    return '數值差分需要對每個權重跑一次前向傳播，總代價為 $O(W^2)$。反向傳播運用鏈式法則在一次反向遍歷中求出所有梯度，時間為 $O(W)$。';
+  } else if (ans === 'A' && text.includes('誤差敏感度為何定義為')) {
+    return '因為 $\\partial a_i / \\partial w_{i\\ell} = z_\\ell$，使權重偏導直接等於 $\\delta_i \\times z_\\ell$。若定義在 $z_i$ 上，每次更新都得多拖一個 $\\sigma\'(a_i)$ 項。';
+  } else if (ans === 'B' && text.includes('處於隱藏層')) {
+    return '根據多變數全微分鏈式法則，神經元 $i$ 的輸出影響到所有下游神經元 $j$，因此 $\\delta_i = \\sigma\'(a_i) \\sum_j (\\delta_j w_{ji})$。';
+  } else if (ans === 'C' && text.includes('本質上的最關鍵差別')) {
+    return '輸出層直接計算 $\\delta_i = \\partial e / \\partial a_i$；隱藏層「看不見標籤」，其誤差是靠下游節點的敏感度沿著突觸權重倒灌回傳而來的。';
+  }
+  return '';
+}
+
+// Interactive Lab: 2-Layer Neural Network Simulator
+(function() {
+  var zl = 1.0, wi = 1.0, wj = 1.0, t = 0.0;
+  var cv = document.getElementById('kp6-cv');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var ro = document.getElementById('kp6-ro');
+
+  function fmt(x) { return (Math.round(x * 1000) / 1000).toFixed(3); }
+
+  function compute() {
+    // Forward pass: sigma(a) = a^2, sigma'(a) = 2a
+    var ai = wi * zl;
+    var zi = ai * ai;
+    var sp = 2 * ai;
+    var aj = wj * zi;
+    var zj = aj; // Linear output
+    var e = 0.5 * (zj - t) * (zj - t);
+
+    // Backward pass
+    var dj = zj - t;               // delta_out
+    var di = dj * wj * sp;         // delta_hid = delta_j * w_ji * sigma'(a_i)
+    var gOut = dj * zi;            // grad w_ji = delta_j * z_i
+    var gHid = di * zl;            // grad w_il = delta_i * z_l
+
+    return { ai: ai, zi: zi, sp: sp, aj: aj, zj: zj, e: e, dj: dj, di: di, gOut: gOut, gHid: gHid };
+  }
+
+  function draw(c) {
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    // Node helper
+    function drawNode(x, y, r, title, subtitle, fillCol, strokeCol) {
+      ctx.fillStyle = fillCol;
+      ctx.strokeStyle = strokeCol;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = strokeCol;
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(title, x, y - 2);
+
+      ctx.font = '11px sans-serif';
+      ctx.fillStyle = '#475569';
+      ctx.fillText(subtitle, x, y + 15);
+      ctx.textAlign = 'left';
+    }
+
+    // Node positions
+    var n1 = { x: 80, y: 150 };   // Input
+    var n2 = { x: 280, y: 150 };  // Hidden
+    var n3 = { x: 480, y: 150 };  // Output
+
+    // Draw Forward Connection Lines (Blue, solid)
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(n1.x + 36, n1.y - 10);
+    ctx.lineTo(n2.x - 42, n2.y - 10);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(n2.x + 42, n2.y - 10);
+    ctx.lineTo(n3.x - 36, n3.y - 10);
+    ctx.stroke();
+
+    // Draw Backward Connection Lines (Red, dashed)
+    ctx.strokeStyle = '#dc2626';
+    ctx.setLineDash([6, 4]);
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(n3.x - 36, n3.y + 15);
+    ctx.lineTo(n2.x + 42, n2.y + 15);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(n2.x - 42, n2.y + 15);
+    ctx.lineTo(n1.x + 36, n1.y + 15);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Forward Arrow heads
+    drawArrowHead(n2.x - 42, n2.y - 10, '#2563eb', 0);
+    drawArrowHead(n3.x - 36, n3.y - 10, '#2563eb', 0);
+
+    // Backward Arrow heads
+    drawArrowHead(n2.x + 42, n2.y + 15, '#dc2626', Math.PI);
+    drawArrowHead(n1.x + 36, n1.y + 15, '#dc2626', Math.PI);
+
+    // Connection weight tags
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillStyle = '#1e40af';
+    ctx.fillText('w_{iℓ} = ' + fmt(wi), 140, 130);
+    ctx.fillText('w_{ji} = ' + fmt(wj), 340, 130);
+
+    // Delta tags
+    ctx.fillStyle = '#b91c1c';
+    ctx.fillText('← 倒灌 δ_j · w_{ji}', 335, 185);
+    ctx.fillText('← 梯度更新', 145, 185);
+
+    // Nodes
+    drawNode(n1.x, n1.y, 35, 'z_ℓ', fmt(zl), '#eff6ff', '#2563eb');
+    drawNode(n2.x, n2.y, 42, '隱藏 z_i', fmt(c.zi), '#ede9fe', '#7c3aed');
+    drawNode(n3.x, n3.y, 36, '出口 z_j', fmt(c.zj), '#fee2e2', '#dc2626');
+
+    // Delta callouts on top
+    ctx.font = 'bold 12px monospace';
+    ctx.fillStyle = '#7c3aed';
+    ctx.fillText('δ_i = ' + fmt(c.di), n2.x - 36, n2.y - 56);
+    ctx.fillStyle = '#dc2626';
+    ctx.fillText('δ_j = ' + fmt(c.dj), n3.x - 36, n3.y - 56);
+
+    // Legend
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = '#2563eb';
+    ctx.fillText('― 前向訊號流 (z)', 30, 30);
+    ctx.fillStyle = '#dc2626';
+    ctx.fillText('- - 反向倒灌流 (δ)', 170, 30);
+    ctx.fillStyle = '#475569';
+    ctx.fillText('損失 e = ½(z_j − t)² = ' + fmt(c.e), 330, 30);
+  }
+
+  function drawArrowHead(x, y, color, angle) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-9, -5);
+    ctx.lineTo(-9, 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function sync() {
+    document.getElementById('kp6-z-v').textContent = fmt(zl);
+    document.getElementById('kp6-wi-v').textContent = fmt(wi);
+    document.getElementById('kp6-wj-v').textContent = fmt(wj);
+    document.getElementById('kp6-t-v').textContent = fmt(t);
+
+    var c = compute();
+    draw(c);
+
+    var statusHtml = '';
+    if (Math.abs(c.e) < 0.001) {
+      statusHtml = '<span class="status-badge success">🎯 目標達成：預測值與目標完美重合 (e ≈ 0)！</span>';
+    } else if (Math.abs(c.sp) < 0.001) {
+      statusHtml = '<span class="status-badge warn">⚠️ 啟用飽和：σ′(a_i) ≈ 0，隱藏層敏感度被截斷！</span>';
+    } else {
+      statusHtml = '<span class="status-badge info">⚡ 反向傳播正常倒灌中</span>';
+    }
+
+    ro.innerHTML =
+      '<strong>【前向傳播 (Forward Pass)】</strong><br/>' +
+      ' 1. 隱藏前加權：a_i = w_{iℓ} · z_ℓ = ' + fmt(wi) + ' × ' + fmt(zl) + ' = <strong>' + fmt(c.ai) + '</strong><br/>' +
+      ' 2. 隱藏啟用值：z_i = a_i² = ' + fmt(c.ai) + '² = <strong>' + fmt(c.zi) + '</strong> (導數 σ′=' + fmt(c.sp) + ')<br/>' +
+      ' 3. 出口預測值：z_j = w_{ji} · z_i = ' + fmt(wj) + ' × ' + fmt(c.zi) + ' = <strong>' + fmt(c.zj) + '</strong><br/>' +
+      ' 4. 均方總損失：e = ½(z_j − t)² = ½(' + fmt(c.zj) + ' − ' + fmt(t) + ')² = <strong>' + fmt(c.e) + '</strong><br/><br/>' +
+      '<strong>【反向傳播 (Backward Pass)】</strong><br/>' +
+      ' 1. 出口敏感度：δ_j = z_j − t = ' + fmt(c.zj) + ' − ' + fmt(t) + ' = <span style="color:#dc2626;font-weight:bold;">' + fmt(c.dj) + '</span><br/>' +
+      ' 2. 隱藏敏感度：δ_i = δ_j · w_{ji} · σ′(a_i) = ' + fmt(c.dj) + ' × ' + fmt(wj) + ' × ' + fmt(c.sp) + ' = <span style="color:#7c3aed;font-weight:bold;">' + fmt(c.di) + '</span><br/><br/>' +
+      '<strong>【權重梯度 (Gradients)】</strong><br/>' +
+      ' • 出口梯度 ∂e/∂w_{ji} = δ_j · z_i = ' + fmt(c.dj) + ' × ' + fmt(c.zi) + ' = <strong>' + fmt(c.gOut) + '</strong><br/>' +
+      ' • 隱藏梯度 ∂e/∂w_{iℓ} = δ_i · z_ℓ = ' + fmt(c.di) + ' × ' + fmt(zl) + ' = <strong>' + fmt(c.gHid) + '</strong><br/>' +
+      '<strong>【連動狀態】</strong> ' + statusHtml;
+  }
+
+  document.getElementById('kp6-z').addEventListener('input', function() { zl = parseFloat(this.value); sync(); });
+  document.getElementById('kp6-wi').addEventListener('input', function() { wi = parseFloat(this.value); sync(); });
+  document.getElementById('kp6-wj').addEventListener('input', function() { wj = parseFloat(this.value); sync(); });
+  document.getElementById('kp6-t').addEventListener('input', function() { t = parseFloat(this.value); sync(); });
+
+  document.getElementById('kp6-reset').addEventListener('click', function() {
+    zl = 1.0; wi = 1.0; wj = 1.0; t = 0.0;
+    document.getElementById('kp6-z').value = 1.0;
+    document.getElementById('kp6-wi').value = 1.0;
+    document.getElementById('kp6-wj').value = 1.0;
+    document.getElementById('kp6-t').value = 0.0;
+    sync();
+  });
+
+  document.getElementById('kp6-target-match').addEventListener('click', function() {
+    zl = 1.0; wi = 1.0; wj = 1.0; t = 1.0;
+    document.getElementById('kp6-z').value = 1.0;
+    document.getElementById('kp6-wi').value = 1.0;
+    document.getElementById('kp6-wj').value = 1.0;
+    document.getElementById('kp6-t').value = 1.0;
+    sync();
+  });
+
+  sync();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch03 · KP05 動量加速與山谷震盪平滑 — Momentum Acceleration & Ravine Smoothing</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(108,92,231,.22), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(9,132,227,.16), transparent 30%),
+              linear-gradient(135deg, #0a0e27 0%, #151a3d 50%, #201740 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(10, 14, 39, .25);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(40px, 4.8vw, 68px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(20px, 2.2vw, 32px);
+  color: #a5b4fc;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #38bdf8;
+  border-radius: 999px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 900px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #38bdf8, #e84393);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #7dd3fc !important; fill: #7dd3fc !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #cbd5e1; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  display: block;
+}
+.half-layout .visual > svg {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  display: block;
+}
+.half-layout .visual .svg-caption {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+  font-size: var(--t5);
+  color: var(--text-low);
+  letter-spacing: .05em;
+}
+@media (max-width: 1100px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+
+/* 高橋流置中修復：卡片居中於內容閱讀區（坑 W） */
+.section .takahashi {
+  text-align: center;
+  padding: 80px 36px;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+}
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin: 28px 0;
+}
+.lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  color: var(--ink);
+}
+.lab-ctrl input[type="range"] {
+  width: 120px;
+}
+.lab-ctrl span.val {
+  min-width: 48px;
+  font-family: var(--mono);
+  color: var(--primary);
+  font-weight: bold;
+}
+.lab-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all .2s;
+}
+.lab-btn:hover {
+  background: hsl(248, 58%, 38%);
+  transform: translateY(-1px);
+}
+.lab-btn.secondary {
+  background: #64748b;
+}
+.lab-btn.secondary:hover {
+  background: #475569;
+}
+.lab-btn.accent {
+  background: #0ea5e9;
+}
+.lab-btn.accent:hover {
+  background: #0284c7;
+}
+.lab-display {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .lab-display { grid-template-columns: 1fr; }
+}
+.lab-canvas-container {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.lab-canvas-container canvas {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+.lab-readout {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+.lab-readout .status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+  margin-top: 4px;
+}
+.status-badge.running { background: #e0f2fe; color: #0369a1; }
+.status-badge.stopped-min { background: #dcfce7; color: #15803d; }
+.status-badge.warning-bounce { background: #fee2e2; color: #b91c1c; }
+.status-badge.accelerating { background: #fef3c7; color: #b45309; }
+
+/* 題目卡片樣式 */
+.quiz-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+.quiz-card h4 {
+  font-size: var(--t3);
+  margin-bottom: 16px;
+  color: var(--ink);
+}
+.quiz-card .options {
+  display: grid;
+  gap: 12px;
+}
+.quiz-card .options button {
+  background: #f8fafc;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 18px;
+  text-align: left;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all .2s;
+  color: var(--ink);
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+.quiz-card .options button.correct {
+  background: #f0fdf4 !important;
+  border-color: #22c55e !important;
+  color: #15803d !important;
+  font-weight: 600;
+}
+.quiz-card .options button.wrong {
+  background: #fef2f2 !important;
+  border-color: #ef4444 !important;
+  color: #b91c1c !important;
+}
+.quiz-card .feedback {
+  margin-top: 16px;
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-size: 15px;
+  line-height: 1.6;
+  display: none;
+}
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+.quiz-card .feedback.no {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+/* 比較矩陣與重點總結 */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  text-align: left;
+  font-size: 16px;
+}
+.comparison-table th {
+  background: #f1f5f9;
+  font-weight: 700;
+  color: var(--ink);
+}
+.comparison-table tr:nth-child(even) {
+  background: #f8fafc;
+}
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP05 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Core Question</a></li>
+    <li><a href="#ravine-problem">山谷困境 · Ravine Dilemma</a></li>
+    <li><a href="#curvature-anisotropy">曲率異向性 · Anisotropy</a></li>
+    <li><a href="#momentum-formula">動量公式 · Eq (8) Formula</a></li>
+    <li><a href="#velocity-view">質點速度視角 · Velocity View</a></li>
+    <li><a href="#physics-intuition">推球下山 · Physics Intuition</a></li>
+    <li><a href="#ema-perspective">EMA 與有效步長 · EMA & Speedup</a></li>
+    <li><a href="#vector-addition">向量合成分解 · Vector Addition</a></li>
+    <li><a href="#hyperparameter-alpha">超參數 α 響應 · Factor Sensitivity</a></li>
+    <li><a href="#comparison">對比總表 · Comparison</a></li>
+    <li><a href="#master-maxims">大師四大鐵律 · Master Laws</a></li>
+    <li><a href="#lab">山谷滑行模擬器 · Ravine Lab</a></li>
+    <li><a href="#quiz">思考題 · Checkpoint</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">IDL 115 · CHAPTER 3 · KP-05 · TEACHING DECK</span>
+    <h1>動量加速與山谷震盪平滑
+      <span class="hero-title-en">Momentum Acceleration & Ravine Smoothing</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      純梯度下降為何在狹長損失山谷中像醉漢撞壁？深入解析 Rumelhart 式 (8) 經典動量更新、物理重球慣性直覺、指數移動平均（EMA）視角與 $\frac{\eta}{1-\alpha}$ 穩態有效步長放大機制。
+    </p>
+    <p class="bilingual-en" style="color: #cbd5e1; max-width: 840px; margin: 10px auto 0;">
+      From pathological ravine oscillations to physics-inspired inertial descent: Demystifying classical momentum, orthogonal gradient cancellation, and effective learning rate acceleration.
+    </p>
+  </div>
+</section>
+
+<!-- 2. 大問句（坑 W 高橋流置中） -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="sec-tag inquiry">01 / 核心提問 · Core Question</div>
+    <div class="quote">
+      「為什麼多看『過去』，反而能跑得更快？」
+      <small>純梯度下降每步只看腳下坡度，在窄谷兩壁反覆彈跳；加一點慣性記憶，側向震盪互相抵消，前進分量乘風破浪！<br/>
+        <span class="bilingual-en-inline">Why does retaining past updates accelerate descent? Inertia cancels lateral bouncing and compounds forward progress down the ravine floor!</span>
+      </small>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 狹長山谷困境 -->
+<section class="section" id="ravine-problem">
+  <div class="sec-tag sustain">02 / 病態幾何 · The Ravine Dilemma</div>
+  <h2 class="section-title">狹長山谷困境：純梯度下降的「短視之痛」
+    <span class="en">The Ravine Dilemma: The Myopia of Vanilla Gradient Descent</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card negative">
+      <h3>1. 橫向懸崖陡峭 (Steep Walls)</h3>
+      <div class="sub-en">橫向梯度巨大，引發劇烈震盪</div>
+      <p>在山谷橫切面上，坡度極度陡峭。純梯度下降由當前斜率主導，每一步都全力朝對側峭壁衝刺，造成慘烈的之字形（Zigzag）彈跳。</p>
+    </div>
+    <div class="card negative">
+      <h3>2. 縱向谷底平緩 (Flat Riverbed)</h3>
+      <div class="sub-en">軸向梯度微弱，步長寸步難行</div>
+      <p>沿著通往最優解的谷底延伸方向，坡度極為平坦。由於橫向穩定性限制了學習率，導致縱向每步前進距離微乎其微。</p>
+    </div>
+    <div class="card warning">
+      <h3>3. 步長調校死衚衕 (Step Size Dilemma)</h3>
+      <div class="sub-en">調大即發散，調小走不動</div>
+      <p>若將學習率 $\eta$ 調大，橫向震盪會立即發散炸裂；若將 $\eta$ 調小以維持穩定，沿山谷滾向谷底可能需要數萬次無謂迭代。</p>
+    </div>
+  </div>
+
+  <p style="margin-top: 24px;">
+    在深層神經網路的複雜非凸地形中，損失曲面幾乎無處不是這種「狹長山谷（Ravine）」。
+    純梯度下降（Vanilla GD）每一步只相信<strong>當下這一瞬間</strong>的瞬時梯度，本質上是一個<strong>極度短視的局部決策者</strong>。
+    <span class="bilingual-en">In high-dimensional loss landscapes, ravines are omnipresent. Vanilla gradient descent suffers from acute myopia, endlessly ricocheting between cliff walls while crawling sluggishly along the valley floor.</span>
+  </p>
+</section>
+
+<!-- 4. 曲率異向性與條件數 -->
+<section class="section" id="curvature-anisotropy">
+  <div class="sec-tag sustain">03 / 數學本質 · Curvature Anisotropy</div>
+  <h2 class="section-title">曲率異向性：Hessian 特徵值與病態條件數
+    <span class="en">Curvature Anisotropy: Hessian Eigenvalues & Ill-Conditioned Geometry</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>二次逼近與病態條件數（Condition Number $\kappa$）</h4>
+    <p>考慮山谷局部二次型目標函式 $f(\boldsymbol{w}) = \frac{1}{2} \boldsymbol{w}^\top \boldsymbol{H} \boldsymbol{w}$，其中 $\boldsymbol{H} = \nabla^2 f$ 為 Hessian 矩陣：</p>
+    <p>$$ \kappa(\boldsymbol{H}) = \frac{\lambda_{\max}(\boldsymbol{H})}{\lambda_{\min}(\boldsymbol{H})} \gg 1 $$</p>
+    <p><strong>收斂速率定理：</strong>在純梯度下降下，即使選取最優固定學習率 $\eta^* = \frac{2}{\lambda_{\max} + \lambda_{\min}}$，誤差衰減率仍受限於：</p>
+    <p>$$ \|\boldsymbol{w}^{(k)} - \boldsymbol{w}^*\| \le \left( \frac{\kappa - 1}{\kappa + 1} \right)^k \|\boldsymbol{w}^{(0)} - \boldsymbol{w}^*\| $$</p>
+    <p>當條件數 $\kappa = 1000$ 時，$\frac{\kappa-1}{\kappa+1} \approx 0.998$，意味著歷經千次迭代，距離最優點的誤差幾乎紋風不動！</p>
+  </div>
+
+  <p>
+    這揭示了最佳化困境的物理根源：<strong>單一學習率純純不足以應對不同方向上相差數百倍的幾何曲率！</strong>
+    我們亟需一種機制，能夠在不額外計算昂貴的二階 Hessian 逆矩陣的情況下，自動壓抑高曲率方向的震盪，並成倍放大低曲率方向的推進力。
+    <span class="bilingual-en">The convergence bound degrades drastically when the condition number is large. Without computing the inverse Hessian, momentum elegantly bypasses this limitation through temporal accumulation.</span>
+  </p>
+</section>
+
+<!-- 5. 經典動量公式：式 (8) -->
+<section class="section" id="momentum-formula">
+  <div class="sec-tag sustain">04 / 核心機制 · Classical Momentum</div>
+  <h2 class="section-title">核心更新：式 (8) 經典動量演算法
+    <span class="en">Core Formulation: Equation (8) Classical Momentum by Rumelhart et al.</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>Rumelhart 等人 (1986) 經典動量更新方程（式 (8)）</h4>
+    <p>將純梯度下降的「只看當前斜率」，升級為「歷史更新方向之慣性 + 當前負梯度」：</p>
+    <p>$$ (\Delta \boldsymbol{w})^{(k)} := \alpha (\Delta \boldsymbol{w})^{(k-1)} - \eta^{(k)} \nabla f\left(\boldsymbol{w}^{(k)}\right) \tag{8} $$</p>
+    <p>隨後將更新量施加於模型參數上：</p>
+    <p>$$ \boldsymbol{w}^{(k+1)} := \boldsymbol{w}^{(k)} + (\Delta \boldsymbol{w})^{(k)} $$</p>
+  </div>
+
+  <div class="card-grid" style="margin-top: 24px;">
+    <div class="card positive">
+      <h3>動量係數 $\alpha \in [0, 1)$</h3>
+      <div class="sub-en">慣性記憶權重 (Friction / Inertia Ratio)</div>
+      <p>控制上一動保留多少。通常設為 0.9。若 $\alpha = 0$，式 (8) 精確退化為標準純梯度下降。$\alpha$ 越大，質點的「慣性質量」越重。</p>
+    </div>
+    <div class="card positive">
+      <h3>當前驅動項 $-\eta \nabla f(\boldsymbol{w}^{(k)})$</h3>
+      <div class="sub-en">瞬時重力推力 (Instantaneous Force)</div>
+      <p>由當前位置的斜率給予質點的瞬時衝量。即便此時梯度很小，只要與歷史方向一致，質點便能在前一速度基礎上繼續加速。</p>
+    </div>
+    <div class="card positive">
+      <h3>合成更新向量 $(\Delta \boldsymbol{w})^{(k)}$</h3>
+      <div class="sub-en">淨前進向量 (Composite Displacement)</div>
+      <p>兩者進行向量加法合成。橫向交替的梯度分量被負反饋抵消，縱向恆定的梯度分量持續同向疊加，形成穩健的前進軌跡。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 速度與物理質點視角 -->
+<section class="section" id="velocity-view">
+  <div class="sec-tag sustain">05 / 運動學重構 · Velocity Kinematics</div>
+  <h2 class="section-title">質點速度視角：牛頓力學的離散化
+    <span class="en">Kinematics Perspective: Discretization of Newtonian Particle Dynamics</span>
+  </h2>
+
+  <p>
+    在現代深度學習框架（如 PyTorch / TensorFlow）中，式 (8) 常以「速度向量 $\boldsymbol{v}$」的形式等價重寫。這讓我們能以經典力學質點運動的宏偉視角理解最佳化：
+  </p>
+
+  <div class="formula-box">
+    <h4>物理阻尼質點運動方程（Velocity Update Form）</h4>
+    <p>定義速度向量 $\boldsymbol{v}^{(k)} = (\Delta \boldsymbol{w})^{(k)}$：</p>
+    <p>$$ \boldsymbol{v}^{(k)} = \alpha \boldsymbol{v}^{(k-1)} - \eta \nabla f\left(\boldsymbol{w}^{(k)}\right) $$</p>
+    <p>$$ \boldsymbol{w}^{(k+1)} = \boldsymbol{w}^{(k)} + \boldsymbol{v}^{(k)} $$</p>
+    <p><strong>連續時間極限（ODE）：</strong>當步長趨於無窮小 $\Delta t \to 0$ 時，此差分方程精確對應於具備阻尼係數 $\gamma$ 的牛頓第二運動定律：</p>
+    <p>$$ m \frac{\mathrm{d}^2 \boldsymbol{w}(t)}{\mathrm{d}t^2} + \gamma \frac{\mathrm{d}\boldsymbol{w}(t)}{\mathrm{d}t} = -\nabla f(\boldsymbol{w}(t)) $$</p>
+  </div>
+
+  <p>
+    <strong>深刻對比：</strong>純梯度下降對應於 $m=0$（無質量質點於極度黏滯蜂蜜中運動，一沒有外力瞬間停滯）；而動量法賦予質點真實的質量 $m>0$，讓它具備衝破平緩地帶與小坑洞的<strong>物理動能（Kinetic Energy）</strong>！
+    <span class="bilingual-en">Vanilla GD is overdamped massless kinematics where motion ceases instantly when force vanishes. Momentum introduces inertial mass, converting potential energy into kinetic velocity.</span>
+  </p>
+</section>
+
+<!-- 7. 物理直覺：推重球下山 -->
+<section class="section" id="physics-intuition">
+  <div class="sec-tag sustain">06 / 直觀想像 · Physical Rolling Ball</div>
+  <h2 class="section-title">直覺比喻：推一顆重鐵球滾下山谷
+    <span class="en">Intuition: Rolling a Heavy Iron Ball Down the Mountain Ravine</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card negative">
+      <h3>無動量：輕若鴻毛的落葉 / 醉漢走路</h3>
+      <div class="sub-en">Massless Particle / Brownian Drunkard</div>
+      <p>
+        沒有慣性。每一微步都完全聽從腳底下的斜度。
+        在狹長山谷中，左邊坡度陡峭就往右跳，右邊坡度陡峭就往左跳。
+        每一步都在谷壁劇烈撞擊，能量全浪費在無謂的側向反彈上，下山極慢。
+      </p>
+    </div>
+    <div class="card positive">
+      <h3>有動量：帶著強大慣量的重鐵球</h3>
+      <div class="sub-en">Inertial Heavy Sphere Rolling Smoothly</div>
+      <p>
+        鐵球帶著數十公斤的慣性順著山谷主軸滾動。
+        當它撞向右側谷壁時，強大的向前動能會抵抗橫向偏折；
+        左側和右側的橫向推力在滾動過程中自然被<strong>時間平均（Time Averaged）</strong>，路徑筆直而流暢。
+      </p>
+    </div>
+  </div>
+
+  <div class="summary-box" style="margin-top: 28px; background: linear-gradient(135deg, #1e3a8a, #312e81); border-radius: var(--radius); padding: 24px; color: #fff;">
+    <h4 style="color: #67e8f9; margin-bottom: 12px; font-size: var(--t3);">💡 一句話核心心法：動量 = 梯度下降 + 慣性</h4>
+    <p style="font-size: 18px; line-height: 1.7; margin: 0;">
+      純梯度下降只「看腳下」，容易被局部陡坡誤導；動量法讓最佳化器「記得剛才往哪走」。
+      多看「過去」不是拖泥帶水，而是利用時間積分濾除高頻空間噪聲，讓行進更平穩、更迅猛！
+    </p>
+    <div class="bilingual-en" style="margin-top: 8px;">Momentum equips optimization with temporal memory, filtering spatial high-frequency chatter into smooth, coherent forward kinetic velocity.</div>
+  </div>
+</section>
+
+<!-- 8. EMA 視角與有效步長放大 -->
+<section class="section" id="ema-perspective">
+  <div class="sec-tag sustain">07 / 級數展開 · EMA & Effective Step Size</div>
+  <h2 class="section-title">指數移動平均（EMA）視角：有效步長 $\frac{\eta}{1-\alpha}$ 放大
+    <span class="en">Exponential Moving Average & Steady-State Velocity Amplification</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>將式 (8) 遞迴展開為歷史梯度的幾何級數</h4>
+    <p>假設起始步 $(\Delta \boldsymbol{w})^{(0)} = \boldsymbol{0}$，連續展開 $(\Delta \boldsymbol{w})^{(k)}$：</p>
+    <p>$$ (\Delta \boldsymbol{w})^{(k)} = -\eta \sum_{i=0}^{k-1} \alpha^i \nabla f\left(\boldsymbol{w}^{(k-i)}\right) $$</p>
+    <p>這表明更新向量正是<strong>歷史梯度的指數加權衰減和（Exponential Moving Average）</strong>！越久遠的梯度權重以 $\alpha^i$ 指數衰減。</p>
+    <hr style="border: none; border-top: 1px solid rgba(0,0,0,0.1); margin: 16px 0;"/>
+    <h4>穩態前進速度與有效學習率放大定理</h4>
+    <p>若在平坦山谷底部的延伸方向上，梯度保持大致恆定為 $\boldsymbol{g}$，則當 $k \to \infty$ 時無窮幾何級數收斂：</p>
+    <p>$$ \sum_{i=0}^{\infty} \alpha^i = \frac{1}{1 - \alpha} \quad \Longrightarrow \quad (\Delta \boldsymbol{w})^{(\infty)} = -\left( \frac{\eta}{1 - \alpha} \right) \boldsymbol{g} $$</p>
+    <p><strong>驚人結論：</strong>動量在谷底方向將有效學習率<strong>放大了 $\frac{1}{1-\alpha}$ 倍</strong>！</p>
+  </div>
+
+  <div class="card-grid" style="margin-top: 24px;">
+    <div class="card info">
+      <h3>當 $\alpha = 0.9$ 時</h3>
+      <div class="sub-en">有效步長放大 10 倍！</div>
+      <p>$\frac{1}{1 - 0.9} = 10$。相當於記憶視窗約為前 10 步的加權平均。在平坦谷底前進速度是純 GD 的 10 倍之多！</p>
+    </div>
+    <div class="card info">
+      <h3>當 $\alpha = 0.99$ 時</h3>
+      <div class="sub-en">有效步長放大 100 倍！</div>
+      <p>$\frac{1}{1 - 0.99} = 100$。極具侵略性的慣性累積，能在平坦無垠的高原上風馳電掣，但轉彎與煞車半徑也會顯著拉長。</p>
+    </div>
+    <div class="card info">
+      <h3>側向震盪分量的命運</h3>
+      <div class="sub-en">$\sum_{i} \alpha^i (-1)^i \approx 0$</div>
+      <p>在谷壁垂直方向，梯度符號步步翻轉（$+g_\perp, -g_\perp, +g_\perp \dots$），級數和為 $\frac{1}{1+\alpha} \approx 0.5$！側向不僅沒有放大，反而被大幅壓制！</p>
+    </div>
+  </div>
+</section>
+
+<!-- 9. 向量加法拆解（含 SVG 圖表） -->
+<section class="section" id="vector-addition">
+  <div class="sec-tag sustain">08 / 幾何圖解 · Vector Composition</div>
+  <h2 class="section-title">向量加法拆解：側向震盪抵消與前進分量累積
+    <span class="en">Vector Addition: Orthogonal Cancellation & Longitudinal Acceleration</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+        <defs>
+          <marker id="m5r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#e53e3e"/>
+          </marker>
+          <marker id="m5g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/>
+          </marker>
+          <marker id="m5b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/>
+          </marker>
+          <marker id="m5p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#7c3aed"/>
+          </marker>
+        </defs>
+
+        <rect x="0" y="0" width="720" height="360" fill="#ffffff" rx="12"/>
+        <text x="360" y="20" text-anchor="middle" font-size="15" font-weight="bold" fill="#1e40af">動量幾何機制：狹長山谷中慣性抵消側向震盪、累積前進向量</text>
+
+        <!-- LEFT no-momentum -->
+        <rect x="12" y="28" width="342" height="186" rx="10" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.4"/>
+        <text x="183" y="47" text-anchor="middle" font-size="13" font-weight="bold" fill="#c53030">無動量 · 谷壁劇烈撞擊反彈</text>
+        <text x="183" y="62" text-anchor="middle" font-size="10" fill="#9f1239">純 GD 每步只看當下梯度，步長受限於橫向曲率</text>
+
+        <!-- Contours Left -->
+        <ellipse cx="183" cy="124" rx="150" ry="30" fill="none" stroke="#fecaca" stroke-width="1.2"/>
+        <ellipse cx="183" cy="124" rx="120" ry="23" fill="none" stroke="#fca5a5" stroke-width="1.3"/>
+        <ellipse cx="183" cy="124" rx="90" ry="16" fill="none" stroke="#f87171" stroke-width="1.4"/>
+        <ellipse cx="183" cy="124" rx="60" ry="10" fill="none" stroke="#e53e3e" stroke-width="1.5"/>
+        <ellipse cx="183" cy="124" rx="30" ry="6" fill="none" stroke="#b91c1c" stroke-width="1.5"/>
+        <ellipse cx="305" cy="124" rx="10" ry="5.5" fill="#16a34a" stroke="#15803d" stroke-width="1.2"/>
+        <text x="323" y="114" font-size="9.5" font-weight="bold" fill="#15803d">min</text>
+
+        <!-- Zigzag path -->
+        <path d="M42 104 L74 144 L106 102 L138 146 L170 104 L202 144 L234 108 L266 140 L296 122" fill="none" stroke="#e53e3e" stroke-width="2.6"/>
+        <circle cx="42" cy="104" r="5" fill="#e53e3e"/>
+        <text x="42" y="92" text-anchor="middle" font-size="9" font-weight="bold" fill="#c53030">start</text>
+        <circle cx="74" cy="144" r="3" fill="#f97316"/>
+        <circle cx="138" cy="146" r="3" fill="#f97316"/>
+        <circle cx="202" cy="144" r="3" fill="#f97316"/>
+        <text x="74" y="160" font-size="8" fill="#c53030">撞壁</text>
+        <text x="138" y="162" font-size="8" fill="#c53030">撞壁</text>
+        <text x="183" y="202" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#c53030">像醉漢在窄巷中撞牆 · 側向白耗力氣</text>
+
+        <!-- RIGHT momentum -->
+        <rect x="366" y="28" width="342" height="186" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1.4"/>
+        <text x="537" y="47" text-anchor="middle" font-size="13" font-weight="bold" fill="#15803d">有動量 · 沿谷底平滑加速</text>
+        <text x="537" y="62" text-anchor="middle" font-size="10" fill="#166534">歷史慣性提供低通濾波，向前速度持續累積</text>
+
+        <!-- Contours Right -->
+        <ellipse cx="537" cy="124" rx="150" ry="30" fill="none" stroke="#bbf7d0" stroke-width="1.2"/>
+        <ellipse cx="537" cy="124" rx="120" ry="23" fill="none" stroke="#86efac" stroke-width="1.3"/>
+        <ellipse cx="537" cy="124" rx="90" ry="16" fill="none" stroke="#4ade80" stroke-width="1.4"/>
+        <ellipse cx="537" cy="124" rx="60" ry="10" fill="none" stroke="#22c55e" stroke-width="1.5"/>
+        <ellipse cx="537" cy="124" rx="30" ry="6" fill="none" stroke="#16a34a" stroke-width="1.5"/>
+        <ellipse cx="659" cy="124" rx="10" ry="5.5" fill="#16a34a" stroke="#15803d" stroke-width="1.2"/>
+        <text x="677" y="114" font-size="9.5" font-weight="bold" fill="#15803d">min</text>
+
+        <!-- Smooth path -->
+        <path d="M396 112 C 432 128, 474 116, 516 124 C 558 132, 602 118, 650 122" fill="none" stroke="#16a34a" stroke-width="2.8" marker-end="url(#m5g)"/>
+        <circle cx="396" cy="112" r="5" fill="#e53e3e"/>
+        <text x="396" y="100" text-anchor="middle" font-size="9" font-weight="bold" fill="#c53030">start</text>
+        <circle cx="474" cy="118" r="3.5" fill="#22c55e"/>
+        <circle cx="558" cy="128" r="3.5" fill="#22c55e"/>
+        <text x="537" y="202" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#15803d">側向震盪相互抵消 · 沿主軸持續加速</text>
+
+        <!-- BOTTOM vector addition -->
+        <rect x="12" y="222" width="696" height="130" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.4"/>
+        <text x="360" y="242" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1e40af">向量加法分解：當前斜坡梯度 + 歷史慣性向量 → 沿谷前進的合成步長</text>
+
+        <!-- Origin marker -->
+        <circle cx="120" cy="332" r="4.5" fill="#1e40af"/>
+        <text x="110" y="348" font-size="9.5" fill="#64748b">當前位置 w^(k)</text>
+
+        <!-- Current gradient vector (Red) -->
+        <path d="M120 332 L165 292" stroke="#e53e3e" stroke-width="2.6" marker-end="url(#m5r)"/>
+        <text x="174" y="290" font-size="10.5" font-weight="bold" fill="#c53030">當前 −η∇f</text>
+        <text x="174" y="302" font-size="9" fill="#c53030">（側向大）</text>
+
+        <!-- History momentum vector (Blue) -->
+        <path d="M120 332 L205 314" stroke="#2563eb" stroke-width="2.6" marker-end="url(#m5b)"/>
+        <text x="214" y="318" font-size="10.5" font-weight="bold" fill="#2563eb">歷史 α(Δw)^(k-1)</text>
+        <text x="214" y="330" font-size="9" fill="#2563eb">（向前慣性）</text>
+
+        <!-- Parallelogram dash -->
+        <path d="M165 292 L250 274 L205 314" fill="none" stroke="#c4b5fd" stroke-width="1.3" stroke-dasharray="4 3"/>
+
+        <!-- Combined step (Purple) -->
+        <path d="M120 332 L246 276" stroke="#7c3aed" stroke-width="3.6" marker-end="url(#m5p)"/>
+        <text x="260" y="278" font-size="11.5" font-weight="bold" fill="#6d28d9">合成步長 (Δw)^(k) · 幾近水平前進</text>
+        <text x="260" y="294" font-size="10" fill="#7c3aed">側向分量相消 · 縱向速度累積</text>
+
+        <!-- Inset callout -->
+        <rect x="510" y="254" width="186" height="84" rx="8" fill="#fef2f2" stroke="#e53e3e" stroke-width="1.2"/>
+        <text x="603" y="278" text-anchor="middle" font-size="11" font-weight="bold" fill="#c53030">反直覺的核心啟示</text>
+        <text x="603" y="298" text-anchor="middle" font-size="9.5" fill="#c53030">多看「歷史」絕非拖泥帶水</text>
+        <text x="603" y="316" text-anchor="middle" font-size="9.5" fill="#c53030">慣性是過濾抖動的最強濾波器</text>
+      </svg>
+      <span class="svg-caption">圖 1：動量向量加法幾何原理與山谷等高線軌跡全景對比</span>
+    </div>
+
+    <div>
+      <h3 style="color: var(--ink); margin-bottom: 12px;">幾何正交分解的奧義</h3>
+      <p>
+        將任意梯度向量正交分解為<strong>谷壁垂直分量 $\boldsymbol{g}_\perp$</strong> 與<strong>谷底平行分量 $\boldsymbol{g}_\parallel$</strong>：
+      </p>
+      <ul style="padding-left: 20px; line-height: 1.8; color: var(--ink-soft); font-size: 16px;">
+        <li><strong>側向正交分量 $\boldsymbol{g}_\perp$：</strong>符號在谷壁兩側來回翻轉。在向量合成時，藍色的歷史慣性剛好與紅色的當前衝量呈銳角/鈍角相抵消，淨位移趨於 0。</li>
+        <li><strong>前進平行分量 $\boldsymbol{g}_\parallel$：</strong>方向在谷底始終穩定朝向極小值。歷史速度與當前推力方向相同，合成後向量不斷拉長，乘風破浪。</li>
+      </ul>
+      <p style="margin-top: 14px;">
+        這便是動量法的神奇之處：<strong>無需顯式旋轉座標系或計算特徵向量，僅憑簡單的遞迴向量累加，便在物理上實現了自適應方向濾波！</strong>
+        <span class="bilingual-en">By decomposing updates into orthogonal subspaces, momentum organically acts as an implicit directional filter without explicitly calculating coordinate transformations.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- 10. 超參數 α 的動態響應 -->
+<section class="section" id="hyperparameter-alpha">
+  <div class="sec-tag sustain">09 / 參數調優 · Factor Sensitivity</div>
+  <h2 class="section-title">超參數 $\alpha$ 敏感度：慣性大小的物理光譜
+    <span class="en">Momentum Factor $\alpha$ Sensitivity: The Inertial Spectrum</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card negative">
+      <h3>$\alpha = 0.0$ (無動量)</h3>
+      <div class="sub-en">過阻尼質點 · 劇烈震盪</div>
+      <p>退化為純 SGD。在狹長山谷或隨機噪聲中毫無抗震能力，極易受瞬間梯度干擾而迷失方向，收斂極其緩慢。</p>
+    </div>
+    <div class="card warning">
+      <h3>$\alpha = 0.5$ (輕度慣性)</h3>
+      <div class="sub-en">弱濾波 · 步長微幅放大 2 倍</div>
+      <p>有效步長僅放大 $\frac{1}{1-0.5} = 2$ 倍。能稍微平滑震盪，但在重度病態條件下仍嫌慣性不足，難以徹底征服深谷。</p>
+    </div>
+    <div class="card positive">
+      <h3>$\alpha = 0.9$ (業界黃金標準)</h3>
+      <div class="sub-en">臨界阻尼平衡 · 放大 10 倍</div>
+      <p>PyTorch 與 TensorFlow 預設推薦值！在慣性加速與過衝控制之間達成絕佳平衡，兼具極速前進與靈敏轉向能力。</p>
+    </div>
+    <div class="card warning">
+      <h3>$\alpha = 0.99$ (重度慣性)</h3>
+      <div class="sub-en">欠阻尼質點 · 容易衝過頭 (Overshoot)</div>
+      <p>放大 100 倍。衝力極猛，但在急轉彎處因慣性過大會嚴重衝過谷底，甚至在谷底引發二次高頻振盪，煞不住車。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 11. 無動量 vs 有動量全維度對比總表 -->
+<section class="section" id="comparison">
+  <div class="sec-tag sustain">10 / 橫向評比 · Comprehensive Matrix</div>
+  <h2 class="section-title">全維度對比：純梯度下降 vs 經典動量法
+    <span class="en">Comprehensive Matrix: Vanilla SGD vs Momentum SGD</span>
+  </h2>
+
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th style="width: 22%;">維度 / 特徵</th>
+        <th style="width: 39%;">純梯度下降 (Vanilla GD / SGD)</th>
+        <th style="width: 39%;">經典動量法 (Momentum, Rumelhart 1986)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>核心更新規則</strong></td>
+        <td>$\boldsymbol{w}^{(k+1)} = \boldsymbol{w}^{(k)} - \eta \nabla f(\boldsymbol{w}^{(k)})$</td>
+        <td>$\boldsymbol{v}^{(k)} = \alpha \boldsymbol{v}^{(k-1)} - \eta \nabla f(\boldsymbol{w}^{(k)})$<br/>$\boldsymbol{w}^{(k+1)} = \boldsymbol{w}^{(k)} + \boldsymbol{v}^{(k)}$</td>
+      </tr>
+      <tr>
+        <td><strong>記憶體額外開銷</strong></td>
+        <td><strong>0</strong>（僅保留當前權重與當前梯度）</td>
+        <td><strong>$1 \times$ 模型參數</strong>（需常駐快取速度向量 $\boldsymbol{v}$）</td>
+      </tr>
+      <tr>
+        <td><strong>山谷曲面（Ravine）</strong></td>
+        <td>在峭壁兩側劇烈之字形撞擊，前進極慢</td>
+        <td><strong>側向震盪相互抵消，沿谷底高速滑翔</strong></td>
+      </tr>
+      <tr>
+        <td><strong>平緩高原（Plateau）</strong></td>
+        <td>梯度微弱時速度趨於 0，深陷停滯假死</td>
+        <td><strong>憑藉歷史累積動能，直接衝過平緩帶</strong></td>
+      </tr>
+      <tr>
+        <td><strong>有效學習率</strong></td>
+        <td>恆定為 $\eta$</td>
+        <td>在穩定方向動態放大至 <strong>$\frac{\eta}{1-\alpha}$</strong></td>
+      </tr>
+      <tr>
+        <td><strong>隨機噪聲抵抗力</strong></td>
+        <td>差，易受 mini-batch 雜訊晃動牽引</td>
+        <td><strong>優，EMA 時間滑動視窗發揮低通濾波效果</strong></td>
+      </tr>
+      <tr>
+        <td><strong>後續衍生演算法</strong></td>
+        <td>Mini-batch SGD</td>
+        <td>Nesterov 加速梯度 (NAG), RMSProp, Adam</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 12. 大師四大鐵律 -->
+<section class="section" id="master-maxims">
+  <div class="sec-tag sustain">11 / 實戰智慧 · Master Laws</div>
+  <h2 class="section-title">大師四大鐵律：動量最佳化的工程實戰法則
+    <span class="en">Master's Four Laws: Engineering Maxims for Momentum Optimization</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>鐵律一：慣性非拖累，乃時間濾波器</h3>
+      <div class="sub-en">Low-pass Temporal Filtering</div>
+      <p>永遠不要把記憶歷史看作包袱。動量本質是在時間維度上對噪聲梯度進行<strong>低通濾波</strong>，將高頻抖動過濾為低頻穩態速度。</p>
+    </div>
+    <div class="card positive">
+      <h3>鐵律二：調大 $\alpha$，切記微調 $\eta$</h3>
+      <div class="sub-en">Effective Step Coupling</div>
+      <p>有效步長等於 $\frac{\eta}{1-\alpha}$。當你把 $\alpha$ 從 0.9 提至 0.99 時，前進推力暴增 10 倍！若不相應調小基礎學習率 $\eta$，模型可能瞬間震盪發散。</p>
+    </div>
+    <div class="card positive">
+      <h3>鐵律三：防範重球衝過頭（Overshoot）</h3>
+      <div class="sub-en">Damping & Friction Management</div>
+      <p>動量雖能衝破鞍點與淺坑，但在接近高精度極小值時容易過衝。搭配<strong>學習率衰減（Cosine Annealing）</strong>能使重球在谷底優雅減速歸位。</p>
+    </div>
+    <div class="card positive">
+      <h3>鐵律四：現代自適應最佳化器的基石</h3>
+      <div class="sub-en">The Bedrock of Adam & Beyond</div>
+      <p>動量所開創的「指數移動平均累積一階矩」思想，直接孕育了現代霸主 Adam、AdamW 的一階動量估計 $m_t$。理解動量，就掌握了現代最佳化的半壁江山！</p>
+    </div>
+  </div>
+</section>
+
+<!-- 13. 互動實驗室：山谷粒子滑行與動量調節模擬器 -->
+<section class="section" id="lab">
+  <div class="sec-tag sustain">12 / 動態模擬 · Interactive Lab</div>
+  <h2 class="section-title">互動實驗室：山谷地形粒子滑行與動量調節模擬器
+    <span class="en">Interactive Lab: Ravine Landscape Particle Descent & Momentum Simulator</span>
+  </h2>
+
+  <p>
+    親自操控粒子在病態狹長山谷 $f(x,y) = \frac{1}{2}(x^2 + 20y^2)$（即 $0.5x^2 + 10y^2$）中滑行！
+    其解析梯度為 $\nabla f(x,y) = (x, 20y)$，橫向曲率高達縱向的 20 倍。
+    觀察紅線（純 GD）如何反覆撞壁，而綠線（有動量）如何貼地加速飛馳！
+    <span class="bilingual-en">Simulate particle descent on the ravine surface $f(x,y) = 0.5x^2 + 10y^2$. Experience how vanilla GD suffers from severe cross-valley bounce while momentum dampens oscillations.</span>
+  </p>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <div class="lab-ctrl">
+        <label for="kp5-eta">學習率 $\eta$：</label>
+        <input type="range" id="kp5-eta" min="0.01" max="0.095" step="0.005" value="0.060">
+        <span class="val" id="kp5-eta-v">0.060</span>
+      </div>
+
+      <div class="lab-ctrl">
+        <label for="kp5-alpha">動量係數 $\alpha$：</label>
+        <input type="range" id="kp5-alpha" min="0.00" max="0.95" step="0.05" value="0.80">
+        <span class="val" id="kp5-alpha-v">0.80</span>
+      </div>
+
+      <div class="lab-ctrl">
+        <label for="kp5-y0">起點高度 $y_0$：</label>
+        <input type="range" id="kp5-y0" min="0.3" max="1.1" step="0.1" value="0.8">
+        <span class="val" id="kp5-y0-v">0.80</span>
+      </div>
+
+      <button type="button" class="lab-btn" id="kp5-step">單步迭代</button>
+      <button type="button" class="lab-btn accent" id="kp5-run">連續執行 40 步</button>
+      <button type="button" class="lab-btn secondary" id="kp5-reset">重設初始狀態</button>
+    </div>
+
+    <div class="lab-display">
+      <div class="lab-canvas-container">
+        <canvas id="kp5-cv" width="600" height="360"></canvas>
+      </div>
+
+      <div class="lab-readout" id="kp5-ro">
+        載入中...
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 14. 思考題與概念檢驗 -->
+<section class="section" id="quiz">
+  <div class="sec-tag sustain">13 / 隨堂評測 · Checkpoint Quizzes</div>
+  <h2 class="section-title">概念檢驗：動量加速深度理解
+    <span class="en">Checkpoint Quizzes: Deep Understanding of Momentum Mechanics</span>
+  </h2>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-card" data-ans="B">
+    <h4>題目 1：動量（Momentum）機制最早在神經網路最佳化中由誰明確提出？</h4>
+    <div class="options">
+      <button type="button" data-opt="A">A. Cauchy，1874</button>
+      <button type="button" data-opt="B">B. Rumelhart 等人 (1986)</button>
+      <button type="button" data-opt="C">C. Robbins 與 Monro，1951</button>
+      <button type="button" data-opt="D">D. Kingma 與 Ba（Adam，2014）</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 2：經典動量更新式 (8) 中，動量係數 $\alpha$ 的主要物理與數學角色是？</h4>
+    <div class="options">
+      <button type="button" data-opt="A">A. 決定當前梯度的縮放倍率（即學習率）</button>
+      <button type="button" data-opt="B">B. 慣性衰減係數，控制保留多少上一世代更新方向 $(\Delta \boldsymbol{w})^{(k-1)}$</button>
+      <button type="button" data-opt="C">C. 目標函式的二階 Lipschitz 平滑常數</button>
+      <button type="button" data-opt="D">D. mini-batch 隨機抽樣的批次大小權重</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 3：當損失曲面呈狹長山谷（Ravine / Ill-conditioned）時，動量法能顯著加速收斂的核心幾何機制是？</h4>
+    <div class="options">
+      <button type="button" data-opt="A">A. 動量能徹底改變損失函式的凸性，把非凸函式變成強凸函式</button>
+      <button type="button" data-opt="B">B. 側向（垂直谷底）交替符號的震盪梯度被加權抵消，而沿山谷前進的同向梯度持續累積疊加</button>
+      <button type="button" data-opt="C">C. 動量法在每一步都計算並求逆了精確的 Hessian 矩陣</button>
+      <button type="button" data-opt="D">D. 動量法能完全略過所有梯度計算，直接躍遷至全域最小值</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-card" data-ans="A" style="margin-top: 24px;">
+    <h4>題目 4：經典動量式 (8) 與純梯度下降式 (4) 最關鍵的代數差異是什麼？</h4>
+    <div class="options">
+      <button type="button" data-opt="A">A. 動量更新量中多了一項歷史累加項 $\alpha (\Delta \boldsymbol{w})^{(k-1)}$</button>
+      <button type="button" data-opt="B">B. 動量法完全捨棄了當前梯度項 $-\eta \nabla f$</button>
+      <button type="button" data-opt="C">C. 動量法僅使用歷史梯度的符號（Sign），不使用大小</button>
+      <button type="button" data-opt="D">D. 兩者在數學結構上完全相同，僅名稱不同</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+</section>
+
+<script>
+// Quiz Interactive Logic with Dynamic MathJax Rendering
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('correct', 'wrong'));
+      const choice = btn.getAttribute('data-opt');
+      if (choice === ans) {
+        btn.classList.add('correct');
+        fb.className = 'feedback show ok';
+        fb.innerHTML = '<strong>✅ 答對了！</strong> ' + getExplanation(card, ans);
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'feedback show no';
+        fb.innerHTML = '<strong>❌ 答錯了！</strong> 請重新思考：' + getExplanation(card, ans);
+      }
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+function getExplanation(card, ans) {
+  const text = card.innerText;
+  if (ans === 'B' && text.includes('最早在神經網路最佳化中由誰明確提出')) {
+    return '動量法由 Rumelhart 等人於 1986 年在經典反向傳播論文中提出，用以解決狹長山谷中的之字形震盪難題。';
+  } else if (ans === 'B' && text.includes('動量係數') && text.includes('物理與數學角色')) {
+    return '$\\alpha \\in [0, 1)$ 是動量係數，決定上一動更新量 $(\\Delta \\boldsymbol{w})^{(k-1)}$ 保留多少，相當於質點的慣性質量記憶。';
+  } else if (ans === 'B' && text.includes('核心幾何機制')) {
+    return '在狹長山谷中，谷壁方向梯度正負交替被慣性對消，谷底方向梯度同號持續累加，有效步長放大為 $\\frac{\\eta}{1-\\alpha}$。';
+  } else if (ans === 'A' && text.includes('最關鍵的代數差異')) {
+    return '動量法在當前負梯度項 $-\\eta \\nabla f(\\boldsymbol{w}^{(k)})$ 之外，疊加了前一步更新向量的 $\\alpha$ 倍，形成物理慣性。';
+  }
+  return '';
+}
+
+// Progress Bar
+window.addEventListener('scroll', () => {
+  const top = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  if (docH > 0) {
+    document.getElementById('progressTop').style.width = (top / docH * 100) + '%';
+  }
+});
+
+// Interactive Lab: Ravine Simulation f(x,y) = 0.5 * x^2 + 10 * y^2
+(function() {
+  var eta = 0.060, alpha = 0.80;
+  var x0 = 4.2, y0 = 0.8;
+  var cv = document.getElementById('kp5-cv');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var ro = document.getElementById('kp5-ro');
+
+  var currentStep = 0;
+  var gdHistory = [[x0, y0]];
+  var momHistory = [[x0, y0]];
+  var momVel = [0, 0];
+
+  function grad(x, y) {
+    return [x, 20 * y]; // gradient of 0.5*x^2 + 10*y^2
+  }
+
+  function f(x, y) {
+    return 0.5 * x * x + 10 * y * y;
+  }
+
+  function fmt(v) {
+    return (Math.round(v * 1000) / 1000).toFixed(3);
+  }
+
+  function stepSim() {
+    // GD step
+    var lastGD = gdHistory[gdHistory.length - 1];
+    var g_gd = grad(lastGD[0], lastGD[1]);
+    var newGD = [lastGD[0] - eta * g_gd[0], lastGD[1] - eta * g_gd[1]];
+    gdHistory.push(newGD);
+
+    // Momentum step
+    var lastMom = momHistory[momHistory.length - 1];
+    var g_mom = grad(lastMom[0], lastMom[1]);
+    var vx = alpha * momVel[0] - eta * g_mom[0];
+    var vy = alpha * momVel[1] - eta * g_mom[1];
+    momVel = [vx, vy];
+    var newMom = [lastMom[0] + vx, lastMom[1] + vy];
+    momHistory.push(newMom);
+
+    currentStep++;
+  }
+
+  function draw() {
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    // Coordinate mapping
+    // x in [-1.5, 5.0], y in [-1.3, 1.3]
+    var xMin = -1.5, xMax = 5.0;
+    var yMin = -1.3, yMax = 1.3;
+
+    function X(x) { return 65 + (x - xMin) / (xMax - xMin) * (W - 100); }
+    function Y(y) { return H / 2 - (y / yMax) * (H / 2 - 35); }
+
+    // Draw coordinate axes
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(30, Y(0)); ctx.lineTo(W - 25, Y(0)); // X axis
+    ctx.moveTo(X(0), 20); ctx.lineTo(X(0), H - 20); // Y axis
+    ctx.stroke();
+
+    // Axis labels
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '11px sans-serif';
+    ctx.fillText('x (平緩主軸)', W - 75, Y(0) - 8);
+    ctx.fillText('y (陡峭谷壁)', X(0) + 8, 32);
+
+    // Draw Contour Ellipses of f(x,y) = 0.5*x^2 + 10*y^2 = C
+    // x = sqrt(2C)*cos, y = sqrt(C/10)*sin
+    var levels = [0.4, 1.2, 2.5, 4.5, 7.5, 11.0, 15.5];
+    ctx.strokeStyle = '#dbeafe';
+    ctx.lineWidth = 1;
+    levels.forEach(function(C) {
+      ctx.beginPath();
+      var rx = Math.sqrt(2 * C);
+      var ry = Math.sqrt(C / 10);
+      for (var deg = 0; deg <= 360; deg += 4) {
+        var rad = deg * Math.PI / 180;
+        var cx = rx * Math.cos(rad);
+        var cy = ry * Math.sin(rad);
+        if (deg === 0) ctx.moveTo(X(cx), Y(cy));
+        else ctx.lineTo(X(cx), Y(cy));
+      }
+      ctx.stroke();
+    });
+
+    // Draw Global Minimum Marker (0,0)
+    ctx.fillStyle = '#10b981';
+    ctx.beginPath();
+    ctx.arc(X(0), Y(0), 5, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#059669';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText('最優點 (0,0)', X(0) + 8, Y(0) + 14);
+
+    // Draw GD trajectory (Red)
+    if (gdHistory.length > 1) {
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      for (var i = 0; i < gdHistory.length; i++) {
+        var pt = gdHistory[i];
+        if (i === 0) ctx.moveTo(X(pt[0]), Y(pt[1]));
+        else ctx.lineTo(X(pt[0]), Y(pt[1]));
+      }
+      ctx.stroke();
+
+      // Dots
+      for (var j = 0; j < gdHistory.length; j++) {
+        var p = gdHistory[j];
+        ctx.beginPath();
+        ctx.arc(X(p[0]), Y(p[1]), (j === gdHistory.length - 1) ? 4.5 : 2.2, 0, 2 * Math.PI);
+        ctx.fillStyle = (j === gdHistory.length - 1) ? '#dc2626' : '#f87171';
+        ctx.fill();
+      }
+    }
+
+    // Draw Momentum trajectory (Green)
+    if (momHistory.length > 1) {
+      ctx.strokeStyle = '#16a34a';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (var m = 0; m < momHistory.length; m++) {
+        var mpt = momHistory[m];
+        if (m === 0) ctx.moveTo(X(mpt[0]), Y(mpt[1]));
+        else ctx.lineTo(X(mpt[0]), Y(mpt[1]));
+      }
+      ctx.stroke();
+
+      // Dots
+      for (var n = 0; n < momHistory.length; n++) {
+        var mp = momHistory[n];
+        ctx.beginPath();
+        ctx.arc(X(mp[0]), Y(mp[1]), (n === momHistory.length - 1) ? 5 : 2.5, 0, 2 * Math.PI);
+        ctx.fillStyle = (n === momHistory.length - 1) ? '#15803d' : '#4ade80';
+        ctx.fill();
+      }
+    }
+
+    // Legend Inset (shifted to right side to avoid overlapping axes)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.fillRect(W - 195, 16, 180, 52);
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.strokeRect(W - 195, 16, 180, 52);
+
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(W - 183, 28, 16, 4);
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText('純 GD (無動量 α=0)', W - 158, 33);
+
+    ctx.fillStyle = '#16a34a';
+    ctx.fillRect(W - 183, 48, 16, 4);
+    ctx.fillText('經典動量 (Momentum)', W - 158, 53);
+  }
+
+  function report() {
+    var curGD = gdHistory[gdHistory.length - 1];
+    var curMom = momHistory[momHistory.length - 1];
+    var distGD = Math.sqrt(curGD[0] * curGD[0] + curGD[1] * curGD[1]);
+    var distMom = Math.sqrt(curMom[0] * curMom[0] + curMom[1] * curMom[1]);
+    var lossGD = f(curGD[0], curGD[1]);
+    var lossMom = f(curMom[0], curMom[1]);
+
+    // Count y-axis sign flips (oscillations)
+    var flipsGD = 0;
+    for (var i = 1; i < gdHistory.length; i++) {
+      if (gdHistory[i][1] * gdHistory[i - 1][1] < 0) flipsGD++;
+    }
+
+    var speedup = (1.0 / (1.0 - alpha)).toFixed(1);
+
+    var statusBadge = '';
+    if (distMom < 0.08) {
+      statusBadge = '<div class="status-badge stopped-min">✅ 動量法已極速抵達谷底最優點！</div>';
+    } else if (flipsGD >= 8) {
+      statusBadge = '<div class="status-badge warning-bounce">⚠️ 純 GD 劇烈反覆撞壁 (已震盪 ' + flipsGD + ' 次)</div>';
+    } else {
+      statusBadge = '<div class="status-badge accelerating">⚡ 動量加速中（有效步長放大 ' + speedup + ' 倍）</div>';
+    }
+
+    ro.innerHTML =
+      '<strong>迭代步數：</strong> ' + currentStep + ' 步<br/>' +
+      '<strong>起點座標：</strong> (' + fmt(x0) + ', ' + fmt(y0) + ')<br/>' +
+      '<strong>當前純 GD 座標：</strong> (' + fmt(curGD[0]) + ', ' + fmt(curGD[1]) + ') | 距谷底: <strong>' + fmt(distGD) + '</strong><br/>' +
+      '<strong>當前動量座標：</strong> (' + fmt(curMom[0]) + ', ' + fmt(curMom[1]) + ') | 距谷底: <strong><span style="color:#16a34a;">' + fmt(distMom) + '</span></strong><br/>' +
+      '<strong>純 GD 損失：</strong> ' + fmt(lossGD) + ' | <strong>動量損失：</strong> ' + fmt(lossMom) + '<br/>' +
+      '<strong>純 GD 側向撞壁次數：</strong> <span style="color:#dc2626;font-weight:bold;">' + flipsGD + ' 次</span><br/>' +
+      '<strong>理論穩態加速比 $\\frac{1}{1-\\alpha}$：</strong> ' + speedup + 'x<br/>' +
+      '<strong>狀態判定：</strong><br/>' + statusBadge;
+
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([ro]);
+    }
+  }
+
+  function resetSim() {
+    currentStep = 0;
+    gdHistory = [[x0, y0]];
+    momHistory = [[x0, y0]];
+    momVel = [0, 0];
+    draw();
+    report();
+  }
+
+  function sync() {
+    document.getElementById('kp5-eta-v').textContent = fmt(eta);
+    document.getElementById('kp5-alpha-v').textContent = fmt(alpha);
+    document.getElementById('kp5-y0-v').textContent = fmt(y0);
+    resetSim();
+  }
+
+  document.getElementById('kp5-eta').addEventListener('input', function() {
+    eta = parseFloat(this.value);
+    sync();
+  });
+
+  document.getElementById('kp5-alpha').addEventListener('input', function() {
+    alpha = parseFloat(this.value);
+    sync();
+  });
+
+  document.getElementById('kp5-y0').addEventListener('input', function() {
+    y0 = parseFloat(this.value);
+    sync();
+  });
+
+  document.getElementById('kp5-step').addEventListener('click', function() {
+    stepSim();
+    draw();
+    report();
+  });
+
+  document.getElementById('kp5-run').addEventListener('click', function() {
+    for (var s = 0; s < 40; s++) {
+      stepSim();
+    }
+    draw();
+    report();
+  });
+
+  document.getElementById('kp5-reset').addEventListener('click', function() {
+    resetSim();
+  });
+
+  sync();
+})();
+</script>
+</body>
+</html>

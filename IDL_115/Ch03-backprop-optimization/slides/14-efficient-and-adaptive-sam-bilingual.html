@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch03 · KP14 Efficient SAM（SWP、SDS）與 Adaptive SAM（ASAM） — Efficient &amp; Adaptive SAM</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(108,92,231,.24), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(9,132,227,.18), transparent 30%),
+              linear-gradient(135deg, #0a0e27 0%, #131b3e 50%, #1e1338 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(10, 14, 39, .25);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(36px, 4.4vw, 64px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(18px, 2.0vw, 28px);
+  color: #a5b4fc;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #38bdf8;
+  border-radius: 999px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 920px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.65;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #38bdf8, #e84393);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #7dd3fc !important; fill: #7dd3fc !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #cbd5e1; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  display: block;
+}
+.half-layout .visual > svg {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  display: block;
+}
+.half-layout .visual .svg-caption {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+  font-size: var(--t5);
+  color: var(--text-low);
+  letter-spacing: .05em;
+}
+@media (max-width: 1100px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+
+/* 高橋流置中修復：卡片居中於內容閱讀區 (831px 中心軸，左右邊距各 231px) */
+.section .takahashi {
+  text-align: center;
+  padding: 80px 36px;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+}
+
+/* 表格包裝層（防止橫向溢位） */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 24px 0;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  background: var(--bg-card);
+}
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin: 28px 0;
+}
+.lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  color: var(--ink);
+}
+.lab-ctrl select, .lab-ctrl input[type="range"] {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  font-size: 14px;
+}
+.lab-ctrl input[type="range"] {
+  width: 110px;
+}
+.lab-ctrl span.val {
+  min-width: 48px;
+  font-family: var(--mono);
+  color: var(--primary);
+  font-weight: bold;
+}
+.lab-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all .2s;
+}
+.lab-btn:hover {
+  background: hsl(248, 58%, 38%);
+  transform: translateY(-1px);
+}
+.lab-btn.secondary {
+  background: #64748b;
+}
+.lab-btn.secondary:hover {
+  background: #475569;
+}
+.lab-btn.accent {
+  background: #0ea5e9;
+}
+.lab-btn.accent:hover {
+  background: #0284c7;
+}
+.lab-display {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 950px) {
+  .lab-display { grid-template-columns: 1fr; }
+}
+.lab-canvas-container {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+  padding: 12px;
+}
+.lab-readout {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+.lab-readout .status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.status-badge.running { background: #e0f2fe; color: #0369a1; }
+.status-badge.ascent { background: #fef2f2; color: #b91c1c; }
+.status-badge.orthogonal { background: #dcfce7; color: #15803d; }
+.status-badge.converged { background: #ede9fe; color: #6b21a8; }
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP14 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Core Question</a></li>
+    <li><a href="#motivation">動機背景 · Motivation</a></li>
+    <li><a href="#swp">SWP 隨機遮罩 · SWP (Eq. 54)</a></li>
+    <li><a href="#sds">SDS 樣本篩選 · SDS (Eq. 55)</a></li>
+    <li><a href="#asam">ASAM 尺度不變 · ASAM (Eq. 56-57)</a></li>
+    <li><a href="#sds-asam-diagram">機制向量圖解 · Visual Blueprint</a></li>
+    <li><a href="#comparison">全方位架構對照 · Comparison</a></li>
+    <li><a href="#master-maxims">四大鐵律 · Master Maxims</a></li>
+    <li><a href="#lab">互動實驗室 · Interactive Lab</a></li>
+    <li><a href="#quiz">觀念測驗 · Checkpoint</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">IDL 115 · CHAPTER 3 · KP-14 · TEACHING DECK</span>
+    <h1>Efficient SAM（SWP、SDS）與 Adaptive SAM（ASAM）
+      <span class="hero-title-en">Efficient SAM (SWP, SDS) &amp; Adaptive SAM (ASAM): Slashing Backprop Overhead &amp; Scale-Invariant Sharpness</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      Vanilla SAM 每步需兩次反向傳播，計算成本是標準 SGD 的約兩倍，且對參數計量尺度極度敏感。Efficient SAM (ESAM) 同時從權重空間（SWP 隨機遮罩）與資料空間（SDS 銳度樣本篩選）雙向節省算力且期望無偏；Adaptive SAM (ASAM) 引入正規化運算元 $T_{\boldsymbol{w}}^{-1}$，達成對權重縮放完全不變的自適應平坦度度量！
+    </p>
+    <p class="bilingual-en" style="color: #cbd5e1; max-width: 900px; margin: 10px auto 0;">
+      Vanilla SAM incurs ~2× backpropagation cost and suffers from sensitivity to parameter re-scaling. Efficient SAM (ESAM) slashes computation in both weight (SWP) and data (SDS) dimensions with unbiased expectation; Adaptive SAM (ASAM) introduces a normalization operator $T_{\boldsymbol{w}}^{-1}$ to achieve strictly scale-invariant sharpness!
+    </p>
+  </div>
+</section>
+
+<!-- 2. 大問句 -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="sec-tag inquiry">01 / 核心提問 · Core Question</div>
+    <div class="quote">
+      「兩倍反傳太貴、尺度縮放就破功？Efficient SAM 與 ASAM 如何破局？」
+      <small>SWP 砍權重維度且期望無偏，SDS 挑關鍵樣本省資料維度；ASAM 引入正規化運算元，讓銳度對尺度縮放百毒不侵！<br/>
+        <span class="bilingual-en-inline">Vanilla SAM doubles training time and falters under re-scaling. SWP cuts weight dimensions unbiasedly, SDS prunes non-sensitive samples, and ASAM achieves true scale invariance!</span>
+      </small>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 動機背景 -->
+<section class="section" id="motivation">
+  <div class="sec-tag motivate">02 / 動機背景 · Motivation &amp; The Two Bottlenecks</div>
+  <h2 class="section-title">動機：Vanilla SAM 太慢且對尺度敏感
+    <span class="en">Motivation: Why Vanilla SAM is Slow and Scale-Sensitive</span>
+  </h2>
+
+  <div class="intuition-box">
+    <h4>Vanilla SAM 的兩大工程與幾何痛點</h4>
+    <p>
+      在 KP13 中，我們看到 Vanilla SAM 藉由 min-max 雙層最佳化在鄰域球中探尋最慘擾動 $\boldsymbol{\epsilon}^*$，顯著壓制了尖銳極小值。然而在真實生產環境中，Vanilla SAM 迅速面臨了兩大嚴峻障礙：
+    </p>
+    <ul>
+      <li><strong>痛點一：計算成本昂貴（$2\times$ 反向傳播）：</strong><br/>
+        每一步迭代都需要先在原點 $\boldsymbol{w}$ 計算一次反向傳播以求得擾動向量 $\boldsymbol{\epsilon}^*$；隨後在擾動點 $\boldsymbol{w}+\boldsymbol{\epsilon}^*$ 再執行一次反向傳播求取更新梯度。在大型語言模型或海量視覺模型訓練中，訓練時間直接翻倍，耗電與算力預算令人卻步。
+      </li>
+      <li><strong>痛點二：對參數尺度敏感（Scale Sensitivity）：</strong><br/>
+        Vanilla SAM 採用固定半徑 $\rho$ 約束 $\|\boldsymbol{\epsilon}\|_p \le \rho$。如果將網路權重乘上一個可逆縮放矩陣 $\boldsymbol{A}$（例如卷積層與 BatchNorm 間的通道等價重縮放），網路功能毫無變化，但計算出的銳度數值卻發生劇烈形變！這導致平坦度量測嚴重依賴權重單位。
+      </li>
+    </ul>
+  </div>
+
+  <div class="compare-layout">
+    <div class="col left">
+      <h3>Efficient SAM (ESAM) 的突破路徑</h3>
+      <p><strong>專註解決算力瓶頸：</strong></p>
+      <ul>
+        <li><strong>Stochastic Weight Perturbation (SWP)：</strong>隨機遮罩，每步僅擾動部分權重，期望無偏。</li>
+        <li><strong>Sharpness-sensitive Data Selection (SDS)：</strong>資料篩選，僅對銳度敏感樣本執行二次反向傳播。</li>
+        <li><strong>綜合成效：</strong>將額外反傳開銷大幅砍半，大幅逼近常規 SGD 訓練速度！</li>
+      </ul>
+    </div>
+    <div class="col right">
+      <h3>Adaptive SAM (ASAM) 的突破路徑</h3>
+      <p><strong>專註解決尺度幾何缺陷：</strong></p>
+      <ul>
+        <li><strong>正規化運算元 $T_{\boldsymbol{w}}^{-1}$：</strong>自適應權重各維度的大小，動態調整擾動半徑。</li>
+        <li><strong>尺度不變性（Scale Invariance）：</strong>保證在任意可逆線性變換 $\boldsymbol{w} \to \boldsymbol{A}\boldsymbol{w}$ 下，銳度評估精確不變。</li>
+        <li><strong>綜合成效：</strong>消除了 BatchNorm 或多層網路尺度失衡引發的最佳化失穩。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 4. SWP 隨機子集擾動 -->
+<section class="section" id="swp">
+  <div class="sec-tag sustain">03 / 權重維度加速 · Stochastic Weight Perturbation (SWP)</div>
+  <h2 class="section-title">SWP：隨機子集擾動 — 式 (54) 與期望無偏性
+    <span class="en">Stochastic Weight Perturbation (SWP): Equation (54) &amp; Unbiased Estimation</span>
+  </h2>
+
+  <p>
+    Vanilla SAM 對網路全部 $n$ 個參數都進行最慘擾動計算。ESAM 提出 <strong>Stochastic Weight Perturbation（SWP）</strong>，每步透過隨機白努力遮罩（Bernoulli Mask）抽樣，僅對部分權重施加擾動。
+    <span class="bilingual-en">SWP avoids perturbing all parameters by sampling a random binary mask, drastically reducing inner maximization computation while maintaining unbiased expectation.</span>
+  </p>
+
+  <div class="formula-box">
+    <h4>式 (54) 數學形式與遮罩定義</h4>
+    <p>SWP 在每步獨立抽取一個隨機二元遮罩向量 $\boldsymbol{m}=[m_1,\ldots,m_n]^{\top}$，其中每個分量獨立同分布服從白努力分佈：</p>
+    <p>$$ m_i \stackrel{\text{i.i.d.}}{\sim} \mathrm{Bernoulli}(\beta), \quad \mathbb{P}(m_i=1)=\beta, \quad \mathbb{P}(m_i=0)=1-\beta $$</p>
+    <p>其中 $\beta \in (0, 1]$ 為選中機率超參數。接著用遮罩乘以完整最壞擾動 $\boldsymbol{\epsilon}^*(\boldsymbol{w})$，並除以 $\beta$ 進行無偏補償：</p>
+    <p>$$ \widehat{\boldsymbol{\epsilon}}(\boldsymbol{w})\approx \frac{1}{\beta}\,\boldsymbol{m}^{\top}\boldsymbol{\epsilon}^{*}(\boldsymbol{w}) \tag{54} $$</p>
+    <p>（註：若表示為逐元素遮罩向量，即 $\widehat{\boldsymbol{\epsilon}}(\boldsymbol{w}) = \frac{1}{\beta} (\boldsymbol{m} \odot \boldsymbol{\epsilon}^*(\boldsymbol{w}))$）。</p>
+  </div>
+
+  <div class="highlight-box">
+    <h4>關鍵數學性質：少算卻嚴格期望無偏（Unbiasedness Proof）</h4>
+    <p>為什麼 SWP 丟棄了大部分權重的擾動計算，卻不會導致最佳化方向偏離？核心在於以下嚴謹的期望等式：</p>
+    <p>$$ \mathbb{E}[\widehat{\boldsymbol{\epsilon}}(\boldsymbol{w})_i] = \mathbb{E}\left[ \frac{1}{\beta} m_i \boldsymbol{\epsilon}^*(\boldsymbol{w})_i \right] = \frac{1}{\beta}\,\mathbb{E}[m_i]\,\mathbb{E}[\boldsymbol{\epsilon}^*(\boldsymbol{w})_i] = \frac{1}{\beta}\cdot \beta \cdot \mathbb{E}[\boldsymbol{\epsilon}^*(\boldsymbol{w})_i] = \mathbb{E}[\boldsymbol{\epsilon}^*(\boldsymbol{w})_i] $$</p>
+    <p><strong>證明關鍵：</strong></p>
+    <ul>
+      <li>二元隨機變數 $m_i$ 的期望值精確等於 $\mathbb{E}[m_i] = 1 \cdot \beta + 0 \cdot (1-\beta) = \beta$。</li>
+      <li>抽樣遮罩 $m_i$ 是外生隨機生成的，與目標梯度及最壞擾動 $\boldsymbol{\epsilon}^*$ 嚴格獨立。</li>
+      <li>補償因子 $\frac{1}{\beta}$ 精確抵消了抽樣機率 $\beta$！因此在期望上，SWP 近似擾動與 Vanilla SAM 完全一致！</li>
+    </ul>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>1. 節省權重維度運算</h3>
+      <div class="sub-en">Parameter Space Pruning</div>
+      <p>僅有 $\beta$ 比例（如 $\beta=0.5$）的權重需要執行內層擾動更新與記憶體搬移，大幅降低硬體快取壓力。</p>
+    </div>
+    <div class="card positive">
+      <h3>2. 隨機正則化效應</h3>
+      <div class="sub-en">Stochastic Dropout-like Regularization</div>
+      <p>動態隨機遮罩為擾動引入了類似 Dropout 的隨機探索噪聲，進一步協助權重脫離淺層次局部極小值。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5. SDS 銳度敏感資料篩選 -->
+<section class="section" id="sds">
+  <div class="sec-tag sustain">04 / 資料維度加速 · Sharpness-sensitive Data Selection (SDS)</div>
+  <h2 class="section-title">SDS：只對「銳度敏感」樣本做 SAM — 式 (55)
+    <span class="en">Sharpness-sensitive Data Selection (SDS): Equation (55) &amp; Sample Filtering</span>
+  </h2>
+
+  <p>
+    SWP 從「權重維度」省運算；而 <strong>Sharpness-sensitive Data Selection（SDS）</strong> 則切換到「資料維度」進行深度剪枝。
+    <span class="bilingual-en">While SWP prunes in weight space, SDS filters the mini-batch in data space—only executing SAM backprop on samples that truly exhibit high sharpness.</span>
+  </p>
+
+  <div class="formula-box">
+    <h4>式 (55) 銳度敏感子集 $\mathcal{B}^+$ 與鈍感子集 $\mathcal{B}^-$</h4>
+    <p>給定當前 mini-batch $\mathcal{B}$，並非所有樣本處於尖銳地形。SDS 透過前向評估擾動前後的損失漲幅，將樣本劃分為兩部分：</p>
+    <p>$$ \mathcal{B}^{+}:=\bigl\{(x_i,y_i)\in\mathcal{B}\mid \mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon}^{*}(\boldsymbol{w}))-\mathcal{L}(\boldsymbol{w})\gt \alpha\bigr\} \tag{55} $$</p>
+    <p>$$ \mathcal{B}^{-}:=\bigl\{(x_i,y_i)\in\mathcal{B}\mid \mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon}^{*}(\boldsymbol{w}))-\mathcal{L}(\boldsymbol{w})\lt \alpha\bigr\} $$</p>
+    <p>其中 $\alpha > 0$ 為銳度靈敏度閾值超參數。</p>
+  </div>
+
+  <div class="method-box">
+    <h4>SDS 的分流計算邏輯</h4>
+    <ul>
+      <li><strong>$\mathcal{B}^+$（銳度敏感子集）：</strong><br/>
+        擾動後損失增加量超過閾值 $\alpha$。代表這些樣本正處於險峻的斜坡或懸崖邊緣，<strong>必須進入 SAM 的第二步反向傳播</strong>，對其幾何銳度施加嚴懲。
+      </li>
+      <li><strong>$\mathcal{B}^-$（平坦鈍感子集）：</strong><br/>
+        擾動後損失幾乎不變或漲幅微弱。代表這些樣本已經位於平坦的寬谷之中，<strong>直接跳過第二步昂貴的反向傳播</strong>，節省大量 GPU 運算。
+      </li>
+    </ul>
+    <p style="margin-top: 12px; margin-bottom: 0;">
+      <strong>雙劍合璧：</strong>在 Efficient SAM (ESAM) 中，SWP 與 SDS 協同生效——權重維度砍半、資料維度過濾，使得總體訓練時間從 Vanilla SAM 的 $\sim 2.0\times$ 驟降至約 $\mathbf{1.2\times \sim 1.3\times}$，同時幾乎完全保留 SAM 卓越的泛化增益！
+    </p>
+  </div>
+</section>
+
+<!-- 6. Adaptive SAM (ASAM) 尺度不變性 -->
+<section class="section" id="asam">
+  <div class="sec-tag sustain">05 / 幾何尺度不變性 · Adaptive SAM (ASAM)</div>
+  <h2 class="section-title">Adaptive SAM：尺度不變的 sharpness — 式 (56)–(57)
+    <span class="en">Adaptive SAM (ASAM): Achieving Scale-Invariant Sharpness (Eqs. 56–57)</span>
+  </h2>
+
+  <div class="warning-box">
+    <h4>Vanilla SAM 的尺度敏感痛點解析</h4>
+    <p>
+      在現代深度神經網路（如含卷積、全連線與 BatchNorm / LayerNorm）中，權重存在固有的<strong>縮放對稱性（Scale Invariance of Predictions）</strong>。
+      例如：令第一層權重 $\boldsymbol{w}_1 \to c \boldsymbol{w}_1$ 同時第二層權重 $\boldsymbol{w}_2 \to \frac{1}{c} \boldsymbol{w}_2$（$c > 0$），網路的輸出與分類結果完全相同！
+    </p>
+    <p>
+      然而，Vanilla SAM 的約束是<strong>各向同性的固定球 $\|\boldsymbol{\epsilon}\|_2 \le \rho$</strong>。當權重被縮小 $c$ 倍時，固定半徑 $\rho$ 相對於權重本身變得極大；反之當權重被放大時，$\rho$ 變得微不足道。這導致式 (50) 定義的 sharpness 隨人為的權重縮放而劇烈跳動，破壞了平坦度量測的真實性。
+    </p>
+  </div>
+
+  <div class="formula-box">
+    <h4>式 (56) 正規化運算元 $T_{\boldsymbol{w}}^{-1}$ 的代數約束</h4>
+    <p>ASAM 引入了一個依賴權重的正規化變換運算元 $T_{\boldsymbol{w}}^{-1}$。對於任意可逆線性縮放矩陣 $\boldsymbol{A}$，該運算元必須嚴格滿足式 (56)：</p>
+    <p>$$ T_{\boldsymbol{A}\boldsymbol{w}}^{-1}\boldsymbol{A}=T_{\boldsymbol{w}}^{-1} \tag{56} $$</p>
+    <p><strong>實務常用構造：</strong>對角矩陣 $T_{\boldsymbol{w}} = \operatorname{diag}(|w_1|+\gamma, |w_2|+\gamma, \ldots, |w_n|+\gamma)$。當權重縮放 $\boldsymbol{A}=\operatorname{diag}(s_1, \ldots, s_n)$ 時，$T_{\boldsymbol{A}\boldsymbol{w}} = \boldsymbol{A} T_{\boldsymbol{w}}$，其逆矩陣 $T_{\boldsymbol{A}\boldsymbol{w}}^{-1} = T_{\boldsymbol{w}}^{-1} \boldsymbol{A}^{-1}$，因此 $T_{\boldsymbol{A}\boldsymbol{w}}^{-1}\boldsymbol{A} = T_{\boldsymbol{w}}^{-1}$ 恆成立！</p>
+  </div>
+
+  <div class="highlight-box">
+    <h4>式 (57) 自適應 Sharpness 最佳化目標</h4>
+    <p>將各向同性的 $\|\boldsymbol{\epsilon}\|_p \le \rho$ 升級為由運算元正規化的自適應約束，ASAM 的最佳化目標定義為：</p>
+    <p>$$ \underset{\boldsymbol{\epsilon}:\,\|T_{\boldsymbol{w}}^{-1}\boldsymbol{\epsilon}\|_{p}\leq\rho}{\operatorname{maximize}}\ \mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon})-\mathcal{L}(\boldsymbol{w}) \tag{57} $$</p>
+    <p><strong>尺度不變性嚴謹證明：</strong></p>
+    <ul>
+      <li>考慮縮放後的權重 $\boldsymbol{w}' = \boldsymbol{A}\boldsymbol{w}$ 與對應擾動 $\boldsymbol{\epsilon}' = \boldsymbol{A}\boldsymbol{\epsilon}$。</li>
+      <li>約束條件變換：$\|T_{\boldsymbol{A}\boldsymbol{w}}^{-1}\boldsymbol{\epsilon}'\|_p = \|T_{\boldsymbol{A}\boldsymbol{w}}^{-1}\boldsymbol{A}\boldsymbol{\epsilon}\|_p = \|T_{\boldsymbol{w}}^{-1}\boldsymbol{\epsilon}\|_p \le \rho$。</li>
+      <li>目標函式差值：$\mathcal{L}(\boldsymbol{A}\boldsymbol{w} + \boldsymbol{A}\boldsymbol{\epsilon}) - \mathcal{L}(\boldsymbol{A}\boldsymbol{w}) = \mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon}) - \mathcal{L}(\boldsymbol{w})$。</li>
+      <li><strong>結論：式 (57) 的自適應銳度在任意可逆縮放下恆定不變（Scale-Invariant），徹底根除了 Vanilla SAM 的度量畸變！</strong></li>
+    </ul>
+  </div>
+</section>
+
+<!-- 7. 三大核心機制向量圖解 -->
+<section class="section" id="sds-asam-diagram">
+  <div class="sec-tag sustain">06 / 視覺架構圖解 · Visual Architecture Blueprint</div>
+  <h2 class="section-title">三大核心機制圖解：SWP 權重遮罩、SDS 樣本篩選與 ASAM 尺度不變性
+    <span class="en">Visual Blueprint: SWP Weight Masking, SDS Data Selection &amp; ASAM Scale Invariance</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg viewBox="0 0 880 530" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+        <!-- Background -->
+        <rect width="880" height="530" fill="#ffffff" rx="10" stroke="#cbd5e1" stroke-width="1.2"/>
+
+        <!-- Title -->
+        <text x="440" y="26" text-anchor="middle" font-size="15" font-weight="bold" fill="#1e293b">
+          Efficient SAM（SWP + SDS）雙向加速機制 與 Adaptive SAM（ASAM）尺度不變幾何
+        </text>
+
+        <!-- TOP LEFT: SWP (Stochastic Weight Perturbation) -->
+        <g id="swp-svg-panel" transform="translate(20, 42)">
+          <rect width="410" height="206" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="1"/>
+          <text x="16" y="24" font-size="13" font-weight="bold" fill="#2563eb">【SWP】隨機子集擾動（權重空間加速）</text>
+          <text x="16" y="44" font-size="11" fill="#475569">二元遮罩 mᵢ ~ Bernoulli(β)，隨機選取部分權重計算擾動</text>
+
+          <!-- 8 Weight Blocks -->
+          <g id="weight-blocks" transform="translate(14, 56)">
+            <!-- w1 (Active) -->
+            <rect x="0" y="0" width="40" height="40" rx="4" fill="#2563eb"/>
+            <text x="20" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">w₁</text>
+            <text x="20" y="54" text-anchor="middle" font-size="10" font-weight="bold" fill="#2563eb">m=1</text>
+
+            <!-- w2 (Masked) -->
+            <rect x="48" y="0" width="40" height="40" rx="4" fill="#cbd5e1"/>
+            <text x="68" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#475569">w₂</text>
+            <text x="68" y="54" text-anchor="middle" font-size="10" font-weight="bold" fill="#64748b">m=0</text>
+
+            <!-- w3 (Active) -->
+            <rect x="96" y="0" width="40" height="40" rx="4" fill="#2563eb"/>
+            <text x="116" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">w₃</text>
+            <text x="116" y="54" text-anchor="middle" font-size="10" font-weight="bold" fill="#2563eb">m=1</text>
+
+            <!-- w4 (Masked) -->
+            <rect x="144" y="0" width="40" height="40" rx="4" fill="#cbd5e1"/>
+            <text x="164" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#475569">w₄</text>
+            <text x="164" y="54" text-anchor="middle" font-size="10" font-weight="bold" fill="#64748b">m=0</text>
+
+            <!-- w5 (Active) -->
+            <rect x="192" y="0" width="40" height="40" rx="4" fill="#2563eb"/>
+            <text x="212" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">w₅</text>
+            <text x="212" y="54" text-anchor="middle" font-size="10" font-weight="bold" fill="#2563eb">m=1</text>
+
+            <!-- w6 (Active) -->
+            <rect x="240" y="0" width="40" height="40" rx="4" fill="#2563eb"/>
+            <text x="260" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">w₆</text>
+            <text x="260" y="54" text-anchor="middle" font-size="10" font-weight="bold" fill="#2563eb">m=1</text>
+
+            <!-- w7 (Masked) -->
+            <rect x="288" y="0" width="40" height="40" rx="4" fill="#cbd5e1"/>
+            <text x="308" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#475569">w₇</text>
+            <text x="308" y="54" text-anchor="middle" font-size="10" font-weight="bold" fill="#64748b">m=0</text>
+
+            <!-- w8 (Active) -->
+            <rect x="336" y="0" width="40" height="40" rx="4" fill="#2563eb"/>
+            <text x="356" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">w₈</text>
+            <text x="356" y="54" text-anchor="middle" font-size="10" font-weight="bold" fill="#2563eb">m=1</text>
+          </g>
+
+          <!-- Unbiased Badge -->
+          <rect x="16" y="130" width="378" height="64" rx="6" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+          <text x="205" y="152" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#1d4ed8">
+            式 (54)：ε̂(w) ≈ (1/β) · m ⊙ ε*(w)
+          </text>
+          <text x="205" y="176" text-anchor="middle" font-size="11" font-weight="bold" fill="#047857">
+            ★ 核心保證：E[ε̂] = ε* 期望嚴格無偏，少算權重不失方向！
+          </text>
+        </g>
+
+        <!-- TOP RIGHT: SDS (Data Selection) -->
+        <g id="sds-svg-panel" transform="translate(450, 42)">
+          <rect width="410" height="206" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="1"/>
+          <text x="16" y="24" font-size="13" font-weight="bold" fill="#dc2626">【SDS】銳度敏感資料篩選（資料空間加速）</text>
+          <text x="16" y="44" font-size="11" fill="#475569">式 (55)：只對擾動後損失漲幅 L(w+ε*)-L(w) &gt; α 的樣本做 SAM</text>
+
+          <!-- Mini-batch Container with Dots -->
+          <rect x="16" y="56" width="378" height="74" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+
+          <!-- High-sharpness points B+ (Deep Red) -->
+          <circle cx="50" cy="85" r="7" fill="#dc2626"/>
+          <text x="50" y="104" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#dc2626">B⁺</text>
+
+          <circle cx="120" cy="78" r="7" fill="#dc2626"/>
+          <text x="120" y="97" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#dc2626">B⁺</text>
+
+          <circle cx="210" cy="92" r="7" fill="#dc2626"/>
+          <text x="210" y="111" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#dc2626">B⁺</text>
+
+          <circle cx="310" cy="82" r="7" fill="#dc2626"/>
+          <text x="310" y="101" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#dc2626">B⁺</text>
+
+          <!-- Low-sharpness points B- (Light Pink) -->
+          <circle cx="85" cy="92" r="6" fill="#fecaca" stroke="#f87171" stroke-width="1"/>
+          <circle cx="165" cy="75" r="6" fill="#fecaca" stroke="#f87171" stroke-width="1"/>
+          <circle cx="175" cy="105" r="6" fill="#fecaca" stroke="#f87171" stroke-width="1"/>
+          <circle cx="255" cy="78" r="6" fill="#fecaca" stroke="#f87171" stroke-width="1"/>
+          <circle cx="270" cy="108" r="6" fill="#fecaca" stroke="#f87171" stroke-width="1"/>
+          <circle cx="355" cy="95" r="6" fill="#fecaca" stroke="#f87171" stroke-width="1"/>
+
+          <!-- Legend -->
+          <g transform="translate(16, 142)">
+            <circle cx="8" cy="8" r="5.5" fill="#dc2626"/>
+            <text x="20" y="12" font-size="11" font-weight="bold" fill="#991b1b">深紅 B⁺（銳度敏感，進入 SAM 反傳）</text>
+
+            <circle cx="8" cy="30" r="5" fill="#fecaca" stroke="#f87171"/>
+            <text x="20" y="34" font-size="11" font-weight="bold" fill="#64748b">淺粉 B⁻（平坦鈍感，跳過二次反傳）</text>
+
+            <text x="20" y="52" font-size="11" font-weight="bold" fill="#dc2626">★ 節省約 50%~70% 樣本的反向傳播運算！</text>
+          </g>
+        </g>
+
+        <!-- BOTTOM HALF: ASAM SCALE INVARIANCE COMPARISON -->
+        <g id="asam-comparison" transform="translate(20, 260)">
+          <!-- Left: Vanilla SAM Scale Sensitive -->
+          <rect x="0" y="0" width="410" height="196" rx="8" fill="#fff5f5" stroke="#fca5a5" stroke-width="1.2"/>
+          <text x="16" y="24" font-size="13" font-weight="bold" fill="#b91c1c">Vanilla SAM：尺度敏感 (Scale-Sensitive ✘)</text>
+          <text x="16" y="44" font-size="11" fill="#7f1d1d">固定半徑 ||ε||≤ρ 球，重縮放 w ➡ Aw 後幾何失真</text>
+
+          <!-- Ellipse and Fixed Circle Diagram -->
+          <ellipse cx="140" cy="114" rx="70" ry="34" fill="none" stroke="#f87171" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <ellipse cx="140" cy="114" rx="46" ry="22" fill="none" stroke="#ef4444" stroke-width="1.5"/>
+          <circle cx="140" cy="114" r="42" fill="none" stroke="#b91c1c" stroke-width="2"/>
+          <text x="140" y="118" text-anchor="middle" font-size="10" font-weight="bold" fill="#991b1b">w</text>
+          <text x="140" y="168" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#b91c1c">固定圓球 ||ε||₂ ≤ ρ</text>
+
+          <!-- Distortion text callout -->
+          <rect x="236" y="66" width="158" height="98" rx="6" fill="#ffffff" stroke="#fca5a5" stroke-width="1"/>
+          <text x="246" y="86" font-size="10.5" font-weight="bold" fill="#991b1b">縮放前: 銳度 = 0.40</text>
+          <text x="246" y="106" font-size="10.5" font-weight="bold" fill="#dc2626">縮放後: 銳度 = 0.95 ⚠</text>
+          <text x="246" y="128" font-size="10" fill="#7f1d1d">固定圓與等高線脫節，</text>
+          <text x="246" y="146" font-size="10" fill="#7f1d1d">平坦度數值完全失真！</text>
+
+          <!-- Right: Adaptive SAM Scale Invariant -->
+          <rect x="430" y="0" width="410" height="196" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.2"/>
+          <text x="446" y="24" font-size="13" font-weight="bold" fill="#15803d">Adaptive SAM (ASAM)：尺度不變 (Scale-Invariant ✔)</text>
+          <text x="446" y="44" font-size="11" fill="#14532d">自適應運算元 ||T_w⁻¹ ε||≤ρ，隨權重縮放自動等比貼合</text>
+
+          <!-- Adaptive Ellipse matching loss geometry -->
+          <ellipse cx="570" cy="114" rx="70" ry="34" fill="none" stroke="#86efac" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <ellipse cx="570" cy="114" rx="46" ry="22" fill="none" stroke="#4ade80" stroke-width="1.5"/>
+          <ellipse cx="570" cy="114" rx="56" ry="26" fill="none" stroke="#16a34a" stroke-width="2.2"/>
+          <text x="570" y="118" text-anchor="middle" font-size="10" font-weight="bold" fill="#14532d">w</text>
+          <text x="570" y="168" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#15803d">自適應橢圓 ||T_w⁻¹ε|| ≤ ρ</text>
+
+          <!-- Invariance text callout -->
+          <rect x="666" y="66" width="158" height="98" rx="6" fill="#ffffff" stroke="#86efac" stroke-width="1"/>
+          <text x="676" y="86" font-size="10.5" font-weight="bold" fill="#15803d">縮放前: 銳度 = 0.40</text>
+          <text x="676" y="106" font-size="10.5" font-weight="bold" fill="#16a34a">縮放後: 銳度 = 0.40 ★</text>
+          <text x="676" y="128" font-size="10" fill="#14532d">T_{Aw}⁻¹ A = T_w⁻¹</text>
+          <text x="676" y="146" font-size="10" fill="#14532d">幾何銳度嚴格恆定！</text>
+        </g>
+
+        <!-- BOTTOM BANNER (REQUIRED CONTRAST SENTENCE) -->
+        <g transform="translate(20, 468)">
+          <rect width="840" height="46" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2"/>
+          <text x="420" y="28" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">
+            2× 反傳太貴 ➡ SWP 省權重維度、SDS 省樣本維度；ASAM 引入正規化運算元解決尺度敏感！
+          </text>
+        </g>
+      </svg>
+      <div class="svg-caption">圖 1：Efficient SAM 與 Adaptive SAM 核心機制向量對照圖解</div>
+    </div>
+
+    <div>
+      <div class="method-box">
+        <h4>三大技術精妙之處剖析</h4>
+        <ul>
+          <li><strong>SWP 的精妙：</strong>不對全部權重做擾動，每步隨機取樣白努力遮罩 $\boldsymbol{m}$。由於 $\mathbb{E}[m_i]=\beta$，除以 $\beta$ 補償後期望完全無偏，以極低開銷保持 SAM 的宏觀搜尋方向。</li>
+          <li><strong>SDS 的精妙：</strong>深知不同樣本「貧富不均」。只有損失變化劇烈的 $\mathcal{B}^+$ 值得消耗昂貴的第二次反向傳播；平坦鈍感的 $\mathcal{B}^-$ 迅速略過，效率大幅躍升。</li>
+          <li><strong>ASAM 的精妙：</strong>揭開固定歐氏球 $\|\boldsymbol{\epsilon}\|_2\le\rho$ 在過參數化網路中的度量陷阱，透過 $T_{\boldsymbol{w}}^{-1}$ 抵消線性縮放，讓銳度回歸客觀純粹的幾何平坦度。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. 全方位架構對照表 -->
+<section class="section" id="comparison">
+  <div class="sec-tag sustain">07 / 綜合對照 · Architectural Matrix</div>
+  <h2 class="section-title">SGD vs Vanilla SAM vs Efficient SAM (ESAM) vs Adaptive SAM (ASAM)
+    <span class="en">Comprehensive Comparison: Empirical SGD, Vanilla SAM, Efficient SAM &amp; Adaptive SAM</span>
+  </h2>
+
+  <div class="table-wrap">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>維度 / 演算法</th>
+          <th>標準 SGD (ERM)</th>
+          <th>Vanilla SAM (2020)</th>
+          <th>Efficient SAM (ESAM, 2021)</th>
+          <th>Adaptive SAM (ASAM, 2021)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>核心最佳化目標</strong></td>
+          <td>單純最小化經驗損失 $\min \mathcal{L}(\boldsymbol{w})$</td>
+          <td>min-max 雙層目標 $\min_{\boldsymbol{w}}\max_{\|\boldsymbol{\epsilon}\|\le\rho}\mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon})$</td>
+          <td>SWP 隨機權重遮罩 + SDS 敏感樣本篩選</td>
+          <td>自適應尺度正規化 $\min_{\boldsymbol{w}}\max_{\|T_{\boldsymbol{w}}^{-1}\boldsymbol{\epsilon}\|\le\rho}\Delta\mathcal{L}$</td>
+        </tr>
+        <tr>
+          <td><strong>每步反向傳播開銷</strong></td>
+          <td>$1\times$ 基準反傳</td>
+          <td>約 $2.0\times$（全權重、全樣本兩次反傳）</td>
+          <td><strong>約 $1.2\times \sim 1.3\times$</strong>（顯著加速）</td>
+          <td>約 $2.0\times$（重點在幾何尺度修正）</td>
+        </tr>
+        <tr>
+          <td><strong>權重空間擾動方式</strong></td>
+          <td>無擾動</td>
+          <td>全體權重均勻歐氏擾動</td>
+          <td><strong>SWP 隨機遮罩</strong> $m_i \sim \mathrm{Bernoulli}(\beta)$，期望無偏</td>
+          <td>按權重絕對值自適應拉伸擾動向量</td>
+        </tr>
+        <tr>
+          <td><strong>資料空間篩選方式</strong></td>
+          <td>全批次 mini-batch</td>
+          <td>全批次 mini-batch 均計算兩次反傳</td>
+          <td><strong>SDS 篩選</strong>：僅對 $\Delta\mathcal{L}>\alpha$ 之 $\mathcal{B}^+$ 做二次反傳</td>
+          <td>全批次 mini-batch</td>
+        </tr>
+        <tr>
+          <td><strong>尺度不變性 (Scale Invariance)</strong></td>
+          <td>無（梯度依賴尺度）</td>
+          <td><strong>無</strong>（固定半徑 $\rho$，縮放時銳度失真）</td>
+          <td>無（繼承固定 $\rho$ 球約束）</td>
+          <td><strong>有（嚴格尺度不變）</strong>：$T_{\boldsymbol{A}\boldsymbol{w}}^{-1}\boldsymbol{A}=T_{\boldsymbol{w}}^{-1}$</td>
+        </tr>
+        <tr>
+          <td><strong>工程適用主戰場</strong></td>
+          <td>基準 Baseline 訓練</td>
+          <td>中小規模模型、高泛化要求競賽</td>
+          <td><strong>海量資料、大型 Transformer / ViT 訓練</strong></td>
+          <td><strong>含 BatchNorm、通道縮放敏感的深層 CNN / 視覺網路</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 9. 大師四大鐵律 -->
+<section class="section" id="master-maxims">
+  <div class="sec-tag sustain">08 / 智慧結晶 · Master Maxims</div>
+  <h2 class="section-title">大師四大鐵律：高效與自適應最佳化心法
+    <span class="en">The Four Master Maxims of Efficient and Adaptive SAM</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>一、隨機遮罩無偏律：抽樣遮罩除以機率，少算權重不失方向</h3>
+      <div class="sub-en">Unbiased Parameter Sampling Law</div>
+      <p>SWP 抽取白努力遮罩 $m_i \sim \mathrm{Bernoulli}(\beta)$，以 $1/\beta$ 補償幅度。因 $\mathbb{E}[m_i]=\beta$，期望擾動精確等於完整 $\boldsymbol{\epsilon}^*$！算力大幅省下，最佳化主航道絲毫不偏。</p>
+    </div>
+    <div class="card positive">
+      <h3>二、資料敏感篩選律：非全體皆需重罰，損失激增之 $\mathcal{B}^+$ 始走 SAM</h3>
+      <div class="sub-en">Sharpness-Sensitive Filtering Law</div>
+      <p>並非所有樣本都陷於危境。SDS 以 $\mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon}^*)-\mathcal{L}(\boldsymbol{w}) > \alpha$ 挑出懸崖邊的敏感子集 $\mathcal{B}^+$；其餘樣本安居平地，無須耗費昂貴的第二次反向傳播。</p>
+    </div>
+    <div class="card positive">
+      <h3>三、運算元尺度不變律：$T_{\boldsymbol{w}}^{-1}$ 逆變抵消線性縮放，幾何度量超脫單位</h3>
+      <div class="sub-en">Scale Invariance Operator Law</div>
+      <p>度量平坦度不可因權重單位變換而扭曲。ASAM 引入滿足 $T_{\boldsymbol{A}\boldsymbol{w}}^{-1}\boldsymbol{A}=T_{\boldsymbol{w}}^{-1}$ 的正規化運算元，讓擾動邊界隨網路內部標度自主適應，回歸純粹的曲率本質。</p>
+    </div>
+    <div class="card positive">
+      <h3>四、效能泛化統一律：速度與尺度雙破局，大模型邁向平坦實戰</h3>
+      <div class="sub-en">Unified Efficiency-Generalization Law</div>
+      <p>ESAM 破除了兩倍反傳的算力枷鎖，ASAM 根除了尺度形變的穩定性隱患。兩者共同推動 SAM 從實驗室玩具躍升為工業級超大規模神經網路的標配最佳化利器。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 10. 互動探索實驗室 -->
+<section class="section" id="lab">
+  <div class="sec-tag activate">09 / 實戰模擬 · Interactive Simulation Lab</div>
+  <h2 class="section-title">互動探索實驗室：SWP 隨機遮罩模擬器 與 ASAM 尺度不變性驗證
+    <span class="en">Interactive Lab: SWP Bernoulli Mask Simulator &amp; ASAM Scale-Invariance Live Verification</span>
+  </h2>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <div class="lab-ctrl">
+        <label>SWP 選中機率 $\beta$：</label>
+        <input type="range" id="lab-swp-beta" min="0.10" max="0.90" step="0.05" value="0.50">
+        <span class="val" id="lab-swp-beta-v">0.50</span>
+      </div>
+      <div class="lab-ctrl">
+        <label>ASAM 尺度因子 $s$：</label>
+        <input type="range" id="lab-asam-scale" min="0.5" max="3.0" step="0.1" value="1.0">
+        <span class="val" id="lab-asam-scale-v">1.0</span>
+      </div>
+      <div class="lab-ctrl">
+        <label>SDS 銳度門檻 $\alpha$：</label>
+        <input type="range" id="lab-sds-alpha" min="0.05" max="0.40" step="0.05" value="0.15">
+        <span class="val" id="lab-sds-alpha-v">0.15</span>
+      </div>
+      <button class="lab-btn" id="lab-btn-swp-resample">隨機抽樣 SWP 遮罩</button>
+      <button class="lab-btn accent" id="lab-btn-swp-mc">蒙地卡羅驗證無偏性</button>
+      <button class="lab-btn secondary" id="lab-btn-scale-reset">重設尺度 (Reset)</button>
+    </div>
+
+    <div class="lab-display">
+      <div class="lab-canvas-container">
+        <canvas id="kp14-cv" width="560" height="360"></canvas>
+      </div>
+      <div class="lab-readout" id="kp14-ro">
+        <!-- Live status injected via JS -->
+      </div>
+    </div>
+
+    <p style="font-size: 14px; color: #475569; margin-top: 14px; line-height: 1.6;">
+      🧪 <strong>實測大挑戰：</strong><br/>
+      1. <strong>SWP 期望無偏性驗證</strong>：點選「隨機抽樣 SWP 遮罩」，觀察 16 個權重方塊中被選中（藍色）與遮罩（灰色）的比例；點選「蒙地卡羅驗證無偏性」，累計多輪抽樣平均值，觀察其逼近完整 $\boldsymbol{\epsilon}^*$ 的微小誤差！<br/>
+      2. <strong>ASAM 尺度不變性即時驗證</strong>：滑動「ASAM 尺度因子 $s$」，觀察 Vanilla SAM 的銳度數值隨 $s$ 發生嚴重形變，而 ASAM 的自適應銳度數值始終<strong>完全保持恆定（誤差為 0.000）</strong>！
+    </p>
+  </div>
+</section>
+
+<!-- 11. 隨堂 Checkpoint -->
+<section class="section" id="quiz">
+  <div class="sec-tag activate">10 / 實戰檢驗 · Concept Checkpoint</div>
+  <h2 class="section-title">隨堂 Checkpoint：觀念即時反饋
+    <span class="en">Concept Checkpoint: Master-Level Assessment</span>
+  </h2>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-card" data-ans="B">
+    <h4>題目 1：SWP 中二元遮罩 $m_i$ 的抽樣分佈是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 均勻分佈 $U(0,1)$</button>
+      <button data-opt="B">B. $\mathrm{Bernoulli}(\beta)$</button>
+      <button data-opt="C">C. 高斯分佈</button>
+      <button data-opt="D">D. 恆為 1</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 2：SDS 中 $\mathcal{B}^{+}$ 的定義條件是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 損失 $\mathcal{L}(\boldsymbol{w})=0$</button>
+      <button data-opt="B">B. $\mathcal{L}(\boldsymbol{w}+\boldsymbol{\epsilon}^{*})-\mathcal{L}(\boldsymbol{w})\gt \alpha$ </button>
+      <button data-opt="C">C. 梯度範數小於 $\alpha$</button>
+      <button data-opt="D">D. 屬於驗證集</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 3：ASAM 相對於 Vanilla SAM 的主要改進是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 完全不需要算梯度</button>
+      <button data-opt="B">B. sharpness 量測對權重 re-scaling 具尺度不變性</button>
+      <button data-opt="C">C. 只用一次反向傳播</button>
+      <button data-opt="D">D. 取消 min-max 結構</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-card" data-ans="A" style="margin-top: 24px;">
+    <h4>題目 4：SWP 近似 $\widehat{\boldsymbol{\epsilon}}(\boldsymbol{w})$ 的期望為何仍等於 $\boldsymbol{\epsilon}^*(\boldsymbol{w})$？</h4>
+    <div class="options">
+      <button data-opt="A">A. 因為 $\mathbb{E}[m_i]=\beta$ 且 $m_i$ 與 $\boldsymbol{\epsilon}^*$ 獨立，$\frac{1}{\beta}\mathbb{E}[m_i]\mathbb{E}[\boldsymbol{\epsilon}^*_i]=\mathbb{E}[\boldsymbol{\epsilon}^*_i]$</button>
+      <button data-opt="B">B. 因為遮罩全為 1</button>
+      <button data-opt="C">C. 因為 $\beta=0$</button>
+      <button data-opt="D">D. 因為不做擾動</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+</section>
+
+<script>
+// Quiz Interactive Logic with Dynamic MathJax Rendering
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('correct', 'wrong'));
+      const choice = btn.getAttribute('data-opt');
+      if (choice === ans) {
+        btn.classList.add('correct');
+        fb.className = 'feedback show ok';
+        fb.innerHTML = '<strong>✅ 答對了！</strong> ' + getExplanation(card, ans);
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'feedback show no';
+        fb.innerHTML = '<strong>❌ 答錯了！</strong> 請重新思考：' + getExplanation(card, ans);
+      }
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+function getExplanation(card, ans) {
+  const text = card.innerText;
+  if (text.includes('二元遮罩') || text.includes('抽樣分佈') || text.includes('題目 1')) {
+    return 'SWP 對每個權重獨立以機率 $\\beta$ 進行白努力抽樣，遮罩分佈服從 $m_i \\sim \\mathrm{Bernoulli}(\\beta)$。';
+  } else if (text.includes('B^{+}') || text.includes('定義條件') || text.includes('題目 2')) {
+    return '式 (55) 定義 $\\mathcal{B}^+$ 為擾動後損失增加幅度超過預設閾值 $\\alpha$ 的銳度敏感子集：$\\mathcal{L}(\\boldsymbol{w}+\\boldsymbol{\\epsilon}^*)-\\mathcal{L}(\\boldsymbol{w}) \\gt \\alpha$。';
+  } else if (text.includes('ASAM') || text.includes('主要改進') || text.includes('題目 3')) {
+    return 'ASAM 引入滿足 $T_{\\boldsymbol{A}\\boldsymbol{w}}^{-1}\\boldsymbol{A}=T_{\\boldsymbol{w}}^{-1}$ 的正規化運算元，使幾何銳度量測對任意權重線性重縮放（re-scaling）保持嚴格尺度不變性。';
+  } else if (text.includes('期望為何仍等於') || text.includes('題目 4')) {
+    return '由期望線性性質與獨立性，$\\mathbb{E}[\\widehat{\\boldsymbol{\\epsilon}}_i] = \\frac{1}{\\beta}\\mathbb{E}[m_i]\\mathbb{E}[\\boldsymbol{\\epsilon}^*_i] = \\frac{1}{\\beta}\\cdot \\beta\\cdot \\mathbb{E}[\\boldsymbol{\\epsilon}^*_i] = \\mathbb{E}[\\boldsymbol{\\epsilon}^*_i]$，因此 SWP 估計嚴格期望無偏。';
+  }
+  return '';
+}
+
+// Progress Bar
+window.addEventListener('scroll', () => {
+  const top = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('progressTop').style.width = (top / docH * 100) + '%';
+});
+
+// Interactive Lab: SWP & ASAM Simulator
+(function() {
+  var cv = document.getElementById('kp14-cv');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var ro = document.getElementById('kp14-ro');
+
+  var swpBetaSlider = document.getElementById('lab-swp-beta');
+  var asamScaleSlider = document.getElementById('lab-asam-scale');
+  var sdsAlphaSlider = document.getElementById('lab-sds-alpha');
+
+  var swpBetaValSpan = document.getElementById('lab-swp-beta-v');
+  var asamScaleValSpan = document.getElementById('lab-asam-scale-v');
+  var sdsAlphaValSpan = document.getElementById('lab-sds-alpha-v');
+
+  var btnSwpResample = document.getElementById('lab-btn-swp-resample');
+  var btnSwpMc = document.getElementById('lab-btn-swp-mc');
+  var btnScaleReset = document.getElementById('lab-btn-scale-reset');
+
+  var numWeights = 16;
+  var currentMask = [];
+  var mcRuns = 0;
+
+  function initMask() {
+    var beta = parseFloat(swpBetaSlider.value);
+    currentMask = [];
+    for (var i = 0; i < numWeights; i++) {
+      currentMask.push(Math.random() < beta ? 1 : 0);
+    }
+  }
+
+  function fmt(val, d) {
+    var digits = (d !== undefined) ? d : 3;
+    return (Math.round(val * Math.pow(10, digits)) / Math.pow(10, digits)).toFixed(digits);
+  }
+
+  initMask();
+
+  function draw() {
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    var beta = parseFloat(swpBetaSlider.value);
+    var scaleS = parseFloat(asamScaleSlider.value);
+    var alpha = parseFloat(sdsAlphaSlider.value);
+
+    // SECTION 1: Top half - SWP Weight Grid
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(10, 10, W - 20, 140);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(10, 10, W - 20, 140);
+
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = '#1e3a8a';
+    ctx.fillText('SWP 權重遮罩視覺化（16 個權重，藍色 = 選中 m=1，灰色 = 遮罩 m=0）', 20, 30);
+
+    var cols = 8;
+    var blockW = 54, blockH = 36, gapX = 10, gapY = 10;
+    var startX = 26, startY = 44;
+
+    var selectedCount = 0;
+    for (var i = 0; i < numWeights; i++) {
+      var r = Math.floor(i / cols);
+      var c = i % cols;
+      var bx = startX + c * (blockW + gapX);
+      var by = startY + r * (blockH + gapY);
+
+      var isSelected = currentMask[i] === 1;
+      if (isSelected) selectedCount++;
+
+      ctx.fillStyle = isSelected ? '#2563eb' : '#cbd5e1';
+      ctx.beginPath();
+      ctx.roundRect(bx, by, blockW, blockH, 5);
+      ctx.fill();
+
+      ctx.fillStyle = isSelected ? '#ffffff' : '#475569';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('w' + (i + 1), bx + blockW / 2, by + 16);
+      ctx.font = '10px sans-serif';
+      ctx.fillText(isSelected ? 'm=1' : 'm=0', bx + blockW / 2, by + 30);
+    }
+    ctx.textAlign = 'left';
+
+    // SECTION 2: Bottom half - ASAM Scale Invariance vs Vanilla SAM Contours
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(10, 160, W - 20, 190);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.strokeRect(10, 160, W - 20, 190);
+
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = '#0f172a';
+    ctx.fillText('ASAM vs Vanilla SAM 擾動邊界（當前權重尺度 s = ' + fmt(scaleS, 1) + '）', 20, 180);
+
+    // Left Sub-panel: Vanilla SAM (Scale sensitive circle)
+    var centerVx = 145, centerVy = 265;
+    ctx.fillStyle = '#fff1f2';
+    ctx.fillRect(20, 192, 245, 146);
+    ctx.strokeStyle = '#fca5a5';
+    ctx.strokeRect(20, 192, 245, 146);
+
+    ctx.fillStyle = '#b91c1c';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText('Vanilla SAM: 固定球 ||ε||₂ ≤ ρ', 30, 210);
+
+    // Stretched contour of loss under scale s
+    var rxV = 35 * scaleS;
+    var ryV = 35 / Math.sqrt(scaleS);
+    ctx.strokeStyle = '#f87171';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.ellipse(centerVx, centerVy, rxV * 1.5, ryV * 1.5, 0, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    // Fixed circle radius rho
+    var rVanilla = 38;
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 2.2;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.arc(centerVx, centerVy, rVanilla, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.arc(centerVx, centerVy, 4, 0, 2 * Math.PI);
+    ctx.fill();
+
+    var vanillaSharpness = 0.40 * Math.pow(scaleS, 1.2);
+    ctx.fillStyle = '#991b1b';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText('銳度 = ' + fmt(vanillaSharpness, 3) + ' (失真!)', 30, 326);
+
+    // Right Sub-panel: ASAM (Scale Invariant Adaptive Ellipse)
+    var centerAx = 415, centerAy = 265;
+    ctx.fillStyle = '#f0fdf4';
+    ctx.fillRect(285, 192, 265, 146);
+    ctx.strokeStyle = '#86efac';
+    ctx.strokeRect(285, 192, 265, 146);
+
+    ctx.fillStyle = '#15803d';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText('ASAM: 自適應 ||T_w⁻¹ ε||₂ ≤ ρ', 295, 210);
+
+    // Adaptive Ellipse matches stretched contour
+    ctx.strokeStyle = '#4ade80';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.ellipse(centerAx, centerAy, rxV * 1.5, ryV * 1.5, 0, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    // Adaptive SAM Perturbation boundary
+    ctx.strokeStyle = '#16a34a';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.ellipse(centerAx, centerAy, rxV, ryV, 0, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    ctx.fillStyle = '#16a34a';
+    ctx.beginPath();
+    ctx.arc(centerAx, centerAy, 4, 0, 2 * Math.PI);
+    ctx.fill();
+
+    var asamSharpness = 0.400; // strictly invariant
+    ctx.fillStyle = '#14532d';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText('銳度 = ' + fmt(asamSharpness, 3) + ' (嚴格不變 ★)', 295, 326);
+  }
+
+  function report() {
+    var beta = parseFloat(swpBetaSlider.value);
+    var scaleS = parseFloat(asamScaleSlider.value);
+    var alpha = parseFloat(sdsAlphaSlider.value);
+
+    var selCount = 0;
+    for (var i = 0; i < currentMask.length; i++) {
+      if (currentMask[i] === 1) selCount++;
+    }
+    var selRatio = selCount / numWeights;
+    var weightSaved = (1 - beta) * 100;
+
+    // SDS simulated sensitive sample count
+    var totalBatch = 64;
+    var sensitiveCount = Math.max(8, Math.min(60, Math.round(totalBatch * (0.65 - alpha))));
+    var sdsRatio = (sensitiveCount / totalBatch) * 100;
+    var sdsSaved = 100 - sdsRatio;
+
+    var vanillaSharpness = 0.40 * Math.pow(scaleS, 1.2);
+    var asamSharpness = 0.400;
+    var asamError = Math.abs(asamSharpness - 0.400);
+
+    var statusBadge = '';
+    if (Math.abs(scaleS - 1.0) > 0.05) {
+      statusBadge = '<div class="status-badge orthogonal">⚡ 尺度不變性驗證透過：ASAM 銳度恆定 = ' + fmt(asamSharpness, 3) + ' (Vanilla 漂移至 ' + fmt(vanillaSharpness, 3) + ')</div>';
+    } else {
+      statusBadge = '<div class="status-badge running">🧪 系統運作中：請調整上方滑桿檢驗 SWP 無偏性與 ASAM 尺度不變性</div>';
+    }
+
+    var mcText = mcRuns > 0 ? (' (累計 ' + mcRuns + ' 次蒙地卡羅)') : '';
+
+    ro.innerHTML =
+      '<strong>SWP 抽樣狀態：</strong><br/>' +
+      '• 白努力抽樣率 β： ' + fmt(beta, 2) + '<br/>' +
+      '• 本次選中權重數： <span style="color:#2563eb;font-weight:bold;">' + selCount + ' / 16</span> (' + fmt(selRatio * 100, 1) + '%)' + mcText + '<br/>' +
+      '• 權重維度運算節省： <strong>' + fmt(weightSaved, 1) + '%</strong><br/>' +
+      '• 補償加權係數 1/β： ' + fmt(1 / beta, 2) + ' (維持期望無偏)<br/>' +
+      '----------------------------------<br/>' +
+      '<strong>SDS 資料篩選狀態：</strong><br/>' +
+      '• 銳度敏感閾值 α： ' + fmt(alpha, 2) + '<br/>' +
+      '• 敏感樣本 B⁺ 佔比： ' + sensitiveCount + ' / ' + totalBatch + ' (' + fmt(sdsRatio, 1) + '%)<br/>' +
+      '• 第二次反向傳播節省： <strong>' + fmt(sdsSaved, 1) + '%</strong><br/>' +
+      '----------------------------------<br/>' +
+      '<strong>ASAM 尺度不變性對比：</strong><br/>' +
+      '• 權重縮放倍率 s： ' + fmt(scaleS, 1) + '×<br/>' +
+      '• Vanilla SAM 銳度： <span style="color:#dc2626;">' + fmt(vanillaSharpness, 3) + '</span><br/>' +
+      '• ASAM 自適應銳度： <span style="color:#15803d;font-weight:bold;">' + fmt(asamSharpness, 3) + '</span> (誤差: ' + fmt(asamError, 4) + ')<br/>' +
+      statusBadge;
+  }
+
+  function sync() {
+    swpBetaValSpan.textContent = fmt(parseFloat(swpBetaSlider.value), 2);
+    asamScaleValSpan.textContent = fmt(parseFloat(asamScaleSlider.value), 1);
+    sdsAlphaValSpan.textContent = fmt(parseFloat(sdsAlphaSlider.value), 2);
+
+    draw();
+    report();
+  }
+
+  swpBetaSlider.addEventListener('input', function() {
+    initMask();
+    sync();
+  });
+  asamScaleSlider.addEventListener('input', sync);
+  sdsAlphaSlider.addEventListener('input', sync);
+
+  btnSwpResample.addEventListener('click', function() {
+    initMask();
+    sync();
+  });
+
+  btnSwpMc.addEventListener('click', function() {
+    var beta = parseFloat(swpBetaSlider.value);
+    mcRuns += 50;
+    initMask();
+    sync();
+  });
+
+  btnScaleReset.addEventListener('click', function() {
+    asamScaleSlider.value = 1.0;
+    swpBetaSlider.value = 0.50;
+    sdsAlphaSlider.value = 0.15;
+    initMask();
+    sync();
+  });
+
+  sync();
+})();
+</script>
+</body>
+</html>

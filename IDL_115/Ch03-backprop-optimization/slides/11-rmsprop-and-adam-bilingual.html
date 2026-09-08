@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch03 · KP11 RMSProp 與 Adam：現代深度學習的預設優化器 — RMSProp &amp; Adam</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(108,92,231,.24), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(9,132,227,.18), transparent 30%),
+              linear-gradient(135deg, #0a0e27 0%, #131b3e 50%, #1e1338 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(10, 14, 39, .25);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(36px, 4.4vw, 64px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(19px, 2.1vw, 30px);
+  color: #a5b4fc;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #38bdf8;
+  border-radius: 999px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 900px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #38bdf8, #e84393);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #7dd3fc !important; fill: #7dd3fc !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #cbd5e1; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  display: block;
+}
+.half-layout .visual > svg {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  display: block;
+}
+.half-layout .visual .svg-caption {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+  font-size: var(--t5);
+  color: var(--text-low);
+  letter-spacing: .05em;
+}
+@media (max-width: 1100px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+
+/* 高橋流置中修復：卡片居中於內容閱讀區 (831px 中心軸，左右邊距各 231px) */
+.section .takahashi {
+  text-align: center;
+  padding: 80px 36px;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+}
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin: 28px 0;
+}
+.lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  color: var(--ink);
+}
+.lab-ctrl select, .lab-ctrl input[type="range"] {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  font-size: 14px;
+}
+.lab-ctrl input[type="range"] {
+  width: 110px;
+}
+.lab-ctrl span.val {
+  min-width: 44px;
+  font-family: var(--mono);
+  color: var(--primary);
+  font-weight: bold;
+}
+.lab-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all .2s;
+}
+.lab-btn:hover {
+  background: hsl(248, 58%, 38%);
+  transform: translateY(-1px);
+}
+.lab-btn.secondary {
+  background: #64748b;
+}
+.lab-btn.secondary:hover {
+  background: #475569;
+}
+.lab-btn.accent {
+  background: #0ea5e9;
+}
+.lab-btn.accent:hover {
+  background: #0284c7;
+}
+.lab-display {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .lab-display { grid-template-columns: 1fr; }
+}
+.lab-canvas-container {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.lab-readout {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+.lab-readout .status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.status-badge.running { background: #e0f2fe; color: #0369a1; }
+.status-badge.boosted { background: #ede9fe; color: #6b21a8; }
+.status-badge.warning { background: #fef3c7; color: #b45309; }
+.status-badge.converged { background: #dcfce7; color: #15803d; }
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP11 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Core Question</a></li>
+    <li><a href="#adagrad-flaw">歷史死局 · AdaGrad Flaw</a></li>
+    <li><a href="#rmsprop-ema">遺忘機制 · RMSProp EMA</a></li>
+    <li><a href="#rmsprop-analysis">機制深探 · RMSProp Deep Dive</a></li>
+    <li><a href="#adam-unification">雙矩合體 · Adam Dual Moments</a></li>
+    <li><a href="#bias-correction">偏置修正 · Bias Correction</a></li>
+    <li><a href="#bias-derivation">嚴密推導 · Unbiased Proof</a></li>
+    <li><a href="#final-update">最終更新 · Final Update</a></li>
+    <li><a href="#three-column-evolution">三欄演進 · Three Columns</a></li>
+    <li><a href="#comparison">橫向矩陣 · Comparison Matrix</a></li>
+    <li><a href="#master-maxims">大師箴言 · Master Laws</a></li>
+    <li><a href="#lab">互動實驗室 · Interactive Lab</a></li>
+    <li><a href="#quiz">思考題 · Checkpoint</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">IDL 115 · CHAPTER 3 · KP-11 · TEACHING DECK</span>
+    <h1>RMSProp 與 Adam：現代深度學習的預設優化器
+      <span class="hero-title-en">RMSProp &amp; Adam: Exponential Decay, Dual Moments, and Bias-Corrected Adaptive Optimization</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      AdaGrad 的單調累積讓學習率步入早夭死局；RMSProp 引入指數移動平均（EMA）賦予演算法「遺忘舊梯度」的自由；而 Adam 則將一階動量方向與二階 RMSProp 尺度完美合體，輔以巧妙的偏置修正（Bias Correction）機制，成為引領現代深度學習架構的絕對預設王者。
+    </p>
+    <p class="bilingual-en" style="color: #cbd5e1; max-width: 860px; margin: 10px auto 0;">
+      While AdaGrad’s monotonic gradient accumulation leads to premature step-size freezing, RMSProp utilizes exponentially decaying averages to forget stale history. Adam unifies first-moment momentum directions with second-moment RMSProp scaling, rectifying early zero-initialization bias to reign as the standard default optimizer in modern deep learning.
+    </p>
+  </div>
+</section>
+
+<!-- 2. 大問句 -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="sec-tag inquiry">01 / 核心提問 · Core Question</div>
+    <div class="quote">
+      「步長早夭怎麼救？方向與尺度如何兼得？」
+      <small>AdaGrad 累積平方讓學習率只跌不升終致凍結；RMSProp 說「學會遺忘才能重生」，Adam 則問「能不能既看慣性方向，又按特徵方差動態縮放步長？」<br/>
+        <span class="bilingual-en-inline">How do we resurrect frozen learning rates and unify momentum directions with coordinate-wise adaptive scales?</span>
+      </small>
+    </div>
+  </div>
+</section>
+
+<!-- 3. AdaGrad 的致命死穴 -->
+<section class="section" id="adagrad-flaw">
+  <div class="sec-tag sustain">02 / 歷史死局 · AdaGrad's Accumulation Dilemma</div>
+  <h2 class="section-title">AdaGrad 的致命死穴：梯度平方無限累積與步長早夭
+    <span class="en">The Fatal Flaw of AdaGrad: Monotonic Gradient Accumulation and Premature Step-Size Freezing</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>AdaGrad 的累積機制與步長衰減公式</h4>
+    <p>AdaGrad 為每個參數維度獨立維護梯度平方和，實現了頻繁更新維度邁小步、稀疏特徵維度邁大步的自適應縮放：</p>
+    <p>$$ G_i^{(k+1)} := G_i^{(k)} + \left(\nabla f\left(\boldsymbol{w}^{(k)}\right)_i\right)^2 \tag{38} $$</p>
+    <p>$$ \boldsymbol{w}_i^{(k+1)} := \boldsymbol{w}_i^{(k)} - \frac{\eta}{\sqrt{\varepsilon + G_i^{(k+1)}}} \nabla f\left(\boldsymbol{w}^{(k)}\right)_i \tag{39} $$</p>
+    <p><strong>致命死穴：</strong>由於每一步的梯度平方項 $(\nabla f)_i^2 \ge 0$，累積量 $G_i$ 隨迭代次數 $k$ 呈<strong>單調不減</strong>（Monotonically Non-Decreasing）遞增。隨著訓練輪數推進，$G_i \to \infty$，分母急劇膨脹，使得有效學習率 $\frac{\eta}{\sqrt{G_i + \varepsilon}} \to 0$！</p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>1. 無限累積的重負</h3>
+      <div class="sub-en">Eternal Monotonic Accumulation</div>
+      <p>歷史所有梯度的平方被毫無保留地疊加。訓練初期在陡峭斜坡上產生的巨大梯度，會永久性地把分母撐大，哪怕後來進入平緩開闊地，步長也再也無法復甦。</p>
+    </div>
+    <div class="card positive">
+      <h3>2. 步長過早歸零</h3>
+      <div class="sub-en">Premature Learning Rate Freezing</div>
+      <p>神經網路訓練需要成千上萬輪迭代。AdaGrad 往往在訓練進行到中盤時，有效步長就已衰減到 $10^{-7}$ 以下，參數更新徹底「假死」，遠未抵達極小點便停滯不前。</p>
+    </div>
+    <div class="card positive">
+      <h3>3. 局部地形的過度懲罰</h3>
+      <div class="sub-en">Over-Penalizing Past Terrains</div>
+      <p>非凸損失曲面千變萬化。千百步前走過懸崖的統計記憶，不應該持續懲罰當前所處的平緩盆地。古典 AdaGrad 缺乏對時間的感知維度。</p>
+    </div>
+    <div class="card positive">
+      <h3>4. 遺忘機制的呼喚</h3>
+      <div class="sub-en">The Need for an Exponential Window</div>
+      <p>若要保持長期持續學習的能力，優化器必須學會「遺忘」遠古時期的梯度，只關注近期地形的二階統計——這正是 RMSProp 與 Adam 誕生的關鍵契機！</p>
+    </div>
+  </div>
+</section>
+
+<!-- 4. RMSProp 遺忘機制 -->
+<section class="section" id="rmsprop-ema">
+  <div class="sec-tag sustain">03 / 遺忘革命 · RMSProp &amp; Exponential Moving Average</div>
+  <h2 class="section-title">式 (40)–(41) RMSProp 遺忘機制：指數移動平均 EMA 解除步長死亡詛咒
+    <span class="en">RMSProp: Exponentially Decaying Averages Rescuing Optimization from Premature Freezing</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>RMSProp 梯度平方指數移動平均（式 (40)）與參數更新（式 (41)）</h4>
+    <p>AdaGrad 的累積和只增不減，長期後學習率會過度衰減。RMSProp [42] 的改進靈感來自動量——用<strong>指數移動平均（exponentially decaying average）</strong>取代簡單累積和，讓舊梯度資訊逐漸被遺忘。</p>
+    <p>維護梯度平方的移動平均（式 (40)）：</p>
+    <p>$$ v^{(k+1)} := \gamma v^{(k)} + (1-\gamma)\left\|\nabla f_{i}\left(\boldsymbol{w}^{(k)}\right)\right\|_{2}^{2} \tag{40} $$</p>
+    <p>其中 $\gamma \in [0, 1]$ 是遺忘因子（通常設為 $\gamma = 0.9$）。參數更新式（式 (41)）：</p>
+    <p>$$ \boldsymbol{w}^{(k+1)} := \boldsymbol{w}^{(k)} - \frac{\eta^{(k)}}{\sqrt{\varepsilon + v^{(k+1)}}} \nabla f_{j}\left(\boldsymbol{w}_{j}^{(k)}\right) \tag{41} $$</p>
+    <p><strong>核心行為解讀：</strong>RMSProp 的行為類似 AdaGrad，但分母是指數衰減平均而非無限累加，避免了學習率過早歸零的問題。當梯度變小時，$v$ 會動態回落，使步長重新放大！</p>
+  </div>
+
+  <p>
+    在 RMSProp 的遞推式中，展開 $v^{(k+1)}$ 可見其本質是歷史梯度平方的幾何加權平均：
+    $v^{(k+1)} = (1-\gamma) \sum_{\tau=0}^k \gamma^{k-\tau} \|\nabla f(\boldsymbol{w}^{(\tau)})\|_2^2$。
+    時間距今越遠的步數 $\tau$，其權重衰減為 $\gamma^{k-\tau}$。當 $\gamma = 0.9$ 時，$0.9^{10} \approx 0.35$，$0.9^{22} \approx 0.098$。演算法本質上只保留最近約 $\frac{1}{1-\gamma} \approx 10$ 步的局部幾何資訊！
+    <span class="bilingual-en">By replacing monotonic sums with exponentially decaying averages, RMSProp limits historical memory to an effective window of 1/(1-gamma) iterations. When gradients shrink, v decreases, dynamically reviving the step size.</span>
+  </p>
+</section>
+
+<!-- 5. RMSProp 深度解構 -->
+<section class="section" id="rmsprop-analysis">
+  <div class="sec-tag sustain">04 / 機制深探 · RMSProp Deep Dive</div>
+  <h2 class="section-title">RMSProp 深度解構：半衰期記憶窗與自適應坐標縮放
+    <span class="en">Deep Mechanics of RMSProp: Half-Life Memory Windows &amp; Non-Stationary Adaptation</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>1. 記憶半衰期定理</h3>
+      <div class="sub-en">Half-Life Decay Formula</div>
+      <p>舊梯度資訊權重降至一半所需的步數為：$t_{1/2} = \frac{\ln 0.5}{\ln \gamma}$。取 $\gamma = 0.9$ 時，$t_{1/2} \approx 6.58$ 步；取 $\gamma = 0.99$ 時，$t_{1/2} \approx 68.97$ 步。超參數 $\gamma$ 直接決定了模型對歷史地形的記憶長度。</p>
+    </div>
+    <div class="card positive">
+      <h3>2. 非平穩環境王者</h3>
+      <div class="sub-en">Master of Non-Stationary Loss Landscapes</div>
+      <p>在迴圈神經網路（RNN / LSTM）或強化學習中，資料分佈與損失曲面隨時間強烈變化。RMSProp 能迅速忘卻先前分佈的舊統計，專注適應當前區域，避免被過往噪聲絆倒。</p>
+    </div>
+    <div class="card positive">
+      <h3>3. 坐標自適應預條件</h3>
+      <div class="sub-en">Diagonal Preconditioning</div>
+      <p>逐維度除以 $\sqrt{v_i + \varepsilon}$，等價於以對角矩陣近似 Hessian 的曲率尺度：在坡度陡峭的維度壓低步長防止震盪發散，在平緩平原上放膽邁大步加速前行。</p>
+    </div>
+    <div class="card positive">
+      <h3>4. 傳奇起源：課堂投影片</h3>
+      <div class="sub-en">Hinton's Legendary Coursera Lecture</div>
+      <p>RMSProp 未曾在傳統頂級學術會議上正式發表論文，而是 Geoffrey Hinton 教授於 2012 年在 Coursera 課程《Neural Networks for Machine Learning》Lecture 6e 中提出，隨後風靡全球深度學習界。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6. Adam 雙矩合體 -->
+<section class="section" id="adam-unification">
+  <div class="sec-tag sustain">05 / 雙矩合體 · Adam: Adaptive Moment Estimation</div>
+  <h2 class="section-title">Adam 雙矩合體：式 (42) 一階動量方向 + 式 (43) 二階 RMSProp 尺度
+    <span class="en">Adam: Harmonizing First-Moment Momentum Direction with Second-Moment RMSProp Scaling</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>Adam 雙矩遞推式：一階矩 $\boldsymbol{m}$（式 (42)）與二階矩 $v$（式 (43)）</h4>
+    <p>Adam（Adaptive Moment Estimation）[25] 是目前深度學習中最廣泛使用的優化器。它同時維護梯度的一階矩（動量）與二階矩（RMSProp 風格的方差估計）：</p>
+    <p>$$ \boldsymbol{m}^{(k+1)} := \gamma_{1} \boldsymbol{m}^{(k)} + \left(1-\gamma_{1}\right) \nabla f_{i}\left(\boldsymbol{w}^{(k)}\right) \tag{42} $$</p>
+    <p>$$ v^{(k+1)} := \gamma_{2} v^{(k)} + \left(1-\gamma_{2}\right)\left\|\nabla f_{i}\left(\boldsymbol{w}^{(k)}\right)\right\|_{2}^{2} \tag{43} $$</p>
+    <p>其中 $\gamma_{1}, \gamma_{2} \in [0,1]$（文獻通常記為 $\beta_1, \beta_2$，經典預設值為 $\beta_1 = 0.9, \beta_2 = 0.999$）。</p>
+  </div>
+
+  <div class="highlight-box">
+    <h4>一階動量掌方向，二階 RMSProp 量尺度：兩強聯手的物理直覺</h4>
+    <p>在物理學與統計學中：</p>
+    <ul style="margin: 8px 0 8px 24px; line-height: 1.8;">
+      <li><strong>一階動量矩 $\boldsymbol{m}$（梯度的均值期望）：</strong>模擬質點慣性，沿著運動方向持續積累速度。在狹窄峽谷中，相鄰步的垂直劇烈震盪會相互抵消，而朝向谷底的前進動量則疊加放大！</li>
+      <li><strong>二階方差矩 $v$（未中心化二階矩）：</strong>度量梯度在各坐標軸向的波動方差與陡峭程度。震盪強烈的維度 $v$ 大，更新時除以 $\sqrt{v}$ 被強制縮減；平緩安靜的維度 $v$ 小，步幅獲得自然補償放大。</li>
+    </ul>
+    <p>動量（Momentum）解決了「前進方向東倒西歪」的難題，RMSProp 解決了「各維度尺度天差地別」的困擾。兩者合二為一，奠定了 Adam 無可撼動的統治地位！</p>
+  </div>
+</section>
+
+<!-- 7. 偏置修正機制 -->
+<section class="section" id="bias-correction">
+  <div class="sec-tag sustain">06 / 關鍵校準 · Bias Correction Mechanism</div>
+  <h2 class="section-title">式 (44)–(45) 偏置修正：初期零值低估拉回與 $1/(1-\gamma^k)$ 幾何修正機制
+    <span class="en">Equations (44)–(45) Bias Correction: Rescuing Zero-Initialized Underestimation via $1/(1-\gamma^k)$</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>一個容易被忽視但至關重要的細節：矩估計偏置修正（式 (44)–(45)）</h4>
+    <p>$\boldsymbol{m}$ 和 $v$ 在訓練開始時初始化為零向量（$\boldsymbol{m}^{(0)}=\boldsymbol{0}, v^{(0)}=0$）。在早期迭代中，由於歷史權重大部分落在「虛無的零」上面，矩估計會<strong>系統性地偏向 0（嚴重被低估）</strong>！Adam 用偏置修正補償：</p>
+    <p>$$ \widehat{\boldsymbol{m}}^{(k+1)} := \frac{1}{1-\gamma_{1}^{k}} \boldsymbol{m}^{(k+1)} \tag{44} $$</p>
+    <p>$$ \widehat{v}^{(k+1)} := \frac{1}{1-\gamma_{2}^{k}} v^{(k+1)} \tag{45} $$</p>
+    <p>當 $k$ 很小時，$1-\gamma_1^k \ll 1$，修正因子 $\frac{1}{1-\gamma_1^k} \gg 1$ 把被壓低的矩估計「拉回來」；隨 $k$ 增大，$\gamma_1^k \to 0$，修正因子趨近 1，影響自然消失。</p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>具體數值算例：未修正 vs 修正後</h3>
+      <div class="sub-en">Concrete Numerical Example</div>
+      <p>設 $\gamma_1 = 0.9$，$k=1$，當前步梯度 $g=4$：<br/>
+      • 未修正：$m = 0.9 \times 0 + 0.1 \times 4 = 0.4$（遭初始 0 嚴重稀釋 10 倍！）<br/>
+      • 修正後：$\widehat{m} = \frac{0.4}{1 - 0.9^1} = \frac{0.4}{0.1} = 4.0$（完美無偏拉回真實梯度！）</p>
+    </div>
+    <div class="card positive">
+      <h3>二階矩 $\gamma_2=0.999$ 的千倍懸殊</h3>
+      <div class="sub-en">Extreme Second Moment Correction</div>
+      <p>由於 $\gamma_2 = 0.999$，在第 1 步時 $1 - \gamma_2 = 0.001$！若無修正，$v^{(1)} = 0.001 g^2$，未修正矩被壓低整整 1000 倍！修正因子 $\frac{1}{1-0.999^1} = 1000$ 將其瞬時校準回 $g^2$。</p>
+    </div>
+    <div class="card positive">
+      <h3>若缺少修正：步長開頭幾步幾乎停擺</h3>
+      <div class="sub-en">Severe Early Step Distortions</div>
+      <p>如果沒有偏置修正，未修正的 $m$ 縮小 10 倍，而 $\sqrt{v}$ 縮小約 $\sqrt{1000} \approx 31.6$ 倍。兩者相除導致步長被嚴重扭曲；且當 $v$ 極小時容易受數值穩定項 $\varepsilon$ 支配，導致開頭幾步動彈不得。</p>
+    </div>
+    <div class="card positive">
+      <h3>隨時間自然淡出</h3>
+      <div class="sub-en">Graceful Asymptotic Vanishing</div>
+      <p>當 $k = 50$ 時，$0.9^{50} \approx 0.00515$，$1 - \gamma_1^{50} \approx 0.9948$，一階修正因子已衰減至 1.005；當 $k = 3000$ 時，二階修正因子亦降至 1.05。修正機制在初期保駕護航，在後期功成身退。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 8. 偏置修正嚴密推導 -->
+<section class="section" id="bias-derivation">
+  <div class="sec-tag sustain">07 / 嚴密推導 · Derivation of Unbiasedness</div>
+  <h2 class="section-title">偏置修正數學推導：幾何級數展開與期望無偏性證明
+    <span class="en">Rigorous Derivation: Geometric Series Expansion and Proof of Unbiased Moment Estimation</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>期望無偏性證明（Proof of Unbiased Expectation）</h4>
+    <p>考察第 $k$ 步一階動量 $\boldsymbol{m}^{(k)}$ 的展開式（初始化 $\boldsymbol{m}^{(0)} = \boldsymbol{0}$）：</p>
+    <p>$$ \boldsymbol{m}^{(k)} = (1-\gamma_1)\sum_{i=1}^k \gamma_1^{k-i} \boldsymbol{g}_i $$</p>
+    <p>兩側取數學期望 $\mathbb{E}[\cdot]$。假設在當前局部平穩區間內，真實梯度期望保持穩定，即 $\mathbb{E}[\boldsymbol{g}_i] \approx \mathbb{E}[\boldsymbol{g}_k]$：</p>
+    <p>$$ \mathbb{E}\left[\boldsymbol{m}^{(k)}\right] = \mathbb{E}\left[(1-\gamma_1)\sum_{i=1}^k \gamma_1^{k-i} \boldsymbol{g}_i\right] = \mathbb{E}[\boldsymbol{g}_k] (1-\gamma_1) \sum_{i=1}^k \gamma_1^{k-i} $$</p>
+    <p>利用等比數列（幾何級數）有限項求和公式：$\sum_{i=1}^k \gamma_1^{k-i} = 1 + \gamma_1 + \gamma_1^2 + \dots + \gamma_1^{k-1} = \frac{1-\gamma_1^k}{1-\gamma_1}$，代入可得：</p>
+    <p>$$ \mathbb{E}\left[\boldsymbol{m}^{(k)}\right] = \mathbb{E}[\boldsymbol{g}_k] (1-\gamma_1) \cdot \frac{1-\gamma_1^k}{1-\gamma_1} = \mathbb{E}[\boldsymbol{g}_k] \left(1-\gamma_1^k\right) $$</p>
+    <p><strong>結論：</strong>未修正的估計值期望比真實梯度期望多乘了一個因子 $(1-\gamma_1^k)$！因此定義 $\widehat{\boldsymbol{m}}^{(k)} := \frac{\boldsymbol{m}^{(k)}}{1-\gamma_1^k}$，即可嚴格滿足：</p>
+    <p>$$ \mathbb{E}\left[\widehat{\boldsymbol{m}}^{(k)}\right] = \frac{\mathbb{E}\left[\boldsymbol{m}^{(k)}\right]}{1-\gamma_1^k} = \mathbb{E}[\boldsymbol{g}_k] $$</p>
+    <p>同理，二階矩亦滿足 $\mathbb{E}\left[\widehat{v}^{(k)}\right] = \mathbb{E}\left[\|\boldsymbol{g}_k\|_2^2\right]$。數學結構優雅嚴密，無懈可擊！</p>
+  </div>
+</section>
+
+<!-- 9. 最終更新與超參數 -->
+<section class="section" id="final-update">
+  <div class="sec-tag sustain">08 / 演算法總成 · Complete Adam Algorithm</div>
+  <h2 class="section-title">式 (46) 最終參數更新式與超參數黃金預設值
+    <span class="en">Equation (46) Final Parameter Update &amp; The Golden Hyperparameter Defaults</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>Adam 最終參數更新式（式 (46)）</h4>
+    <p>$$ \boldsymbol{w}^{(k+1)} := \boldsymbol{w}^{(k)} - \frac{\eta^{(k)}}{\sqrt{\varepsilon + \widehat{v}^{(k+1)}}} \widehat{\boldsymbol{m}}^{(k+1)} \tag{46} $$</p>
+    <p><strong>本質解構：</strong>這等價於<strong>帶動量的 SGD + 自適應坐標縮放</strong>：$\widehat{\boldsymbol{m}}$ 提供方向（含動量平滑），$\sqrt{\widehat{v}}$ 提供逐維度的步幅調整。大多數深度學習框架（PyTorch、TensorFlow 等）都將 SGD（mini-batch 版）與 Adam 列為標準選項。</p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>$\beta_1 = 0.9$ (一階動量衰減率)</h3>
+      <div class="sub-en">First Moment Decay Rate</div>
+      <p>有效記憶時間窗約 10 步。賦予模型合適的運動慣性，既能衝過平坦微小起伏與局部鞍點，又不會因慣性過大而衝出最優吸引盆地。</p>
+    </div>
+    <div class="card positive">
+      <h3>$\beta_2 = 0.999$ (二階方差衰減率)</h3>
+      <div class="sub-en">Second Moment Decay Rate</div>
+      <p>有效記憶時間窗約 1000 步。二階矩度量梯度能量，需更長期的統計平均才能壓制 mini-batch 隨機抽樣帶來的方差波動。</p>
+    </div>
+    <div class="card positive">
+      <h3>$\varepsilon = 10^{-8}$ (數值穩定微小常數)</h3>
+      <div class="sub-en">Numerical Stability Term</div>
+      <p>防止梯度接近零或訓練初期分母除以 0。在 32 位浮點數（float32）運算中，$10^{-8}$ 剛好接近單精度下界，兼具穩定性與靈敏度。</p>
+    </div>
+    <div class="card positive">
+      <h3>$\eta = 10^{-3}$ ($0.001$, 預設學習率基準)</h3>
+      <div class="sub-en">Default Learning Rate Baseline</div>
+      <p>在幾乎所有深度神經網路（CNN、Transformer、MLP）的原型驗證中，$0.001$ 都是最穩健的起點，堪稱現代 AI 領域的「宇宙常數」。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 10. 三欄演進圖 -->
+<section class="section" id="three-column-evolution">
+  <div class="sec-tag sustain">09 / 演進圖譜 · Three-Column Evolution</div>
+  <h2 class="section-title">三欄演進圖：AdaGrad 步長死亡 vs RMSProp 遺忘波浪 vs Adam 預設王者
+    <span class="en">Three-Column Evolution: AdaGrad's Freezing vs RMSProp's Decay Wave vs Adam's King Supremacy</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 490" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif">
+        <defs>
+          <marker id="m-arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 1 L9 5 L0 9 z" fill="#2563eb"/>
+          </marker>
+          <marker id="m-arrow-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 1 L9 5 L0 9 z" fill="#dc2626"/>
+          </marker>
+          <marker id="m-arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 1 L9 5 L0 9 z" fill="#16a34a"/>
+          </marker>
+        </defs>
+
+        <rect x="0" y="0" width="760" height="490" fill="#ffffff" rx="10"/>
+        <text x="380" y="24" text-anchor="middle" font-size="16" font-weight="bold" fill="#1e40af">優化器演進歷程：從累積死局到雙矩合體與偏置校準</text>
+
+        <!-- COLUMN 1: AdaGrad (Left) -->
+        <g transform="translate(16, 40)">
+          <rect width="226" height="295" rx="8" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.6"/>
+          <rect x="12" y="10" width="202" height="26" rx="4" fill="#fee2e2"/>
+          <text x="113" y="27" text-anchor="middle" font-size="13" font-weight="bold" fill="#dc2626">1. AdaGrad · 累積死局</text>
+          <text x="113" y="52" text-anchor="middle" font-size="11" fill="#7f1d1d">G ← G + g² (無限累加)</text>
+
+          <!-- Monotonic growing bar chart -->
+          <g transform="translate(20, 68)">
+            <line x1="0" y1="130" x2="186" y2="130" stroke="#cbd5e1" stroke-width="1.4"/>
+            <!-- Bar 1 -->
+            <rect x="14" y="98" width="28" height="32" rx="3" fill="#fca5a5"/>
+            <text x="28" y="144" text-anchor="middle" font-size="10" fill="#64748b">k=1</text>
+            <!-- Bar 2 -->
+            <rect x="56" y="70" width="28" height="60" rx="3" fill="#f87171"/>
+            <text x="70" y="144" text-anchor="middle" font-size="10" fill="#64748b">k=5</text>
+            <!-- Bar 3 -->
+            <rect x="98" y="38" width="28" height="92" rx="3" fill="#ef4444"/>
+            <text x="112" y="144" text-anchor="middle" font-size="10" fill="#64748b">k=20</text>
+            <!-- Bar 4 (Huge) -->
+            <rect x="140" y="8" width="28" height="122" rx="3" fill="#dc2626"/>
+            <text x="154" y="144" text-anchor="middle" font-size="10" fill="#64748b">k=100</text>
+            <text x="154" y="4" text-anchor="middle" font-size="10" font-weight="bold" fill="#b91c1c">G 暴漲 ↑</text>
+          </g>
+
+          <!-- Warning Downward arrow: step -> 0 -->
+          <g transform="translate(20, 222)">
+            <rect width="186" height="60" rx="6" fill="#ffffff" stroke="#fca5a5" stroke-width="1"/>
+            <path d="M 30 18 L 150 18" stroke="#dc2626" stroke-width="2.5" marker-end="url(#m-arrow-red)"/>
+            <text x="93" y="38" text-anchor="middle" font-size="11" font-weight="bold" fill="#dc2626">有效步長 η/√G → 0</text>
+            <text x="93" y="52" text-anchor="middle" font-size="10" fill="#b91c1c">⚠ 步長過早死亡，訓練停滯</text>
+          </g>
+        </g>
+
+        <!-- COLUMN 2: RMSProp (Middle) -->
+        <g transform="translate(258, 40)">
+          <rect width="232" height="295" rx="8" fill="#fff7ed" stroke="#fdba74" stroke-width="1.6"/>
+          <rect x="12" y="10" width="208" height="26" rx="4" fill="#ffedd5"/>
+          <text x="116" y="27" text-anchor="middle" font-size="13" font-weight="bold" fill="#ea580c">2. RMSProp · 遺忘波浪</text>
+          <text x="116" y="52" text-anchor="middle" font-size="11" fill="#9a3412">v ← γv + (1−γ)g² (γ ≈ 0.9)</text>
+
+          <!-- Oscillating EMA wave -->
+          <g transform="translate(20, 68)">
+            <line x1="0" y1="130" x2="192" y2="130" stroke="#cbd5e1" stroke-width="1.4"/>
+            <!-- Wave path: goes up on steep, goes down on flat -->
+            <path d="M 5 95 Q 35 25, 65 60 T 120 115 T 185 70" fill="none" stroke="#ea580c" stroke-width="3"/>
+            <!-- Annotations -->
+            <circle cx="48" cy="38" r="4" fill="#ea580c"/>
+            <text x="48" y="22" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#c2410c">陡峭坡: v 升</text>
+            <circle cx="120" cy="115" r="4" fill="#16a34a"/>
+            <text x="120" y="105" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#15803d">平緩處: v 降！</text>
+            <text x="96" y="144" text-anchor="middle" font-size="10" font-weight="bold" fill="#ea580c">指數加權可升可降</text>
+          </g>
+
+          <!-- Revival banner -->
+          <g transform="translate(20, 222)">
+            <rect width="192" height="60" rx="6" fill="#ffffff" stroke="#fdba74" stroke-width="1"/>
+            <path d="M 30 18 L 160 18" stroke="#16a34a" stroke-width="2.5" marker-end="url(#m-arrow-green)"/>
+            <text x="96" y="38" text-anchor="middle" font-size="11" font-weight="bold" fill="#15803d">舊梯度被忘掉，步長復甦</text>
+            <text x="96" y="52" text-anchor="middle" font-size="10" fill="#9a3412">✓ 有效記憶窗 ≈ 1/(1−γ) 步</text>
+          </g>
+        </g>
+
+        <!-- COLUMN 3: Adam (Right) -->
+        <g transform="translate(506, 40)">
+          <rect width="238" height="295" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.8"/>
+          <!-- Default King Badge -->
+          <rect x="12" y="10" width="214" height="26" rx="4" fill="#dbeafe"/>
+          <text x="119" y="27" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563eb">3. Adam · 預設王者 👑</text>
+          <text x="119" y="52" text-anchor="middle" font-size="11" fill="#1e40af">動量(方向) + RMSProp(尺度)</text>
+
+          <!-- Dual Moments Visual -->
+          <g transform="translate(18, 68)">
+            <!-- Left half: Momentum Vector Arrow -->
+            <rect x="0" y="10" width="96" height="110" rx="6" fill="#ffffff" stroke="#bfdbfe" stroke-width="1"/>
+            <text x="48" y="28" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#2563eb">一階矩 m̂</text>
+            <path d="M 20 85 Q 45 40, 78 50" fill="none" stroke="#2563eb" stroke-width="2.6" marker-end="url(#m-arrow-blue)"/>
+            <text x="48" y="106" text-anchor="middle" font-size="9" fill="#1e40af">慣性前進方向</text>
+
+            <!-- Right half: RMSProp Scale Ellipse -->
+            <rect x="104" y="10" width="96" height="110" rx="6" fill="#ffffff" stroke="#bfdbfe" stroke-width="1"/>
+            <text x="152" y="28" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#0891b2">二階矩 √(v̂)</text>
+            <ellipse cx="152" cy="65" rx="34" ry="18" fill="none" stroke="#0891b2" stroke-width="2" stroke-dasharray="4 3"/>
+            <text x="152" y="106" text-anchor="middle" font-size="9" fill="#0e7490">坐標方差尺度</text>
+          </g>
+
+          <!-- Update formula box -->
+          <g transform="translate(18, 222)">
+            <rect width="202" height="60" rx="6" fill="#1e40af" stroke="#1d4ed8" stroke-width="1"/>
+            <text x="101" y="25" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">w ← w − η · m̂ / √(ε + v̂)</text>
+            <text x="101" y="44" text-anchor="middle" font-size="10" fill="#93c5fd">兼備平滑慣性與坐標自適應</text>
+          </g>
+        </g>
+
+        <!-- BOTTOM BANNER: Bias Correction Comparison -->
+        <g transform="translate(16, 345)">
+          <rect width="728" height="135" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.4"/>
+          <!-- Title -->
+          <text x="24" y="22" font-size="13" font-weight="bold" fill="#1e40af">核心轉折：偏置修正機制（Bias Correction）— 為何必須除以 (1 − γᵏ)？</text>
+
+          <!-- Curve visualization on left -->
+          <g transform="translate(20, 28)">
+            <line x1="30" y1="74" x2="220" y2="74" stroke="#94a3b8" stroke-width="1.2"/>
+            <line x1="30" y1="12" x2="30" y2="74" stroke="#94a3b8" stroke-width="1.2"/>
+            <text x="220" y="84" font-size="9" fill="#64748b">步數 k</text>
+            <text x="14" y="16" font-size="9" fill="#64748b">矩</text>
+
+            <!-- True level -->
+            <line x1="30" y1="26" x2="216" y2="26" stroke="#16a34a" stroke-width="1.4" stroke-dasharray="4 3"/>
+            <text x="175" y="20" font-size="8.5" font-weight="bold" fill="#16a34a">真實期望 E[g]</text>
+
+            <!-- Uncorrected gray dashed curve starting at 0 -->
+            <path d="M 30 74 Q 80 62, 130 44 T 216 28" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-dasharray="4 4"/>
+            <text x="110" y="66" font-size="8.5" fill="#64748b">未修正 m (初始為0被低估)</text>
+
+            <!-- Corrected blue curve immediately at true level -->
+            <path d="M 30 26 L 216 26" fill="none" stroke="#2563eb" stroke-width="2.4"/>
+            <circle cx="48" cy="26" r="3.5" fill="#2563eb"/>
+            <text x="56" y="40" font-size="8.5" font-weight="bold" fill="#2563eb">修正後 m̂ (立即無偏拉回！)</text>
+          </g>
+
+          <!-- Explanatory bullets on right -->
+          <g transform="translate(262, 34)">
+            <text x="0" y="14" font-size="10.5" font-weight="bold" fill="#b91c1c">● 痛點根源：</text>
+            <text x="70" y="14" font-size="10" fill="#334155">m, v 初始為 0，早期歷史權重缺位，估計值系統性偏低；</text>
+            <text x="70" y="28" font-size="10" fill="#64748b">例如 k=1 時 m = 0.1g，初值將真實梯度壓低整整 10 倍！</text>
+
+            <text x="0" y="48" font-size="10.5" font-weight="bold" fill="#2563eb">● 修正本質：</text>
+            <text x="70" y="48" font-size="10" fill="#334155">除以 1 − γᵏ。當 k 很小時 1 − γᵏ ≪ 1，修正倍率將估計值拉回；</text>
+            <text x="70" y="62" font-size="10" fill="#64748b">隨步數 k 增大，γᵏ → 0，修正因子趨近 1，影響自然淡出。</text>
+
+            <text x="0" y="82" font-size="10.5" font-weight="bold" fill="#15803d">● 實務關鍵：</text>
+            <text x="70" y="82" font-size="10" fill="#334155">若不校準，前幾步因 v, m 被壓制導致步幅嚴重畸形；</text>
+            <text x="70" y="96" font-size="10" fill="#64748b">偏置修正確保模型在關鍵起步期邁出正確步伐！</text>
+          </g>
+        </g>
+      </svg>
+      <div class="svg-caption">圖 1：優化器三欄演進對比（AdaGrad 累積死局 → RMSProp 遺忘波浪 → Adam 雙矩合體）與偏置修正機制</div>
+    </div>
+
+    <div>
+      <div class="method-box">
+        <h4>優化器演進的核心邏輯與轉折</h4>
+        <p>從古典梯度下降到現代預設 Adam，凝聚了深度學習學界十餘年的探索精髓：</p>
+        <ul>
+          <li><strong>AdaGrad 的歷史功績與死穴：</strong>開創了「為每個維度單獨調步長」的先河，但單調累加平方讓分母成了無底洞，終致步長在訓練中盤早夭。</li>
+          <li><strong>RMSProp 的遺忘智慧：</strong>引入 EMA 指數移動平均，用幾何衰減賦予演算法「遺忘」舊梯度的能力。平緩時步長復甦，陡峭時步長收斂，解除了早夭魔咒。</li>
+          <li><strong>Adam 的雙矩集大成：</strong>動量（一階矩）負責指引前進方向、穿透峽谷震盪；RMSProp（二階矩）負責平衡各維度尺度；偏置修正（除以 $1-\gamma^k$）則解決了初值為零導致的起跑遲滯難題！</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 11. 橫向全維度矩陣表 -->
+<section class="section" id="comparison">
+  <div class="sec-tag sustain">10 / 橫向矩陣 · Full Optimizer Comparison</div>
+  <h2 class="section-title">SGD vs Momentum vs AdaGrad vs RMSProp vs Adam 橫向全維度矩陣表
+    <span class="en">Comprehensive Comparison: SGD, Momentum, AdaGrad, RMSProp, and Adam Across All Dimensions</span>
+  </h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>優化器名稱</th>
+          <th>一階矩 (動量方向)</th>
+          <th>二階矩 (自適應尺度)</th>
+          <th>歷史遺忘機制</th>
+          <th>偏置修正</th>
+          <th>核心更新式</th>
+          <th>適用場景與評析</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>標準 SGD</strong></td>
+          <td>無 (單純負梯度)</td>
+          <td>無 (全域單一步長 $\eta$)</td>
+          <td>無</td>
+          <td>無</td>
+          <td>$w \leftarrow w - \eta g$</td>
+          <td>凸最佳化基準；在病態峽谷中震盪劇烈，易卡在鞍點。</td>
+        </tr>
+        <tr>
+          <td><strong>Momentum SGD</strong></td>
+          <td>有 ($\beta \approx 0.9$)</td>
+          <td>無 (全域單一步長 $\eta$)</td>
+          <td>有 (動量 EMA)</td>
+          <td>無</td>
+          <td>$v \leftarrow \beta v + \eta g$<br/>$w \leftarrow w - v$</td>
+          <td>電腦視覺（ResNet 等）極致泛化時常選；方向平滑但無坐標縮放。</td>
+        </tr>
+        <tr>
+          <td><strong>AdaGrad</strong></td>
+          <td>無</td>
+          <td>有 (累加和 $G$)</td>
+          <td><strong>無 (只增不減！)</strong></td>
+          <td>無</td>
+          <td>$w \leftarrow w - \frac{\eta}{\sqrt{G+\varepsilon}} g$</td>
+          <td>適合稀疏特徵（NLP 詞向量）；分母無限增大導致步長早夭。</td>
+        </tr>
+        <tr>
+          <td><strong>RMSProp</strong></td>
+          <td>無</td>
+          <td>有 (指數平均 $v$)</td>
+          <td><strong>有 ($\gamma \approx 0.9$)</strong></td>
+          <td>無</td>
+          <td>$w \leftarrow w - \frac{\eta}{\sqrt{v+\varepsilon}} g$</td>
+          <td>迴圈神經網路 (RNN)、強化學習；能遺忘舊梯度，步長不早夭。</td>
+        </tr>
+        <tr style="background: rgba(37, 99, 235, 0.06);">
+          <td><strong>Adam (預設王者)</strong></td>
+          <td><strong>有 ($\beta_1 = 0.9$)</strong></td>
+          <td><strong>有 ($\beta_2 = 0.999$)</strong></td>
+          <td><strong>有 (雙矩 EMA)</strong></td>
+          <td><strong>有 ($1-\beta^k$)</strong></td>
+          <td>$w \leftarrow w - \frac{\eta}{\sqrt{\widehat{v}+\varepsilon}} \widehat{m}$</td>
+          <td><strong>現代深度學習通用首選 (Transformer / LLM / GNN)；調參最穩健！</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 12. 大師箴言 -->
+<section class="section" id="master-maxims">
+  <div class="sec-tag sustain">11 / 智慧結晶 · Four Inviolable Laws</div>
+  <h2 class="section-title">大師箴言：現代深度最佳化四大鐵律
+    <span class="en">Master Maxims: The Four Inviolable Laws of Modern Deep Optimization</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>一、指數遺忘律：累積過猶不及，EMA 賦予重生自由</h3>
+      <div class="sub-en">The Law of Exponential Forgetting</div>
+      <p>無限累積歷史梯度的代價是步長早夭。唯有引入指數衰減（EMA），讓舊記憶幾何褪色，才能在曲折多變的損失景觀中保持生生不息的自適應調控力。</p>
+    </div>
+    <div class="card positive">
+      <h3>二、雙矩互補律：一階掌方向、二階量尺度，各司其職</h3>
+      <div class="sub-en">The Law of Dual-Moment Synergy</div>
+      <p>單純動量不知維度懸殊，單純 RMSProp 不識慣性方向。動量平滑削平峽谷之字形震盪，方差縮放抹平特徵尺度鴻溝，兩強協同方成大器。</p>
+    </div>
+    <div class="card positive">
+      <h3>三、偏置校準律：零初值必遭低估，$1/(1-\gamma^k)$ 拉回早夭幼苗</h3>
+      <div class="sub-en">The Law of Bias Rectification</div>
+      <p>看似不起眼的幾何除數 $1-\gamma^k$，承擔著消除零初值人為低估的關鍵重任。沒有偏置修正的保駕護航，優化器在前十步將陷入步幅嚴重畸形的泥潭。</p>
+    </div>
+    <div class="card positive">
+      <h3>四、預設首選律：遇事不決用 Adam，未知領域的自適應基石</h3>
+      <div class="sub-en">The Law of Default Supremacy</div>
+      <p>儘管在某些特定任務的極限泛化上 SGD+動量仍有精調優勢，但面對任何全新架構與未知任務，Adam 始終是收斂最穩、試錯成本最低的絕對首選！</p>
+    </div>
+  </div>
+</section>
+
+<!-- 13. 互動探索實驗室 -->
+<section class="section" id="lab">
+  <div class="sec-tag activate">12 / 實戰模擬 · Interactive Simulation Lab</div>
+  <h2 class="section-title">互動探索實驗室：Adam 超參數調節器與狹長峽谷軌跡模擬
+    <span class="en">Interactive Lab: Adam Hyperparameter Tuner &amp; Moment Trajectory on Ill-Conditioned Ravine</span>
+  </h2>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <div class="lab-ctrl">
+        <label for="kp11-preset">演算法預設：</label>
+        <select id="kp11-preset">
+          <option value="adam-corr" selected>Adam (預設王者 · 偏置修正 ON)</option>
+          <option value="adam-nocorr">Adam (未偏置修正 · 偏置修正 OFF)</option>
+          <option value="rmsprop">RMSProp 模式 (β1=0, β2=0.99)</option>
+          <option value="momentum">Momentum 模式 (β1=0.9, β2=0)</option>
+        </select>
+      </div>
+      <div class="lab-ctrl">
+        <label for="kp11-b1">β₁ (動量):</label>
+        <input type="range" id="kp11-b1" min="0" max="0.95" step="0.05" value="0.9">
+        <span class="val" id="kp11-b1-v">0.90</span>
+      </div>
+      <div class="lab-ctrl">
+        <label for="kp11-b2">β₂ (方差):</label>
+        <input type="range" id="kp11-b2" min="0.5" max="0.999" step="0.005" value="0.999">
+        <span class="val" id="kp11-b2-v">0.999</span>
+      </div>
+      <div class="lab-ctrl">
+        <label for="kp11-eta">學習率 η:</label>
+        <input type="range" id="kp11-eta" min="0.05" max="0.6" step="0.05" value="0.25">
+        <span class="val" id="kp11-eta-v">0.25</span>
+      </div>
+      <div class="lab-ctrl">
+        <input type="checkbox" id="kp11-bias-corr" checked>
+        <label for="kp11-bias-corr" style="cursor:pointer;">啟用偏置修正 (Bias Correction)</label>
+      </div>
+      <button class="lab-btn" id="kp11-step">單步執行</button>
+      <button class="lab-btn accent" id="kp11-run">快進 10 步</button>
+      <button class="lab-btn secondary" id="kp11-reset">重設起點</button>
+    </div>
+
+    <div class="lab-display">
+      <div class="lab-canvas-container">
+        <canvas id="kp11-cv" width="620" height="420"></canvas>
+      </div>
+      <div class="lab-readout" id="kp11-ro">
+        載入中...
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 14. 思考題 -->
+<section class="section" id="quiz">
+  <div class="sec-tag inquiry">13 / 檢測評量 · Checkpoint Quizzes</div>
+  <h2 class="section-title">隨堂檢測：四題掌握 RMSProp 與 Adam 核心機制
+    <span class="en">Checkpoint Quizzes: Mastering RMSProp, Adam Dual Moments, and Bias Correction</span>
+  </h2>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-card" data-ans="B">
+    <h4>題目 1：RMSProp 相對 AdaGrad 的關鍵改進是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 引入 Hessian 資訊</button>
+      <button data-opt="B">B. 用指數移動平均取代梯度平方的累積和</button>
+      <button data-opt="C">C. 取消學習率</button>
+      <button data-opt="D">D. 改用全梯度</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-card" data-ans="A" style="margin-top: 24px;">
+    <h4>題目 2：Adam 同時維護哪兩種矩估計？</h4>
+    <div class="options">
+      <button data-opt="A">A. 梯度的均值與方差（一階矩與二階矩）</button>
+      <button data-opt="B">B. 損失的均值與方差</button>
+      <button data-opt="C">C. 權重的均值與方差</button>
+      <button data-opt="D">D. 啟用值的均值與方差</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 3：Adam 偏置修正（式 (44)–(45)）的目的是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 加速收斂到 sharp minima</button>
+      <button data-opt="B">B. 補償早期迭代中 $m$、$v$ 初始為 0 造成的系統性偏差</button>
+      <button data-opt="C">C. 增大 batch size</button>
+      <button data-opt="D">D. 替代 L2 正則化</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 4：下列何者正確描述 Adam 在實務中的地位？</h4>
+    <div class="options">
+      <button data-opt="A">A. 僅用於理論研究</button>
+      <button data-opt="B">B. 現代深度學習中最廣泛使用的優化器之一</button>
+      <button data-opt="C">C. 已被 SGD 完全取代</button>
+      <button data-opt="D">D. 只能用在凸最佳化</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+</section>
+
+<script>
+// Quiz Interactive Logic with Dynamic MathJax Rendering
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('correct', 'wrong'));
+      const choice = btn.getAttribute('data-opt');
+      if (choice === ans) {
+        btn.classList.add('correct');
+        fb.className = 'feedback show ok';
+        fb.innerHTML = '<strong>✅ 答對了！</strong> ' + getExplanation(card, ans);
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'feedback show no';
+        fb.innerHTML = '<strong>❌ 答錯了！</strong> 請重新思考：' + getExplanation(card, ans);
+      }
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+function getExplanation(card, ans) {
+  const text = card.innerText;
+  if (ans === 'B' && text.includes('RMSProp 相對 AdaGrad')) {
+    return 'RMSProp 的核心貢獻是將 AdaGrad 的梯度平方無界累積和改為指數移動平均（EMA），賦予優化器遺忘遠古梯度的能力，避免了步長早夭歸零。';
+  } else if (ans === 'A' && text.includes('兩種矩估計')) {
+    return 'Adam 同時維護梯度的均值（一階矩 $\\boldsymbol{m}$，對應動量方向）與未中心化方差（二階矩 $v$，對應 RMSProp 坐標尺度縮放）。';
+  } else if (ans === 'B' && text.includes('偏置修正')) {
+    return '偏置修正（式 (44)–(45)）除以 $1-\\gamma^k$，旨在消除因 $\\boldsymbol{m}$ 和 $v$ 初始化為 0 導致早期估計值被系統性嚴重低估的缺陷。';
+  } else if (ans === 'B' && text.includes('Adam 在實務中的地位')) {
+    return 'Adam 是現代深度學習中最主流、最適應各類複雜模型（如 Transformer、ResNet 等）的預設優化器。';
+  }
+  return '';
+}
+
+// Progress Bar
+window.addEventListener('scroll', () => {
+  const top = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('progressTop').style.width = (top / docH * 100) + '%';
+});
+
+// Interactive Lab: Adam Optimizer Simulation on 2D Elliptic Ravine
+(function() {
+  var cv = document.getElementById('kp11-cv');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var ro = document.getElementById('kp11-ro');
+
+  var presetSelect = document.getElementById('kp11-preset');
+  var b1Slider = document.getElementById('kp11-b1');
+  var b2Slider = document.getElementById('kp11-b2');
+  var etaSlider = document.getElementById('kp11-eta');
+  var biasCheckbox = document.getElementById('kp11-bias-corr');
+
+  var b1Val = parseFloat(b1Slider.value);
+  var b2Val = parseFloat(b2Slider.value);
+  var etaVal = parseFloat(etaSlider.value);
+  var useBiasCorr = biasCheckbox.checked;
+
+  // Narrow ravine: f(x, y) = 0.5 * (cond * x^2 + y^2)
+  var cond = 14.0;
+  var eps = 1e-8;
+
+  // State
+  var startX = -3.2, startY = 2.2;
+  var x = startX, y = startY;
+  var mx = 0, my = 0;
+  var vx = 0, vy = 0;
+  var stepK = 0;
+  var hist = [{ x: startX, y: startY, k: 0, mx: 0, my: 0, vx: 0, vy: 0, m_hat_x: 0, m_hat_y: 0, v_hat_x: 0, v_hat_y: 0 }];
+
+  function f(px, py) {
+    return 0.5 * (cond * px * px + py * py);
+  }
+
+  function grad(px, py) {
+    return { gx: cond * px, gy: py };
+  }
+
+  function fmt(val, d) {
+    var digits = (d !== undefined) ? d : 3;
+    return (Math.round(val * Math.pow(10, digits)) / Math.pow(10, digits)).toFixed(digits);
+  }
+
+  function draw() {
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    var xRange = 4.2, yRange = 3.2;
+    function toCanvasX(px) { return W / 2 + (px / xRange) * (W * 0.44); }
+    function toCanvasY(py) { return H / 2 - (py / yRange) * (H * 0.44); }
+
+    // Draw Axes
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(30, toCanvasY(0)); ctx.lineTo(W - 30, toCanvasY(0));
+    ctx.moveTo(toCanvasX(0), 20); ctx.lineTo(toCanvasX(0), H - 20);
+    ctx.stroke();
+
+    // Draw Elliptic Contours
+    var levels = [0.3, 1.2, 3.5, 7.5, 14.0, 24.0, 38.0];
+    for (var i = 0; i < levels.length; i++) {
+      var cVal = levels[i];
+      var rx = Math.sqrt(2 * cVal / cond);
+      var ry = Math.sqrt(2 * cVal);
+      var cx = toCanvasX(0), cy = toCanvasY(0);
+      var radX = rx / xRange * (W * 0.44);
+      var radY = ry / yRange * (H * 0.44);
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, radX, radY, 0, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+
+    // Minimum point (0, 0)
+    ctx.fillStyle = '#16a34a';
+    ctx.beginPath();
+    ctx.arc(toCanvasX(0), toCanvasY(0), 4.5, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.font = '11px sans-serif';
+    ctx.fillText('谷底 (0, 0)', toCanvasX(0) + 7, toCanvasY(0) + 14);
+
+    // Draw Trajectory line
+    if (hist.length > 1) {
+      ctx.strokeStyle = useBiasCorr ? '#2563eb' : '#ea580c';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      for (var j = 0; j < hist.length; j++) {
+        var hx = toCanvasX(hist[j].x), hy = toCanvasY(hist[j].y);
+        if (j === 0) ctx.moveTo(hx, hy);
+        else ctx.lineTo(hx, hy);
+      }
+      ctx.stroke();
+    }
+
+    // Trajectory Points
+    for (var m = 0; m < hist.length; m++) {
+      var isCur = (m === hist.length - 1);
+      ctx.beginPath();
+      ctx.arc(toCanvasX(hist[m].x), toCanvasY(hist[m].y), isCur ? 5.5 : 3.2, 0, 2 * Math.PI);
+      ctx.fillStyle = isCur ? '#dc2626' : (m === 0 ? '#1e40af' : (useBiasCorr ? '#3b82f6' : '#f97316'));
+      ctx.fill();
+    }
+  }
+
+  function report() {
+    var curF = f(x, y);
+    var g = grad(x, y);
+    var gNorm = Math.sqrt(g.gx * g.gx + g.gy * g.gy);
+    var last = hist[hist.length - 1];
+
+    var corrFactor1 = (stepK > 0) ? (1 / (1 - Math.pow(b1Val, stepK))) : 1;
+    var corrFactor2 = (stepK > 0) ? (1 / (1 - Math.pow(b2Val, stepK))) : 1;
+
+    var statusBadge = '';
+    if (gNorm < 0.05 || curF < 0.005) {
+      statusBadge = '<div class="status-badge converged">✅ 成功收斂抵達谷底 (|∇f| &lt; 0.05)</div>';
+    } else if (useBiasCorr && stepK > 0 && stepK <= 5) {
+      statusBadge = '<div class="status-badge boosted">🚀 偏置修正生效中：初期動量/方差無偏校準！(校準倍率: ' + fmt(corrFactor1, 1) + 'x / ' + fmt(corrFactor2, 1) + 'x)</div>';
+    } else if (!useBiasCorr && stepK > 0 && stepK <= 5) {
+      statusBadge = '<div class="status-badge warning">⚠️ 未偏置修正：初值為 0 導致早期矩估計嚴重被低估！</div>';
+    } else {
+      statusBadge = '<div class="status-badge running">🏃 沿著狹長峽谷高速推進中...</div>';
+    }
+
+    ro.innerHTML =
+      '<strong>當前步數 k：</strong> ' + stepK + '<br/>' +
+      '<strong>座標 (x, y)：</strong> (' + fmt(x, 3) + ', ' + fmt(y, 3) + ')<br/>' +
+      '<strong>損失值 f(x, y)：</strong> ' + fmt(curF, 4) + '<br/>' +
+      '<strong>梯度範數 ‖∇f‖：</strong> ' + fmt(gNorm, 3) + '<br/>' +
+      '<strong>一階矩 m (raw)：</strong> (' + fmt(mx, 4) + ', ' + fmt(my, 4) + ')<br/>' +
+      '<strong>修正後 m̂ (corrected)：</strong> (' + fmt(last.m_hat_x, 4) + ', ' + fmt(last.m_hat_y, 4) + ')<br/>' +
+      '<strong>二階矩 v (raw)：</strong> (' + fmt(vx, 4) + ', ' + fmt(vy, 4) + ')<br/>' +
+      '<strong>修正後 v̂ (corrected)：</strong> (' + fmt(last.v_hat_x, 4) + ', ' + fmt(last.v_hat_y, 4) + ')<br/>' +
+      '<strong>修正倍率 (1/(1−βᵏ))：</strong> 1階: ' + fmt(corrFactor1, 2) + 'x | 2階: ' + fmt(corrFactor2, 2) + 'x<br/>' +
+      '<strong>偏置修正開關：</strong> ' + (useBiasCorr ? '<span style="color:#16a34a;font-weight:bold;">已開啟 (ON)</span>' : '<span style="color:#dc2626;font-weight:bold;">已關閉 (OFF)</span>') + '<br/>' +
+      '<strong>狀態判定：</strong><br/>' + statusBadge;
+  }
+
+  function stepOnce() {
+    var g = grad(x, y);
+    var gNorm = Math.sqrt(g.gx * g.gx + g.gy * g.gy);
+    if (gNorm < 0.005) return;
+
+    stepK++;
+
+    // Update raw biased moments
+    mx = b1Val * mx + (1 - b1Val) * g.gx;
+    my = b1Val * my + (1 - b1Val) * g.gy;
+
+    vx = b2Val * vx + (1 - b2Val) * (g.gx * g.gx);
+    vy = b2Val * vy + (1 - b2Val) * (g.gy * g.gy);
+
+    // Bias correction
+    var m_hat_x = mx, m_hat_y = my;
+    var v_hat_x = vx, v_hat_y = vy;
+
+    if (useBiasCorr) {
+      var c1 = 1 - Math.pow(b1Val, stepK);
+      var c2 = 1 - Math.pow(b2Val, stepK);
+      if (c1 > 1e-12) {
+        m_hat_x = mx / c1;
+        m_hat_y = my / c1;
+      }
+      if (c2 > 1e-12) {
+        v_hat_x = vx / c2;
+        v_hat_y = vy / c2;
+      }
+    }
+
+    // Parameter update
+    var step_x = 0, step_y = 0;
+    if (b2Val > 0) {
+      step_x = etaVal * m_hat_x / (Math.sqrt(Math.max(0, v_hat_x)) + eps);
+      step_y = etaVal * m_hat_y / (Math.sqrt(Math.max(0, v_hat_y)) + eps);
+    } else {
+      // Pure momentum SGD mode
+      step_x = etaVal * m_hat_x;
+      step_y = etaVal * m_hat_y;
+    }
+
+    x = x - step_x;
+    y = y - step_y;
+
+    hist.push({
+      x: x, y: y, k: stepK,
+      mx: mx, my: my,
+      vx: vx, vy: vy,
+      m_hat_x: m_hat_x, m_hat_y: m_hat_y,
+      v_hat_x: v_hat_x, v_hat_y: v_hat_y
+    });
+
+    if (hist.length > 100) hist.shift();
+  }
+
+  function sync() {
+    b1Val = parseFloat(b1Slider.value);
+    document.getElementById('kp11-b1-v').textContent = fmt(b1Val, 2);
+
+    b2Val = parseFloat(b2Slider.value);
+    document.getElementById('kp11-b2-v').textContent = fmt(b2Val, 3);
+
+    etaVal = parseFloat(etaSlider.value);
+    document.getElementById('kp11-eta-v').textContent = fmt(etaVal, 2);
+
+    useBiasCorr = biasCheckbox.checked;
+
+    draw();
+    report();
+  }
+
+  function resetState() {
+    x = startX;
+    y = startY;
+    mx = 0; my = 0;
+    vx = 0; vy = 0;
+    stepK = 0;
+    hist = [{ x: startX, y: startY, k: 0, mx: 0, my: 0, vx: 0, vy: 0, m_hat_x: 0, m_hat_y: 0, v_hat_x: 0, v_hat_y: 0 }];
+    sync();
+  }
+
+  presetSelect.addEventListener('change', function() {
+    var p = this.value;
+    if (p === 'adam-corr') {
+      b1Slider.value = 0.9;
+      b2Slider.value = 0.999;
+      etaSlider.value = 0.25;
+      biasCheckbox.checked = true;
+    } else if (p === 'adam-nocorr') {
+      b1Slider.value = 0.9;
+      b2Slider.value = 0.999;
+      etaSlider.value = 0.25;
+      biasCheckbox.checked = false;
+    } else if (p === 'rmsprop') {
+      b1Slider.value = 0.0;
+      b2Slider.value = 0.99;
+      etaSlider.value = 0.25;
+      biasCheckbox.checked = false;
+    } else if (p === 'momentum') {
+      b1Slider.value = 0.9;
+      b2Slider.value = 0.5; // low b2
+      etaSlider.value = 0.10;
+      biasCheckbox.checked = false;
+    }
+    resetState();
+  });
+
+  b1Slider.addEventListener('input', function() {
+    b1Val = parseFloat(this.value);
+    document.getElementById('kp11-b1-v').textContent = fmt(b1Val, 2);
+  });
+
+  b2Slider.addEventListener('input', function() {
+    b2Val = parseFloat(this.value);
+    document.getElementById('kp11-b2-v').textContent = fmt(b2Val, 3);
+  });
+
+  etaSlider.addEventListener('input', function() {
+    etaVal = parseFloat(this.value);
+    document.getElementById('kp11-eta-v').textContent = fmt(etaVal, 2);
+  });
+
+  biasCheckbox.addEventListener('change', function() {
+    useBiasCorr = this.checked;
+    report();
+    draw();
+  });
+
+  document.getElementById('kp11-step').addEventListener('click', function() {
+    stepOnce();
+    sync();
+  });
+
+  document.getElementById('kp11-run').addEventListener('click', function() {
+    for (var s = 0; s < 10; s++) {
+      stepOnce();
+    }
+    sync();
+  });
+
+  document.getElementById('kp11-reset').addEventListener('click', resetState);
+
+  resetState();
+})();
+</script>
+</body>
+</html>

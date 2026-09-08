@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch03 · KP04 線搜索與最陡下降 — Line Search &amp; Steepest Descent</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(108,92,231,.24), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(9,132,227,.18), transparent 30%),
+              linear-gradient(135deg, #0a0e27 0%, #131b3e 50%, #1e1338 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(10, 14, 39, .25);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(38px, 4.6vw, 66px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(20px, 2.2vw, 32px);
+  color: #a5b4fc;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #38bdf8;
+  border-radius: 999px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 880px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #38bdf8, #e84393);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #7dd3fc !important; fill: #7dd3fc !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #cbd5e1; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  display: block;
+}
+.half-layout .visual > svg {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  display: block;
+}
+.half-layout .visual .svg-caption {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+  font-size: var(--t5);
+  color: var(--text-low);
+  letter-spacing: .05em;
+}
+@media (max-width: 1100px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+
+/* 高橋流置中修復：卡片居中於內容閱讀區 (831px 中心軸，左右邊距各 231px) */
+.section .takahashi {
+  text-align: center;
+  padding: 80px 36px;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+}
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin: 28px 0;
+}
+.lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  color: var(--ink);
+}
+.lab-ctrl select, .lab-ctrl input[type="range"] {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  font-size: 14px;
+}
+.lab-ctrl input[type="range"] {
+  width: 110px;
+}
+.lab-ctrl span.val {
+  min-width: 44px;
+  font-family: var(--mono);
+  color: var(--primary);
+  font-weight: bold;
+}
+.lab-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all .2s;
+}
+.lab-btn:hover {
+  background: hsl(248, 58%, 38%);
+  transform: translateY(-1px);
+}
+.lab-btn.secondary {
+  background: #64748b;
+}
+.lab-btn.secondary:hover {
+  background: #475569;
+}
+.lab-btn.accent {
+  background: #0ea5e9;
+}
+.lab-btn.accent:hover {
+  background: #0284c7;
+}
+.lab-display {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .lab-display { grid-template-columns: 1fr; }
+}
+.lab-canvas-container {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.lab-readout {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+.lab-readout .status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+  margin-top: 4px;
+}
+.status-badge.running { background: #e0f2fe; color: #0369a1; }
+.status-badge.halved { background: #fef3c7; color: #b45309; }
+.status-badge.orthogonal { background: #ede9fe; color: #6b21a8; }
+.status-badge.converged { background: #dcfce7; color: #15803d; }
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP04 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Core Question</a></li>
+    <li><a href="#linesearch-intro">線搜索核心 · Line Search Intro</a></li>
+    <li><a href="#algorithm1">演算法一 · Algorithm 1</a></li>
+    <li><a href="#step-halving">步長減半 · Step-Halving &amp; 1D</a></li>
+    <li><a href="#armijo-wolfe">進階準則 · Armijo &amp; Wolfe</a></li>
+    <li><a href="#steepest-descent">最陡下降 · Steepest Descent</a></li>
+    <li><a href="#exact-vs-backtracking">精確 vs 回溯 · Exact vs Backtracking</a></li>
+    <li><a href="#orthogonality">正交鋸齒 · Orthogonal Zig-Zag</a></li>
+    <li><a href="#comparison">三大策略對比 · Comparison</a></li>
+    <li><a href="#master-maxims">大師四大鐵律 · Master Laws</a></li>
+    <li><a href="#lab">互動實驗室 · Interactive Lab</a></li>
+    <li><a href="#quiz">思考題 · Checkpoint</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">IDL 115 · CHAPTER 3 · KP-04 · TEACHING DECK</span>
+    <h1>線搜索與最陡下降：步子太大就對半砍
+      <span class="hero-title-en">Line Search &amp; Steepest Descent: Backtracking, Exact 1D Minimization, and Orthogonal Zig-Zagging</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      理想步長 $1/L$ 常常未知。線搜索（Line Search）每步動態試探、不滿足就步長減半；最陡下降（Steepest Descent）則解一維最佳化、沿負梯度走得最遠。透視 Armijo-Wolfe 充分下降準則、相鄰步垂直定理與深度學習實務步長哲學。
+    </p>
+    <p class="bilingual-en" style="color: #cbd5e1; max-width: 840px; margin: 10px auto 0;">
+      When the Lipschitz constant $L$ remains elusive, line search dynamically halves overshoot step sizes, while steepest descent performs exact 1D minimization along negative gradients. Demystifying Armijo-Wolfe bounds, orthogonal zig-zag traps, and deep learning adaptive realities.
+    </p>
+  </div>
+</section>
+
+<!-- 2. 大問句 -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="sec-tag inquiry">01 / 核心提問 · Core Question</div>
+    <div class="quote">
+      「步子邁太大容易扯到，走太小又天荒地老——步長到底怎麼選？」
+      <small>理想步長 $1/L$ 宛如天書未知，線搜索說「不服就對半砍」，最陡下降說「沿著這條線算到底」！<br/>
+        <span class="bilingual-en-inline">Overshooting diverges, while tiny creeping takes forever—how should step sizes be chosen dynamically in high-dimensional optimization?</span>
+      </small>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 線搜索核心思想 -->
+<section class="section" id="linesearch-intro">
+  <div class="sec-tag sustain">02 / 理想與現實 · Ideal vs Reality</div>
+  <h2 class="section-title">線搜索核心思想：擺脫未知 Lipschitz 常數的束縛
+    <span class="en">Core Concept of Line Search: Liberating Descent from Unknown Lipschitz Constants</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>理想步長 $1/L$ 的困境與線搜索目標（式 (5)）</h4>
+    <p>在光滑凸最佳化中，理論保證單調下降的步長是 $\eta \le 1/L$，但實務中 Lipschitz 常數 $L$ 通常未知且計算代價高達 $\mathcal{O}(d^3)$。<strong>線搜索（Line Search）</strong>的做法是：每一步<strong>動態調整</strong>步長 $\eta$，直到找到能讓目標損失下降的合適步長：</p>
+    <p>$$ f\left(\boldsymbol{w}^{(k)}-\eta\nabla f\left(\boldsymbol{w}^{(k)}\right)\right)\lt f\left(\boldsymbol{w}^{(k)}\right) \tag{5} $$</p>
+    <p><strong>核心哲學：</strong>不在出發前算計未知的全域常數，而是在每一步的前進射線上動態試探；一旦發現更新後 loss 上升，立刻縮小步長！</p>
+  </div>
+  <p>
+    線搜索是古典數值最佳化中最重要的安全煞車機制。它將高維複雜參數空間的尋優問題，在當前梯度射線上簡化為「沿著單一維度尋找合適步長」的子任務。
+    <span class="bilingual-en">The ideal step size 1/L relies on the Lipschitz constant, which is practically intractable to compute in deep learning. Line search solves this by dynamically adapting step size along the negative gradient ray until descent is achieved.</span>
+  </p>
+</section>
+
+<!-- 4. 演算法 1 流程 -->
+<section class="section" id="algorithm1">
+  <div class="sec-tag sustain">03 / 演算法架構 · Algorithm Framework</div>
+  <h2 class="section-title">演算法 1：帶減半線搜索的梯度下降法
+    <span class="en">Algorithm 1: Gradient Descent with Step-Halving Line Search</span>
+  </h2>
+
+  <div class="highlight-box">
+    <h4>雙層迴圈架構：外層梯度下降，內層調步長</h4>
+    <p>線搜索的執行流程清晰直覺，每個梯度下降迭代裡，皆包裹了一個步長縮放的內層回饋迴圈：</p>
+    <ol style="margin: 8px 0 8px 24px; line-height: 1.8;">
+      <li><strong>初始大膽試探：</strong>每輪迭代從初始步長 $\eta = 1$ 開始。</li>
+      <li><strong>線搜索條件檢驗（式 (5)）：</strong>檢查更新後 loss 是否確實下降：$f(\boldsymbol{w}^{(k)}-\eta\nabla f(\boldsymbol{w}^{(k)})) < f(\boldsymbol{w}^{(k)})$。</li>
+      <li><strong>步長幾何減半：</strong>若不滿足，<strong>步長減半</strong>：$\eta \leftarrow \eta/2$，回到步驟 2 重新檢驗。</li>
+      <li><strong>確認拍板更新：</strong>重複直到式 (5) 成立，立即用此 $\eta$ 拍板更新權重：$\boldsymbol{w}^{(k+1)} := \boldsymbol{w}^{(k)}-\eta\nabla f(\boldsymbol{w}^{(k)})$。</li>
+    </ol>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>1. 為什麼從 $\eta=1$ 開始？</h3>
+      <div class="sub-en">Newton Step Consistency</div>
+      <p>標準牛頓法與無量綱二次模型的最優步長恰好為 1。以 1 為上限能給予模型最大膽的大步跨越機會，避免人為將步長限制得過於保守。</p>
+    </div>
+    <div class="card positive">
+      <h3>2. 為什麼減半一定能成功？</h3>
+      <div class="sub-en">Guaranteed Finite Termination</div>
+      <p>根據下降引理，當 $\eta < 1/L$ 時目標函式必下降。由於 $\eta/2^m \to 0$，幾何級數遞減保證在有限次減半內必跌入安全下降區間。</p>
+    </div>
+    <div class="card positive">
+      <h3>3. 內層迴圈的代價是什麼？</h3>
+      <div class="sub-en">Forward Pass Overhead</div>
+      <p>每一次減半試探都需要重新計算一次目標函式值 $f(\boldsymbol{w} - \eta \nabla f)$，意味著外層一次梯度計算背後可能伴隨多次前向傳播。</p>
+    </div>
+    <div class="card positive">
+      <h3>4. 深度學習為何少用？</h3>
+      <div class="sub-en">Stochastic Noise &amp; GPU Latency</div>
+      <p>小批次（Mini-batch）資料帶有隨機噪聲，在當前批次精確線搜索不代表全集下降；且動態條件分支大幅降低 GPU 平行運算效率。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 步長減半視覺化與 1D 損失切片 -->
+<section class="section" id="step-halving">
+  <div class="sec-tag sustain">04 / 圖解分析 · Visualizing Step-Halving</div>
+  <h2 class="section-title">步長減半視覺化：1D 損失切片與「肯縮」的哲學
+    <span class="en">Visualizing Step-Halving: 1D Loss Slice along the Gradient Ray</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg style="max-width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="-apple-system, BlinkMacSystemFont, sans-serif">
+        <defs>
+          <marker id="m4b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/>
+          </marker>
+          <marker id="m4r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#e53e3e"/>
+          </marker>
+          <marker id="m4g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/>
+          </marker>
+        </defs>
+
+        <rect x="0" y="0" width="720" height="360" fill="#ffffff" rx="10"/>
+        <text x="360" y="20" text-anchor="middle" font-size="15" font-weight="bold" fill="#1e40af">線搜索：從 η=1 試走，不下降就減半——敢走不如肯縮</text>
+
+        <!-- LEFT: 1D loss slice vs eta -->
+        <rect x="12" y="30" width="360" height="236" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.4"/>
+        <text x="192" y="50" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">1D 切片：試探步長 vs 更新後損失</text>
+
+        <!-- axes -->
+        <line x1="48" y1="230" x2="350" y2="230" stroke="#64748b" stroke-width="1.4"/>
+        <line x1="48" y1="64" x2="48" y2="230" stroke="#64748b" stroke-width="1.4"/>
+        <text x="348" y="246" font-size="10" fill="#64748b">η</text>
+        <text x="22" y="72" font-size="10" fill="#64748b">f</text>
+
+        <!-- current-loss dashed line -->
+        <line x1="48" y1="168" x2="350" y2="168" stroke="#1e40af" stroke-width="1.6" stroke-dasharray="6 4"/>
+        <text x="268" y="160" font-size="9" fill="#1e40af">當前損失 f(w)</text>
+
+        <!-- loss curve as function of eta: starts at current, goes up then down below -->
+        <path d="M48 168 C 90 60, 150 70, 200 150 C 240 210, 280 200, 330 188" fill="none" stroke="#2563eb" stroke-width="2.4"/>
+
+        <!-- eta = 1 red reject -->
+        <line x1="112" y1="230" x2="112" y2="92" stroke="#e53e3e" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <circle cx="112" cy="92" r="8" fill="#e53e3e"/>
+        <text x="112" y="80" text-anchor="middle" font-size="10" font-weight="bold" fill="#c53030">η=1</text>
+        <rect x="78" y="102" width="68" height="18" rx="4" fill="#fef2f2" stroke="#e53e3e" stroke-width="1"/>
+        <text x="112" y="115" text-anchor="middle" font-size="9" font-weight="bold" fill="#c53030">reject (拒絕)</text>
+        <text x="112" y="246" text-anchor="middle" font-size="9" fill="#c53030">1</text>
+
+        <!-- eta = 1/2 orange -->
+        <line x1="196" y1="230" x2="196" y2="148" stroke="#ea580c" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <circle cx="196" cy="148" r="8" fill="#ea580c"/>
+        <text x="196" y="136" text-anchor="middle" font-size="10" font-weight="bold" fill="#c2410c">η=1/2</text>
+        <rect x="162" y="176" width="68" height="18" rx="4" fill="#fff7ed" stroke="#ea580c" stroke-width="1"/>
+        <text x="196" y="189" text-anchor="middle" font-size="9" font-weight="bold" fill="#c2410c">still high (仍高)</text>
+        <text x="196" y="246" text-anchor="middle" font-size="9" fill="#c2410c">1/2</text>
+
+        <!-- eta = 1/4 green accept -->
+        <line x1="280" y1="230" x2="280" y2="196" stroke="#16a34a" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <circle cx="280" cy="196" r="8" fill="#16a34a"/>
+        <text x="280" y="188" text-anchor="middle" font-size="10" font-weight="bold" fill="#15803d">η=1/4</text>
+        <rect x="248" y="204" width="64" height="18" rx="4" fill="#f0fdf4" stroke="#16a34a" stroke-width="1"/>
+        <text x="280" y="217" text-anchor="middle" font-size="9" font-weight="bold" fill="#15803d">accept (接受)</text>
+        <text x="280" y="246" text-anchor="middle" font-size="9" fill="#15803d">1/4</text>
+
+        <!-- RIGHT: inner loop flowchart -->
+        <rect x="384" y="30" width="324" height="236" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.4"/>
+        <text x="546" y="50" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">內層迴圈：不下降就減半</text>
+
+        <rect x="456" y="62" width="180" height="32" rx="6" fill="#dbeafe" stroke="#2563eb" stroke-width="1.6"/>
+        <text x="546" y="82" text-anchor="middle" font-size="11" fill="#1e40af">每步從 η = 1 開始</text>
+        <path d="M546 94 V108" stroke="#2563eb" stroke-width="2" marker-end="url(#m4b)"/>
+
+        <rect x="448" y="110" width="196" height="40" rx="6" fill="#eff6ff" stroke="#1e40af" stroke-width="1.8"/>
+        <text x="546" y="128" text-anchor="middle" font-size="11" fill="#1e40af">f(w − η∇f) &lt; f(w) ？</text>
+        <text x="546" y="144" text-anchor="middle" font-size="9" fill="#64748b">線搜索條件 (式 5)</text>
+
+        <!-- no branch left -->
+        <path d="M448 130 H410 V176" fill="none" stroke="#e53e3e" stroke-width="2" marker-end="url(#m4r)"/>
+        <text x="428" y="122" font-size="10" font-weight="bold" fill="#c53030">否</text>
+        <rect x="392" y="178" width="120" height="36" rx="6" fill="#fef2f2" stroke="#e53e3e" stroke-width="1.6"/>
+        <text x="452" y="194" text-anchor="middle" font-size="11" font-weight="bold" fill="#c53030">η ← η / 2</text>
+        <text x="452" y="208" text-anchor="middle" font-size="9" fill="#c53030">減半再試</text>
+
+        <!-- feedback loop back up -->
+        <path d="M452 178 C 400 178, 392 96, 456 80" fill="none" stroke="#e53e3e" stroke-width="2" marker-end="url(#m4r)"/>
+        <text x="404" y="88" font-size="9" fill="#c53030">回饋</text>
+
+        <!-- yes branch -->
+        <path d="M644 130 H678 V176" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#m4g)"/>
+        <text x="662" y="122" font-size="10" font-weight="bold" fill="#15803d">是</text>
+        <rect x="560" y="178" width="140" height="36" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.6"/>
+        <text x="630" y="194" text-anchor="middle" font-size="11" font-weight="bold" fill="#15803d">更新 w</text>
+        <text x="630" y="208" text-anchor="middle" font-size="9" fill="#15803d">w := w − η∇f</text>
+
+        <text x="546" y="248" text-anchor="middle" font-size="9" fill="#64748b">每個 GD 迭代裡，還包一個調步長迴圈</text>
+
+        <!-- Bottom counterintuition banner -->
+        <rect x="12" y="276" width="696" height="70" rx="8" fill="#fef2f2" stroke="#e53e3e" stroke-width="1.4"/>
+        <text x="360" y="300" text-anchor="middle" font-size="13" font-weight="bold" fill="#c53030">反直覺：最大步 η=1 常常被拒絕；縮到 η=1/4 反而保證下降</text>
+        <text x="360" y="322" text-anchor="middle" font-size="11" fill="#c53030">因為只要 η &lt; 1/L，損失就一定降——「敢走」不如「肯縮」。最陡下降則每步精算最遠，代價更高。</text>
+        <text x="360" y="338" text-anchor="middle" font-size="10" fill="#9f1239">深度學習資料量大，寧可固定或自適應學習率，也不常做完整線搜索。</text>
+      </svg>
+      <div class="svg-caption">圖 1：線搜索 1D 切片試探、減半迴圈與反直覺橫幅</div>
+    </div>
+
+    <div>
+      <div class="method-box">
+        <h4>「敢走」不如「肯縮」的深層智慧</h4>
+        <p>很多初學者以為步長越大、模型前進越快。但從圖 1 左側的一維損失切片可見：</p>
+        <ul>
+          <li><strong>衝出有效半徑：</strong>當 $\eta=1$ 時，更新點直接越過了曲率能維持單調性的區域，目標函式值反而大幅暴漲（紅點被拒絕）。</li>
+          <li><strong>漸進逼近安全區：</strong>步長對半砍至 $\eta=1/2$ 時，損失仍然高於出發點；直到 $\eta=1/4$ 終於沉降至水平虛線以下，成功被採納。</li>
+          <li><strong>保證收斂的物理本質：</strong>在極小鄰域內，曲面必近似為線性或二次碗狀。只要步長縮小到小於 $1/L$，一階項主導下降，更新必能取得正向進展。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 進階線搜索：Armijo 與 Wolfe -->
+<section class="section" id="armijo-wolfe">
+  <div class="sec-tag sustain">05 / 數值最佳化進階 · Advanced Line Search</div>
+  <h2 class="section-title">進階線搜索條件：Armijo 充分下降與 Wolfe 曲率條件
+    <span class="en">Advanced Conditions: Armijo Sufficient Decrease and Wolfe Curvature Controls</span>
+  </h2>
+
+  <p>
+    簡單的「不滿足式 (5) 就減半」是最基礎的 Backtracking 策略。但在嚴格的數值分析中，單純要求 $f(\boldsymbol{w}_{new}) < f(\boldsymbol{w}_{curr})$ 存在一個嚴重漏洞：<strong>如果每步下降量只有 $10^{-16}$，數列可能在遠離極小值的地方「假死」停滯！</strong>
+    <span class="bilingual-en">Naive decrease f(w_new) &lt; f(w) might allow minuscule progress that fails to converge to a stationary point. Professional optimization employs Armijo and Wolfe conditions.</span>
+  </p>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>1. Armijo 規則（充分下降條件）</h3>
+      <div class="sub-en">Sufficient Decrease Condition</div>
+      <p>要求更新後的損失下降量，必須大於一個與步長和梯度長度成比例的下界：</p>
+      <p>$$ f\left(\boldsymbol{w}^{(k)}-\eta\nabla f\right) \le f\left(\boldsymbol{w}^{(k)}\right) - c_1 \eta \left\|\nabla f\left(\boldsymbol{w}^{(k)}\right)\right\|^2 $$</p>
+      <p>其中常數 $c_1 \in (0, 1)$（實務常取 $c_1 = 10^{-4}$）。幾何上相當於要求函式值落在斜率為 $c_1$ 倍切線的虛線下方，防止步長過大。</p>
+    </div>
+
+    <div class="card positive">
+      <h3>2. Wolfe 曲率條件（防止步長過小）</h3>
+      <div class="sub-en">Curvature Condition</div>
+      <p>Armijo 只能防止「步長太大」，但無法防止「步長縮得太小而原地踏步」。Wolfe 額外要求更新點的切線斜率：</p>
+      <p>$$ \nabla f\left(\boldsymbol{w}^{(k)}-\eta\nabla f\right)^T \left(-\nabla f\left(\boldsymbol{w}^{(k)}\right)\right) \ge c_2 \left(-\left\|\nabla f\right\|^2\right) $$</p>
+      <p>其中 $c_2 \in (c_1, 1)$（常取 $c_2 = 0.9$）。強制要求新點處的坡度必須明顯減緩，確保步長已經跨越了足夠遠的距離。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7. 最陡下降法 -->
+<section class="section" id="steepest-descent">
+  <div class="sec-tag sustain">06 / 極致追求 · Steepest Descent</div>
+  <h2 class="section-title">最陡下降法：每步解一維最佳化，沿梯度方向走最遠
+    <span class="en">Steepest Descent: Exact Line Search by Solving 1D Minimization at Each Step</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>最陡下降的精確一維最優步長（式 (7)）</h4>
+    <p><strong>最陡下降（Steepest Descent）</strong>與標準梯度下降的前進方向完全相同（皆為負梯度方向 $-\nabla f$），但步長策略達到了極致——不是猜測固定 $\eta$，也不是減半試探，而是<strong>每一步在該條射線上解一個精確的一維最佳化問題</strong>：</p>
+    <p>$$ \eta^{(k)} := \arg\min_{\eta > 0} f\left(\boldsymbol{w}^{(k)}-\eta\nabla f\left(\boldsymbol{w}^{(k)}\right)\right) \tag{7} $$</p>
+    <p>找到能讓該射線上 $f$ 降到最低的最優步長 $\eta^{(k)}$ 後，執行更新：$\boldsymbol{w}^{(k+1)} := \boldsymbol{w}^{(k)}-\eta^{(k)}\nabla f\left(\boldsymbol{w}^{(k)}\right)$。</p>
+  </div>
+  <p>
+    對於二次型目標函式 $f(\boldsymbol{w}) = \frac{1}{2}\boldsymbol{w}^T \boldsymbol{A} \boldsymbol{w} - \boldsymbol{b}^T \boldsymbol{w}$，令當前殘差梯度為 $\boldsymbol{g}_k = \boldsymbol{A}\boldsymbol{w}^{(k)} - \boldsymbol{b}$，最優步長可直接解析求出：
+    $$\eta^{(k)} = \frac{\boldsymbol{g}_k^T \boldsymbol{g}_k}{\boldsymbol{g}_k^T \boldsymbol{A} \boldsymbol{g}_k}$$
+    最陡下降是貪婪思想的登峰造極之作：在給定方向上，絕不浪費任何一絲潛在的降幅！
+    <span class="bilingual-en">Steepest descent extracts the maximum possible reduction along the search ray by solving an exact 1D optimization problem at every iteration.</span>
+  </p>
+</section>
+
+<!-- 8. 精確線搜索 vs 回溯線搜索 -->
+<section class="section" id="exact-vs-backtracking">
+  <div class="sec-tag sustain">07 / 權衡取捨 · Trade-off Analysis</div>
+  <h2 class="section-title">精確線搜索 vs 回溯線搜索：算力與步長精度的天平
+    <span class="en">Exact Line Search vs Backtracking: The Balance Between Precision and Computation</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>精確線搜索 (Exact Line Search)</h3>
+      <div class="sub-en">Analytical / 1D Numerical Optimization</div>
+      <ul>
+        <li><strong>求解手段：</strong>二次函式靠公式直接解析求解；非二次函式需藉助黃金分割或牛頓插值反覆逼近極小值。</li>
+        <li><strong>優勢：</strong>在該射線上榨乾所有下降潛力，單步損失下降幅度達到理論最大值。</li>
+        <li><strong>劣勢：</strong>單步計算成本極其高昂。在多層神經網路中求解一維精確極小幾乎不可行。</li>
+      </ul>
+    </div>
+
+    <div class="card positive">
+      <h3>回溯線搜索 (Backtracking Line Search)</h3>
+      <div class="sub-en">Step-Halving / Armijo Backtracking</div>
+      <ul>
+        <li><strong>求解手段：</strong>從 $\eta=1$ 開始，以固定比例幾何收縮（如減半 $\eta \leftarrow \eta/2$ 或乘以 $\beta = 0.5$）。</li>
+        <li><strong>優勢：</strong>演算法極為穩健，不求極致最優，只要滿足「充分下降」即刻終止並更新，計算量小得多。</li>
+        <li><strong>劣勢：</strong>依賴常數選擇；在隨機噪聲較大的場景下，幾何試探依然需要多次額外前向傳播。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 9. 正交鋸齒走勢解析 -->
+<section class="section" id="orthogonality">
+  <div class="sec-tag sustain">08 / 關鍵幾何定理 · The Orthogonality Trap</div>
+  <h2 class="section-title">正交鋸齒走勢解析：最陡下降的相鄰步垂直定理與峽谷陷阱
+    <span class="en">The Orthogonality of Consecutive Steps: Mathematical Proof &amp; Ill-Conditioned Ravines</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, sans-serif">
+        <rect width="720" height="360" fill="#ffffff" rx="10"/>
+        <text x="360" y="24" text-anchor="middle" font-size="16" font-weight="bold" fill="#1e40af">最陡下降致命盲區：相鄰步梯度必垂直 (90° 正交鋸齒震盪)</text>
+
+        <!-- Elliptic Contour Rings -->
+        <g transform="translate(360, 180)">
+          <!-- Contours of f(x, y) = 5*x^2 + 0.5*y^2 -->
+          <ellipse cx="0" cy="0" rx="320" ry="140" fill="none" stroke="#dbeafe" stroke-width="1.2"/>
+          <ellipse cx="0" cy="0" rx="250" ry="110" fill="none" stroke="#bfdbfe" stroke-width="1.3"/>
+          <ellipse cx="0" cy="0" rx="180" ry="80" fill="none" stroke="#93c5fd" stroke-width="1.4"/>
+          <ellipse cx="0" cy="0" rx="120" ry="50" fill="none" stroke="#60a5fa" stroke-width="1.5"/>
+          <ellipse cx="0" cy="0" rx="60" ry="25" fill="none" stroke="#3b82f6" stroke-width="1.6"/>
+          <!-- Minima star -->
+          <circle cx="0" cy="0" r="4" fill="#16a34a"/>
+          <text x="0" y="16" text-anchor="middle" font-size="10" font-weight="bold" fill="#15803d">極小點 (0, 0)</text>
+
+          <!-- Steepest Descent Zig-zag path -->
+          <!-- P0: (-220, 100) -> P1: (-110, -65) -> P2: (-50, 42) -> P3: (-24, -28) -> P4: (-12, 18) -->
+          <path d="M -220 100 L -110 -65 L -50 42 L -24 -28 L -12 18 L -6 -12" fill="none" stroke="#dc2626" stroke-width="2.6"/>
+
+          <!-- Step Dots -->
+          <circle cx="-220" cy="100" r="5" fill="#dc2626"/>
+          <text x="-235" y="112" font-size="11" font-weight="bold" fill="#dc2626">w₀</text>
+
+          <circle cx="-110" cy="-65" r="5" fill="#dc2626"/>
+          <text x="-110" y="-76" font-size="11" font-weight="bold" fill="#dc2626">w₁</text>
+
+          <circle cx="-50" cy="42" r="4" fill="#dc2626"/>
+          <text x="-65" y="52" font-size="10" font-weight="bold" fill="#dc2626">w₂</text>
+
+          <circle cx="-24" cy="-28" r="3.5" fill="#dc2626"/>
+          <circle cx="-12" cy="18" r="3" fill="#dc2626"/>
+
+          <!-- 90 Degree Right-Angle Markers -->
+          <!-- At w1 (-110, -65): v1 = (110, -165), v2 = (60, 107). Right angle symbol -->
+          <path d="M -102 -53 L -90 -61 L -98 -73" fill="none" stroke="#1e40af" stroke-width="1.8"/>
+          <circle cx="-96" cy="-62" r="1.5" fill="#1e40af"/>
+          <text x="-80" y="-55" font-size="10" font-weight="bold" fill="#1e40af">90° 正交！</text>
+
+          <!-- At w2 (-50, 42) -->
+          <path d="M -44 32 L -34 38 L -40 48" fill="none" stroke="#1e40af" stroke-width="1.6"/>
+          <text x="-32" y="55" font-size="9" font-weight="bold" fill="#1e40af">90°</text>
+
+          <!-- Tangent indicator at w1 -->
+          <line x1="-155" y1="-95" x2="-65" y2="-35" stroke="#16a34a" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <text x="-150" y="-102" font-size="9" fill="#15803d">切於等高線</text>
+        </g>
+
+        <!-- Proof banner at bottom -->
+        <g transform="translate(18, 290)">
+          <rect width="684" height="60" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+          <text x="342" y="22" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">數學證明：令 φ(η) = f(wₖ − η∇fₖ)，極小處必滿足 dφ/dη = 0 ⟹ −∇f(wₖ₊₁)ᵀ ∇f(wₖ) = 0</text>
+          <text x="342" y="44" text-anchor="middle" font-size="11" fill="#b91c1c">幾何結論：每步必切於等高線！在狹長病態峽谷（Ill-Conditioned Ravine）中引發劇烈直角之字形（Zig-zagging）震盪！</text>
+        </g>
+      </svg>
+      <div class="svg-caption">圖 2：最陡下降法在狹長二次病態曲面上的 90° 正交鋸齒走勢</div>
+    </div>
+
+    <div>
+      <div class="formula-box">
+        <h4>相鄰步正交定理（Orthogonality Theorem）</h4>
+        <p>在最陡下降法中，定義沿負梯度射線的一維函式 $\phi(\eta) = f(\boldsymbol{w}^{(k)} - \eta \nabla f(\boldsymbol{w}^{(k)}))$。既然 $\eta^{(k)}$ 是一維極小點，根據費馬引理，其對 $\eta$ 的導數必為零：</p>
+        <p>$$ \frac{d\phi}{d\eta}\Big|_{\eta^{(k)}} = -\nabla f\left(\boldsymbol{w}^{(k+1)}\right)^T \nabla f\left(\boldsymbol{w}^{(k)}\right) = 0 $$</p>
+        <p>$$ \Longleftrightarrow \quad \nabla f\left(\boldsymbol{w}^{(k+1)}\right) \perp \nabla f\left(\boldsymbol{w}^{(k)}\right) $$</p>
+        <p><strong>致命後果：</strong>連續兩步的前進方向必嚴格垂直！前一步走到等高線的切點，下一步只能往垂直方向折返，在狹窄峽谷壁之間瘋狂彈跳，前進進度奇慢無比！</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. 三大策略對比總表 -->
+<section class="section" id="comparison">
+  <div class="sec-tag sustain">09 / 總體對比 · Comprehensive Matrix</div>
+  <h2 class="section-title">三大步長策略全方位對比總表
+    <span class="en">Comprehensive Comparison: Fixed Learning Rate, Line Search, and Steepest Descent</span>
+  </h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>維度 / 特性</th>
+          <th>固定學習率 GD (Fixed LR)</th>
+          <th>減半回溯線搜索 (Backtracking)</th>
+          <th>最陡下降法 (Steepest Descent)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>步長決定方式</strong></td>
+          <td>人工超參數 $\eta$ 保持不變</td>
+          <td>從 $\eta=1$ 開始，不滿足則減半</td>
+          <td>每步解一維最佳化求 $\arg\min_\eta f$</td>
+        </tr>
+        <tr>
+          <td><strong>單步理論降幅</strong></td>
+          <td>取決於 $\eta$，太大發散、太小龜速</td>
+          <td>保證充分下降（Armijo 下界）</td>
+          <td>沿負梯度方向達到理論最大值</td>
+        </tr>
+        <tr>
+          <td><strong>計算時間開銷</strong></td>
+          <td>最低（每輪僅 1 次梯度計算）</td>
+          <td>中等（內層迴圈額外 Forward Pass）</td>
+          <td>最高（需反覆數值迭代求 1D 極小）</td>
+        </tr>
+        <tr>
+          <td><strong>病態曲面表現</strong></td>
+          <td>震盪劇烈，需手動精細退火</td>
+          <td>步長縮小以求安全，緩慢前進</td>
+          <td>相鄰步 90° 正交，陷入之字形鋸齒</td>
+        </tr>
+        <tr>
+          <td><strong>深度學習適用性</strong></td>
+          <td>★★★★★（搭配動量與排程）</td>
+          <td>★☆☆☆☆（隨機噪聲與 GPU 分支瓶頸）</td>
+          <td>☆☆☆☆☆（高維非二次函式不可行）</td>
+        </tr>
+        <tr>
+          <td><strong>實務代表演算法</strong></td>
+          <td>SGD, Adam, RMSProp</td>
+          <td>傳統凸最佳化、L-BFGS、內點法</td>
+          <td>共軛梯度法的啟蒙理論、非線性規劃</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 11. 大師箴言 -->
+<section class="section" id="master-maxims">
+  <div class="sec-tag sustain">10 / 智慧結晶 · Inviolable Laws</div>
+  <h2 class="section-title">大師箴言：步長決策四大鐵律
+    <span class="en">The Four Inviolable Laws of Step Size Selection</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>一、敢走肯縮律：最大步敢試，對半砍肯退</h3>
+      <div class="sub-en">Courage to Step, Wisdom to Halve</div>
+      <p>從 $\eta=1$ 大膽出發才能捕捉全速前進的紅利；但一旦越過等高嶺，毫不猶豫幾何減半才是數值穩健的第一道生命線。</p>
+    </div>
+    <div class="card positive">
+      <h3>二、充分下降律：微小下降不可信，Armijo 守門檻</h3>
+      <div class="sub-en">Sufficient Decrease Over Illusory Creeping</div>
+      <p>目標函式值微降 $10^{-15}$ 往往是平緩荒漠的假死陷阱。唯有跨過斜率比例門檻的實質下降，才配作為迭代有效的依據。</p>
+    </div>
+    <div class="card positive">
+      <h3>三、正交成囚律：每步貪婪最優，反被正交囚禁</h3>
+      <div class="sub-en">Greedy Exactness Breeds Orthogonal Prisons</div>
+      <p>最陡下降每步做到極致，卻在峽谷中步步九十度碰撞。過度算計單步的最大收益，往往在全域走勢中付出最沉重的震盪代價。</p>
+    </div>
+    <div class="card positive">
+      <h3>四、算力權衡律：高維隨機大資料，動量自適應勝精算</h3>
+      <div class="sub-en">Adaptive Momentum Conquers High-Dimensional Noise</div>
+      <p>深度學習捨棄昂貴的線搜索內層迴圈，以 Mini-batch 吞吐量換取探索多樣性，並以動量（Momentum）撫平病態曲面的直角鋸齒！</p>
+    </div>
+  </div>
+</section>
+
+<!-- 12. 互動探索實驗室 -->
+<section class="section" id="lab">
+  <div class="sec-tag activate">11 / 實戰模擬 · Interactive Simulation Lab</div>
+  <h2 class="section-title">互動探索實驗室：2D 峽谷等高線上線搜索減半與最陡下降軌跡對比
+    <span class="en">Interactive Lab: Trajectory Comparison between Backtracking Line Search &amp; Steepest Descent</span>
+  </h2>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <div class="lab-ctrl">
+        <label>最佳化模式：</label>
+        <select id="kp4-mode">
+          <option value="steepest" selected>最陡下降法 (Steepest Descent · 90° 正交)</option>
+          <option value="halving">步長減半線搜索 (Step-Halving Line Search)</option>
+          <option value="fixed">固定步長 GD (Fixed Step Size)</option>
+        </select>
+      </div>
+      <div class="lab-ctrl">
+        <label>狹窄度 κ (病態比)：</label>
+        <input type="range" id="kp4-cond" min="2" max="15" step="1" value="8">
+        <span class="val" id="kp4-cond-v">8</span>
+      </div>
+      <div class="lab-ctrl">
+        <label>初始/固定步長 η：</label>
+        <input type="range" id="kp4-eta" min="0.05" max="0.5" step="0.02" value="0.2">
+        <span class="val" id="kp4-eta-v">0.20</span>
+      </div>
+      <button class="lab-btn" id="kp4-step">單步探索 (Step)</button>
+      <button class="lab-btn accent" id="kp4-run">連續 10 步 (Run 10)</button>
+      <button class="lab-btn secondary" id="kp4-reset">重設 (Reset)</button>
+    </div>
+
+    <div class="lab-display">
+      <div class="lab-canvas-container">
+        <canvas id="kp4-cv" width="560" height="340"></canvas>
+      </div>
+      <div class="lab-readout" id="kp4-ro">
+        <!-- Live status injected via JS -->
+      </div>
+    </div>
+
+    <p style="font-size: 14px; color: #475569; margin-top: 14px; line-height: 1.6;">
+      🧪 <strong>實測大挑戰：</strong><br/>
+      1. <strong>90° 正交鋸齒體驗</strong>：選擇「最陡下降法」，點選「連續 10 步」，觀察紅線在橢圓等高線間精確呈現 90 度折返，相鄰步梯度內積嚴格為 0，印證正交定理！<br/>
+      2. <strong>步長減半體驗</strong>：切換至「步長減半線搜索」，觀察當試探步長邁得過大時，系統如何即時減半，避免發散並穩健逼近谷底！
+    </p>
+  </div>
+</section>
+
+<!-- 13. 隨堂 Checkpoint -->
+<section class="section" id="quiz">
+  <div class="sec-tag activate">12 / 實戰檢驗 · Concept Checkpoint</div>
+  <h2 class="section-title">隨堂 Checkpoint：觀念即時反饋
+    <span class="en">Concept Checkpoint: Master-Level Assessment</span>
+  </h2>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-card" data-ans="B">
+    <h4>題目 1：線搜索式 (5) 的條件 $f(\boldsymbol{w}^{(k)}-\eta\nabla f(\boldsymbol{w}^{(k)}))\lt f(\boldsymbol{w}^{(k)})$ 要求什麼？</h4>
+    <div class="options">
+      <button data-opt="A">A. loss 必須上升</button>
+      <button data-opt="B">B. 沿梯度反方向更新後 loss 必須下降</button>
+      <button data-opt="C">C. 梯度範數為零</button>
+      <button data-opt="D">D. $\eta$ 必須等於 $L$</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 2：線搜索中步長不滿足條件時，採取的策略是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 步長加倍 $\eta\leftarrow 2\eta$</button>
+      <button data-opt="B">B. 步長減半 $\eta\leftarrow\eta/2$</button>
+      <button data-opt="C">C. 停止最佳化</button>
+      <button data-opt="D">D. 反轉梯度方向</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 3：最陡下降（式 (7)）與固定學習率梯度下降的主要差異是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 更新方向不同</button>
+      <button data-opt="B">B. 每步用一維最佳化解出使 $f$ 最小的 $\eta^{(k)}$</button>
+      <button data-opt="C">C. 不使用梯度</button>
+      <button data-opt="D">D. 只用二階方法</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 4：Armijo 規則屬於哪類方法？</h4>
+    <div class="options">
+      <button data-opt="A">A. 反向傳播</button>
+      <button data-opt="B">B. 進階線搜索策略（充分下降條件）</button>
+      <button data-opt="C">C. 啟用函式</button>
+      <button data-opt="D">D. 資料增強</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+</section>
+
+<script>
+// Quiz Interactive Logic with Dynamic MathJax Rendering
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('correct', 'wrong'));
+      const choice = btn.getAttribute('data-opt');
+      if (choice === ans) {
+        btn.classList.add('correct');
+        fb.className = 'feedback show ok';
+        fb.innerHTML = '<strong>✅ 答對了！</strong> ' + getExplanation(card, ans);
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'feedback show no';
+        fb.innerHTML = '<strong>❌ 答錯了！</strong> 請重新思考：' + getExplanation(card, ans);
+      }
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+function getExplanation(card, ans) {
+  const text = card.innerText;
+  if (ans === 'B' && text.includes('式 (5)')) {
+    return '式 (5) 檢查沿 $-\\eta\\nabla f$ 方向更新後，目標函式是否確實下降。';
+  } else if (ans === 'B' && text.includes('不滿足條件時')) {
+    return '不滿足式 (5) 時將 $\\eta$ 減半（$\\eta \\leftarrow \\eta/2$），重複直到找到使 loss 下降的步長。';
+  } else if (ans === 'B' && text.includes('最陡下降（式 (7)）')) {
+    return '最陡下降沿 $-\\nabla f$ 方向，但每步解 $\\arg\\min_\\eta f(\\boldsymbol{w}^{(k)}-\\eta\\nabla f(\\boldsymbol{w}^{(k)}))$ 找最優步長。';
+  } else if (ans === 'B' && text.includes('Armijo 規則')) {
+    return 'Armijo 規則（backtracking line search）是比簡單減半更精確的線搜索充分下降條件，Wolfe 條件也是同類進階策略。';
+  }
+  return '';
+}
+
+// Progress Bar
+window.addEventListener('scroll', () => {
+  const top = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('progressTop').style.width = (top / docH * 100) + '%';
+});
+
+// Interactive Lab: 2D Elliptic Ravine Optimization
+// f(x, y) = 0.5 * (cond * x^2 + y^2)
+(function() {
+  var cv = document.getElementById('kp4-cv');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var ro = document.getElementById('kp4-ro');
+
+  var modeSelect = document.getElementById('kp4-mode');
+  var condSlider = document.getElementById('kp4-cond');
+  var etaSlider = document.getElementById('kp4-eta');
+
+  var cond = parseFloat(condSlider.value);
+  var baseEta = parseFloat(etaSlider.value);
+
+  // Initial state
+  var startX = -3.2, startY = 2.4;
+  var x = startX, y = startY;
+  var hist = [{x: startX, y: startY, eta: baseEta, halved: 0, dot: 0, angle: 0}];
+
+  function f(px, py) {
+    return 0.5 * (cond * px * px + py * py);
+  }
+
+  function grad(px, py) {
+    return { gx: cond * px, gy: py };
+  }
+
+  function fmt(val, d) {
+    var digits = (d !== undefined) ? d : 3;
+    return (Math.round(val * Math.pow(10, digits)) / Math.pow(10, digits)).toFixed(digits);
+  }
+
+  function draw() {
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    var xRange = 4.0, yRange = 3.2;
+    function toCanvasX(px) { return W / 2 + (px / xRange) * (W * 0.44); }
+    function toCanvasY(py) { return H / 2 - (py / yRange) * (H * 0.44); }
+
+    // Draw Axes
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(30, toCanvasY(0)); ctx.lineTo(W - 30, toCanvasY(0));
+    ctx.moveTo(toCanvasX(0), 20); ctx.lineTo(toCanvasX(0), H - 20);
+    ctx.stroke();
+
+    // Draw Elliptic Contours
+    var levels = [0.2, 0.8, 2.0, 4.5, 8.5, 14.0, 22.0];
+    for (var i = 0; i < levels.length; i++) {
+      var cVal = levels[i];
+      // 0.5*(cond*x^2 + y^2) = cVal => rx = sqrt(2*cVal/cond), ry = sqrt(2*cVal)
+      var rx = Math.sqrt(2 * cVal / cond);
+      var ry = Math.sqrt(2 * cVal);
+      var cx = toCanvasX(0), cy = toCanvasY(0);
+      var radX = rx / xRange * (W * 0.44);
+      var radY = ry / yRange * (H * 0.44);
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, radX, radY, 0, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+
+    // Origin (Minimum)
+    ctx.fillStyle = '#16a34a';
+    ctx.beginPath();
+    ctx.arc(toCanvasX(0), toCanvasY(0), 4, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.font = '11px sans-serif';
+    ctx.fillText('谷底 (0, 0)', toCanvasX(0) + 7, toCanvasY(0) + 14);
+
+    // Draw Trajectory
+    if (hist.length > 1) {
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      for (var j = 0; j < hist.length; j++) {
+        var hx = toCanvasX(hist[j].x), hy = toCanvasY(hist[j].y);
+        if (j === 0) ctx.moveTo(hx, hy);
+        else ctx.lineTo(hx, hy);
+      }
+      ctx.stroke();
+
+      // Draw 90-degree indicators for steepest descent
+      if (modeSelect.value === 'steepest') {
+        for (var k = 1; k < hist.length - 1; k++) {
+          var pCurr = hist[k];
+          var cxk = toCanvasX(pCurr.x), cyk = toCanvasY(pCurr.y);
+          ctx.strokeStyle = '#2563eb';
+          ctx.lineWidth = 1.2;
+          ctx.strokeRect(cxk - 4, cyk - 4, 8, 8);
+        }
+      }
+    }
+
+    // Trajectory Points
+    for (var m = 0; m < hist.length; m++) {
+      var isCur = (m === hist.length - 1);
+      ctx.beginPath();
+      ctx.arc(toCanvasX(hist[m].x), toCanvasY(hist[m].y), isCur ? 5.5 : 3.5, 0, 2 * Math.PI);
+      ctx.fillStyle = isCur ? '#dc2626' : (m === 0 ? '#1e40af' : '#ea580c');
+      ctx.fill();
+    }
+  }
+
+  function report() {
+    var curF = f(x, y);
+    var g = grad(x, y);
+    var gNorm = Math.sqrt(g.gx * g.gx + g.gy * g.gy);
+    var lastStep = hist[hist.length - 1];
+    var mode = modeSelect.value;
+
+    var statusBadge = '';
+    if (gNorm < 0.05 || curF < 0.005) {
+      statusBadge = '<div class="status-badge converged">✅ 成功收斂抵達谷底 (|∇f| &lt; 0.05)</div>';
+    } else if (mode === 'steepest') {
+      statusBadge = '<div class="status-badge orthogonal">📐 90° 嚴格正交走勢 (相鄰梯度內積 ≈ 0)</div>';
+    } else if (mode === 'halving' && lastStep.halved > 0) {
+      statusBadge = '<div class="status-badge halved">⚡ 觸發減半：內層收縮 ' + lastStep.halved + ' 次後下降</div>';
+    } else {
+      statusBadge = '<div class="status-badge running">🏃 迭代進行中...</div>';
+    }
+
+    var angleStr = 'N/A (初始步)';
+    var dotStr = 'N/A';
+    if (hist.length > 1) {
+      dotStr = fmt(lastStep.dot, 4);
+      angleStr = fmt(lastStep.angle, 1) + '°';
+      if (Math.abs(lastStep.angle - 90) < 1.5) {
+        angleStr = '<span style="color:#6b21a8;font-weight:bold;">' + angleStr + ' (正交！)</span>';
+      }
+    }
+
+    ro.innerHTML =
+      '<strong>當前模式：</strong> ' + (mode === 'steepest' ? '最陡下降 (Exact 1D)' : (mode === 'halving' ? '減半線搜索 (Backtracking)' : '固定學習率 GD')) + '<br/>' +
+      '<strong>座標 (x, y)：</strong> (' + fmt(x, 3) + ', ' + fmt(y, 3) + ')<br/>' +
+      '<strong>損失值 f(x, y)：</strong> ' + fmt(curF, 4) + '<br/>' +
+      '<strong>梯度範數 ‖∇f‖：</strong> ' + fmt(gNorm, 3) + '<br/>' +
+      '<strong>本步採納步長 η：</strong> ' + fmt(lastStep.eta, 4) + (lastStep.halved ? ' (對半砍 ' + lastStep.halved + ' 次)' : '') + '<br/>' +
+      '<strong>相鄰步梯度內積：</strong> ' + dotStr + '<br/>' +
+      '<strong>相鄰步夾角 θ：</strong> ' + angleStr + '<br/>' +
+      '<strong>累計步數：</strong> ' + (hist.length - 1) + '<br/>' +
+      '<strong>狀態判定：</strong><br/>' + statusBadge;
+  }
+
+  function stepOnce() {
+    var g = grad(x, y);
+    var gNorm = Math.sqrt(g.gx * g.gx + g.gy * g.gy);
+    if (gNorm < 0.005) return;
+
+    var mode = modeSelect.value;
+    var adoptedEta = baseEta;
+    var halfCount = 0;
+
+    if (mode === 'steepest') {
+      // Analytical 1D minimum for 0.5 * (cond * x^2 + y^2)
+      // d = -grad = (-gx, -gy)
+      // f(w + eta*d) => derivative wrt eta = 0:
+      // eta = (g^T g) / (g^T A g)
+      var gAg = cond * g.gx * g.gx + g.gy * g.gy;
+      adoptedEta = (g.gx * g.gx + g.gy * g.gy) / (gAg + 1e-12);
+    } else if (mode === 'halving') {
+      // Step-halving line search: start at eta = 1 (or baseEta*2)
+      var trialEta = 1.0;
+      var curVal = f(x, y);
+      while (halfCount < 15) {
+        var nx = x - trialEta * g.gx;
+        var ny = y - trialEta * g.gy;
+        if (f(nx, ny) < curVal) {
+          adoptedEta = trialEta;
+          break;
+        }
+        trialEta /= 2.0;
+        halfCount++;
+      }
+      adoptedEta = trialEta;
+    } else {
+      adoptedEta = baseEta;
+    }
+
+    var nextX = x - adoptedEta * g.gx;
+    var nextY = y - adoptedEta * g.gy;
+    var nextG = grad(nextX, nextY);
+
+    // Compute dot product and angle between consecutive gradients
+    var dot = g.gx * nextG.gx + g.gy * nextG.gy;
+    var nextGNorm = Math.sqrt(nextG.gx * nextG.gx + nextG.gy * nextG.gy);
+    var cosTheta = dot / (gNorm * nextGNorm + 1e-12);
+    cosTheta = Math.max(-1, Math.min(1, cosTheta));
+    var angle = Math.acos(cosTheta) * (180 / Math.PI);
+
+    x = nextX;
+    y = nextY;
+    hist.push({x: x, y: y, eta: adoptedEta, halved: halfCount, dot: dot, angle: angle});
+    if (hist.length > 80) hist.shift();
+  }
+
+  function sync() {
+    cond = parseFloat(condSlider.value);
+    document.getElementById('kp4-cond-v').textContent = cond;
+    baseEta = parseFloat(etaSlider.value);
+    document.getElementById('kp4-eta-v').textContent = fmt(baseEta, 2);
+    draw();
+    report();
+  }
+
+  function resetState() {
+    x = startX;
+    y = startY;
+    hist = [{x: startX, y: startY, eta: baseEta, halved: 0, dot: 0, angle: 0}];
+    sync();
+  }
+
+  modeSelect.addEventListener('change', resetState);
+  condSlider.addEventListener('input', resetState);
+  etaSlider.addEventListener('input', function() {
+    baseEta = parseFloat(this.value);
+    document.getElementById('kp4-eta-v').textContent = fmt(baseEta, 2);
+  });
+
+  document.getElementById('kp4-step').addEventListener('click', function() {
+    stepOnce();
+    sync();
+  });
+
+  document.getElementById('kp4-run').addEventListener('click', function() {
+    for (var s = 0; s < 10; s++) {
+      stepOnce();
+    }
+    sync();
+  });
+
+  document.getElementById('kp4-reset').addEventListener('click', resetState);
+
+  resetState();
+})();
+</script>
+</body>
+</html>
