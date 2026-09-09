@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch03 · KP01 線性判別函式與決策超平面 — Linear Discriminant Functions & Decision Hyperplane</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(5,150,105,.26), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(14,165,233,.22), transparent 30%),
+              linear-gradient(135deg, #022c22 0%, #064e3b 50%, #022c22 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(2, 44, 34, .35);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(34px, 4.2vw, 62px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(17px, 1.9vw, 26px);
+  color: #6ee7b7;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #059669;
+  border-radius: 999px;
+  color: #34d399;
+  background: rgba(5, 150, 105, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 900px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #10b981, #0ea5e9);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #6ee7b7 !important; fill: #6ee7b7 !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #a7f3d0; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+@media (max-width: 1024px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: var(--shadow);
+}
+.half-layout .visual > svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 坑 W 嚴格落實：Takahashi 置中與 rail-nav 留白保護 */
+.section .takahashi {
+  box-sizing: border-box;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  text-align: center;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 2px solid #059669;
+  border-radius: var(--radius);
+  padding: 40px 32px;
+  box-shadow: var(--shadow);
+}
+.section .takahashi .core-q {
+  font-size: clamp(26px, 3.2vw, 42px);
+  font-weight: 800;
+  color: #065f46;
+  line-height: 1.3;
+  margin-bottom: 16px;
+}
+.section .takahashi .core-ans {
+  font-size: clamp(16px, 1.8vw, 22px);
+  color: #0f172a;
+  line-height: 1.6;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* 測驗 Checkpoint 樣式 */
+.quiz-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  margin: 20px 0;
+  box-shadow: var(--shadow);
+  transition: border-color 0.2s;
+}
+.quiz-card:hover { border-color: var(--accent); }
+.quiz-card .q-num {
+  font-size: var(--t5);
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.quiz-card .q-text {
+  font-size: var(--t3);
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.quiz-card .options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.quiz-card .options button {
+  text-align: left;
+  padding: 12px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  color: var(--ink);
+  font-size: var(--t4);
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1.4;
+}
+.quiz-card .options button:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+.quiz-card .options button.selected {
+  background: #d1fae5;
+  border-color: #059669;
+}
+.quiz-card .options button.correct {
+  background: #dcfce7 !important;
+  border-color: #16a34a !important;
+  color: #166534 !important;
+  font-weight: 600;
+}
+.quiz-card .options button.wrong {
+  background: #fee2e2 !important;
+  border-color: #dc2626 !important;
+  color: #991b1b !important;
+}
+.quiz-card .feedback {
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: var(--t4);
+  line-height: 1.6;
+}
+.quiz-card .feedback.correct {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+.quiz-card .feedback.wrong {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+/* 內容卡片與表格美化 */
+.content-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin: 24px 0;
+  box-shadow: var(--shadow);
+}
+.feature-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18px 0;
+}
+.feature-table th, .feature-table td {
+  border: 1px solid var(--line);
+  padding: 12px 16px;
+  text-align: left;
+  font-size: var(--t4);
+}
+.feature-table th {
+  background: #f1f5f9;
+  font-weight: 700;
+  color: var(--ink);
+}
+.feature-table tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  box-shadow: var(--shadow);
+}
+.lab-toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  font-size: var(--t4);
+  color: var(--ink);
+}
+.lab-ctrl input[type="range"] {
+  width: 110px;
+}
+.lab-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: none;
+  background: #059669;
+  color: #fff;
+  font-size: var(--t4);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.lab-btn:hover {
+  background: #047857;
+  transform: translateY(-1px);
+}
+.lab-btn.btn-sec {
+  background: #475569;
+}
+.lab-btn.btn-sec:hover {
+  background: #334155;
+}
+.lab-display {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 950px) {
+  .lab-display { grid-template-columns: 1fr; }
+}
+.lab-canvas-container {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.lab-readout {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<!-- TOC RAIL (PITFALL W 必須) -->
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP01 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Core Question</a></li>
+    <li><a href="#sec-geometric-meaning">超平面幾何意義 · Geometric Essence</a></li>
+    <li><a href="#svg-hyperplane">向量幾何結構圖 · Visual Breakdown</a></li>
+    <li><a href="#sec-distance-augmented">代數距離與增廣向量 · Distance & Augmented</a></li>
+    <li><a href="#lab">互動實驗室 · Interactive Lab</a></li>
+    <li><a href="#quiz">觀念測驗 · Checkpoint</a></li>
+    <li><a href="#summary">單元核心總結 · Key Takeaways</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 Cover -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">KP01 · LINEAR CLASSIFIERS · 幾何分介面</span>
+    <h1>3.2 線性判別函式與決策超平面
+      <span class="hero-title-en">Linear Discriminant Functions & Decision Hyperplane</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      如果不計算繁瑣的先驗與機率密度函式，如何在特徵空間直接劃出一道清晰分界？本單元解構<strong>線性判別超平面</strong>：法向量 $\boldsymbol{w}$ 的方向決定分界朝向，偏置 $w_0$ 決定位置平移，代數值 $g(\boldsymbol{x})$ 精確度量空間距離！
+    </p>
+  </div>
+</section>
+
+<!-- 2. 高橋流大問句 (PITFALL W) -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="core-q">
+      為什麼權重向量 $\boldsymbol{w}$ 必然垂直於決策分界直線？
+      <div style="font-size:0.55em; font-weight:normal; color:#059669; margin-top:8px;">
+        Why must the weight vector w be strictly orthogonal to the decision hyperplane?
+      </div>
+    </div>
+    <div class="core-ans">
+      <strong>超平面上任兩點相減的差向量必躺在分介面上，而兩式相減得到 $\boldsymbol{w}^\top(\boldsymbol{x}_1 - \boldsymbol{x}_2) = 0$！</strong><br>
+      內積為零證明 $\boldsymbol{w}$ 正交於分介面上所有切線方向——$\boldsymbol{w}$ 即為決策超平面的<strong>法向量</strong>！
+    </div>
+  </div>
+</section>
+
+<!-- 3. 超平面幾何意義 -->
+<section class="section" id="sec-geometric-meaning">
+  <div class="sec-tag activate">01 / 幾何本質 · Geometric Principles</div>
+  <h2 class="section-title">線性分類器的幾何骨幹：超平面與法向量
+    <span class="en">Geometric Backbone of Linear Classifiers: Hyperplanes & Normal Vectors</span>
+  </h2>
+
+  <div class="content-card">
+    <p>
+      在特徵空間中，線性分類器透過最簡潔的幾何形狀——<strong>超平面（Hyperplane）</strong>，將整個空間一分為二：
+      $$g(\boldsymbol{x}) = \boldsymbol{w}^\top \boldsymbol{x} + w_0 = \sum_{i=1}^d w_i x_i + w_0 = 0$$
+      在二維空間中超平面是一條直線，在三維空間中是一個平面，在 $d$ 維空間中則是 $d-1$ 維的超平面。
+    </p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 18px 0;">
+      <div style="background: #ecfdf5; border: 1.5px solid #059669; border-radius: 10px; padding: 18px;">
+        <h4 style="margin: 0 0 10px 0; color: #065f46; font-size: 16px;">
+          🧭 法向量 $\boldsymbol{w}$ 的方向決定性
+        </h4>
+        <p style="margin: 0; font-size: 14px; line-height: 1.7; color: #334155;">
+          若 $\boldsymbol{x}_1, \boldsymbol{x}_2$ 均位於超平面上，則滿足 $g(\boldsymbol{x}_1) = 0$ 且 $g(\boldsymbol{x}_2) = 0$：
+          $$\boldsymbol{w}^\top \boldsymbol{x}_1 + w_0 - (\boldsymbol{w}^\top \boldsymbol{x}_2 + w_0) = \boldsymbol{w}^\top (\boldsymbol{x}_1 - \boldsymbol{x}_2) = 0$$
+          差向量 $\boldsymbol{x}_1 - \boldsymbol{x}_2$ 平行於超平面，與 $\boldsymbol{w}$ 內積為零，證明 $\boldsymbol{w}$ <strong>垂直於超平面</strong>，且恆指向正側 $g(\boldsymbol{x}) > 0$！
+        </p>
+      </div>
+
+      <div style="background: #f0fdf4; border: 1.5px solid #16a34a; border-radius: 10px; padding: 18px;">
+        <h4 style="margin: 0 0 10px 0; color: #15803d; font-size: 16px;">
+          📏 偏置 $w_0$ 的位置截距性
+        </h4>
+        <p style="margin: 0; font-size: 14px; line-height: 1.7; color: #334155;">
+          原點 $\boldsymbol{x} = \mathbf{0}$ 代入判別函式得 $g(\mathbf{0}) = w_0$。因此原點到超平面的垂直幾何距離為：
+          $$d = \frac{|w_0|}{\|\boldsymbol{w}\|}$$
+          若偏置 $w_0 = 0$，則超平面<strong>必然精確穿過座標原點</strong>！$w_0$ 的大小實質控制了超平面偏離原點的位移量。
+        </p>
+      </div>
+    </div>
+    <span class="bilingual-en">The weight vector w defines the hyperplane orientation as its normal vector, while bias w0 determines the intercept and distance from the origin.</span>
+  </div>
+</section>
+
+<!-- 4. 向量視覺化 (Fig 3.1 概念) -->
+<section class="section" id="svg-hyperplane">
+  <div class="sec-tag sustain">02 / 向量幾何藍圖 · Visual Architecture</div>
+  <h2 class="section-title">二維決策直線幾何剖析 (Example 3.1 藍圖)
+    <span class="en">Geometric Anatomy of 2D Decision Boundary (Example 3.1 Blueprint)</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <!-- SVG DIAGRAM FIG 3.1 -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380" font-family="Arial, Helvetica, sans-serif">
+        <defs>
+          <marker id="a1g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#059669"/>
+          </marker>
+          <marker id="a1b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/>
+          </marker>
+          <marker id="a1r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#e11d48"/>
+          </marker>
+        </defs>
+        <rect x="0" y="0" width="720" height="380" fill="#ffffff" rx="8"/>
+
+        <!-- Title -->
+        <text x="360" y="24" text-anchor="middle" font-size="14" font-weight="bold" fill="#065f46">決策直線幾何結構：法向量 w 垂直指向正側，g(x) 度量代數距離</text>
+
+        <!-- Coordinate axes -->
+        <line x1="120" y1="320" x2="620" y2="320" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#a1b)"/>
+        <text x="615" y="340" font-size="12" font-weight="bold" fill="#475569">x₁</text>
+        <line x1="240" y1="340" x2="240" y2="40" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#a1b)"/>
+        <text x="220" y="55" font-size="12" font-weight="bold" fill="#475569">x₂</text>
+        <text x="225" y="335" font-size="12" fill="#64748b">O(0,0)</text>
+
+        <!-- Shaded half planes -->
+        <polygon points="140,300 480,40 640,40 640,320 280,320" fill="#ecfdf5" opacity="0.6"/>
+        <text x="500" y="110" font-size="14" font-weight="bold" fill="#059669">g(x) &gt; 0 (正側區域 ω₁)</text>
+        <text x="170" y="270" font-size="14" font-weight="bold" fill="#64748b">g(x) &lt; 0 (負側區域 ω₂)</text>
+
+        <!-- Decision line: x1 + x2 - 0.5 = 0 -->
+        <line x1="140" y1="300" x2="480" y2="40" stroke="#059669" stroke-width="3"/>
+        <text x="490" y="50" font-size="12" font-weight="bold" fill="#047857">決策超平面: g(x) = x₁ + x₂ − 0.5 = 0</text>
+
+        <!-- Normal vector w = [1, 1] from hyperplane point (310, 170) -->
+        <line x1="310" y1="170" x2="380" y2="80" stroke="#059669" stroke-width="3" marker-end="url(#a1g)"/>
+        <text x="395" y="85" font-size="13" font-weight="bold" fill="#047857">法向量 w = [1, 1]ᵀ</text>
+
+        <!-- Origin distance projection -->
+        <line x1="240" y1="320" x2="270" y2="282" stroke="#e11d48" stroke-width="2" stroke-dasharray="4 3"/>
+        <!-- right angle symbol -->
+        <path d="M 264 289 L 272 295 L 278 288" fill="none" stroke="#e11d48" stroke-width="1.5"/>
+        <text x="215" y="280" font-size="11" font-weight="bold" fill="#e11d48">d = |w₀|/||w|| ≈ 0.354</text>
+
+        <!-- Sample points from Example 3.1 -->
+        <!-- xA = [1.0, 1.0] -> canvas (440, 120) -->
+        <circle cx="440" cy="140" r="6" fill="#2563eb"/>
+        <text x="452" y="145" font-size="12" font-weight="bold" fill="#1e40af">x_A [1.0, 1.0]ᵀ (g = +1.5 &gt; 0)</text>
+
+        <!-- xB = [0.4, 0.05] -> canvas (320, 310) -->
+        <circle cx="300" cy="310" r="6" fill="#e11d48"/>
+        <text x="312" y="315" font-size="12" font-weight="bold" fill="#b91c1c">x_B [0.4, 0.05]ᵀ (g = −0.05 &lt; 0)</text>
+
+        <!-- Projection of xA to line -->
+        <line x1="440" y1="140" x2="365" y2="215" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <text x="415" y="190" font-size="11" fill="#2563eb">距離 r = 1.5 / √2 ≈ 1.06</text>
+
+        <!-- Bottom note banner -->
+        <rect x="15" y="348" width="690" height="24" rx="4" fill="#f8fafc" stroke="#e2e8f0"/>
+        <text x="360" y="364" text-anchor="middle" font-size="10" fill="#475569">
+          核心定理：w 是法向量（垂直超平面指向正側）；|g(x)| 正比於點到超平面的垂直距離；w₀ 控制距原點平移量。
+        </text>
+      </svg>
+    </div>
+
+    <div class="desc">
+      <h3 style="margin-top:0; color:#065f46;">代數距離與分類判決</h3>
+      <p>
+        判別函式 $g(\boldsymbol{x})$ 絕不僅僅輸出「正負號」，它的數值大小具備深刻的<strong>幾何距離意涵</strong>：
+      </p>
+      <ul>
+        <li><strong>點到超平面距離：</strong> 任意樣本點 $\boldsymbol{x}$ 到超平面的垂直距離為：
+          $$z = \frac{|g(\boldsymbol{x})|}{\|\boldsymbol{w}\|}$$
+        </li>
+        <li><strong>有號代數距離（Signed Distance）：</strong> 若去除絕對值，比值 $r = \frac{g(\boldsymbol{x})}{\|\boldsymbol{w}\|}$ 即代表該點沿法向量方向相對超平面的<strong>有號位移</strong>（正側為正，負側為負）。</li>
+        <li><strong>Example 3.1 數值實戰：</strong> $\boldsymbol{w}=[1,1]^\top, w_0=-0.5$。
+          對於 $\boldsymbol{x}_A = [1, 1]^\top$，代入得 $g = 1.5 > 0$（歸類 $\omega_1$）；對於 $\boldsymbol{x}_B = [0.4, 0.05]^\top$，代入得 $g = -0.05 < 0$（歸類 $\omega_2$）。
+        </li>
+      </ul>
+      <span class="bilingual-en">The signed value g(x) directly reflects the directional orthogonal distance to the hyperplane scaled by the weight norm ||w||.</span>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 增廣特徵向量與過原點超平面 -->
+<section class="section" id="sec-distance-augmented">
+  <div class="sec-tag operate">03 / 數學轉換 · Augmented Vectors</div>
+  <h2 class="section-title">增廣特徵向量技巧：將仿射變換轉為原點超平面
+    <span class="en">Augmented Feature Vector Technique: Mapping to Origin Hyperplane</span>
+  </h2>
+
+  <div class="content-card">
+    <p>
+      在原始 $d$ 維空間中，決策超平面帶有偏置項 $w_0$，屬於<strong>仿射集合（Affine Set）</strong>。透過引入<strong>增廣特徵向量（Augmented Feature Vector）</strong>，可將數學形式大幅簡化為純粹的向量內積：
+    </p>
+
+    <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 20px; margin: 16px 0;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div>
+          <h4 style="color:#0f172a; margin-top:0;">原始 $d$ 維特徵空間</h4>
+          <p style="line-height:1.8; font-size:14px; margin:0;">
+            特徵向量：$\boldsymbol{x} = [x_1, x_2, \dots, x_d]^\top$<br>
+            權重向量：$\boldsymbol{w} = [w_1, w_2, \dots, w_d]^\top$<br>
+            判別式：$g(\boldsymbol{x}) = \boldsymbol{w}^\top \boldsymbol{x} + w_0 = 0$（不一定透過原點）
+          </p>
+        </div>
+        <div>
+          <h4 style="color:#059669; margin-top:0;">增廣 $(d+1)$ 維特徵空間</h4>
+          <p style="line-height:1.8; font-size:14px; margin:0;">
+            增廣特徵：$\boldsymbol{y} = [1, x_1, x_2, \dots, x_d]^\top$<br>
+            增廣權重：$\boldsymbol{a} = [w_0, w_1, w_2, \dots, w_d]^\top$<br>
+            判別式：$g(\boldsymbol{y}) = \boldsymbol{a}^\top \boldsymbol{y} = 0$（<strong>必透過高維原點</strong>）
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <table class="feature-table">
+      <thead>
+        <tr>
+          <th>幾何性質</th>
+          <th>原始空間 ($d$ 維)</th>
+          <th>增廣空間 ($d+1$ 維)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>決策分介面</strong></td>
+          <td>可能不透過原點的仿射超平面</td>
+          <td><strong>恆透過原點</strong>的線性子空間超平面</td>
+        </tr>
+        <tr>
+          <td><strong>幾何約束</strong></td>
+          <td>需同時最佳化斜率 $\boldsymbol{w}$ 與截距 $w_0$</td>
+          <td>只需旋轉單一方向向量 $\boldsymbol{a}$</td>
+        </tr>
+        <tr>
+          <td><strong>演算法意義</strong></td>
+          <td>感知器需分別處理偏置更新</td>
+          <td>將偏置視為常數特徵 $y_0 = 1$ 的對應權重，統一更新規則</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 6. 互動實驗室 -->
+<section class="section" id="lab">
+  <div class="sec-tag activate">04 / 互動實驗室 · Interactive Lab</div>
+  <h2 class="section-title">互動實驗室：決策超平面法向量與點距模擬器
+    <span class="en">Interactive Lab: Hyperplane Normal Vector & Distance Simulator</span>
+  </h2>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <div class="lab-ctrl">
+        <label>權重 $w_1$:</label>
+        <input type="range" id="kp1-w1" min="-3" max="3" step="0.1" value="1.0">
+        <span id="kp1-w1-v" style="font-weight:700; width:30px;">1.0</span>
+      </div>
+
+      <div class="lab-ctrl">
+        <label>權重 $w_2$:</label>
+        <input type="range" id="kp1-w2" min="-3" max="3" step="0.1" value="1.0">
+        <span id="kp1-w2-v" style="font-weight:700; width:30px;">1.0</span>
+      </div>
+
+      <div class="lab-ctrl">
+        <label>偏置 $w_0$:</label>
+        <input type="range" id="kp1-w0" min="-3" max="3" step="0.1" value="-0.5">
+        <span id="kp1-w0-v" style="font-weight:700; width:34px;">-0.5</span>
+      </div>
+
+      <div class="lab-ctrl">
+        <label>測試點 $x_1$:</label>
+        <input type="range" id="kp1-x1" min="-2" max="2" step="0.05" value="0.4">
+        <span id="kp1-x1-v" style="font-weight:700; width:32px;">0.4</span>
+      </div>
+
+      <div class="lab-ctrl">
+        <label>測試點 $x_2$:</label>
+        <input type="range" id="kp1-x2" min="-2" max="2" step="0.05" value="0.05">
+        <span id="kp1-x2-v" style="font-weight:700; width:32px;">0.05</span>
+      </div>
+
+      <button class="lab-btn" id="kp1-btn-ex1">載入 Example 3.1</button>
+      <button class="lab-btn btn-sec" id="kp1-btn-reset">重設</button>
+    </div>
+
+    <div class="lab-display">
+      <div>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 8px;">
+          二維座標系中的超平面、法向量與測試點幾何位置：
+        </p>
+        <div class="lab-canvas-container">
+          <canvas id="kp1-cv" width="560" height="320"></canvas>
+        </div>
+      </div>
+      <div class="lab-readout" id="kp1-ro">
+        <!-- Live readout injected by JS -->
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. 隨堂 Checkpoint -->
+<section class="section" id="quiz">
+  <div class="sec-tag activate">05 / 實戰檢驗 · Concept Checkpoint</div>
+  <h2 class="section-title">隨堂 Checkpoint：觀念即時反饋
+    <span class="en">Concept Checkpoint: Immediate Feedback Quiz</span>
+  </h2>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 1 · 法向量幾何關係 / Normal Vector Orthogonality</div>
+    <div class="q-text">若 $\boldsymbol{x}_1, \boldsymbol{x}_2$ 是同一個決策超平面 $g(\boldsymbol{x})=\boldsymbol{w}^\top\boldsymbol{x}+w_0=0$ 上的任兩點，可以推出權重向量 $\boldsymbol{w}$ 與差向量 $\boldsymbol{x}_1-\boldsymbol{x}_2$ 的關係為何？</div>
+    <div class="options">
+      <button data-opt="A">A. 兩者必然互相平行</button>
+      <button data-opt="B">B. 兩者必然互相垂直（即 w 是超平面的法向量）</button>
+      <button data-opt="C">C. 權重向量 w 必然恆等於零向量</button>
+      <button data-opt="D">D. 兩者方向無任何固定幾何關係</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-card" data-ans="A">
+    <div class="q-num">題目 2 · 幾何距離公式 / Hyperplane Distance Formula</div>
+    <div class="q-text">任意樣本點 $\boldsymbol{x}$ 到決策超平面 $g(\boldsymbol{x})=\boldsymbol{w}^\top\boldsymbol{x}+w_0=0$ 的有號代數距離 $r$ 為何？</div>
+    <div class="options">
+      <button data-opt="A">A. r = g(x) / ||w||</button>
+      <button data-opt="B">B. r = g(x) × ||w||</button>
+      <button data-opt="C">C. r = |w0| / ||x||</button>
+      <button data-opt="D">D. r = w^T x</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 3 · 偏置項的幾何意義 / Role of Bias Term</div>
+    <div class="q-text">線上性判別函式 $g(\boldsymbol{x})=\boldsymbol{w}^\top\boldsymbol{x}+w_0$ 中，若偏置項 $w_0 = 0$，超平面在幾何上有何特徵？</div>
+    <div class="options">
+      <button data-opt="A">A. 超平面與所有座標軸平行</button>
+      <button data-opt="B">B. 超平面必然精確透過座標原點</button>
+      <button data-opt="C">C. 超平面退化為單一點</button>
+      <button data-opt="D">D. 法向量長度變為零</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 4 · 增廣特徵向量 / Augmented Vector Purpose</div>
+    <div class="q-text">定義增廣特徵向量 $\boldsymbol{y}=[1, \boldsymbol{x}^\top]^\top$ 與增廣權重向量 $\boldsymbol{a}=[w_0, \boldsymbol{w}^\top]^\top$ 的核心優勢為何？</div>
+    <div class="options">
+      <button data-opt="A">A. 可以把原本不可分的資料直接變成分開的二元資料</button>
+      <button data-opt="B">B. 將 d 維帶偏置的仿射超平面轉化為 d+1 維過原點的線性超平面，簡化數學與演算法結構</button>
+      <button data-opt="C">C. 完全消除樣本的幾何維度</button>
+      <button data-opt="D">D. 使權重向量的長度永遠保持為 1</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+</section>
+
+<!-- 8. 總結框 -->
+<section class="section" id="summary">
+  <div class="summary-box" style="background:linear-gradient(135deg,#064e3b 0%,#047857 100%); border-radius:14px; padding:32px; color:#fff; border:1px solid #34d399; box-shadow:0 12px 30px rgba(5,150,105,0.25);">
+    <h4 style="font-size:22px; margin-top:0; color:#34d399; display:flex; align-items:center; gap:10px;">
+      <span>📌</span> 本單元核心總結：決策超平面的幾何真諦
+      <span class="bilingual-en-inline" style="font-size:14px; color:#a7f3d0; font-weight:normal;">Key Takeaways: Hyperplane Geometry</span>
+    </h4>
+    <ul style="line-height:1.8; font-size:15px; margin-bottom:0;">
+      <li><strong>法向量正交性：</strong> 權重向量 $\boldsymbol{w}$ 必然垂直於超平面上任兩點連線，且永遠朝向正判別側（$g(\boldsymbol{x}) > 0$）。</li>
+      <li><strong>代數距離度量：</strong> 判別值 $g(\boldsymbol{x})$ 不僅給出二元符號，除以範數後的比值 $r = \frac{g(\boldsymbol{x})}{\|\boldsymbol{w}\|}$ 精確度量了點到超平面的空間幾何距離。</li>
+      <li><strong>偏置的截距意義：</strong> 原點距離為 $d = \frac{|w_0|}{\|\boldsymbol{w}\|}$；$w_0=0$ 時超平面精確透過原點。</li>
+      <li><strong>增廣空間統一性：</strong> 透過引入虛擬常數特徵 $y_0=1$，將帶有偏置的仿射超平面升維對映為高維過原點的線性超平面，為感知器演算法奠定優美的數學基石！</li>
+    </ul>
+  </div>
+</section>
+
+<script>
+// Checkpoint Quiz Interaction Logic
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('selected', 'correct', 'wrong'));
+      const opt = btn.getAttribute('data-opt');
+      btn.classList.add('selected');
+      fb.style.display = 'block';
+
+      const qNum = card.querySelector('.q-num').innerText;
+      let expText = "";
+      if (qNum.includes('題目 1')) expText = "由 wᵀx1 + w0 = wᵀx2 + w0 = 0 相減得 wᵀ(x1 - x2) = 0，說明 w 垂直於躺在超平面上的任意差向量，因此 w 是超平面的法向量。";
+      else if (qNum.includes('題目 2')) expText = "點到超平面的垂直距離由判別式除以權重向量的 L2 範數給出：r = g(x) / ||w||。";
+      else if (qNum.includes('題目 3')) expText = "原點距離為 |w0| / ||w||，當 w0 = 0 時原點距離為 0，意味著超平面恰好切過座標原點。";
+      else if (qNum.includes('題目 4')) expText = "增廣向量 y = [1, xᵀ]ᵀ 與 a = [w0, wᵀ]ᵀ 將仿射超平面寫成 aᵀy = 0，消除了獨立的偏置項，使得整個最佳化可以在原點超平面上進行。";
+
+      if (opt === ans) {
+        btn.classList.add('correct');
+        fb.className = 'feedback correct';
+        fb.innerHTML = `<strong>答對了！</strong> ${expText}`;
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'feedback wrong';
+        fb.innerHTML = `<strong>答案不正確。</strong> 再想一下！${expText}`;
+      }
+
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+// Interactive Lab Logic
+(function() {
+  const cv = document.getElementById('kp1-cv');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const ro = document.getElementById('kp1-ro');
+
+  const inW1 = document.getElementById('kp1-w1');
+  const inW2 = document.getElementById('kp1-w2');
+  const inW0 = document.getElementById('kp1-w0');
+  const inX1 = document.getElementById('kp1-x1');
+  const inX2 = document.getElementById('kp1-x2');
+
+  function getVals() {
+    return {
+      w1: parseFloat(inW1.value),
+      w2: parseFloat(inW2.value),
+      w0: parseFloat(inW0.value),
+      x1: parseFloat(inX1.value),
+      x2: parseFloat(inX2.value)
+    };
+  }
+
+  function draw() {
+    const v = getVals();
+    document.getElementById('kp1-w1-v').textContent = v.w1.toFixed(1);
+    document.getElementById('kp1-w2-v').textContent = v.w2.toFixed(1);
+    document.getElementById('kp1-w0-v').textContent = v.w0.toFixed(1);
+    document.getElementById('kp1-x1-v').textContent = v.x1.toFixed(2);
+    document.getElementById('kp1-x2-v').textContent = v.x2.toFixed(2);
+
+    const W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const originX = W / 2, originY = H / 2;
+    const scale = 55; // 55 px per unit
+
+    function toCanvas(x, y) {
+      return { cx: originX + x * scale, cy: originY - y * scale };
+    }
+
+    // Grid and axes
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    for (let u = -4; u <= 4; u++) {
+      let p1 = toCanvas(u, -4), p2 = toCanvas(u, 4);
+      ctx.beginPath(); ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); ctx.stroke();
+      let p3 = toCanvas(-4, u), p4 = toCanvas(4, u);
+      ctx.beginPath(); ctx.moveTo(p3.cx, p3.cy); ctx.lineTo(p4.cx, p4.cy); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(20, originY); ctx.lineTo(W - 20, originY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(originX, H - 15); ctx.lineTo(originX, 15); ctx.stroke();
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '11px sans-serif';
+    ctx.fillText('x₁', W - 18, originY - 6);
+    ctx.fillText('x₂', originX + 6, 20);
+    ctx.fillText('O', originX - 14, originY + 14);
+
+    // Decision Line: w1*x1 + w2*x2 + w0 = 0 => if w2 != 0: x2 = (-w1*x1 - w0) / w2
+    const pts = [];
+    if (Math.abs(v.w2) > 1e-4) {
+      const xLeft = -5, xRight = 5;
+      const yLeft = (-v.w1 * xLeft - v.w0) / v.w2;
+      const yRight = (-v.w1 * xRight - v.w0) / v.w2;
+      pts.push(toCanvas(xLeft, yLeft), toCanvas(xRight, yRight));
+    } else if (Math.abs(v.w1) > 1e-4) {
+      const xFix = -v.w0 / v.w1;
+      pts.push(toCanvas(xFix, -5), toCanvas(xFix, 5));
+    }
+
+    if (pts.length === 2) {
+      ctx.strokeStyle = '#059669';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].cx, pts[0].cy);
+      ctx.lineTo(pts[1].cx, pts[1].cy);
+      ctx.stroke();
+    }
+
+    // Normal Vector w from line anchor
+    const wNorm = Math.sqrt(v.w1 * v.w1 + v.w2 * v.w2);
+    if (wNorm > 1e-4) {
+      // Anchor on line closest to origin: -w0 / (w1^2 + w2^2) * (w1, w2)
+      const ax = (-v.w0 / (wNorm * wNorm)) * v.w1;
+      const ay = (-v.w0 / (wNorm * wNorm)) * v.w2;
+      const aPt = toCanvas(ax, ay);
+
+      // Normal vector tip
+      const tipX = ax + (v.w1 / wNorm) * 1.0;
+      const tipY = ay + (v.w2 / wNorm) * 1.0;
+      const tPt = toCanvas(tipX, tipY);
+
+      ctx.strokeStyle = '#047857';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(aPt.cx, aPt.cy);
+      ctx.lineTo(tPt.cx, tPt.cy);
+      ctx.stroke();
+
+      // Arrow head
+      ctx.fillStyle = '#047857';
+      ctx.beginPath();
+      ctx.arc(tPt.cx, tPt.cy, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText('w (法向量)', tPt.cx + 8, tPt.cy - 4);
+    }
+
+    // Sample Point x
+    const sPt = toCanvas(v.x1, v.x2);
+    const gx = v.w1 * v.x1 + v.w2 * v.x2 + v.w0;
+    const isPos = gx >= 0;
+
+    // Projection point on line
+    if (wNorm > 1e-4) {
+      const dist = gx / wNorm;
+      const projX = v.x1 - (dist * v.w1) / wNorm;
+      const projY = v.x2 - (dist * v.w2) / wNorm;
+      const pPt = toCanvas(projX, projY);
+
+      ctx.strokeStyle = isPos ? '#2563eb' : '#dc2626';
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(sPt.cx, sPt.cy);
+      ctx.lineTo(pPt.cx, pPt.cy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Draw test point
+    ctx.fillStyle = isPos ? '#2563eb' : '#dc2626';
+    ctx.beginPath();
+    ctx.arc(sPt.cx, sPt.cy, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText(`x (${v.x1.toFixed(2)}, ${v.x2.toFixed(2)})`, sPt.cx + 10, sPt.cy + 4);
+
+    // Readout
+    const distSigned = wNorm > 1e-4 ? gx / wNorm : 0;
+    const originDist = wNorm > 1e-4 ? Math.abs(v.w0) / wNorm : 0;
+
+    ro.innerHTML = `
+      <div style="color:#059669; font-weight:700; font-size:15px; margin-bottom:8px;">
+        決策超平面與幾何距離診斷報告
+      </div>
+      <div><strong>超平面方程式：</strong> <span style="font-family:monospace; font-weight:700;">${v.w1.toFixed(1)} x₁ + ${v.w2.toFixed(1)} x₂ + (${v.w0.toFixed(1)}) = 0</span></div>
+      <div><strong>法向量範數 ||w||：</strong> <span style="font-weight:700;">${wNorm.toFixed(3)}</span></div>
+      <div><strong>原點到直線距離 d：</strong> <span style="font-weight:700;">${originDist.toFixed(3)}</span></div>
+      <hr style="border:none; border-top:1px solid #cbd5e1; margin:8px 0;"/>
+      <div><strong>測試點判別式值 g(x)：</strong> <span style="color:${isPos ? '#2563eb' : '#dc2626'}; font-weight:700;">${gx.toFixed(3)}</span></div>
+      <div><strong>點到超平面有號距離 r：</strong> <span style="color:${isPos ? '#2563eb' : '#dc2626'}; font-weight:700;">${distSigned.toFixed(3)}</span></div>
+      <div><strong>預測分類：</strong> <span style="background:${isPos ? '#dbeafe' : '#fee2e2'}; color:${isPos ? '#1e40af' : '#991b1b'}; padding:2px 8px; border-radius:4px; font-weight:700;">${isPos ? '類別 ω₁ (正側)' : '類別 ω₂ (負側)'}</span></div>
+    `;
+
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([ro]);
+    }
+  }
+
+  [inW1, inW2, inW0, inX1, inX2].forEach(el => el.addEventListener('input', draw));
+
+  document.getElementById('kp1-btn-ex1').addEventListener('click', () => {
+    inW1.value = 1.0; inW2.value = 1.0; inW0.value = -0.5;
+    inX1.value = 0.4; inX2.value = 0.05;
+    draw();
+  });
+
+  document.getElementById('kp1-btn-reset').addEventListener('click', () => {
+    inW1.value = 1.0; inW2.value = 1.0; inW0.value = 0.0;
+    inX1.value = 1.0; inX2.value = 1.0;
+    draw();
+  });
+
+  draw();
+})();
+</script>
+</body>
+</html>

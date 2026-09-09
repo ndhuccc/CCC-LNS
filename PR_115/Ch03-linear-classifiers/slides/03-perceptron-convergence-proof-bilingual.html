@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch03 · KP03 感知器演算法的收斂證明 — Convergence Proof of the Perceptron Algorithm</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(5,150,105,.26), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(14,165,233,.22), transparent 30%),
+              linear-gradient(135deg, #022c22 0%, #064e3b 50%, #022c22 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(2, 44, 34, .35);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(34px, 4.2vw, 62px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(17px, 1.9vw, 26px);
+  color: #6ee7b7;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #059669;
+  border-radius: 999px;
+  color: #34d399;
+  background: rgba(5, 150, 105, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 900px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #10b981, #0ea5e9);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #6ee7b7 !important; fill: #6ee7b7 !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #a7f3d0; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+@media (max-width: 1024px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: var(--shadow);
+}
+.half-layout .visual > svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 坑 W：Takahashi 卡片置中保證 */
+#q1 .takahashi {
+  box-sizing: border-box;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+}
+
+/* 右側 TOC 軌道規範 */
+.toc-rail {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 250px;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  border-left: 1px solid var(--line);
+  padding: 28px 16px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+@media (max-width: 1100px) {
+  .toc-rail { display: none; }
+}
+.toc-rail h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin: 0 0 8px 6px;
+}
+.toc-rail a {
+  display: block;
+  font-size: 13px;
+  color: var(--ink);
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.toc-rail a:hover, .toc-rail a.active {
+  background: #ecfdf5;
+  color: #059669;
+  font-weight: 600;
+}
+
+/* 頂部進度條 */
+#progressTop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #10b981, #0ea5e9);
+  width: 0%;
+  z-index: 9999;
+  transition: width 0.1s ease;
+}
+
+/* 互動測驗卡樣式 */
+.quiz-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
+}
+.quiz-card .question {
+  font-size: 1.12rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 16px;
+}
+.quiz-card .options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.quiz-card .options button {
+  text-align: left;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.98rem;
+  transition: all 0.2s;
+  color: var(--ink);
+}
+.quiz-card .options button:hover {
+  background: #f0fdf4;
+  border-color: #059669;
+}
+.quiz-card .feedback {
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  display: none;
+}
+.quiz-card .feedback.correct {
+  display: block;
+  background: #ecfdf5;
+  border: 1px solid #10b981;
+  color: #065f46;
+}
+.quiz-card .feedback.wrong {
+  display: block;
+  background: #fef2f2;
+  border: 1px solid #ef4444;
+  color: #991b1b;
+}
+
+/* 互動實驗室自定義樣式 */
+.kp3-lab-box {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  margin: 24px 0;
+}
+.kp3-lab-head {
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #059669, #047857);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.05rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.kp3-lab-body {
+  padding: 20px;
+}
+.kp3-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 900px) {
+  .kp3-grid { grid-template-columns: 1fr; }
+}
+.kp3-ctrl-panel {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.kp3-display-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+</style>
+</head>
+<body>
+
+<div id="progressTop"></div>
+
+<!-- 右側目錄 TOC 軌道 -->
+<nav class="toc-rail">
+  <h3>Ch03 · KP03 導覽</h3>
+  <a href="#cover" class="active">首頁概覽 / Overview</a>
+  <a href="#q1">核心大哉問 / Core Question</a>
+  <a href="#sec-proof-idea">證明核心巧思 / Beacon Strategy</a>
+  <a href="#svg-solution-cone">解錐與能量衰減 / Solution Cone & Bound</a>
+  <a href="#sec-dual-conditions">學習率雙重保險 / Dual Conditions</a>
+  <a href="#lab">收斂階梯實驗室 / Convergence Simulator</a>
+  <a href="#quiz">隨堂測驗 / Checkpoint Quiz</a>
+  <a href="#summary">章節精華 / Master Summary</a>
+</nav>
+
+<!-- 封面區塊 -->
+<section id="cover" class="hero section">
+  <div class="content-width">
+    <div class="badge">CH03 · 知識點 03 / 18 · 線性分類器</div>
+    <h1>
+      感知器演算法的收斂證明
+      <span class="hero-title-en">Convergence Proof of the Perceptron Algorithm & Novikoff's Beacon Method</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      當代價函式分段線性且不可微時，微積分極值工具全數失效。<br>
+      數學家 Novikoff 在解錐中樹立理想向量 $\alpha\boldsymbol{w}^*$ 作為<strong>燈塔信標</strong>，嚴密證明歐氏距離平方 $\|\boldsymbol{w}(t) - \alpha\boldsymbol{w}^*\|^2$ 單調遞減，於有限步 $t_0$ 內必然歸零！
+    </p>
+
+    <div class="grid-4" style="margin-top: 36px; text-align: left;">
+      <div class="card" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15);">
+        <div class="card-title" style="color: #6ee7b7;">1. 信標幾何法</div>
+        <div class="bilingual-en" style="color: #a7f3d0; margin-bottom: 6px;">Beacon Strategy</div>
+        <p style="color: #e2e8f0; font-size: 0.9rem;">
+          不依賴連續梯度場，直接追蹤與理想解 $\alpha\boldsymbol{w}^*$ 的幾何歐氏距離，化不可微為單調縮小。
+        </p>
+      </div>
+
+      <div class="card" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15);">
+        <div class="card-title" style="color: #6ee7b7;">2. 能量不等式</div>
+        <div class="bilingual-en" style="color: #a7f3d0; margin-bottom: 6px;">Lyapunov Energy Bound</div>
+        <p style="color: #e2e8f0; font-size: 0.9rem;">
+          展開範數平方：擾動項 $\rho_t^2\beta^2$ 與牽引項 $-2\rho_t\alpha|\gamma|$ 巧妙配平為 $\beta^2(\rho_t^2 - \rho_t)$。
+        </p>
+      </div>
+
+      <div class="card" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15);">
+        <div class="card-title" style="color: #6ee7b7;">3. 雙重保險條件</div>
+        <div class="bilingual-en" style="color: #a7f3d0; margin-bottom: 6px;">Dual Learning Rate Axiom</div>
+        <p style="color: #e2e8f0; font-size: 0.9rem;">
+          $\sum \rho_k = \infty$（驅動力無窮防早停）與 $\sum \rho_k^2 < \infty$（總震盪有限防跳躍）。
+        </p>
+      </div>
+
+      <div class="card" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15);">
+        <div class="card-title" style="color: #6ee7b7;">4. 夾擠矛盾律</div>
+        <div class="bilingual-en" style="color: #a7f3d0; margin-bottom: 6px;">Finite Steps Termination</div>
+        <p style="color: #e2e8f0; font-size: 0.9rem;">
+          非負距離被推進至負值上界，唯一合理解是在有限步 $t_0$ 時 $\boldsymbol{w}(t_0+1) = \alpha\boldsymbol{w}^*$！
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 高橋流大問句區塊 -->
+<section id="q1" class="section">
+  <div class="takahashi">
+    <div class="badge">核心思考問題 · CORE QUESTION</div>
+    <h2>
+      代價函式處處不可微，<br>如何保證演算法不會陷入無限震盪？
+    </h2>
+    <p class="en-sub">
+      Since the Perceptron criterion is piecewise linear and non-differentiable, how do we mathematically guarantee it will not bounce endlessly?
+    </p>
+    <p class="desc">
+      答案就在於<strong>「解錐內的虛擬燈塔」</strong>！<br>
+      每一次誤判修正，法向量與燈塔向量的夾角都在縮小、投影長度都在拉長，<br>
+      幾何距離的上界終將被硬生生壓縮至零！
+    </p>
+  </div>
+</section>
+
+<!-- 證明架構與核心思維 -->
+<section id="sec-proof-idea" class="section">
+  <div class="content-width">
+    <div class="section-title">
+      <h2>推導核心：從更新式展開距離平方</h2>
+      <div class="bilingual-en">Derivation Core: Expanding the Euclidean Norm to the Ideal Beacon</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="color: #059669;">1. 設定燈塔解與距離展開</div>
+        <div class="bilingual-en" style="margin-bottom: 8px;">Beacon Definition & Expansion</div>
+        <p>
+          因資料集線性可分，必存在完美解向量 $\boldsymbol{w}^*$ 使所有樣本嚴格分離。設 $\alpha > 0$ 為待定比例常數。觀察第 $t+1$ 步與目標 $\alpha\boldsymbol{w}^*$ 的距離平方：
+        </p>
+        <div class="formula-box" style="margin: 10px 0;">
+          $$\|\boldsymbol{w}(t+1) - \alpha\boldsymbol{w}^*\|^2 = \left\|\Big(\boldsymbol{w}(t) - \alpha\boldsymbol{w}^*\Big) - \rho_t \sum_{\boldsymbol{x} \in Y} \delta_x \boldsymbol{x}'\right\|^2$$
+        </div>
+        <p style="font-size: 0.9rem; color: var(--muted);">
+          展開為三項：舊距離平方、修正量長度平方（干擾項）、以及二者內積交叉項（牽引項）。
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="color: #059669;">2. 干擾項與牽引項的物理上界</div>
+        <div class="bilingual-en" style="margin-bottom: 8px;">Bounding Perturbation & Pulling Terms</div>
+        <ul style="margin: 0; padding-left: 18px; font-size: 0.92rem; line-height: 1.7;">
+          <li>
+            <strong>最大修正量上界 $\beta^2$：</strong>有限訓練集的所有誤判子集組合，其向量和長度有限：
+            $\left\|\sum_{Y} \delta_x \boldsymbol{x}'\right\|^2 \le \beta^2$。
+          </li>
+          <li>
+            <strong>完美解牽引項 $-|\gamma|$：</strong>交叉項展開後包含 $-2\rho_t \boldsymbol{w}(t)^\top(\sum \delta_x \boldsymbol{x}') \le 0$（負損失）與完美解內積。完美解使正類樣本大於 0、乘上 $\delta_x=-1$ 恆負，總和小於 $-|\gamma| < 0$。
+          </li>
+        </ul>
+        <div class="formula-box" style="margin: 10px 0;">
+          $$\|\boldsymbol{w}(t+1) - \alpha\boldsymbol{w}^*\|^2 \le \|\boldsymbol{w}(t) - \alpha\boldsymbol{w}^*\|^2 + \rho_t^2\beta^2 - 2\rho_t\alpha|\gamma|$$
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 雙面板向量視覺化圖解 (FIGURE 3.2 & Convergence Path) -->
+<section id="svg-solution-cone" class="section">
+  <div class="content-width">
+    <div class="section-title">
+      <h2>解錐空間幾何軌跡與能量上界衰減</h2>
+      <div class="bilingual-en">Weight Space Solution Cone & Monotonic Energy Upper Bound Decay</div>
+    </div>
+
+    <div class="half-layout">
+      <!-- 向量 SVG (雙面板) -->
+      <div class="visual">
+        <svg viewBox="0 0 540 400" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L7,3 z" fill="#059669"/>
+            </marker>
+            <marker id="arr-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L7,3 z" fill="#2563eb"/>
+            </marker>
+          </defs>
+
+          <!-- 背景 -->
+          <rect width="540" height="400" fill="#f8fafc" rx="8"/>
+
+          <!-- 左面板：權重空間 (w1, w2) 與解錐 -->
+          <g transform="translate(10, 10)">
+            <text x="120" y="22" font-size="13" font-weight="bold" fill="#1e293b" text-anchor="middle">權重空間解錐 (Weight Space)</text>
+
+            <!-- 座標軸 (原點在 120, 240) -->
+            <line x1="20" y1="240" x2="240" y2="240" stroke="#cbd5e1" stroke-width="1.5"/>
+            <line x1="120" y1="340" x2="120" y2="40" stroke="#cbd5e1" stroke-width="1.5"/>
+            <text x="245" y="244" font-size="11" fill="#64748b">w₁</text>
+            <text x="124" y="36" font-size="11" fill="#64748b">w₂</text>
+
+            <!-- 解錐 (綠色半透明扇形區域) -->
+            <path d="M 120,240 L 220,60 L 60,75 Z" fill="rgba(5, 150, 105, 0.15)" stroke="#059669" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <text x="145" y="85" font-size="11" fill="#047857" font-weight="bold">解錐區域 (Cone)</text>
+
+            <!-- 目標燈塔向量 alpha * w* (藍色實線) -->
+            <line x1="120" y1="240" x2="155" y2="105" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arr-blue)"/>
+            <text x="162" y="105" font-size="12" fill="#2563eb" font-weight="bold">αw* (目標信標)</text>
+
+            <!-- 同心圓測距等高線 (以 alpha*w* 為圓心) -->
+            <circle cx="155" cy="105" r="45" fill="none" stroke="#93c5fd" stroke-width="1" stroke-dasharray="3,3"/>
+            <circle cx="155" cy="105" r="90" fill="none" stroke="#93c5fd" stroke-width="1" stroke-dasharray="3,3"/>
+            <circle cx="155" cy="105" r="140" fill="none" stroke="#bfdbfe" stroke-width="1" stroke-dasharray="3,3"/>
+
+            <!-- 疊代路徑 w(0) -> w(1) -> w(2) -> w(t0+1) -->
+            <!-- w(0) at (40, 210) -->
+            <circle cx="40" cy="210" r="4.5" fill="#d97706"/>
+            <text x="20" y="205" font-size="10" fill="#d97706" font-weight="bold">w(0)</text>
+
+            <!-- Step 1 -->
+            <line x1="40" y1="210" x2="75" y2="180" stroke="#059669" stroke-width="1.8" marker-end="url(#arr-green)"/>
+            <circle cx="75" cy="180" r="3.5" fill="#059669"/>
+            <text x="65" y="170" font-size="10" fill="#047857">w(1)</text>
+
+            <!-- Step 2 -->
+            <line x1="75" y1="180" x2="115" y2="145" stroke="#059669" stroke-width="1.8" marker-end="url(#arr-green)"/>
+            <circle cx="115" cy="145" r="3.5" fill="#059669"/>
+            <text x="100" y="138" font-size="10" fill="#047857">w(2)</text>
+
+            <!-- Step 3 (到達解錐邊界) -->
+            <line x1="115" y1="145" x2="155" y2="105" stroke="#059669" stroke-width="2.2" stroke-dasharray="4,2" marker-end="url(#arr-green)"/>
+            <circle cx="155" cy="105" r="5" fill="#2563eb"/>
+            <text x="160" y="125" font-size="10" fill="#2563eb" font-weight="bold">w(t₀+1)</text>
+          </g>
+
+          <!-- 右面板：能量上界衰減曲線 E(t) -->
+          <g transform="translate(280, 10)">
+            <text x="120" y="22" font-size="13" font-weight="bold" fill="#1e293b" text-anchor="middle">距離平方上界 E(t) 衰減曲線</text>
+
+            <!-- 座標軸 (原點在 30, 240) -->
+            <line x1="30" y1="240" x2="240" y2="240" stroke="#cbd5e1" stroke-width="1.5"/>
+            <line x1="30" y1="240" x2="30" y2="40" stroke="#cbd5e1" stroke-width="1.5"/>
+            <text x="242" y="244" font-size="11" fill="#64748b">步數 t</text>
+            <text x="25" y="32" font-size="11" fill="#64748b">||w - αw*||²</text>
+
+            <!-- 初始能量標記 -->
+            <text x="5" y="65" font-size="10" fill="#d97706">E(0)</text>
+            <line x1="26" y1="62" x2="34" y2="62" stroke="#d97706" stroke-width="2"/>
+
+            <!-- 單調下降曲線 (到達 t0 歸零) -->
+            <!-- path from (30, 62) down to (185, 240) -->
+            <path d="M 30,62 Q 90,140 185,240" fill="none" stroke="#059669" stroke-width="3"/>
+
+            <!-- 虛線外推進入負值 (被實數物理限制截斷) -->
+            <path d="M 185,240 Q 210,265 235,285" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="4,4"/>
+            <text x="180" y="280" font-size="10" fill="#dc2626">數學上界趨向 -∞</text>
+
+            <!-- 臨界步數 t0 標註 -->
+            <line x1="185" y1="240" x2="185" y2="246" stroke="#047857" stroke-width="2"/>
+            <text x="178" y="260" font-size="11" fill="#047857" font-weight="bold">t₀ (收斂點)</text>
+
+            <circle cx="185" cy="240" r="5" fill="#059669"/>
+
+            <!-- 說明標註盒 -->
+            <rect x="50" y="90" width="165" height="50" fill="#ecfdf5" rx="6" stroke="#a7f3d0"/>
+            <text x="60" y="110" font-size="10" fill="#065f46" font-weight="bold">單調遞減約束：</text>
+            <text x="60" y="128" font-size="10" fill="#047857">ΔE ≤ β²(ρ² - ρ) &lt; 0</text>
+          </g>
+
+          <!-- 底部整體核心定理解釋 -->
+          <g transform="translate(30, 345)">
+            <rect width="480" height="42" fill="#ffffff" rx="6" stroke="#e2e8f0"/>
+            <text x="240" y="26" font-size="11" fill="#334155" font-weight="bold" text-anchor="middle">
+              黃金不等式累加：||w(t+1) - αw*||² ≤ ||w(0) - αw*||² + β² ( ∑ρₖ² - ∑ρₖ ) → 有限步必達 0！
+            </text>
+          </g>
+        </svg>
+      </div>
+
+      <!-- 右側收斂條件精華 -->
+      <div>
+        <h3 style="margin-top: 0; color: #047857;">縮放係數 $\alpha$ 的巧妙選取</h3>
+        <p>
+          為了讓一階牽引項消去高階干擾項，我們選取常數：
+        </p>
+        <div class="formula-box">
+          $$\alpha = \frac{\beta^2}{2|\gamma|}$$
+        </div>
+        <p style="font-size: 0.92rem;">
+          代入後，每一步的能量差分簡化為極致純粹的兩項對決：
+        </p>
+        <div class="formula-box" style="margin: 10px 0;">
+          $$\|\boldsymbol{w}(t+1) - \alpha\boldsymbol{w}^*\|^2 \le \|\boldsymbol{w}(0) - \alpha\boldsymbol{w}^*\|^2 + \beta^2 \left( \sum_{k=0}^t \rho_k^2 - \sum_{k=0}^t \rho_k \right)$$
+        </div>
+        <p style="font-size: 0.92rem; color: var(--muted);">
+          這就是感知器著名的<strong>李亞普諾夫 (Lyapunov) 式收斂能量函式</strong>！只要右側括號能保證變成負值，左側距離平方就必須在有限步內等於零。
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 學習率雙重保險條件 -->
+<section id="sec-dual-conditions" class="section">
+  <div class="content-width">
+    <div class="section-title">
+      <h2>學習率序列 $\rho_t$ 的雙重保險條件</h2>
+      <div class="bilingual-en">The Dual Learning Rate Conditions for Guaranteed Convergence</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="color: #059669;">條件一：發散累積和 (Drive Condition)</div>
+        <div class="bilingual-en" style="margin-bottom: 8px;">$$\lim_{t \to \infty} \sum_{k=0}^t \rho_k = \infty$$</div>
+        <p>
+          <strong>白話意義：前進動力永不枯竭。</strong><br>
+          若累加和有限（例如 $\rho_k = 0.5^k$），權重總共能移動的物理距離存在上限。若初始點距離解錐太遠，步長提早衰減至 0，演算法將凍結在半路而<strong>提早停滯</strong>。
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="color: #059669;">條件二：平方和收斂 (Stability Condition)</div>
+        <div class="bilingual-en" style="margin-bottom: 8px;">$$\lim_{t \to \infty} \sum_{k=0}^t \rho_k^2 < \infty$$</div>
+        <p>
+          <strong>白話意義：隨機震盪能量有限。</strong><br>
+          干擾項 $\sum \rho_k^2$ 累積的總噪聲能量存在有限天花板。這保證了當步數增加時，更新步長最終會衰減至微小尺度，避免超平面在最優解邊界兩側<strong>無限跳躍震盪</strong>。
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 互動實驗室：收斂階梯模擬器 -->
+<section id="lab" class="section">
+  <div class="content-width">
+    <div class="section-title">
+      <h2>收斂階梯實驗室：學習率策略與能量衰減模擬器</h2>
+      <div class="bilingual-en">Interactive Lab: Learning Rate Strategy & Energy Decay Simulator</div>
+    </div>
+
+    <div class="kp3-lab-box">
+      <div class="kp3-lab-head">
+        <span>互動實作：感知器收斂上界與步數推估</span>
+        <span style="font-size: 0.84rem; font-weight: normal; opacity: 0.9;">Chapter 3 KP-3 · Interactive Simulator</span>
+      </div>
+
+      <div class="kp3-lab-body">
+        <div class="kp3-grid">
+          <!-- 控制面板 -->
+          <div class="kp3-ctrl-panel">
+            <h4 style="margin: 0 0 4px; color: var(--ink);">設定模擬參數</h4>
+
+            <div>
+              <label for="kp3-strategy" style="font-size: 0.88rem; font-weight: 600;">學習率序列策略：</label>
+              <select id="kp3-strategy" style="width: 100%; padding: 7px 10px; margin-top: 4px; border-radius: 6px; border: 1px solid var(--line);">
+                <option value="harmonic" selected>調和級數 ρ_k = 1 / (k + 1) (完美符合兩條件)</option>
+                <option value="constant">常數學習率 ρ_k = 0.50 (保證收斂到解錐)</option>
+                <option value="fast-decay">衰減過快 ρ_k = 1 / (k + 1)² (違反發散條件，停滯)</option>
+                <option value="large-const">過大常數 ρ_k = 1.20 (震盪較大)</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="kp3-e0" style="font-size: 0.88rem; font-weight: 600;">初始距離平方 $\|\boldsymbol{w}(0) - \alpha\boldsymbol{w}^*\|^2$：<span id="kp3-e0-val">4.0</span></label>
+              <input type="range" id="kp3-e0" min="2.0" max="20.0" step="1.0" value="4.0" style="width: 100%; accent-color: #059669;">
+            </div>
+
+            <div>
+              <label for="kp3-beta" style="font-size: 0.88rem; font-weight: 600;">干擾邊界常數 $\beta^2$：<span id="kp3-beta-val">2.0</span></label>
+              <input type="range" id="kp3-beta" min="0.5" max="5.0" step="0.5" value="2.0" style="width: 100%; accent-color: #059669;">
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 8px;">
+              <button type="button" id="kp3-btn-calc" class="kp2-btn kp2-btn-primary" style="flex: 1; justify-content: center;">
+                ⚡ 重新計算理論上界
+              </button>
+            </div>
+          </div>
+
+          <!-- 結果展示面板 -->
+          <div class="kp3-display-panel" id="kp3-readout">
+            <!-- 動態注入計算結果 -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 隨堂檢驗 Checkpoint Quiz 區塊 (4 題) -->
+<section id="quiz" class="section">
+  <div class="content-width">
+    <div class="section-title">
+      <h2>課堂核心觀念檢核 (Checkpoint Quiz)</h2>
+      <div class="bilingual-en">Concept Mastery & Proof Logic Verification</div>
+    </div>
+
+    <!-- 題目 1 -->
+    <div class="quiz-card" data-ans="B">
+      <div class="question">
+        1. 在感知器演算法的收斂證明中，學習率序列 $\rho_t$ 需要同時滿足哪兩個核心數學條件？
+      </div>
+      <div class="options">
+        <button data-opt="A">A. $\rho_t$ 必須恆為負數，且隨步數單調遞增</button>
+        <button data-opt="B">B. 累加和發散 $\sum \rho_t \to \infty$ 且平方和收斂 $\sum \rho_t^2 < \infty$</button>
+        <button data-opt="C">C. 學習率必須恆等於 1.0，不可隨步數改變</button>
+        <button data-opt="D">D. $\rho_t$ 必須嚴格小於訓練集樣本總數的倒數</button>
+      </div>
+      <div class="feedback"></div>
+    </div>
+
+    <!-- 題目 2 -->
+    <div class="quiz-card" data-ans="B">
+      <div class="question">
+        2. 為什麼證明感知器演算法有限步收斂時，需要引入理想解信標 $\alpha\boldsymbol{w}^*$ 並追蹤其歐氏距離平方？
+      </div>
+      <div class="options">
+        <button data-opt="A">A. 為了計算感知器分類器的 ROC 曲線面積</button>
+        <button data-opt="B">B. 因為感知器代價函式為分段線性不可微，傳統梯度下降證明失效，幾何距離提供單調嚴格約束</button>
+        <button data-opt="C">C. 為了保證超平面透過坐標原點</button>
+        <button data-opt="D">D. 為了將二元分類問題轉化為多類別邏輯斯迴歸</button>
+      </div>
+      <div class="feedback"></div>
+    </div>
+
+    <!-- 題目 3 -->
+    <div class="quiz-card" data-ans="B">
+      <div class="question">
+        3. 若研究員在訓練感知器時選用了學習率序列 $\rho_k = \frac{1}{(k+1)^2}$，在理論上會產生什麼不良後果？
+      </div>
+      <div class="options">
+        <button data-opt="A">A. 擾動平方和 $\sum \rho_k^2$ 趨於無窮，導致超平面無限震盪</button>
+        <button data-opt="B">B. 違反 $\sum \rho_k = \infty$ 條件，前進步長過早萎縮為 0，可能在抵達解錐前便提早停滯</button>
+        <button data-opt="C">C. 導致代價函式的斜率變成複數</button>
+        <button data-opt="D">D. 完全沒有任何影響，依然必定收斂</button>
+      </div>
+      <div class="feedback"></div>
+    </div>
+
+    <!-- 題目 4 -->
+    <div class="quiz-card" data-ans="A">
+      <div class="question">
+        4. 感知器收斂定理（Novikoff 定理）保證有限步收斂的最根本前提假設是什麼？
+      </div>
+      <div class="options">
+        <button data-opt="A">A. 訓練集資料在特徵空間中必須是完全「線性可分 (Linearly Separable)」的</button>
+        <button data-opt="B">B. 訓練樣本數必須大於特徵維度的 10 倍</button>
+        <button data-opt="C">C. 所有輸入特徵必須先經過高斯正規化且均值為 0</button>
+        <button data-opt="D">D. 權重初始值 $\boldsymbol{w}(0)$ 必須設定在第一象限</button>
+      </div>
+      <div class="feedback"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 章節精華與教授秘笈總結 -->
+<section id="summary" class="section">
+  <div class="content-width">
+    <div class="summary-box">
+      <h3 style="color: #ffffff; margin-top: 0; font-size: 1.4rem;">
+        🎓 教授秘笈：收斂證明與幾何燈塔核心思維
+        <span class="bilingual-en" style="font-size: 1rem; color: #6ee7b7; display: block; margin-top: 4px;">
+          Master's Insights: The Elegant Physics of Novikoff's Beacon Method
+        </span>
+      </h3>
+      <p style="color: #f1f5f9; line-height: 1.7; margin-bottom: 18px;">
+        感知器的收斂證明是機器學習史上最燦爛的明珠之一。它不是靠複雜的連續泛函分析，而是憑藉純粹的<strong>幾何夾擠</strong>完成論證：
+      </p>
+
+      <ul style="color: #f8fafc; line-height: 1.8; padding-left: 20px;">
+        <li>
+          <strong>信標法的高度啟發性：</strong>當你無法看清腳下崎嶇的即時坡度（不可微）時，不要盯著地面，抬起頭在目標方向樹立一座燈塔 $\alpha\boldsymbol{w}^*$。只要能證明每走一步與燈塔的距離都在縮短，收斂就成了數學上的必然！
+        </li>
+        <li>
+          <strong>物理與數學的宿命碰撞：</strong>右側的能量上界 $\beta^2(\sum \rho_k^2 - \sum \rho_k)$ 在數學上毫不留情地朝著 $-\infty$ 奔去；然而左側的歐氏距離在物理空間中死守 $\ge 0$ 的底線。這場數學與物理的對決，唯一的收場就是步數在 $t_0$ 嘎然而止——$\boldsymbol{w}(t_0+1)$ 正中解向量！
+        </li>
+        <li>
+          <strong>條件的工程啟示：</strong>調和級數 $\rho_k = \frac{1}{k+1}$ 是收斂條件的最佳代言人。在現代深度學習中，學習率排程器（如 Cosine Annealing 或 StepLR）逐漸降溫的策略，其哲學根源正發軔於此：初期大步探索、後期收斂穩定。
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<script>
+// 頂部閱讀進度指示器
+window.addEventListener('scroll', () => {
+  const h = document.documentElement.scrollHeight - window.innerHeight;
+  const s = window.scrollY;
+  const p = h > 0 ? (s / h) * 100 : 0;
+  const el = document.getElementById('progressTop');
+  if (el) el.style.width = p + '%';
+});
+
+// Checkpoint Quiz Logic with MathJax Typesetting
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+  const btns = card.querySelectorAll('.options button');
+
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const userOpt = btn.getAttribute('data-opt');
+      btns.forEach(b => b.style.background = 'var(--bg)');
+      btn.style.background = '#e2e8f0';
+
+      let expText = '';
+      if (ans === 'B' && card.querySelector('.question').innerText.includes('兩個核心數學條件')) {
+        expText = '條件 $\\sum \\rho_t = \\infty$ 保證前進動力無窮（防提早停滯），$\\sum \\rho_t^2 < \\infty$ 保證震盪能量有限（防無限跳躍），合力鎖定有限步收斂。';
+      } else if (ans === 'B' && card.querySelector('.question').innerText.includes('理想解信標')) {
+        expText = '感知器代價函式為分段線性且在分界處不可微，無法套用傳統梯度下降微積分收斂定理。引入信標向量後，證明轉化為純幾何範數的單調縮小。';
+      } else if (ans === 'B' && card.querySelector('.question').innerText.includes('1 / (k+1)²')) {
+        expText = '級數 $\\sum_{k=1}^\\infty \\frac{1}{k^2} = \\frac{\\pi^2}{6} < \\infty$，此時累加和為有限值，違反了發散條件，步長衰減太快會導致權重凍結在未抵達解錐的途中。';
+      } else if (ans === 'A' && card.querySelector('.question').innerText.includes('最根本前提假設')) {
+        expText = '若資料非線性可分，則解錐根本不存在，不可能找到理想解向量 $\\boldsymbol{w}^*$；此時感知器將在不同超平面間陷入無限迴圈震盪。';
+      }
+
+      if (userOpt === ans) {
+        fb.className = 'feedback correct';
+        fb.innerHTML = `<strong>答對了！</strong> ${expText}`;
+      } else {
+        fb.className = 'feedback wrong';
+        fb.innerHTML = `<strong>答案不正確。</strong> 再想一下！${expText}`;
+      }
+
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+// Interactive Lab Logic (KP03 Convergence Bound Simulator)
+(function() {
+  const selectStrategy = document.getElementById('kp3-strategy');
+  const sliderE0 = document.getElementById('kp3-e0');
+  const labelE0 = document.getElementById('kp3-e0-val');
+  const sliderBeta = document.getElementById('kp3-beta');
+  const labelBeta = document.getElementById('kp3-beta-val');
+  const btnCalc = document.getElementById('kp3-btn-calc');
+  const readout = document.getElementById('kp3-readout');
+
+  function calculate() {
+    const strat = selectStrategy.value;
+    const E0 = parseFloat(sliderE0.value);
+    const beta2 = parseFloat(sliderBeta.value);
+
+    labelE0.textContent = E0.toFixed(1);
+    labelBeta.textContent = beta2.toFixed(1);
+
+    let sumRho = 0;
+    let sumRho2 = 0;
+    let t0 = -1;
+    const history = [];
+
+    for (let k = 0; k <= 500; k++) {
+      let rho = 0;
+      if (strat === 'harmonic') {
+        rho = 1.0 / (k + 1);
+      } else if (strat === 'constant') {
+        rho = 0.50;
+      } else if (strat === 'fast-decay') {
+        rho = 1.0 / ((k + 1) * (k + 1));
+      } else if (strat === 'large-const') {
+        rho = 1.20;
+      }
+
+      sumRho += rho;
+      sumRho2 += rho * rho;
+
+      const bound = E0 + beta2 * (sumRho2 - sumRho);
+      history.push({ step: k, rho: rho, bound: bound });
+
+      if (bound <= 0 && t0 === -1) {
+        t0 = k;
+        break;
+      }
+    }
+
+    let resultHtml = `
+      <div style="color:#059669; font-weight:700; font-size:1.05rem; margin-bottom:10px;">
+        理論收斂步數推算報告
+      </div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
+        <div style="background:#f8fafc; padding:8px 12px; border-radius:6px; border:1px solid #e2e8f0;">
+          <div style="font-size:0.8rem; color:#64748b;">初始距離平方 E(0)</div>
+          <div style="font-weight:700; font-size:1.1rem; color:#1e293b;">${E0.toFixed(1)}</div>
+        </div>
+        <div style="background:#f8fafc; padding:8px 12px; border-radius:6px; border:1px solid #e2e8f0;">
+          <div style="font-size:0.8rem; color:#64748b;">臨界收斂步數 t₀ 上界</div>
+          <div style="font-weight:700; font-size:1.1rem; color:${t0 !== -1 ? '#059669' : '#dc2626'};">
+            ${t0 !== -1 ? `≤ ${t0} 步收斂` : '無法在100步內收斂(停滯)'}
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (t0 !== -1) {
+      resultHtml += `
+        <p style="font-size:0.88rem; color:#065f46; background:#ecfdf5; padding:10px 12px; border-radius:6px; border:1px solid #a7f3d0; margin:0 0 10px;">
+          ✅ <strong>收斂保證成立：</strong>在第 <strong>${t0}</strong> 步時，距離平方上界壓至 <strong>${history[history.length-1].bound.toFixed(3)} ≤ 0</strong>。由於向量範數平方恆大於等於 0，演算法必定在該步之前或該步完全抵達解錐！
+        </p>
+      `;
+    } else {
+      resultHtml += `
+        <p style="font-size:0.88rem; color:#991b1b; background:#fef2f2; padding:10px 12px; border-radius:6px; border:1px solid #fecaca; margin:0 0 10px;">
+          ⚠️ <strong>警告：</strong>該策略下步長衰減太快（∑ρ 趨近有限常數），擾動與牽引項相減後未能抵銷初始距離 $E(0) = ${E0.toFixed(1)}$，演算法凍結於解錐之外！
+        </p>
+      `;
+    }
+
+    resultHtml += `
+      <div style="font-size:0.82rem; color:#64748b; margin-top:6px;">
+        前 3 步能量上界追蹤：
+        Step 0: ${history[0].bound.toFixed(2)} → 
+        Step 1: ${history[1] ? history[1].bound.toFixed(2) : '-'} → 
+        Step 2: ${history[2] ? history[2].bound.toFixed(2) : '-'}
+      </div>
+    `;
+
+    readout.innerHTML = resultHtml;
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([readout]);
+    }
+  }
+
+  [selectStrategy, sliderE0, sliderBeta].forEach(el => el.addEventListener('input', calculate));
+  btnCalc.addEventListener('click', calculate);
+
+  calculate();
+})();
+</script>
+</body>
+</html>
