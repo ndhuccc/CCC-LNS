@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch03 · KP11 MSE 判別函數其實在估計事後機率 — MSE Discriminant Function Actually Estimates Posterior Probabilities</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(245, 158, 11, .28), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(239, 68, 68, .22), transparent 30%),
+              linear-gradient(135deg, #451a03 0%, #1f2937 50%, #172554 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(69, 26, 3, .35);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(34px, 4.2vw, 62px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(17px, 1.9vw, 26px);
+  color: #fde68a;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #f59e0b;
+  border-radius: 999px;
+  color: #fde68a;
+  background: rgba(245, 158, 11, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.hero p.lead {
+  font-size: clamp(17px, 1.5vw, 22px);
+  max-width: 860px;
+  margin: 0 auto 36px;
+  color: #e2e8f0;
+  line-height: 1.65;
+}
+.hero-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  max-width: 1060px;
+  margin: 0 auto;
+  text-align: left;
+}
+.hero-feat-card {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .15);
+  border-radius: 12px;
+  padding: 20px;
+  backdrop-filter: blur(8px);
+}
+.hero-feat-card h4 {
+  color: #fde68a;
+  margin-bottom: 8px;
+  font-size: 1.08rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hero-feat-card p {
+  color: #cbd5e1;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* 深色背景 MathJax 淺色覆蓋 (坑 U 防呆) */
+.hero mjx-container, .hero mjx-container * {
+  color: #f8fafc !important;
+  fill: #f8fafc !important;
+}
+.summary-box mjx-container, .summary-box mjx-container * {
+  color: #f8fafc !important;
+  fill: #f8fafc !important;
+}
+
+/* 坑 W: 高橋流卡片置中硬指標 (中心 x = 831px, 左右留白各 231px) */
+#q1 .takahashi {
+  box-sizing: border-box;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  padding: 56px 48px;
+  background: linear-gradient(135deg, #78350f 0%, #451a03 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 18px;
+  box-shadow: 0 20px 48px rgba(120, 53, 15, .3);
+  text-align: center;
+}
+#q1 .takahashi h2 {
+  font-size: clamp(30px, 3.4vw, 48px);
+  color: #ffffff;
+  line-height: 1.25;
+  margin-bottom: 20px;
+}
+#q1 .takahashi .en-sub {
+  color: #fde68a;
+  font-size: clamp(16px, 1.4vw, 22px);
+  font-weight: 500;
+  margin-bottom: 30px;
+  display: block;
+}
+#q1 .takahashi .core-statement {
+  font-size: clamp(22px, 2.2vw, 32px);
+  color: #fef08a;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 28px 0;
+  padding: 20px;
+  background: rgba(0, 0, 0, .25);
+  border-radius: 12px;
+  border-left: 6px solid #eab308;
+}
+
+/* 坑 H: 向量圖防拉伸與 MathJax 隔離 */
+.half-layout .visual > svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+.visual mjx-container svg {
+  width: auto !important;
+  height: auto !important;
+  display: inline !important;
+}
+
+/* TOC Rail 佈局 */
+.toc-rail {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 258px;
+  height: 100vh;
+  background: #ffffff;
+  border-left: 1px solid #e2e8f0;
+  padding: 32px 18px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, .04);
+}
+.toc-rail h4 {
+  font-size: 0.86rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: #64748b;
+  margin-bottom: 18px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #d97706;
+}
+.toc-rail ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.toc-rail li {
+  margin-bottom: 10px;
+}
+.toc-rail a {
+  display: block;
+  font-size: 0.86rem;
+  color: #334155;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: all .2s ease;
+  line-height: 1.35;
+}
+.toc-rail a:hover {
+  background: #fffbeb;
+  color: #d97706;
+  font-weight: 600;
+}
+.toc-rail a.active {
+  background: #d97706;
+  color: #ffffff;
+  font-weight: 600;
+}
+@media (max-width: 1100px) {
+  .toc-rail { display: none; }
+}
+
+/* 雙欄與卡片設計 */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: center;
+  margin: 24px 0;
+}
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.04);
+  margin-bottom: 24px;
+}
+.card-header-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #fffbeb;
+  color: #d97706;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+.formula-highlight {
+  background: #f8fafc;
+  border-left: 4px solid #d97706;
+  padding: 16px 20px;
+  border-radius: 0 10px 10px 0;
+  margin: 18px 0;
+  font-size: 1.05rem;
+}
+.formula-highlight.warning {
+  border-left-color: #ef4444;
+  background: #fef2f2;
+}
+
+/* 互動實作專區樣式 */
+.kp11-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.kp11-panel {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px 22px;
+}
+.kp11-panel h4 {
+  margin: 0 0 8px;
+  font-size: 0.98rem;
+  color: #0f172a;
+}
+.kp11-panel p {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #334155;
+}
+.kp11-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+}
+.kp11-btn {
+  background-color: #d97706;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.kp11-btn:hover {
+  background-color: #b45309;
+}
+.kp11-btn-secondary {
+  background-color: #475569;
+}
+.kp11-btn-secondary:hover {
+  background-color: #334155;
+}
+.kp11-canvas-container {
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+}
+#demo-canvas-kp11 {
+  width: 100%;
+  height: auto;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.kp11-readout {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 14px 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+.kp11-metric {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.kp11-metric-label {
+  color: #64748b;
+  font-size: 0.76rem;
+  margin-bottom: 4px;
+}
+.kp11-metric-value {
+  color: #0f172a;
+  font: 700 .94rem/1.3 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.kp11-warn { color: #dc2626; }
+.kp11-ok { color: #059669; }
+
+/* 隨堂測驗 Checkpoint 樣式 */
+.quiz-section {
+  margin: 40px 0;
+}
+.quiz-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 26px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .03);
+}
+.quiz-card h4 {
+  font-size: 1.06rem;
+  color: #1e293b;
+  margin-bottom: 16px;
+  line-height: 1.45;
+}
+.quiz-card .options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.quiz-card .options button {
+  text-align: left;
+  padding: 12px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all .2s;
+  line-height: 1.4;
+}
+.quiz-card .options button:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+.quiz-card .options button.correct {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+  font-weight: 600;
+}
+.quiz-card .options button.wrong {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+.quiz-card .feedback {
+  margin-top: 14px;
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  display: none;
+}
+.quiz-card .feedback.visible {
+  display: block;
+}
+.quiz-card .feedback.correct {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+.quiz-card .feedback.wrong {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+/* 總結卡片 */
+.summary-box {
+  background: linear-gradient(135deg, #78350f 0%, #451a03 100%);
+  color: #ffffff;
+  padding: 36px 40px;
+  border-radius: 16px;
+  border: 1px solid #f59e0b;
+  margin: 40px 0;
+  box-shadow: 0 16px 36px rgba(120, 53, 15, .25);
+}
+.summary-box h3 {
+  color: #fde68a;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 24px;
+}
+.summary-item {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .15);
+  border-radius: 10px;
+  padding: 18px;
+}
+.summary-item h5 {
+  color: #fef08a;
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+.summary-item p {
+  color: #e2e8f0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  margin: 0;
+}
+</style>
+</head>
+<body>
+
+<div id="progressTop" style="position:fixed;top:0;left:0;height:4px;background:#d97706;z-index:9999;width:0%;"></div>
+
+<nav class="toc-rail">
+  <h4>目錄導覽 Contents</h4>
+  <ul>
+    <li><a href="#cover">首頁：MSE 估計事後機率</a></li>
+    <li><a href="#q1">核心之問：線性擬合的機率公理悖論</a></li>
+    <li><a href="#sec-bayesian-connection">0/1 編碼與事後機率等價性</a></li>
+    <li><a href="#sec-outlier-traction">極端正確點牽引偏誤剖析</a></li>
+    <li><a href="#lab">互動實驗室：牽引偏誤實驗室</a></li>
+    <li><a href="#quiz">隨堂觀念測驗 Checkpoint</a></li>
+    <li><a href="#summary">本章精要總結與延伸</a></li>
+  </ul>
+</nav>
+
+<!-- 1. COVER HERO -->
+<section class="section hero" id="cover">
+  <div style="max-width: 1200px; margin: 0 auto; width: 100%;">
+    <span class="badge">PR_115 · Chapter 3 · KP11</span>
+    <h1>MSE 判別函數其實在估計事後機率——貝氏味的意外驚喜
+      <span class="hero-title-en">MSE Discriminant Function Actually Estimates Posterior Probabilities: A Bayesian Serendipity</span>
+    </h1>
+    <p class="lead">
+      當以 0/1 目標標籤訓練 MSE 判別函數時，其條件期望值精確等於事後機率 $P(\omega_i \mid \boldsymbol{x})$！
+      完全不需顯式估計機率密度，即可自然逼近貝氏最優決策；然而無約束的線性空間也埋下了「機率越界」與「離群點牽引偏誤」的致命缺陷！
+    </p>
+    <div class="hero-features">
+      <div class="hero-feat-card">
+        <h4>✨ 0/1 指示變數神蹟</h4>
+        <p>$E[y_i \mid \boldsymbol{x}] = P(\omega_i \mid \boldsymbol{x})$！MSE 最優回歸自然轉化為貝氏事後機率估計器。</p>
+      </div>
+      <div class="hero-feat-card">
+        <h4>⚠️ 越界悖論</h4>
+        <p>線性函數 $g(\boldsymbol{x})$ 值域在 $(-\infty, +\infty)$，難免輸出小於 0 或大於 1，違反機率論公理。</p>
+      </div>
+      <div class="hero-feat-card">
+        <h4>💥 牽引偏誤 (Traction Pitfall)</h4>
+        <p>深度正確樣本因數值過大遭平方懲罰，迫使決策面被嚴重牽引扭曲，催生 Logistic 交叉熵改進。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. TAKAHASHI HIGH IMPACT QUESTION (坑 W 嚴格防呆) -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <span class="card-header-badge">核心提問 · Core Question</span>
+    <h2>為什麼一個明明被「百分之百正確分類」的極端樣本，<br>竟會毀掉整個線性分類器的決策超平面？</h2>
+    <span class="en-sub">Why Does an Ultra-Confident Correctly Classified Point Severely Distort the Linear Decision Boundary?</span>
+    <div class="core-statement">
+      $$ (g(\boldsymbol{x}) - 1)^2 = (3.5 - 1)^2 = 6.25 \gg 0 $$
+      「MSE 回歸無情懲罰『過度自信的正確預測』，導致超平面被遠方離群點強行拉扯偏離最佳邊界！」
+    </div>
+    <p style="color: #cbd5e1; font-size: 1.05rem; max-width: 860px; margin: 0 auto; line-height: 1.6;">
+      分類器的靈魂在於「邊界決策精確度」，而非「連續數值擬合度」。
+      若強行用最小平方誤差去逼近 S 型事後機率，遠離邊界的深處點將產生巨大的平方殘差，迫使模型為了迎合它們而犧牲邊界分離度！
+    </p>
+  </div>
+</section>
+
+<!-- 3. BAYESIAN CONNECTION -->
+<section class="section" id="sec-bayesian-connection">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="card">
+      <span class="card-header-badge">數學證明 · Mathematical Derivation</span>
+      <h3>1. 0/1 目標編碼與貝氏事後機率的等價推導</h3>
+      <p style="color: #64748b; font-size: 0.92rem; margin-top: -6px; margin-bottom: 20px;">
+        Indicator Target Identity: How Minimizing MSE Translates into Optimal Non-parametric Posterior Probability Estimation
+      </p>
+
+      <div class="content-grid half-layout">
+        <div>
+          <p>
+            考慮 $M$ 類別分類問題。對每一類別 $\omega_i$，設定 1-of-K 或 0/1 標籤：
+            $$ y_i = \begin{cases} 1, & \boldsymbol{x} \in \omega_i \\ 0, & \text{否則} \end{cases} $$
+            定義全體類別的均方誤差損失函數：
+            $$ J = E\Big[\sum_{i=1}^M \big(g_i(\boldsymbol{x}) - y_i\big)^2\Big] $$
+          </p>
+          <p>
+            利用重期望法則，計算隨機變數 $y_i$ 在給定 $\boldsymbol{x}$ 下的條件期望值：
+          </p>
+          <div class="formula-highlight">
+            $$ E[y_i \mid \boldsymbol{x}] = 1 \cdot P(\omega_i \mid \boldsymbol{x}) + 0 \cdot \big(1 - P(\omega_i \mid \boldsymbol{x})\big) = P(\omega_i \mid \boldsymbol{x}) $$
+          </div>
+          <p style="font-size: 0.92rem; color: #334155;">
+            由 KP10 的理論，使 MSE 最小化的最優無偏預測就是其條件期望值！因此：
+          </p>
+          <div class="formula-highlight warning">
+            $$ g_i^*(\boldsymbol{x}) \equiv P(\omega_i \mid \boldsymbol{x}) $$
+            「以 0/1 目標訓練 MSE 判別函數，實質上就是直接估計各類別的貝氏事後機率！」
+          </div>
+        </div>
+
+        <div class="visual" id="svg-sigmoid-linear">
+          <!-- 內聯 SVG：線性逼近 vs Sigmoid 曲線與逼近誤差陰影 -->
+          <svg viewBox="0 0 540 380" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; width: 100%; height: auto;">
+            <defs>
+              <linearGradient id="err-amber" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.05"/>
+              </linearGradient>
+            </defs>
+
+            <!-- 座標軸 -->
+            <line x1="50" y1="320" x2="500" y2="320" stroke="#64748b" stroke-width="2"/>
+            <line x1="50" y1="320" x2="50" y2="40" stroke="#64748b" stroke-width="2"/>
+            <text x="505" y="324" font-size="12" fill="#64748b" font-family="sans-serif">特徵 x</text>
+            <text x="35" y="30" font-size="12" fill="#64748b" font-family="sans-serif">P(ω₁|x)</text>
+
+            <!-- 機率邊界參考線 0.0, 0.5, 1.0 -->
+            <line x1="50" y1="100" x2="500" y2="100" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4,4"/>
+            <text x="25" y="104" font-size="11" fill="#64748b">1.0</text>
+            <line x1="50" y1="210" x2="500" y2="210" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2,2"/>
+            <text x="25" y="214" font-size="11" fill="#64748b">0.5</text>
+            <text x="25" y="324" font-size="11" fill="#64748b">0.0</text>
+
+            <!-- 逼近誤差陰影帶 -->
+            <path d="M 120 310 Q 240 310 270 210 Q 300 110 420 110 L 420 70 L 120 350 Z" fill="url(#err-amber)"/>
+
+            <!-- 真實 S 型 Sigmoid 事後機率 P(w1|x) -->
+            <path d="M 60 318 C 190 318, 220 280, 270 210 C 320 140, 350 102, 480 102" fill="none" stroke="#d97706" stroke-width="3"/>
+            <text x="380" y="85" font-size="13" fill="#d97706" font-weight="bold">P(ω₁|x) 真實事後機率 (Sigmoid)</text>
+
+            <!-- 線性判別函數 g1(x) -->
+            <line x1="120" y1="350" x2="420" y2="70" stroke="#2563eb" stroke-width="2.5"/>
+            <text x="360" y="160" font-size="12" fill="#2563eb" font-weight="bold">g₁(x) = w₁x + w₀ (線性 MSE 逼近)</text>
+
+            <!-- 越界區域標記 (g > 1, g < 0) -->
+            <rect x="420" y="55" width="75" height="40" rx="4" fill="#fee2e2" stroke="#ef4444"/>
+            <text x="428" y="72" font-size="10" fill="#991b1b" font-weight="bold">越界：g₁ > 1</text>
+            <text x="428" y="86" font-size="9" fill="#b91c1c">違反機率公理</text>
+
+            <rect x="60" y="325" width="75" height="40" rx="4" fill="#fee2e2" stroke="#ef4444"/>
+            <text x="68" y="342" font-size="10" fill="#991b1b" font-weight="bold">越界：g₁ < 0</text>
+            <text x="68" y="356" font-size="9" fill="#b91c1c">負機率荒謬解</text>
+
+            <!-- 決策門檻點 (0, 0.5) -->
+            <circle cx="270" cy="210" r="5" fill="#10b981"/>
+            <text x="280" y="215" font-size="11" fill="#047857" font-weight="bold">決策門檻 (x*, 0.5)</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. OUTLIER TRACTION PITFALL -->
+<section class="section" id="sec-outlier-traction">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="card">
+      <span class="card-header-badge">病態剖析 · Pathology Analysis</span>
+      <h3>2. 極端正確點牽引偏誤：為什麼 MSE 會在分類中翻車？</h3>
+      <p style="color: #64748b; font-size: 0.92rem; margin-top: -6px; margin-bottom: 20px;">
+        The Outlier Masking Effect: Excessive Penalty on Highly Confident Correct Instances
+      </p>
+
+      <div class="content-grid">
+        <div>
+          <h4>牽引機制的代數根源</h4>
+          <p style="font-size: 0.92rem; color: #334155; line-height: 1.6;">
+            考慮二元分類中遠離邊界的正確樣本點 $\boldsymbol{x}_{\text{far}}$（例如標籤 $y=1$，且位於深處，真實模型輸出 $g(\boldsymbol{x}_{\text{far}}) = 3.0$）。
+          </p>
+          <ul style="color: #475569; font-size: 0.92rem; line-height: 1.6;">
+            <li>在感知器或 SVM 視角：該樣本分類完全正確，邊際足夠寬，<strong>損失為 0</strong>，絕不參與超平面更新。</li>
+            <li>在 Logistic / 交叉熵視角：$\hat{p} = \sigma(3.0) \approx 0.95$，交叉熵損失 $-\log(0.95) \approx 0.05$ <strong>接近於零</strong>。</li>
+            <li><strong>在 MSE 視角：</strong> $(3.0 - 1.0)^2 = 4.0$！MSE 將其視為比「被輕微誤判點」還要嚴重的巨大錯誤，瘋狂拉扯超平面的斜率來降低這個遠方殘差，導致決策邊界嚴重偏移！</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>解決方案：從 MSE 跨越到 Logistic 回歸</h4>
+          <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 18px;">
+            <span style="font-weight: 700; color: #065f46; font-size: 0.95rem;">現代機器學習的標準演進路徑</span>
+            <p style="font-size: 0.88rem; color: #047857; margin: 8px 0 12px; line-height: 1.55;">
+              為瞭解決「機率越界」與「遠方點牽引」，統計學引入了<strong>非線性 Sigmoid 啟用</strong>與<strong>對數損失 (Log-loss)</strong>：
+              $$ P(\omega_1 \mid \boldsymbol{x}) = \sigma(\boldsymbol{w}^\top \boldsymbol{x}) = \frac{1}{1 + e^{-\boldsymbol{w}^\top \boldsymbol{x}}} $$
+              $$ \mathcal{L}_{\text{BCE}} = -y \log(\hat{p}) - (1-y)\log(1-\hat{p}) $$
+            </p>
+            <div style="border-top: 1px dashed #6ee7b7; padding-top: 8px; font-size: 0.84rem; color: #065f46;">
+              💡 <strong>橋樑結論：</strong> MSE 揭示了事後機率的理論黃金起點，而 Logistic 與神經網路則修復了其工程脆弱性！
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. INTERACTIVE LAB SECTION -->
+<section class="section" id="lab">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="card">
+      <span class="card-header-badge">互動實作 · Interactive Laboratory</span>
+      <h3>3. 0/1 目標擬回事後機率與離群點牽引效應實驗室</h3>
+      <p style="color: #64748b; font-size: 0.92rem; margin-top: -6px; margin-bottom: 20px;">
+        Interactive Simulator: Experience the Catastrophic Boundary Shift Caused by Correct Extreme Outliers
+      </p>
+
+      <div class="kp11-container">
+        <div class="kp11-panel">
+          <h4>💡 這在做什麼與怎麼操作</h4>
+          <p>
+            藍點為類別 1 ($y=1$)，紅點為類別 0 ($y=0$)。預設狀態下線性 MSE 給出一條平穩的決策分界線。
+            點選<strong>「⚠️ 新增遠端極端正確點」</strong>，觀察這些本就屬於類別 1 的遠端點如何透過平方殘差將決策門檻往右推移，甚至引發中間混合點的嚴重大面積誤判！
+          </p>
+        </div>
+
+        <div class="kp11-controls">
+          <button class="kp11-btn" id="kp11-btn-add-outlier" type="button">⚠️ 新增遠端極端正確點 (Class 1)</button>
+          <button class="kp11-btn kp11-btn-secondary" id="kp11-btn-reset" type="button">↺ 重置為標準乾淨資料</button>
+        </div>
+
+        <div class="kp11-canvas-container">
+          <canvas id="demo-canvas-kp11" width="600" height="420"></canvas>
+        </div>
+
+        <div class="demo-readout kp11-readout" id="kp11-readout">
+          <div class="kp11-metric">
+            <div class="kp11-metric-label">線性決策邊界 x* (g=0.5)</div>
+            <div class="kp11-metric-value" id="kp11-ro-boundary">0.00</div>
+          </div>
+          <div class="kp11-metric">
+            <div class="kp11-metric-label">最佳理論邊界 (Sigmoid)</div>
+            <div class="kp11-metric-value kp11-ok">0.00</div>
+          </div>
+          <div class="kp11-metric">
+            <div class="kp11-metric-label">邊界牽引偏移量 Δx</div>
+            <div class="kp11-metric-value" id="kp11-ro-shift">0.00</div>
+          </div>
+          <div class="kp11-metric">
+            <div class="kp11-metric-label">總誤判樣本數</div>
+            <div class="kp11-metric-value" id="kp11-ro-errors">0 / 20</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. CHECKPOINT QUIZ SECTION -->
+<section class="section quiz-section" id="quiz">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="card">
+      <span class="card-header-badge">隨堂測驗 · Checkpoint Quizzes</span>
+      <h3>4. 核心觀念檢核點 (Checkpoint Assessment)</h3>
+      <p style="color: #64748b; font-size: 0.92rem; margin-top: -6px; margin-bottom: 24px;">
+        檢驗您對 0/1 目標編碼期望值、MSE 逼近事後機率、越界悖論與離群點牽引偏誤的理解。
+      </p>
+
+      <!-- Quiz 1 -->
+      <div class="quiz-card" data-ans="B">
+        <h4>Q1. 當目標類別採用 0/1 編碼（$\boldsymbol{x} \in \omega_i$ 時 $y_i=1$，否則 $y_i=0$）時，以均方誤差 (MSE) 訓練出的判別函數 $g_i(\boldsymbol{x})$，在理論上直接逼近什麼核心統計量？</h4>
+        <div class="options">
+          <button data-opt="A">A. 類別條件機率密度 $p(\boldsymbol{x} \mid \omega_i)$</button>
+          <button data-opt="B">B. 貝氏事後機率 $P(\omega_i \mid \boldsymbol{x})$</button>
+          <button data-opt="C">C. 兩類別特徵向量的歐幾裡得馬氏距離 (Mahalanobis Distance)</button>
+          <button data-opt="D">D. 樣本的先驗機率分佈 $P(\omega_i)$</button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+
+      <!-- Quiz 2 -->
+      <div class="quiz-card" data-ans="B">
+        <h4>Q2. 既然 MSE 判別函數在估計事後機率，若採用線性判別函數 $g_i(\boldsymbol{x}) = \boldsymbol{w}_i^\top \boldsymbol{x}$，在機率論的公理原則上會遭遇什麼嚴重的結構性缺陷？</h4>
+        <div class="options">
+          <button data-opt="A">A. 線性函數的斜率恆為正數，無法擬合下降趨勢</button>
+          <button data-opt="B">B. 線性輸出未經有界約束，在遠離原點區域其預測值會小於 0 或大於 1，違反機率公理中 $0 \le P \le 1$ 的基本規範</button>
+          <button data-opt="C">C. 線性函數會導致貝氏風險恆等於無窮大</button>
+          <button data-opt="D">D. 線性判別函數在二元分類時無法求出決策閾值</button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+
+      <!-- Quiz 3 -->
+      <div class="quiz-card" data-ans="A">
+        <h4>Q3. 在使用線性 MSE 進行二元分類時，著名的「極端正確點牽引偏誤 (Outlier Masking / Traction Pitfall)」是指何種現象？</h4>
+        <div class="options">
+          <button data-opt="A">A. 落在分類邊界深處、分類極度明確且正確的遠端樣本點，因線性輸出遠大於 1 而被 MSE 施加巨大平方懲罰，迫使決策超平面發生偏移並破壞邊界處的分類精度</button>
+          <button data-opt="B">B. 離群點會導致矩陣 $X^\top X$ 的行列式值嚴格等於 0</button>
+          <button data-opt="C">C. 靠近決策邊界的樣本點會被強制忽略，只有邊緣點參與權重更新</button>
+          <button data-opt="D">D. 類別標籤會隨樣本數量增加自動反轉正負號</button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+
+      <!-- Quiz 4 -->
+      <div class="quiz-card" data-ans="B">
+        <h4>Q4. 為了克服線性 MSE 在估計事後機率時的「越界」與「極端正確點牽引」缺陷，現代機器學習通常引進什麼機制進行根本性改良？</h4>
+        <div class="options">
+          <button data-opt="A">A. 強制將所有特徵值限制在 $[0, 1]$ 之間</button>
+          <button data-opt="B">B. 線上性輸出外層複合單調非線性對映（如 Sigmoid / Softmax 啟用函數），並將損失函數從 MSE 替換為對數損失 (Log-Loss / 交叉熵)</button>
+          <button data-opt="C">C. 將二元分類問題轉換為 100 維的多項式擬合</button>
+          <button data-opt="D">D. 拋棄所有訓練樣本，改用純粹的均勻隨機猜測</button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- 7. SUMMARY AND TAKEAWAYS -->
+<section class="section" id="summary">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="summary-box">
+      <h3>本章精要總結 · Key Takeaways</h3>
+      <p style="font-size: 1.05rem; color: #e2e8f0; line-height: 1.6;">
+        0/1 目標編碼在 MSE 回歸與貝氏決策理論之間架起了一座精妙的橋樑。
+        理解其背後事後機率估計的幾何意義與牽引缺陷，是掌握現代 Logistic 回歸與深度神經網路分類損失的關鍵基石！
+      </p>
+
+      <div class="summary-grid">
+        <div class="summary-item">
+          <h5>無密度估計的貝氏通道</h5>
+          <p>
+            指示變數的期望值即機率！MSE 判別函數繞開繁雜的密度建模，直接輸出事後機率的最佳平方逼近。
+          </p>
+        </div>
+        <div class="summary-item">
+          <h5>線性模型的機率枷鎖</h5>
+          <p>
+            無界的值域必然引發負機率與大於 1 的公理違背，促使機器學習走向 Sigmoid 與 Softmax 非線性有界啟用。
+          </p>
+        </div>
+        <div class="summary-item">
+          <h5>損失函數的本質升華</h5>
+          <p>
+            極端正確點的平方懲罰暴露了 MSE 不適合做離散分類的命門，推動整個領域全面擁抱交叉熵 (Cross-Entropy)。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Canvas Interactive Logic Script for KP11 -->
+<script>
+(function() {
+  const canvas = document.getElementById('demo-canvas-kp11');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const btnAddOutlier = document.getElementById('kp11-btn-add-outlier');
+  const btnReset = document.getElementById('kp11-btn-reset');
+  const roBoundary = document.getElementById('kp11-ro-boundary');
+  const roShift = document.getElementById('kp11-ro-shift');
+  const roErrors = document.getElementById('kp11-ro-errors');
+
+  const margin = 45;
+  const minX = -3.5, maxX = 6.0;
+  const minY = -0.3, maxY = 1.3;
+
+  function toScreenX(x) {
+    return margin + ((x - minX) / (maxX - minX)) * (canvas.width - 2 * margin);
+  }
+  function toScreenY(y) {
+    return canvas.height - margin - ((y - minY) / (maxY - minY)) * (canvas.height - 2 * margin);
+  }
+  function toMathX(sx) {
+    return minX + ((sx - margin) / (canvas.width - 2 * margin)) * (maxX - minX);
+  }
+
+  // Base dataset: Class 0 (mean=-1.2), Class 1 (mean=1.2)
+  const basePoints = [
+    { x: -2.8, y: 0 }, { x: -2.3, y: 0 }, { x: -1.9, y: 0 }, { x: -1.6, y: 0 }, { x: -1.4, y: 0 },
+    { x: -1.1, y: 0 }, { x: -0.9, y: 0 }, { x: -0.6, y: 0 }, { x: -0.3, y: 0 }, { x: -0.1, y: 0 },
+    { x: 0.1, y: 1 }, { x: 0.3, y: 1 }, { x: 0.7, y: 1 }, { x: 1.0, y: 1 }, { x: 1.2, y: 1 },
+    { x: 1.5, y: 1 }, { x: 1.8, y: 1 }, { x: 2.1, y: 1 }, { x: 2.4, y: 1 }, { x: 2.7, y: 1 }
+  ];
+
+  let currentPoints = [];
+
+  function resetData() {
+    currentPoints = basePoints.map(p => ({ ...p }));
+  }
+
+  function addOutliers() {
+    // Add 6 extreme points on class 1 side (far right, x = 4.0 ~ 5.5)
+    currentPoints.push({ x: 4.2, y: 1 });
+    currentPoints.push({ x: 4.5, y: 1 });
+    currentPoints.push({ x: 4.8, y: 1 });
+    currentPoints.push({ x: 5.1, y: 1 });
+    currentPoints.push({ x: 5.4, y: 1 });
+  }
+
+  function fitLinear(pts) {
+    let sumX = 0, sumY = 0, sumXX = 0, sumXY = 0;
+    const N = pts.length;
+    pts.forEach(p => {
+      sumX += p.x;
+      sumY += p.y;
+      sumXX += p.x * p.x;
+      sumXY += p.x * p.y;
+    });
+    const denom = N * sumXX - sumX * sumX;
+    if (Math.abs(denom) < 1e-8) return { w1: 0, w0: 0.5 };
+    const w1 = (N * sumXY - sumX * sumY) / denom;
+    const w0 = (sumY - w1 * sumX) / N;
+    return { w1, w0 };
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Baseline reference lines
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+
+    // y = 1 line
+    const sY1 = toScreenY(1);
+    ctx.beginPath();
+    ctx.moveTo(margin, sY1);
+    ctx.lineTo(canvas.width - margin, sY1);
+    ctx.stroke();
+
+    // y = 0.5 line (decision threshold)
+    const sY05 = toScreenY(0.5);
+    ctx.strokeStyle = '#94a3b8';
+    ctx.beginPath();
+    ctx.moveTo(margin, sY05);
+    ctx.lineTo(canvas.width - margin, sY05);
+    ctx.stroke();
+
+    // y = 0 line
+    const sY0 = toScreenY(0);
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.beginPath();
+    ctx.moveTo(margin, sY0);
+    ctx.lineTo(canvas.width - margin, sY0);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Axes
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(margin, toScreenY(0));
+    ctx.lineTo(canvas.width - margin, toScreenY(0));
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(toScreenX(0), margin);
+    ctx.lineTo(toScreenX(0), canvas.height - margin);
+    ctx.stroke();
+
+    // True Sigmoid Posterior Curve
+    ctx.strokeStyle = '#d97706';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let px = margin; px <= canvas.width - margin; px += 3) {
+      const mx = toMathX(px);
+      const my = 1 / (1 + Math.exp(-2.2 * mx));
+      const sy = toScreenY(my);
+      if (px === margin) ctx.moveTo(px, sy);
+      else ctx.lineTo(px, sy);
+    }
+    ctx.stroke();
+
+    // Fit linear MSE model
+    const { w1, w0 } = fitLinear(currentPoints);
+
+    // Linear fit line
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 2.8;
+    ctx.beginPath();
+    ctx.moveTo(toScreenX(minX), toScreenY(w1 * minX + w0));
+    ctx.lineTo(toScreenX(maxX), toScreenY(w1 * maxX + w0));
+    ctx.stroke();
+
+    // Calculate decision boundary: w1 * x + w0 = 0.5 => x* = (0.5 - w0) / w1
+    const xStar = Math.abs(w1) > 1e-5 ? (0.5 - w0) / w1 : 0;
+    const sxStar = toScreenX(xStar);
+
+    // Draw decision boundary line on canvas
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(sxStar, margin);
+    ctx.lineTo(sxStar, canvas.height - margin);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Plot data points
+    let misclassified = 0;
+    currentPoints.forEach(p => {
+      const sx = toScreenX(p.x);
+      const sy = toScreenY(p.y);
+      const pred = w1 * p.x + w0 >= 0.5 ? 1 : 0;
+      const isErr = pred !== p.y;
+      if (isErr) misclassified++;
+
+      ctx.fillStyle = p.y === 1 ? '#2563eb' : '#dc2626';
+      ctx.beginPath();
+      ctx.arc(sx, sy, isErr ? 7 : 5, 0, 2 * Math.PI);
+      ctx.fill();
+
+      if (isErr) {
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 11, 0, 2 * Math.PI);
+        ctx.stroke();
+      }
+    });
+
+    // Update Readouts
+    roBoundary.textContent = xStar.toFixed(2);
+    const shift = xStar - 0.0;
+    roShift.textContent = (shift >= 0 ? '+' : '') + shift.toFixed(2);
+    roShift.className = 'kp11-metric-value ' + (Math.abs(shift) > 0.3 ? 'kp11-warn' : 'kp11-ok');
+    roErrors.textContent = `${misclassified} / ${currentPoints.length}`;
+    roErrors.className = 'kp11-metric-value ' + (misclassified > 0 ? 'kp11-warn' : 'kp11-ok');
+  }
+
+  btnAddOutlier.addEventListener('click', () => {
+    addOutliers();
+    render();
+  });
+  btnReset.addEventListener('click', () => {
+    resetData();
+    render();
+  });
+
+  resetData();
+  render();
+})();
+</script>
+
+<!-- Interactive Quiz Logic with MathJax Re-rendering -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const quizCards = document.querySelectorAll('.quiz-card');
+  quizCards.forEach(card => {
+    const ans = card.getAttribute('data-ans');
+    const buttons = card.querySelectorAll('.options button');
+    const fb = card.querySelector('.feedback');
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const selected = btn.getAttribute('data-opt');
+        buttons.forEach(b => {
+          b.disabled = true;
+          b.classList.remove('correct', 'wrong');
+        });
+
+        if (selected === ans) {
+          btn.classList.add('correct');
+          fb.className = 'feedback visible correct';
+          if (selected === 'B' && card.querySelector('h4').textContent.includes('Q1')) {
+            fb.innerHTML = '<strong>答對了！</strong> 對 0/1 隨機指示變數而言，其條件期望值 $E[y_i \\mid \\boldsymbol{x}] = 1 \\cdot P(\\omega_i\\mid\\boldsymbol{x}) + 0 \\cdot (1 - P(\\omega_i\\mid\\boldsymbol{x})) = P(\\omega_i\\mid\\boldsymbol{x})$。而前面已證明 MSE 的最優預測正是條件期望值，因此以 0/1 目標訓練 MSE 判別函數，實質上就是在最小平方意義下擬合真實的事後機率！';
+          } else if (selected === 'B' && card.querySelector('h4').textContent.includes('Q2')) {
+            fb.innerHTML = '<strong>答對了！</strong> 真實的事後機率 $P(\\omega_1\\mid\\boldsymbol{x})$ 具有非負性且上界為 1；而無約束的線性仿射函數 $g_1(\\boldsymbol{x})$ 的值域是 $(-\\infty, +\\infty)$，必然會在某些區域給出「機率為 $-0.3$」或「機率為 $1.8$」的荒謬數值！';
+          } else if (selected === 'A' && card.querySelector('h4').textContent.includes('Q3')) {
+            fb.innerHTML = '<strong>答對了！</strong> 這正是分類問題不宜盲目套用 MSE 回歸損失的致命原因：MSE 不管樣本是否分類正確，只要數值 $g(\\boldsymbol{x})$ 偏離目標 1（例如深度正確點算出來是 3.0，誤差達 $(3.0-1)^2 = 4$），MSE 就會全力拉扯超平面來壓制這個「誤差」，導致真正關鍵的邊界決策面被帶偏！';
+          } else if (selected === 'B' && card.querySelector('h4').textContent.includes('Q4')) {
+            fb.innerHTML = '<strong>答對了！</strong> 將線性加總輸入 Sigmoid 函數 $\\sigma(\\boldsymbol{w}^\\top \\boldsymbol{x}) = \\frac{1}{1 + e^{-\\boldsymbol{w}^\\top \\boldsymbol{x}}}$ 保證了輸出嚴格介於 $(0, 1)$；搭配交叉熵損失函數，當樣本被正確且自信地分類時（$\\hat{y} \\to 1$），損失平滑趨於零而不會產生多餘懲罰，徹底解決了牽引偏誤！';
+          } else {
+            fb.innerHTML = '<strong>答對了！</strong> 概念理解完全正確！';
+          }
+        } else {
+          btn.classList.add('wrong');
+          const correctBtn = card.querySelector(`button[data-opt="${ans}"]`);
+          if (correctBtn) correctBtn.classList.add('correct');
+          fb.className = 'feedback visible wrong';
+          fb.innerHTML = `<strong>答錯了。</strong> 正確選項為 <strong>${ans}</strong>。請回顧上方指示變數期望值推導與牽引效應剖析！`;
+        }
+
+        if (window.MathJax && window.MathJax.typesetPromise) {
+          window.MathJax.typesetPromise([fb]).catch(err => console.error(err));
+        }
+      });
+    });
+  });
+
+  // Top progress bar update
+  window.addEventListener('scroll', () => {
+    const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    const scrolled = (winScroll / height) * 100;
+    const bar = document.getElementById('progressTop');
+    if (bar) bar.style.width = scrolled + '%';
+  });
+});
+</script>
+
+</body>
+</html>

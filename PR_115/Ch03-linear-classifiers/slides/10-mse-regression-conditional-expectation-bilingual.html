@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch03 · KP10 均方誤差回歸再探：條件期望值是最佳預測 — MSE Regression Revisited: Conditional Expectation is Optimal</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(99, 102, 241, .28), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(14, 165, 233, .24), transparent 30%),
+              linear-gradient(135deg, #1e1b4b 0%, #0f172a 50%, #1e293b 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(30, 27, 75, .35);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(34px, 4.2vw, 62px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(17px, 1.9vw, 26px);
+  color: #a5b4fc;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #818cf8;
+  border-radius: 999px;
+  color: #a5b4fc;
+  background: rgba(129, 140, 248, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.hero p.lead {
+  font-size: clamp(17px, 1.5vw, 22px);
+  max-width: 860px;
+  margin: 0 auto 36px;
+  color: #e2e8f0;
+  line-height: 1.65;
+}
+.hero-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  max-width: 1060px;
+  margin: 0 auto;
+  text-align: left;
+}
+.hero-feat-card {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .15);
+  border-radius: 12px;
+  padding: 20px;
+  backdrop-filter: blur(8px);
+}
+.hero-feat-card h4 {
+  color: #a5b4fc;
+  margin-bottom: 8px;
+  font-size: 1.08rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hero-feat-card p {
+  color: #cbd5e1;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* 深色背景 MathJax 淺色覆蓋 (坑 U 防呆) */
+.hero mjx-container, .hero mjx-container * {
+  color: #f8fafc !important;
+  fill: #f8fafc !important;
+}
+.summary-box mjx-container, .summary-box mjx-container * {
+  color: #f8fafc !important;
+  fill: #f8fafc !important;
+}
+
+/* 坑 W: 高橋流卡片置中硬指標 (中心 x = 831px, 左右留白各 231px) */
+#q1 .takahashi {
+  box-sizing: border-box;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  padding: 56px 48px;
+  background: linear-gradient(135deg, #312e81 0%, #1e1b4b 100%);
+  border: 2px solid #818cf8;
+  border-radius: 18px;
+  box-shadow: 0 20px 48px rgba(49, 46, 129, .3);
+  text-align: center;
+}
+#q1 .takahashi h2 {
+  font-size: clamp(30px, 3.4vw, 48px);
+  color: #ffffff;
+  line-height: 1.25;
+  margin-bottom: 20px;
+}
+#q1 .takahashi .en-sub {
+  color: #a5b4fc;
+  font-size: clamp(16px, 1.4vw, 22px);
+  font-weight: 500;
+  margin-bottom: 30px;
+  display: block;
+}
+#q1 .takahashi .core-statement {
+  font-size: clamp(22px, 2.2vw, 32px);
+  color: #fef08a;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 28px 0;
+  padding: 20px;
+  background: rgba(0, 0, 0, .25);
+  border-radius: 12px;
+  border-left: 6px solid #eab308;
+}
+
+/* 坑 H: 向量圖防拉伸與 MathJax 隔離 */
+.half-layout .visual > svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+.visual mjx-container svg {
+  width: auto !important;
+  height: auto !important;
+  display: inline !important;
+}
+
+/* TOC Rail 佈局 */
+.toc-rail {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 258px;
+  height: 100vh;
+  background: #ffffff;
+  border-left: 1px solid #e2e8f0;
+  padding: 32px 18px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, .04);
+}
+.toc-rail h4 {
+  font-size: 0.86rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: #64748b;
+  margin-bottom: 18px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #6366f1;
+}
+.toc-rail ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.toc-rail li {
+  margin-bottom: 10px;
+}
+.toc-rail a {
+  display: block;
+  font-size: 0.86rem;
+  color: #334155;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: all .2s ease;
+  line-height: 1.35;
+}
+.toc-rail a:hover {
+  background: #eef2ff;
+  color: #4f46e5;
+  font-weight: 600;
+}
+.toc-rail a.active {
+  background: #4f46e5;
+  color: #ffffff;
+  font-weight: 600;
+}
+@media (max-width: 1100px) {
+  .toc-rail { display: none; }
+}
+
+/* 雙欄與卡片設計 */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: center;
+  margin: 24px 0;
+}
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.04);
+  margin-bottom: 24px;
+}
+.card-header-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+.formula-highlight {
+  background: #f8fafc;
+  border-left: 4px solid #6366f1;
+  padding: 16px 20px;
+  border-radius: 0 10px 10px 0;
+  margin: 18px 0;
+  font-size: 1.05rem;
+}
+.formula-highlight.warning {
+  border-left-color: #f59e0b;
+  background: #fffbeb;
+}
+
+/* 互動實作專區樣式 */
+.kp10-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.kp10-panel {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px 22px;
+}
+.kp10-panel h4 {
+  margin: 0 0 8px;
+  font-size: 0.98rem;
+  color: #0f172a;
+}
+.kp10-panel p {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #334155;
+}
+.kp10-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+}
+.kp10-btn {
+  background-color: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.kp10-btn:hover {
+  background-color: #4338ca;
+}
+.kp10-slider-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.86rem;
+  color: #1e293b;
+}
+.kp10-slider {
+  width: 130px;
+  accent-color: #4f46e5;
+}
+.kp10-canvas-container {
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+}
+#demo-canvas-kp10 {
+  width: 100%;
+  height: auto;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  cursor: crosshair;
+}
+.kp10-readout {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 14px 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+.kp10-metric {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.kp10-metric-label {
+  color: #64748b;
+  font-size: 0.76rem;
+  margin-bottom: 4px;
+}
+.kp10-metric-value {
+  color: #0f172a;
+  font: 700 .94rem/1.3 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.kp10-ok { color: #4338ca; }
+
+/* 隨堂測驗 Checkpoint 樣式 */
+.quiz-section {
+  margin: 40px 0;
+}
+.quiz-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 26px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .03);
+}
+.quiz-card h4 {
+  font-size: 1.06rem;
+  color: #1e293b;
+  margin-bottom: 16px;
+  line-height: 1.45;
+}
+.quiz-card .options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.quiz-card .options button {
+  text-align: left;
+  padding: 12px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all .2s;
+  line-height: 1.4;
+}
+.quiz-card .options button:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+.quiz-card .options button.correct {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+  font-weight: 600;
+}
+.quiz-card .options button.wrong {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+.quiz-card .feedback {
+  margin-top: 14px;
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  display: none;
+}
+.quiz-card .feedback.visible {
+  display: block;
+}
+.quiz-card .feedback.correct {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+.quiz-card .feedback.wrong {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+/* 總結卡片 */
+.summary-box {
+  background: linear-gradient(135deg, #312e81 0%, #1e1b4b 100%);
+  color: #ffffff;
+  padding: 36px 40px;
+  border-radius: 16px;
+  border: 1px solid #818cf8;
+  margin: 40px 0;
+  box-shadow: 0 16px 36px rgba(49, 46, 129, .25);
+}
+.summary-box h3 {
+  color: #a5b4fc;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 24px;
+}
+.summary-item {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .15);
+  border-radius: 10px;
+  padding: 18px;
+}
+.summary-item h5 {
+  color: #fef08a;
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+.summary-item p {
+  color: #e2e8f0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  margin: 0;
+}
+</style>
+</head>
+<body>
+
+<div id="progressTop" style="position:fixed;top:0;left:0;height:4px;background:#4f46e5;z-index:9999;width:0%;"></div>
+
+<nav class="toc-rail">
+  <h4>目錄導覽 Contents</h4>
+  <ul>
+    <li><a href="#cover">首頁：均方誤差回歸再探</a></li>
+    <li><a href="#q1">核心之問：最佳預測函數形式</a></li>
+    <li><a href="#sec-derivation-optimality">條件期望值嚴格證明</a></li>
+    <li><a href="#sec-orthogonal-decomposition">正交投影與不可約誤差</a></li>
+    <li><a href="#sec-gaussian-special-case">高斯分佈下的線性神蹟</a></li>
+    <li><a href="#lab">互動實驗室：切片分佈模擬器</a></li>
+    <li><a href="#quiz">隨堂觀念測驗 Checkpoint</a></li>
+    <li><a href="#summary">本章精要總結與延伸</a></li>
+  </ul>
+</nav>
+
+<!-- 1. COVER HERO -->
+<section class="section hero" id="cover">
+  <div style="max-width: 1200px; margin: 0 auto; width: 100%;">
+    <span class="badge">PR_115 · Chapter 3 · KP10</span>
+    <h1>均方誤差回歸再探：條件期望值是最佳預測
+      <span class="hero-title-en">MSE Regression Revisited: The Conditional Expectation is the Theoretically Optimal Predictor</span>
+    </h1>
+    <p class="lead">
+      若拋開任何預設的線性或多項式模型架構，在全體可測函數空間中尋求使均方誤差最小的最優預測 $g^*(\boldsymbol{x})$，
+      其答案恆為條件期望值 $E[y \mid \boldsymbol{x}]$！揭示了殘差正交性、正交投影定理與不可約隨機雜訊的底層真諦。
+    </p>
+    <div class="hero-features">
+      <div class="hero-feat-card">
+        <h4>🎯 泛函全域性最優</h4>
+        <p>在無約束函數空間中，條件期望值 $E[y \mid \boldsymbol{x}]$ 是唯一使 MSE 最小的統計極限。</p>
+      </div>
+      <div class="hero-feat-card">
+        <h4>📐 正交投影定理</h4>
+        <p>最優預測之殘差 $y - E[y\mid\boldsymbol{x}]$ 恆正交於特徵空間中的任意變換，無法再被榨取資訊。</p>
+      </div>
+      <div class="hero-feat-card">
+        <h4>✨ 聯合高斯的神奇退化</h4>
+        <p>當特徵與目標聯合服從多元常態分佈時，條件期望值自動退化為嚴格線性函數！</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. TAKAHASHI HIGH IMPACT QUESTION (坑 W 嚴格防呆) -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <span class="card-header-badge">核心提問 · Core Question</span>
+    <h2>如果我們完全不限制預測模型的形式，<br>究竟什麼樣的函數才能在均方誤差意義下達到全域完美？</h2>
+    <span class="en-sub">Without Any Model Constraints, What Mathematical Function Minimizes Mean Squared Error?</span>
+    <div class="core-statement">
+      $$ g^*(\boldsymbol{x}) = \arg\min_{g(\cdot)} E\big[(y - g(\boldsymbol{x}))^2\big] \equiv E[y \mid \boldsymbol{x}] $$
+      「給定任何特徵輸入 $\boldsymbol{x}$，最優預測點永遠坐落在垂直切片機率密度的『重心』上！」
+    </div>
+    <p style="color: #cbd5e1; font-size: 1.05rem; max-width: 860px; margin: 0 auto; line-height: 1.6;">
+      無論真實世界的回歸曲面多麼蜿蜒扭曲，條件期望值 $E[y\mid\boldsymbol{x}]$ 就是上帝視角下的統計最優解答。
+      工程中設計的所有線性回歸、類神經網路或決策樹，本質上都是在有限資料下對這個條件期望值的逼近器！
+    </p>
+  </div>
+</section>
+
+<!-- 3. CONDITIONAL EXPECTATION OPTIMALITY PROOF -->
+<section class="section" id="sec-derivation-optimality">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="card">
+      <span class="card-header-badge">理論證明 · Theoretical Proof</span>
+      <h3>1. 條件期望值最優性的平方式展開證明</h3>
+      <p style="color: #64748b; font-size: 0.92rem; margin-top: -6px; margin-bottom: 20px;">
+        Rigorous Derivation of Optimality: Orthogonal Decomposition via Law of Total Expectation
+      </p>
+
+      <div class="content-grid half-layout">
+        <div>
+          <p>
+            考慮任意預測函數 $\tilde{y} = g(\boldsymbol{x})$。令 $\hat{y} = E[y \mid \boldsymbol{x}]$，展開預測誤差平方：
+          </p>
+          <div class="formula-highlight">
+            $$ E\big[(y - \tilde{y})^2\big] = E\big[\big((y - \hat{y}) + (\hat{y} - \tilde{y})\big)^2\big] $$
+            $$ = E\big[(y - \hat{y})^2\big] + E\big[(\hat{y} - \tilde{y})^2\big] + 2 E\big[(y - \hat{y})(\hat{y} - \tilde{y})\big] $$
+          </div>
+          <p>
+            利用重期望法則 (Law of Iterated Expectations)，檢驗交叉項：
+            $$ E\big[(y - \hat{y})(\hat{y} - \tilde{y})\big] = E_{\boldsymbol{x}}\Big[(\hat{y} - \tilde{y}) \cdot E_{y\mid\boldsymbol{x}}\big[y - E[y\mid\boldsymbol{x}]\big]\Big] $$
+            因為條件期望的偏差 $E_{y\mid\boldsymbol{x}}[y - E[y\mid\boldsymbol{x}]] \equiv 0$，交叉項<strong>恆等於零</strong>！
+          </p>
+          <div class="formula-highlight warning">
+            $$ E\big[(y - \tilde{y})^2\big] = \underbrace{E\big[(y - E[y\mid\boldsymbol{x}])^2\big]}_{\text{不可約隨機方差 } \sigma^2} + \underbrace{E\big[(E[y\mid\boldsymbol{x}] - g(\boldsymbol{x}))^2\big]}_{\ge 0 \text{ (模型近似偏差)}} \ge E\big[(y - E[y\mid\boldsymbol{x}])^2\big] $$
+          </div>
+          <p style="font-size: 0.92rem; color: #475569;">
+            第二項為非負平方期望值。等號成立當且僅當 $g(\boldsymbol{x}) = E[y \mid \boldsymbol{x}]$。證畢！
+          </p>
+        </div>
+
+        <div class="visual" id="svg-slice-geometry">
+          <!-- 內聯 SVG：垂直切片機率密度與重心示意圖 -->
+          <svg viewBox="0 0 540 380" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; width: 100%; height: auto;">
+            <defs>
+              <linearGradient id="slice-band" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#818cf8" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#818cf8" stop-opacity="0.05"/>
+              </linearGradient>
+            </defs>
+
+            <!-- 座標軸 -->
+            <line x1="50" y1="330" x2="500" y2="330" stroke="#64748b" stroke-width="2"/>
+            <line x1="50" y1="330" x2="50" y2="40" stroke="#64748b" stroke-width="2"/>
+            <text x="505" y="334" font-size="12" fill="#64748b" font-family="sans-serif">特徵 x</text>
+            <text x="40" y="30" font-size="12" fill="#64748b" font-family="sans-serif">目標 y</text>
+
+            <!-- 散佈點分佈 -->
+            <g fill="#94a3b8" opacity="0.6">
+              <circle cx="90" cy="270" r="3"/><circle cx="110" cy="245" r="3"/><circle cx="130" cy="230" r="3"/>
+              <circle cx="160" cy="220" r="3"/><circle cx="180" cy="190" r="3"/><circle cx="210" cy="180" r="3"/>
+              <circle cx="250" cy="150" r="3"/><circle cx="280" cy="125" r="3"/><circle cx="310" cy="110" r="3"/>
+              <circle cx="350" cy="130" r="3"/><circle cx="380" cy="165" r="3"/><circle cx="420" cy="200" r="3"/>
+              <circle cx="450" cy="235" r="3"/><circle cx="470" cy="250" r="3"/>
+            </g>
+
+            <!-- 非線性條件期望值真實曲線 E[y|x] -->
+            <path d="M 60 290 Q 200 240 280 130 T 480 245" fill="none" stroke="#4f46e5" stroke-width="3"/>
+            <text x="390" y="270" font-size="13" fill="#4f46e5" font-weight="700" font-family="sans-serif">E[y|x] (條件期望值曲面)</text>
+
+            <!-- 最佳線性回歸線 -->
+            <line x1="60" y1="260" x2="480" y2="180" stroke="#059669" stroke-width="2" stroke-dasharray="6,4"/>
+            <text x="350" y="175" font-size="12" fill="#059669" font-weight="600" font-family="sans-serif">線性回歸投影 (wᵀx)</text>
+
+            <!-- 垂直切片 x0 -->
+            <rect x="265" y="50" width="30" height="280" fill="url(#slice-band)"/>
+            <line x1="280" y1="50" x2="280" y2="330" stroke="#818cf8" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <text x="272" y="348" font-size="12" fill="#4338ca" font-weight="bold">x₀</text>
+
+            <!-- 橫向高斯鐘形曲線 p(y|x0) -->
+            <path d="M 280 60 Q 340 130 280 200" fill="rgba(239,68,68,0.15)" stroke="#dc2626" stroke-width="2"/>
+            <text x="315" y="90" font-size="11" fill="#dc2626" font-weight="bold">p(y | x₀)</text>
+
+            <!-- 重心點 E[y|x0] -->
+            <circle cx="280" cy="130" r="6" fill="#f59e0b" stroke="#78350f" stroke-width="2"/>
+            <text x="205" y="134" font-size="12" fill="#d97706" font-weight="bold">E[y | x₀] (切片重心)</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. ORTHOGONAL DECOMPOSITION AND GAUSSIAN CASE -->
+<section class="section" id="sec-orthogonal-decomposition">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="card">
+      <span class="card-header-badge">幾何與特例 · Geometry & Gaussian Special Case</span>
+      <h3>2. 正交投影定理與多元高斯下的線性神蹟</h3>
+      <p style="color: #64748b; font-size: 0.92rem; margin-top: -6px; margin-bottom: 20px;">
+        Orthogonal Decomposition in Hilbert Space L2 and Why Linear Models are Provably Optimal under Gaussianity
+      </p>
+
+      <div class="content-grid">
+        <div>
+          <h4>正交殘差：資訊已經徹底被榨乾</h4>
+          <p style="font-size: 0.92rem; color: #334155; line-height: 1.6;">
+            在希爾伯特空間 $L^2$ 的幾何視角下，條件期望值 $E[y\mid\boldsymbol{x}]$ 是隨機變數 $y$ 在由全體 $\boldsymbol{x}$ 的非線性可測函數張成的子空間上的<strong>正交投影</strong>。
+            殘差 $e = y - E[y\mid\boldsymbol{x}]$ 滿足：
+            $$ E\big[\big(y - E[y\mid\boldsymbol{x}]\big) \cdot h(\boldsymbol{x})\big] = 0 \quad (\forall h(\cdot)) $$
+            這意味著殘差與輸入特徵的<strong>任意非線性變換均不相關</strong>！殘差中已不含任何可被特徵 $\boldsymbol{x}$ 預測的資訊，純屬上帝擲骰子的不可約白噪音。
+          </p>
+        </div>
+
+        <div>
+          <h4>多元高斯分佈：非線性自動退化為線性</h4>
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 18px;">
+            <span style="font-weight: 700; color: #166534; font-size: 0.95rem;">高斯條件下的完美吻合</span>
+            <p style="font-size: 0.88rem; color: #14532d; margin: 8px 0 12px; line-height: 1.55;">
+              若 $(\boldsymbol{x}, y)$ 聯合服從多元高斯分佈，則條件分佈 $p(y \mid \boldsymbol{x})$ 仍為常態分佈，其條件期望值解析解為：
+              $$ E[y \mid \boldsymbol{x}] = \mu_y + \Sigma_{yx} \Sigma_{xx}^{-1} (\boldsymbol{x} - \boldsymbol{\mu}_x) $$
+              這是一個<strong>嚴格的線性仿射函數</strong>！
+            </p>
+            <div style="border-top: 1px dashed #86efac; padding-top: 8px; font-size: 0.84rem; color: #166534;">
+              💡 <strong>工程啟示：</strong> 線性分類器與線性回歸之所以歷久不衰，正是因為在近高斯背景下，線性模型非但不是簡陋的將就，而是數學定理背書的「理論最優解」！
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. INTERACTIVE LAB SECTION -->
+<section class="section" id="lab">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="card">
+      <span class="card-header-badge">互動實作 · Interactive Laboratory</span>
+      <h3>3. 條件期望值曲線 vs 線性回歸正交投影模擬器</h3>
+      <p style="color: #64748b; font-size: 0.92rem; margin-top: -6px; margin-bottom: 20px;">
+        Interactive Lab: Compare Non-linear Conditional Expectation Curve with Optimal Linear Projection and Inspect Slice Density
+      </p>
+
+      <div class="kp10-container">
+        <div class="kp10-panel">
+          <h4>💡 這在做什麼與怎麼操作</h4>
+          <p>
+            模擬非線性生成機制 $y = \sin(1.8x) + 0.3x^2 + \epsilon$。在畫布上<strong>點選或拖曳移動切片基準線 $x_0$</strong>，
+            實時觀察該處的垂直條件分佈 $p(y \mid x_0)$、重心 $E[y \mid x_0]$ 與線性回歸預測值的差距！
+          </p>
+        </div>
+
+        <div class="kp10-controls">
+          <div class="kp10-slider-group">
+            <label for="kp10-slider-n">樣本量 N：<strong id="kp10-n-val">120</strong></label>
+            <input class="kp10-slider" id="kp10-slider-n" max="300" min="40" step="20" type="range" value="120"/>
+          </div>
+          <div class="kp10-slider-group">
+            <label for="kp10-slider-noise">噪音強度 σ：<strong id="kp10-noise-val">0.35</strong></label>
+            <input class="kp10-slider" id="kp10-slider-noise" max="0.80" min="0.10" step="0.05" type="range" value="0.35"/>
+          </div>
+          <button class="kp10-btn" id="kp10-resample-btn" type="button">🎲 重新取樣資料</button>
+        </div>
+
+        <div class="kp10-canvas-container">
+          <canvas id="demo-canvas-kp10" width="600" height="420"></canvas>
+        </div>
+
+        <div class="demo-readout kp10-readout" id="kp10-readout">
+          <div class="kp10-metric">
+            <div class="kp10-metric-label">切片位置 x₀</div>
+            <div class="kp10-metric-value" id="kp10-ro-x0">0.00</div>
+          </div>
+          <div class="kp10-metric">
+            <div class="kp10-metric-label">條件期望 E[y|x₀]</div>
+            <div class="kp10-metric-value kp10-ok" id="kp10-ro-ey">0.000</div>
+          </div>
+          <div class="kp10-metric">
+            <div class="kp10-metric-label">線性預測 ŷ_lin(x₀)</div>
+            <div class="kp10-metric-value" id="kp10-ro-ylin">0.000</div>
+          </div>
+          <div class="kp10-metric">
+            <div class="kp10-metric-label">全域性 MSE(E[y|x]) vs 線性</div>
+            <div class="kp10-metric-value" id="kp10-ro-mse">0.122 vs 0.485</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. CHECKPOINT QUIZ SECTION -->
+<section class="section quiz-section" id="quiz">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="card">
+      <span class="card-header-badge">隨堂測驗 · Checkpoint Quizzes</span>
+      <h3>4. 核心觀念檢核點 (Checkpoint Assessment)</h3>
+      <p style="color: #64748b; font-size: 0.92rem; margin-top: -6px; margin-bottom: 24px;">
+        檢驗您對條件期望值最優性、正交分解、不可約誤差與高斯特例的理解。
+      </p>
+
+      <!-- Quiz 1 -->
+      <div class="quiz-card" data-ans="B">
+        <h4>Q1. 在均方誤差 (MSE) 回歸的一般泛函架構下（無任何模型形式限制），使期望損失 $E[(y - g(\boldsymbol{x}))^2]$ 達到理論全域性最小的預測函數 $g^*(\boldsymbol{x})$ 為何？</h4>
+        <div class="options">
+          <button data-opt="A">A. 必然是特徵空間中的某個高階多項式超曲面</button>
+          <button data-opt="B">B. 條件期望值 $g^*(\boldsymbol{x}) = E[y \mid \boldsymbol{x}]$（在一般機率分佈下為非線性函數）</button>
+          <button data-opt="C">C. 訓練集中歐幾裡得距離最接近該輸入的最近鄰點標籤</button>
+          <button data-opt="D">D. 該最佳化問題在數學上屬於 NP-hard，不存在理論解析解</button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+
+      <!-- Quiz 2 -->
+      <div class="quiz-card" data-ans="A">
+        <h4>Q2. 在正交投影定理 (Orthogonal Projection Theorem) 的幾何視角下，條件期望值 $E[y \mid \boldsymbol{x}]$ 與最佳線性預測 $\hat{y} = \hat{\boldsymbol{w}}^\top \boldsymbol{x}$ 之間存在何種層級關係？</h4>
+        <div class="options">
+          <button data-opt="A">A. 最佳線性預測本質上是條件期望值 $E[y \mid \boldsymbol{x}]$ 在有限維度線性仿射子空間上的進一步正交投影，其殘差正交於所有線性特徵</button>
+          <button data-opt="B">B. 兩者彼此獨立且互斥，線性預測無法作為條件期望值的任何逼近</button>
+          <button data-opt="C">C. 線性預測的方差必然嚴格大於真實母體變異數 $\text{Var}(y)$</button>
+          <button data-opt="D">D. 條件期望值是最佳線性預測在符號函數空間中的非線性對映</button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+
+      <!-- Quiz 3 -->
+      <div class="quiz-card" data-ans="B">
+        <h4>Q3. 既然真實世界中 $E[y \mid \boldsymbol{x}]$ 大多是非線性的，為什麼線性分類器與線性回歸在統計機器學習中依然被廣泛使用？在什麼嚴格條件下 $E[y \mid \boldsymbol{x}]$ 本身恰好就是嚴格線性的？</h4>
+        <div class="options">
+          <button data-opt="A">A. 只有在樣本數量小於 3 時才能使用線性模型</button>
+          <button data-opt="B">B. 當 $(\boldsymbol{x}, y)$ 聯合服從多元高斯分佈 (Multivariate Gaussian) 時，條件期望值自然具備嚴格線性形式；且線性模型具有低變異數與優良泛化力</button>
+          <button data-opt="C">C. 線性模型能消除所有量測噪音，保證測試集誤差恆等於零</button>
+          <button data-opt="D">D. 高斯混合模型強制規定所有特徵邊際分佈必須為均勻分佈</button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+
+      <!-- Quiz 4 -->
+      <div class="quiz-card" data-ans="A">
+        <h4>Q4. 在分解式 $E[(y - g(\boldsymbol{x}))^2] = E[(y - E[y\mid\boldsymbol{x}])^2] + E[(E[y\mid\boldsymbol{x}] - g(\boldsymbol{x}))^2]$ 中，第一項 $E[(y - E[y\mid\boldsymbol{x}])^2]$ 具備什麼統計物理意義？</h4>
+        <div class="options">
+          <button data-opt="A">A. 它是任何機器學習模型都無法消除的固有雜訊極限（不可約誤差，Irreducible Error），等於條件變異數的期望值 $E[\text{Var}(y\mid\boldsymbol{x})]$</button>
+          <button data-opt="B">B. 它是演算法隨疊代步數增加而能夠完全消除的數值捨入誤差</button>
+          <button data-opt="C">C. 它是設計矩陣求逆過程中所產生的數值病態條件數</button>
+          <button data-opt="D">D. 它是由於模型參數過多所引發的過擬合懲罰項</button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- 7. SUMMARY AND TAKEAWAYS -->
+<section class="section" id="summary">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="summary-box">
+      <h3>本章精要總結 · Key Takeaways</h3>
+      <p style="font-size: 1.05rem; color: #e2e8f0; line-height: 1.6;">
+        條件期望值 $E[y \mid \boldsymbol{x}]$ 為所有回歸演算法樹立了理論黃金標竿。
+        它將預測誤差分解為「不可約的隨機環境雜訊」與「可透過模型改進的逼近偏差」，指引著現代統計學習理論的核心航道！
+      </p>
+
+      <div class="summary-grid">
+        <div class="summary-item">
+          <h5>無偏回歸的極致境界</h5>
+          <p>
+            條件期望值是垂直切片機率分佈的重心，以平方式展開證明瞭其全域性均方誤差無可匹敵。
+          </p>
+        </div>
+        <div class="summary-item">
+          <h5>不可約誤差的自然分界</h5>
+          <p>
+            條件方差 $E[\text{Var}(y\mid\boldsymbol{x})]$ 是物理世界帶來的固有隨機性，任何先進的模型都無法將其降為零。
+          </p>
+        </div>
+        <div class="summary-item">
+          <h5>高斯假設下的最優庇護</h5>
+          <p>
+            多元常態分佈將條件期望值約束在精確線性超平面內，賦予線性模型崇高的理論正當性。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Canvas Interactive Logic Script for KP10 -->
+<script>
+(function() {
+  const canvas = document.getElementById('demo-canvas-kp10');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const sliderN = document.getElementById('kp10-slider-n');
+  const sliderNoise = document.getElementById('kp10-slider-noise');
+  const nVal = document.getElementById('kp10-n-val');
+  const noiseVal = document.getElementById('kp10-noise-val');
+  const btnResample = document.getElementById('kp10-resample-btn');
+
+  const roX0 = document.getElementById('kp10-ro-x0');
+  const roEy = document.getElementById('kp10-ro-ey');
+  const roYlin = document.getElementById('kp10-ro-ylin');
+  const roMse = document.getElementById('kp10-ro-mse');
+
+  let x0 = 0.0;
+  let points = [];
+
+  const margin = 45;
+  const minX = -2.5, maxX = 2.5;
+  const minY = -1.8, maxY = 3.2;
+
+  function toScreenX(x) {
+    return margin + ((x - minX) / (maxX - minX)) * (canvas.width - 2 * margin);
+  }
+  function toScreenY(y) {
+    return canvas.height - margin - ((y - minY) / (maxY - minY)) * (canvas.height - 2 * margin);
+  }
+  function toMathX(sx) {
+    return minX + ((sx - margin) / (canvas.width - 2 * margin)) * (maxX - minX);
+  }
+
+  // Non-linear True Conditional Expectation E[y|x]
+  function trueEy(x) {
+    return Math.sin(1.8 * x) + 0.3 * x * x;
+  }
+
+  function sampleData() {
+    const N = parseInt(sliderN.value, 10);
+    const sigma = parseFloat(sliderNoise.value);
+    points = [];
+
+    for (let i = 0; i < N; i++) {
+      const x = minX + Math.random() * (maxX - minX);
+      // Box-Muller normal noise
+      const u1 = Math.max(1e-6, Math.random());
+      const u2 = Math.random();
+      const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      const y = trueEy(x) + sigma * z;
+      points.push({ x, y });
+    }
+  }
+
+  // Linear Regression Fit
+  function fitLinear() {
+    let sumX = 0, sumY = 0, sumXX = 0, sumXY = 0;
+    const N = points.length;
+    points.forEach(p => {
+      sumX += p.x;
+      sumY += p.y;
+      sumXX += p.x * p.x;
+      sumXY += p.x * p.y;
+    });
+    const denom = N * sumXX - sumX * sumX;
+    if (Math.abs(denom) < 1e-8) return { w1: 0, w0: 0 };
+    const w1 = (N * sumXY - sumX * sumY) / denom;
+    const w0 = (sumY - w1 * sumX) / N;
+    return { w1, w0 };
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Grid and Axes
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    for (let x = -2; x <= 2; x += 1) {
+      const sx = toScreenX(x);
+      ctx.beginPath();
+      ctx.moveTo(sx, margin);
+      ctx.lineTo(sx, canvas.height - margin);
+      ctx.stroke();
+    }
+    for (let y = -1; y <= 3; y += 1) {
+      const sy = toScreenY(y);
+      ctx.beginPath();
+      ctx.moveTo(margin, sy);
+      ctx.lineTo(canvas.width - margin, sy);
+      ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(margin, toScreenY(0));
+    ctx.lineTo(canvas.width - margin, toScreenY(0));
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(toScreenX(0), margin);
+    ctx.lineTo(toScreenX(0), canvas.height - margin);
+    ctx.stroke();
+
+    // Data points
+    ctx.fillStyle = '#94a3b8';
+    points.forEach(p => {
+      const sx = toScreenX(p.x);
+      const sy = toScreenY(p.y);
+      ctx.beginPath();
+      ctx.arc(sx, sy, 3, 0, 2 * Math.PI);
+      ctx.fill();
+    });
+
+    // Linear fit
+    const { w1, w0 } = fitLinear();
+    ctx.strokeStyle = '#059669';
+    ctx.lineWidth = 2.2;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(toScreenX(minX), toScreenY(w1 * minX + w0));
+    ctx.lineTo(toScreenX(maxX), toScreenY(w1 * maxX + w0));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Non-linear True Conditional Expectation E[y|x]
+    ctx.strokeStyle = '#4f46e5';
+    ctx.lineWidth = 2.8;
+    ctx.beginPath();
+    for (let px = margin; px <= canvas.width - margin; px += 3) {
+      const mx = toMathX(px);
+      const my = trueEy(mx);
+      const sy = toScreenY(my);
+      if (px === margin) ctx.moveTo(px, sy);
+      else ctx.lineTo(px, sy);
+    }
+    ctx.stroke();
+
+    // Vertical slice at x0
+    const sx0 = toScreenX(x0);
+    ctx.fillStyle = 'rgba(129, 140, 248, 0.18)';
+    ctx.fillRect(sx0 - 15, margin, 30, canvas.height - 2 * margin);
+
+    ctx.strokeStyle = '#6366f1';
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(sx0, margin);
+    ctx.lineTo(sx0, canvas.height - margin);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Sideways bell curve at x0
+    const sigma = parseFloat(sliderNoise.value);
+    const ey0 = trueEy(x0);
+    const sy0 = toScreenY(ey0);
+
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    let started = false;
+    for (let sy = margin; sy <= canvas.height - margin; sy += 2) {
+      const my = minY + ((canvas.height - margin - sy) / (canvas.height - 2 * margin)) * (maxY - minY);
+      const z = (my - ey0) / sigma;
+      const dens = Math.exp(-0.5 * z * z);
+      const curveX = sx0 + dens * 45;
+      if (!started) { ctx.moveTo(sx0, sy); started = true; }
+      else ctx.lineTo(curveX, sy);
+    }
+    ctx.lineTo(sx0, canvas.height - margin);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Center of slice gravity marker E[y|x0]
+    ctx.fillStyle = '#f59e0b';
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(sx0, sy0, 6, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+
+    // Linear point at x0
+    const ylin0 = w1 * x0 + w0;
+    const sylin0 = toScreenY(ylin0);
+    ctx.fillStyle = '#059669';
+    ctx.beginPath();
+    ctx.arc(sx0, sylin0, 5, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // Compute MSE values
+    let mseOptimal = 0, mseLin = 0;
+    points.forEach(p => {
+      const diffOpt = p.y - trueEy(p.x);
+      const diffLin = p.y - (w1 * p.x + w0);
+      mseOptimal += diffOpt * diffOpt;
+      mseLin += diffLin * diffLin;
+    });
+    mseOptimal /= points.length;
+    mseLin /= points.length;
+
+    // Update readout
+    roX0.textContent = x0.toFixed(2);
+    roEy.textContent = ey0.toFixed(3);
+    roYlin.textContent = ylin0.toFixed(3);
+    roMse.textContent = `${mseOptimal.toFixed(3)} vs ${mseLin.toFixed(3)}`;
+  }
+
+  function handlePointer(e) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const sx = (cx - rect.left) * (canvas.width / rect.width);
+    x0 = Math.max(minX + 0.2, Math.min(maxX - 0.2, toMathX(sx)));
+    render();
+  }
+
+  canvas.addEventListener('mousedown', handlePointer);
+  canvas.addEventListener('mousemove', (e) => {
+    if (e.buttons === 1) handlePointer(e);
+  });
+  canvas.addEventListener('touchmove', handlePointer);
+
+  sliderN.addEventListener('input', () => {
+    nVal.textContent = sliderN.value;
+    sampleData();
+    render();
+  });
+  sliderNoise.addEventListener('input', () => {
+    noiseVal.textContent = parseFloat(sliderNoise.value).toFixed(2);
+    sampleData();
+    render();
+  });
+  btnResample.addEventListener('click', () => {
+    sampleData();
+    render();
+  });
+
+  sampleData();
+  render();
+})();
+</script>
+
+<!-- Interactive Quiz Logic with MathJax Re-rendering -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const quizCards = document.querySelectorAll('.quiz-card');
+  quizCards.forEach(card => {
+    const ans = card.getAttribute('data-ans');
+    const buttons = card.querySelectorAll('.options button');
+    const fb = card.querySelector('.feedback');
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const selected = btn.getAttribute('data-opt');
+        buttons.forEach(b => {
+          b.disabled = true;
+          b.classList.remove('correct', 'wrong');
+        });
+
+        if (selected === ans) {
+          btn.classList.add('correct');
+          fb.className = 'feedback visible correct';
+          if (selected === 'B' && card.querySelector('h4').textContent.includes('Q1')) {
+            fb.innerHTML = '<strong>答對了！</strong> 可以藉由平方式展開嚴格證明：對任意候選預測函數 $g(\\boldsymbol{x})$，均方誤差恆滿足 $E[(y - g(\\boldsymbol{x}))^2] = E[(y - E[y\\mid\\boldsymbol{x}])^2] + E[(E[y\\mid\\boldsymbol{x}] - g(\\boldsymbol{x}))^2] \\ge E[(y - E[y\\mid\\boldsymbol{x}])^2]$。當且僅當 $g(\\boldsymbol{x}) = E[y\\mid\\boldsymbol{x}]$ 時取得最小值！';
+          } else if (selected === 'A' && card.querySelector('h4').textContent.includes('Q2')) {
+            fb.innerHTML = '<strong>答對了！</strong> 在希爾伯特空間 $L^2$ 中，$E[y\\mid\\boldsymbol{x}]$ 是 $y$ 在全體非線性可測函數子空間上的正交投影；而線性回歸 $\\hat{\\boldsymbol{w}}^\\top \\boldsymbol{x}$ 則是將此投影進一步正交投影到線性超平面子空間！';
+          } else if (selected === 'B' && card.querySelector('h4').textContent.includes('Q3')) {
+            fb.innerHTML = '<strong>答對了！</strong> 若 $(\\boldsymbol{x}, y)$ 聯合高斯分佈，則條件分佈 $p(y\\mid\\boldsymbol{x})$ 仍為高斯分佈，其條件期望值 $E[y\\mid\\boldsymbol{x}] = \\mu_y + \\Sigma_{yx}\\Sigma_{xx}^{-1}(\\boldsymbol{x} - \\mu_x)$ 嚴格為 $\\boldsymbol{x}$ 的線性函數！此時線性模型非但不是妥協，而是理論最優解！';
+          } else if (selected === 'A' && card.querySelector('h4').textContent.includes('Q4')) {
+            fb.innerHTML = '<strong>答對了！</strong> 第一項代表即使掌握了上帝視角的真實條件期望值 $E[y\\mid\\boldsymbol{x}]$，由於物理世界的固有隨機性，依然存在的殘差方差。這是任何回歸演算法預測精度的理論天花板（不可約誤差）！';
+          } else {
+            fb.innerHTML = '<strong>答對了！</strong> 概念理解完全正確！';
+          }
+        } else {
+          btn.classList.add('wrong');
+          const correctBtn = card.querySelector(`button[data-opt="${ans}"]`);
+          if (correctBtn) correctBtn.classList.add('correct');
+          fb.className = 'feedback visible wrong';
+          fb.innerHTML = `<strong>答錯了。</strong> 正確選項為 <strong>${ans}</strong>。請回顧上方平方式展開與正交投影定理！`;
+        }
+
+        if (window.MathJax && window.MathJax.typesetPromise) {
+          window.MathJax.typesetPromise([fb]).catch(err => console.error(err));
+        }
+      });
+    });
+  });
+
+  // Top progress bar update
+  window.addEventListener('scroll', () => {
+    const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    const scrolled = (winScroll / height) * 100;
+    const bar = document.getElementById('progressTop');
+    if (bar) bar.style.width = scrolled + '%';
+  });
+});
+</script>
+
+</body>
+</html>
