@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch03 · KP13 邏輯斯迴歸：把事後機率比值的對數建模成線性函數 — Logistic Regression: Modeling Log-Odds as a Linear Function</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(16, 185, 129, .28), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(6, 182, 212, .24), transparent 30%),
+              linear-gradient(135deg, #064e3b 0%, #0f172a 50%, #042f2e 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(6, 78, 59, .35);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(34px, 4.2vw, 62px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(17px, 1.9vw, 26px);
+  color: #6ee7b7;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #10b981;
+  border-radius: 999px;
+  color: #34d399;
+  background: rgba(16, 185, 129, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.hero p.lead {
+  font-size: clamp(17px, 1.5vw, 22px);
+  max-width: 860px;
+  margin: 0 auto 36px;
+  color: #e2e8f0;
+  line-height: 1.65;
+}
+.hero-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  max-width: 1060px;
+  margin: 0 auto;
+  text-align: left;
+}
+.hero-feat-card {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .15);
+  border-radius: 12px;
+  padding: 20px;
+  backdrop-filter: blur(8px);
+}
+.hero-feat-card h4 {
+  color: #34d399;
+  margin-bottom: 8px;
+  font-size: 1.08rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hero-feat-card p {
+  color: #cbd5e1;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* 深色背景 MathJax 淺色覆蓋 (坑 U 防呆) */
+.hero mjx-container, .hero mjx-container * {
+  color: #f8fafc !important;
+  fill: #f8fafc !important;
+}
+.summary-box mjx-container, .summary-box mjx-container * {
+  color: #f8fafc !important;
+  fill: #f8fafc !important;
+}
+
+/* 坑 W: 高橋流卡片置中硬指標 (中心 x = 831px, 左右留白各 231px) */
+#q1 .takahashi {
+  box-sizing: border-box;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  padding: 56px 48px;
+  background: linear-gradient(135deg, #065f46 0%, #064e3b 100%);
+  border: 2px solid #10b981;
+  border-radius: 18px;
+  box-shadow: 0 20px 48px rgba(6, 95, 70, .3);
+  text-align: center;
+}
+#q1 .takahashi h2 {
+  font-size: clamp(30px, 3.4vw, 48px);
+  color: #ffffff;
+  line-height: 1.25;
+  margin-bottom: 20px;
+}
+#q1 .takahashi .en-sub {
+  color: #6ee7b7;
+  font-size: clamp(16px, 1.4vw, 22px);
+  font-weight: 500;
+  margin-bottom: 30px;
+  display: block;
+}
+#q1 .takahashi .core-statement {
+  font-size: clamp(22px, 2.2vw, 32px);
+  color: #fef08a;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 28px 0;
+  padding: 20px;
+  background: rgba(0, 0, 0, .25);
+  border-radius: 12px;
+  border-left: 6px solid #eab308;
+}
+
+/* 坑 H: 向量圖防拉伸與 MathJax 隔離 */
+.half-layout .visual > svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+.visual mjx-container svg {
+  width: auto !important;
+  height: auto !important;
+  display: inline !important;
+}
+
+/* TOC Rail 佈局 */
+.toc-rail {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 258px;
+  height: 100vh;
+  background: #ffffff;
+  border-left: 1px solid #e2e8f0;
+  padding: 32px 18px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, .04);
+}
+.toc-rail h4 {
+  font-size: 0.86rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: #64748b;
+  margin-bottom: 18px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #059669;
+}
+.toc-rail ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.toc-rail li {
+  margin-bottom: 10px;
+}
+.toc-rail a {
+  display: block;
+  font-size: 0.86rem;
+  color: #334155;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: all .2s ease;
+  line-height: 1.35;
+}
+.toc-rail a:hover {
+  background: #ecfdf5;
+  color: #059669;
+  font-weight: 600;
+}
+.toc-rail a.active {
+  background: #059669;
+  color: #ffffff;
+  font-weight: 600;
+}
+@media (max-width: 1100px) {
+  .toc-rail { display: none; }
+}
+
+/* 雙欄與卡片設計 */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: center;
+  margin: 24px 0;
+}
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.04);
+  margin-bottom: 24px;
+}
+.card-header-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #ecfdf5;
+  color: #059669;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+.formula-highlight {
+  background: #f8fafc;
+  border-left: 4px solid #059669;
+  padding: 16px 20px;
+  border-radius: 0 10px 10px 0;
+  margin: 18px 0;
+  font-size: 1.05rem;
+}
+.formula-highlight.warning {
+  border-left-color: #f59e0b;
+  background: #fffbeb;
+}
+
+/* 互動實作專區樣式 */
+.kp13-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.kp13-panel {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px 22px;
+}
+.kp13-panel h4 {
+  margin: 0 0 8px;
+  font-size: 0.98rem;
+  color: #0f172a;
+}
+.kp13-panel p {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #334155;
+}
+.kp13-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+.kp13-control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.kp13-slider {
+  cursor: pointer;
+  accent-color: #059669;
+}
+.kp13-val-badge {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+.kp13-btn {
+  background-color: #059669;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.kp13-btn:hover {
+  background-color: #047857;
+}
+.kp13-canvas-container {
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+}
+#demo-canvas-kp13 {
+  width: 100%;
+  height: auto;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.kp13-readout {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 16px 20px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: #065f46;
+}
+
+/* 隨堂測驗 Checkpoint 樣式 */
+.quiz-section {
+  margin: 40px 0;
+}
+.quiz-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 26px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .03);
+}
+.quiz-card h4 {
+  font-size: 1.06rem;
+  color: #1e293b;
+  margin-bottom: 16px;
+  line-height: 1.45;
+}
+.quiz-card .options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.quiz-card .options button {
+  text-align: left;
+  padding: 12px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all .2s;
+  line-height: 1.4;
+}
+.quiz-card .options button:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+.quiz-card .options button.correct {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+  font-weight: 600;
+}
+.quiz-card .options button.wrong {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+.quiz-card .feedback {
+  margin-top: 14px;
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  display: none;
+}
+.quiz-card .feedback.visible {
+  display: block;
+}
+.quiz-card .feedback.correct {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+.quiz-card .feedback.wrong {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+/* 總結卡片 */
+.summary-box {
+  background: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+  color: #ffffff;
+  padding: 36px 40px;
+  border-radius: 16px;
+  border: 1px solid #10b981;
+  margin: 40px 0;
+  box-shadow: 0 16px 36px rgba(6, 78, 59, .25);
+}
+.summary-box h3 {
+  color: #34d399;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 24px;
+}
+.summary-item {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .15);
+  border-radius: 10px;
+  padding: 18px;
+}
+.summary-item h5 {
+  color: #fef08a;
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+.summary-item p {
+  color: #e2e8f0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  margin: 0;
+}
+</style>
+</head>
+<body>
+
+<div id="progressTop" style="position:fixed;top:0;left:0;height:4px;background:#059669;z-index:9999;width:0%;"></div>
+
+<nav class="toc-rail">
+  <h4>目錄導覽 Contents</h4>
+  <ul>
+    <li><a href="#cover">首頁：邏輯斯迴歸與對數勝率</a></li>
+    <li><a href="#q1">核心之問：為何 Logit 能破局？</a></li>
+    <li><a href="#sec-logit-derivation">Logit 變換與 Sigmoid 匯出</a></li>
+    <li><a href="#sec-mle-cross-entropy">極大似然與交叉熵凸最佳化</a></li>
+    <li><a href="#lab">互動實驗室：Sigmoid 曲線擬合器</a></li>
+    <li><a href="#quiz">隨堂觀念測驗 Checkpoint</a></li>
+    <li><a href="#summary">本章精要總結與延伸</a></li>
+  </ul>
+</nav>
+
+<!-- 1. COVER HERO -->
+<section class="section hero" id="cover">
+  <div style="max-width: 1200px; margin: 0 auto; width: 100%;">
+    <span class="badge">PR_115 · Chapter 3 · KP13</span>
+    <h1>邏輯斯迴歸：把事後機率比值的對數建模成線性函數
+      <span class="hero-title-en">Logistic Regression: Modeling the Log-Odds as a Linear Function</span>
+    </h1>
+    <p class="lead">
+      有別於 MSE 暴力擬合 0/1 標籤導致的「機率越界」與「離群點牽引偏誤」，邏輯斯迴歸巧妙地將兩類事後機率的比值取自然對數（對數勝率 Logit）建模為線性超平面！
+      自然推匯出平滑的 Sigmoid 啟用函數，並以極大似然估計 (MLE) 建立嚴格凸的交叉熵損失函數，奠定現代統計學習分類的基石！
+    </p>
+    <div class="hero-features">
+      <div class="hero-feat-card">
+        <h4>🎲 勝率對數 (Log-Odds)</h4>
+        <p>將 $(0, 1)$ 有界機率對映至 $(-\infty, +\infty)$ 實數軸，使線性模型具備崇高的數學合理性。</p>
+      </div>
+      <div class="hero-feat-card">
+        <h4>📈 Sigmoid 平滑激發</h4>
+        <p>$P(\omega_1\mid\boldsymbol{x}) = \sigma(\boldsymbol{w}^\top \boldsymbol{x})$；天然滿足機率公理，導函數簡潔且無跳躍斷點。</p>
+      </div>
+      <div class="hero-feat-card">
+        <h4>🛡️ 交叉熵凸最佳化保證</h4>
+        <p>負對數似然損失具備半正定 Hessian 矩陣，無局部鞍點陷阱，牛頓法 IRLS 迅速抵達唯一全域性最優。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. TAKAHASHI HIGH IMPACT QUESTION (坑 W 嚴格防呆) -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <span class="card-header-badge">核心提問 · Core Question</span>
+    <h2>機率只能介於 0 到 1 之間，<br>而線性函數的值域卻是負無窮到正無窮——如何化解這場矛盾？</h2>
+    <span class="en-sub">Probabilities Lie in [0, 1], While Linear Functions Span (-inf, +inf): How to Bridge the Chasm?</span>
+    <div class="core-statement">
+      $$ \ln \left( \frac{P(\omega_1 \mid \boldsymbol{x})}{1 - P(\omega_1 \mid \boldsymbol{x})} \right) = \boldsymbol{w}^\top \boldsymbol{x} + w_0 $$
+      「對數勝率 (Log-Odds) 將有限的機率空間展開至整條實數軸，使線性超平面與機率公理達成完美和解！」
+    </div>
+    <p style="color: #cbd5e1; font-size: 1.05rem; max-width: 860px; margin: 0 auto; line-height: 1.6;">
+      這正是統計學家最優雅的發明之一：與其直接將線性輸出強壓給機率，不如先問「勝率有多大」並取對數。
+      反解之後，代表物理世界相變規律的 S 型 Sigmoid 曲線躍然而出！
+    </p>
+  </div>
+</section>
+
+<!-- 3. LOGIT DERIVATION AND SIGMOID -->
+<section class="section" id="sec-logit-derivation">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="card">
+      <span class="card-header-badge">數學推導 · Mathematical Derivation</span>
+      <h3>1. Logit 變換與 Sigmoid 啟用函數的自然誕生</h3>
+      <p style="color: #64748b; font-size: 0.92rem; margin-top: -6px; margin-bottom: 20px;">
+        The Logit Link Function: Deriving the Bounded Sigmoid Activation from Linear Log-Odds
+      </p>
+
+      <div class="content-grid half-layout">
+        <div>
+          <p>
+            定義事件發生的<strong>勝率 (Odds)</strong> 為「發生機率」與「不發生機率」的比值：$\text{Odds} = \frac{P}{1-P} \in (0, +\infty)$。
+            取自然對數後得到 <strong>Logit（對數勝率）</strong>：
+          </p>
+          <div class="formula-highlight">
+            $$ \text{Logit}(P) = \ln \left( \frac{P(\omega_1 \mid \boldsymbol{x})}{1 - P(\omega_1 \mid \boldsymbol{x})} \right) = \boldsymbol{w}^\top \boldsymbol{x} + w_0 \equiv z $$
+          </div>
+          <p>
+            對上式兩邊取指數並反解事後機率 $P(\omega_1 \mid \boldsymbol{x})$：
+            $$ \frac{P}{1-P} = e^z \implies P = e^z (1 - P) \implies P(1 + e^z) = e^z $$
+          </p>
+          <div class="formula-highlight warning">
+            $$ P(\omega_1 \mid \boldsymbol{x}) = \frac{e^z}{1 + e^z} = \frac{1}{1 + e^{-z}} \equiv \sigma(\boldsymbol{w}^\top \boldsymbol{x} + w_0) $$
+          </div>
+          <p style="font-size: 0.92rem; color: #334155;">
+            這正是著名的 <strong>Sigmoid (S 型) 函數</strong>！當 $\boldsymbol{w}^\top \boldsymbol{x} + w_0 = 0$ 時，$P = 0.5$（決策超平面）；當 $z \to +\infty$ 時 $P \to 1$；當 $z \to -\infty$ 時 $P \to 0$。機率恆嚴格介於 $(0, 1)$ 之間，徹底根除了 MSE 的越界悖論！
+          </p>
+        </div>
+
+        <div class="visual" id="svg-logit-bridge">
+          <!-- 內聯 SVG：Logit 雙向橋樑示意圖 -->
+          <svg viewBox="0 0 540 380" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; width: 100%; height: auto;">
+            <defs>
+              <marker id="arr-g" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#059669"/>
+              </marker>
+              <marker id="arr-b" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb"/>
+              </marker>
+            </defs>
+
+            <!-- 頂部：線性空間 (-inf, +inf) -->
+            <rect x="50" y="40" width="440" height="70" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+            <text x="70" y="68" font-size="13" fill="#1e40af" font-weight="bold">線性特徵組合空間 z = wᵀx + w₀</text>
+            <line x1="70" y1="88" x2="470" y2="88" stroke="#3b82f6" stroke-width="2"/>
+            <text x="65" y="104" font-size="11" fill="#64748b">-∞</text>
+            <circle cx="270" cy="88" r="4" fill="#3b82f6"/>
+            <text x="260" y="104" font-size="11" fill="#1e40af">z = 0 (決策面)</text>
+            <text x="460" y="104" font-size="11" fill="#64748b">+∞</text>
+
+            <!-- 中間轉換箭頭 -->
+            <!-- 向下：Sigmoid 對映 -->
+            <path d="M 220 120 L 220 180" stroke="#059669" stroke-width="2.5" marker-end="url(#arr-g)"/>
+            <text x="130" y="155" font-size="11" fill="#059669" font-weight="bold">Sigmoid: P = 1/(1+e⁻ᶻ)</text>
+
+            <!-- 向上：Logit 對映 -->
+            <path d="M 320 180 L 320 120" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arr-b)"/>
+            <text x="330" y="155" font-size="11" fill="#2563eb" font-weight="bold">Logit: z = ln(P / (1-P))</text>
+
+            <!-- 底部：有界機率空間 (0, 1) -->
+            <rect x="50" y="200" width="440" height="130" rx="8" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1.5"/>
+            <text x="70" y="228" font-size="13" fill="#065f46" font-weight="bold">有界機率空間 P(ω₁|x) ∈ (0, 1)</text>
+
+            <!-- 繪製 Sigmoid S 曲線 -->
+            <line x1="70" y1="300" x2="470" y2="300" stroke="#94a3b8" stroke-width="1"/>
+            <line x1="70" y1="245" x2="470" y2="245" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="3,3"/>
+            <text x="440" y="240" font-size="10" fill="#64748b">P = 1.0</text>
+            <text x="440" y="315" font-size="10" fill="#64748b">P = 0.0</text>
+            <line x1="70" y1="272" x2="470" y2="272" stroke="#6ee7b7" stroke-width="1" stroke-dasharray="2,2"/>
+            <text x="440" y="275" font-size="10" fill="#059669">P = 0.5</text>
+
+            <path d="M 70 298 C 210 298, 230 272, 270 272 C 310 272, 330 247, 470 247" fill="none" stroke="#059669" stroke-width="3"/>
+            <circle cx="270" cy="272" r="5" fill="#eab308"/>
+            <text x="280" y="265" font-size="11" fill="#854d0e" font-weight="bold">(z=0, P=0.5)</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. MLE AND CROSS-ENTROPY LOSS -->
+<section class="section" id="sec-mle-cross-entropy">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="card">
+      <span class="card-header-badge">最佳化理論 · Optimization Theory</span>
+      <h3>2. 極大似然估計 (MLE) 與交叉熵損失函數的凸性</h3>
+      <p style="color: #64748b; font-size: 0.92rem; margin-top: -6px; margin-bottom: 20px;">
+        Maximum Likelihood Estimation: Why Cross-Entropy Guarantees a Unique Global Optimum
+      </p>
+
+      <div class="content-grid">
+        <div>
+          <h4>伯努利概似函數與二元交叉熵</h4>
+          <p style="font-size: 0.92rem; color: #334155; line-height: 1.6;">
+            給定 $N$ 筆獨立訓練樣本 $\{(\boldsymbol{x}_i, y_i)\}$，標籤 $y_i \in \{0, 1\}$。預測機率記為 $\hat{y}_i = \sigma(\boldsymbol{w}^\top \boldsymbol{x}_i)$。其聯合概似函數為：
+            $$ L(\boldsymbol{w}) = \prod_{i=1}^N \hat{y}_i^{y_i} (1 - \hat{y}_i)^{1 - y_i} $$
+            取負對數似然（Negative Log-Likelihood）得到經典的<strong>二元交叉熵損失 (Binary Cross-Entropy)</strong>：
+          </p>
+          <div class="formula-highlight">
+            $$ J(\boldsymbol{w}) = -\ln L(\boldsymbol{w}) = -\sum_{i=1}^N \Big[y_i \ln \hat{y}_i + (1 - y_i)\ln(1 - \hat{y}_i)\Big] $$
+          </div>
+        </div>
+
+        <div>
+          <h4>優雅的梯度與 Hessian 矩陣嚴格凸性</h4>
+          <p style="font-size: 0.92rem; color: #475569; line-height: 1.55;">
+            利用 Sigmoid 導函數 $\hat{y}' = \hat{y}(1-\hat{y})$，鏈鎖律微分奇蹟般地相互抵消：
+          </p>
+          <div class="formula-highlight warning">
+            $$ \nabla_{\boldsymbol{w}} J(\boldsymbol{w}) = \sum_{i=1}^N (\hat{y}_i - y_i) \boldsymbol{x}_i = X^\top (\hat{\boldsymbol{y}} - \boldsymbol{y}) $$
+            $$ H = \nabla_{\boldsymbol{w}}^2 J(\boldsymbol{w}) = \sum_{i=1}^N \hat{y}_i(1 - \hat{y}_i) \boldsymbol{x}_i \boldsymbol{x}_i^\top = X^\top S X $$
+          </div>
+          <p style="font-size: 0.88rem; color: #64748b;">
+            其中 $S = \text{diag}(\hat{y}_i(1-\hat{y}_i))$ 為對角線上恆大於零的加權矩陣。對任意向量 $\boldsymbol{v}$ 均有 $\boldsymbol{v}^\top H \boldsymbol{v} \ge 0$！
+            <strong>Hessian 矩陣恆為半正定，代價函數嚴格為凸函數</strong>，不存在任何局部鞍點困擾！
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. INTERACTIVE LAB SECTION -->
+<section class="section" id="lab">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="card">
+      <span class="card-header-badge">互動實作 · Interactive Laboratory</span>
+      <h3>3. Sigmoid S 曲線擬合器與決策門檻動態實驗室</h3>
+      <p style="color: #64748b; font-size: 0.92rem; margin-top: -6px; margin-bottom: 20px;">
+        Interactive Simulator: Adjust Weights and Bias, Observe Region Probabilities and the P=0.5 Decision Boundary
+      </p>
+
+      <div class="kp13-container">
+        <div class="kp13-panel">
+          <h4>💡 這在做什麼與怎麼操作</h4>
+          <p>
+            滑動<strong>「截距 $w_0$」</strong>與<strong>「權重 $w$」</strong>滑桿，觀察綠色 Sigmoid 曲線的傾斜陡峭程度與中心平移。
+            系統即時渲染綠色（類別 $\omega_1$, $P>0.5$）與橘色（類別 $\omega_2$, $P<0.5$）的決策區間！
+          </p>
+        </div>
+
+        <div class="kp13-controls">
+          <div class="kp13-control-group">
+            <label for="kp13-w0-slider">截距 w₀：</label>
+            <input class="kp13-slider" id="kp13-w0-slider" max="5.0" min="-5.0" step="0.2" type="range" value="0.0"/>
+            <span class="kp13-val-badge" id="kp13-w0-val">0.0</span>
+          </div>
+          <div class="kp13-control-group">
+            <label for="kp13-w-slider">權重 w：</label>
+            <input class="kp13-slider" id="kp13-w-slider" max="4.0" min="-4.0" step="0.2" type="range" value="1.5"/>
+            <span class="kp13-val-badge" id="kp13-w-val">1.5</span>
+          </div>
+          <button class="kp13-btn" id="kp13-reset-btn" type="button">↺ 重置參數</button>
+        </div>
+
+        <div class="kp13-canvas-container">
+          <canvas id="demo-canvas-kp13" width="600" height="420"></canvas>
+        </div>
+
+        <div class="demo-readout kp13-readout" id="kp13-readout">
+          載入中...
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. CHECKPOINT QUIZ SECTION -->
+<section class="section quiz-section" id="quiz">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="card">
+      <span class="card-header-badge">隨堂測驗 · Checkpoint Quizzes</span>
+      <h3>4. 核心觀念檢核點 (Checkpoint Assessment)</h3>
+      <p style="color: #64748b; font-size: 0.92rem; margin-top: -6px; margin-bottom: 24px;">
+        檢驗您對 Logit 變換、Sigmoid 導函數性質、交叉熵損失凸性與牛頓法 IRLS 的理解。
+      </p>
+
+      <!-- Quiz 1 -->
+      <div class="quiz-card" data-ans="B">
+        <h4>Q1. 邏輯斯迴歸 (Logistic Regression) 解決二元分類問題時，其最核心的模型假設是什麼？</h4>
+        <div class="options">
+          <button data-opt="A">A. 假設兩類別的特徵在空間中呈現高斯分佈且共用協方差矩陣</button>
+          <button data-opt="B">B. 假設兩類別事後機率比值的自然對數（對數勝率 Log-Odds / Logit）是輸入特徵的線性組合：$\ln \frac{P(\omega_1\mid\boldsymbol{x})}{P(\omega_2\mid\boldsymbol{x})} = \boldsymbol{w}^\top \boldsymbol{x} + w_0$</button>
+          <button data-opt="C">C. 假設所有支援向量到超平面的歐氏距離嚴格相等</button>
+          <button data-opt="D">D. 假設樣本點的數值標籤嚴格服從均勻隨機分佈</button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+
+      <!-- Quiz 2 -->
+      <div class="quiz-card" data-ans="B">
+        <h4>Q2. Sigmoid 啟用函數 $\sigma(z) = \frac{1}{1 + e^{-z}}$ 在一階導數計算上具備什麼極具優勢的解析性質？</h4>
+        <div class="options">
+          <button data-opt="A">A. 其導數恆等於常數 1</button>
+          <button data-opt="B">B. 其導數可簡潔表達為自身的二次多項式：$\sigma'(z) = \sigma(z)(1 - \sigma(z))$</button>
+          <button data-opt="C">C. 其導數在原點處為不可導奇異點</button>
+          <button data-opt="D">D. 其導數需要透過數值微分才能求得近似值</button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+
+      <!-- Quiz 3 -->
+      <div class="quiz-card" data-ans="A">
+        <h4>Q3. 邏輯斯迴歸在參數學習時，為什麼普遍捨棄均方誤差 (MSE)，而改用極大似然估計 (MLE) 所匯出的交叉熵 (Cross-Entropy) 損失？</h4>
+        <div class="options">
+          <button data-opt="A">A. 因為 MSE 在配合 Sigmoid 函數時會形成非凸且存在大量局部平坦區的代價表面，極易導致梯度消失；而交叉熵損失是嚴格凸函數，具備全域性唯一最優解</button>
+          <button data-opt="B">B. 因為交叉熵損失計算量比 MSE 少 100 倍</button>
+          <button data-opt="C">C. 因為 MSE 只能處理一維資料，無法處理向量輸入</button>
+          <button data-opt="D">D. 因為使用交叉熵時不需要計算梯度</button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+
+      <!-- Quiz 4 -->
+      <div class="quiz-card" data-ans="B">
+        <h4>Q4. 在求解邏輯斯迴歸的最優權重時，二階最佳化演算法 Newton-Raphson / IRLS 相比於標準一階梯度下降法的主要優勢為何？</h4>
+        <div class="options">
+          <button data-opt="A">A. 每次疊代完全不需要計算矩陣逆</button>
+          <button data-opt="B">B. 利用 Hessian 矩陣的二階曲率資訊，在最優點附近具備二次收斂速度 (Quadratic Convergence)，通常僅需 5~10 次疊代即可高度精確收斂</button>
+          <button data-opt="C">C. 能夠自動處理特徵維度大於 100 萬的稀疏資料</button>
+          <button data-opt="D">D. 免除了樣本標籤的讀取過程</button>
+        </div>
+        <div class="feedback"></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- 7. SUMMARY AND TAKEAWAYS -->
+<section class="section" id="summary">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="summary-box">
+      <h3>本章精要總結 · Key Takeaways</h3>
+      <p style="font-size: 1.05rem; color: #e2e8f0; line-height: 1.6;">
+        邏輯斯迴歸以 Log-Odds 對數勝率為支點，成功將線性超平面與有界機率論公理完美融合。
+        它是現代分類器、類神經網路可微分輸出層與大語言模型 Logits 的共同祖先！
+      </p>
+
+      <div class="summary-grid">
+        <div class="summary-item">
+          <h5>Logit 橋樑的優雅轉換</h5>
+          <p>
+            對數勝率打破了 $(0, 1)$ 的空間桎梏，讓無約束的線性代數工具能安全無虞地預測真實機率。
+          </p>
+        </div>
+        <div class="summary-item">
+          <h5>交叉熵的凸最佳化庇護</h5>
+          <p>
+            極大似然匯出的負對數損失具備半正定 Hessian，徹底消除了局部極小值與平坦飽和區的威脅。
+          </p>
+        </div>
+        <div class="summary-item">
+          <h5>與現代深度學習的傳承</h5>
+          <p>
+            多類別 Softmax 交叉熵本質上就是多項式邏輯斯迴歸 (Multinomial Logistic Regression) 的直接擴充套件。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Canvas Interactive Logic Script for KP13 -->
+<script>
+
+(function () {
+  const canvas = document.getElementById("demo-canvas-kp13");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  const w0Slider = document.getElementById("kp13-w0-slider");
+  const wSlider = document.getElementById("kp13-w-slider");
+  const w0ValTag = document.getElementById("kp13-w0-val");
+  const wValTag = document.getElementById("kp13-w-val");
+  const resetBtn = document.getElementById("kp13-reset-btn");
+  const readout = document.getElementById("kp13-readout");
+
+  const width = canvas.width;
+  const height = canvas.height;
+
+  // Coordinate system mapping: x in [-6, 6], y (probability P) in [-0.1, 1.1]
+  const padding = 50;
+  const plotW = width - 2 * padding;
+  const plotH = height - 2 * padding;
+
+  function toScreenX(x) {
+    return padding + ((x - (-6)) / 12) * plotW;
+  }
+
+  function toScreenY(p) {
+    // p=1 near top, p=0 near bottom
+    return padding + ((1.1 - p) / 1.2) * plotH;
+  }
+
+  function sigmoid(z) {
+    if (z > 40) return 1.0;
+    if (z < -40) return 0.0;
+    return 1.0 / (1.0 + Math.exp(-z));
+  }
+
+  function render() {
+    const w0 = parseFloat(w0Slider.value);
+    const w = parseFloat(wSlider.value);
+
+    w0ValTag.textContent = w0.toFixed(1);
+    wValTag.textContent = w.toFixed(1);
+
+    ctx.clearRect(0, 0, width, height);
+
+    // 1. Draw Background Region Fill (Probability Decision Zones)
+    const thresholdX = Math.abs(w) > 0.001 ? -w0 / w : null;
+
+    if (thresholdX !== null && thresholdX >= -6 && thresholdX <= 6) {
+      const splitScreenX = toScreenX(thresholdX);
+      if (w > 0) {
+        // Left is w2 (P < 0.5), Right is w1 (P > 0.5)
+        ctx.fillStyle = "rgba(234, 88, 12, 0.08)";
+        ctx.fillRect(padding, padding, splitScreenX - padding, plotH);
+        ctx.fillStyle = "rgba(5, 150, 105, 0.08)";
+        ctx.fillRect(splitScreenX, padding, padding + plotW - splitScreenX, plotH);
+      } else {
+        // Left is w1 (P > 0.5), Right is w2 (P < 0.5)
+        ctx.fillStyle = "rgba(5, 150, 105, 0.08)";
+        ctx.fillRect(padding, padding, splitScreenX - padding, plotH);
+        ctx.fillStyle = "rgba(234, 88, 12, 0.08)";
+        ctx.fillRect(splitScreenX, padding, padding + plotW - splitScreenX, plotH);
+      }
+    } else {
+      const pConst = sigmoid(w0);
+      const zoneColor = pConst >= 0.5 ? "rgba(5, 150, 105, 0.08)" : "rgba(234, 88, 12, 0.08)";
+      ctx.fillStyle = zoneColor;
+      ctx.fillRect(padding, padding, plotW, plotH);
+    }
+
+    // 2. Grid & Axes
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#e2e8f0";
+
+    // Horizontal grid lines (P = 0.0, 0.25, 0.5, 0.75, 1.0)
+    for (let pVal = 0.0; pVal <= 1.0; pVal += 0.25) {
+      const sy = toScreenY(pVal);
+      ctx.beginPath();
+      ctx.moveTo(padding, sy);
+      ctx.lineTo(width - padding, sy);
+      ctx.stroke();
+
+      ctx.fillStyle = "#64748b";
+      ctx.font = "12px sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(pVal.toFixed(2), padding - 8, sy + 4);
+    }
+
+    // Vertical grid lines (x = -6 to +6)
+    for (let xVal = -6; xVal <= 6; xVal += 2) {
+      const sx = toScreenX(xVal);
+      ctx.beginPath();
+      ctx.moveTo(sx, padding);
+      ctx.lineTo(sx, height - padding);
+      ctx.stroke();
+
+      ctx.fillStyle = "#64748b";
+      ctx.font = "12px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(xVal.toString(), sx, height - padding + 20);
+    }
+
+    // Axis Labels
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 13px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("x (特徵值)", width / 2, height - 10);
+
+    ctx.save();
+    ctx.translate(16, height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("事後機率 P(ω1 | x)", 0, 0);
+    ctx.restore();
+
+    // 3. Asymptote Lines P = 1.0 and P = 0.0 (Dashed Gray)
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = "#94a3b8";
+    ctx.lineWidth = 1.2;
+
+    const yTop = toScreenY(1.0);
+    ctx.beginPath();
+    ctx.moveTo(padding, yTop);
+    ctx.lineTo(width - padding, yTop);
+    ctx.stroke();
+
+    const yBottom = toScreenY(0.0);
+    ctx.beginPath();
+    ctx.moveTo(padding, yBottom);
+    ctx.lineTo(width - padding, yBottom);
+    ctx.stroke();
+
+    // 4. Decision Threshold Line P = 0.5 (Dashed Red)
+    ctx.strokeStyle = "#dc2626";
+    ctx.lineWidth = 1.5;
+
+    const yMid = toScreenY(0.5);
+    ctx.beginPath();
+    ctx.moveTo(padding, yMid);
+    ctx.lineTo(width - padding, yMid);
+    ctx.stroke();
+
+    // Vertical Threshold Line if within plot
+    if (thresholdX !== null && thresholdX >= -6 && thresholdX <= 6) {
+      const sxThresh = toScreenX(thresholdX);
+      ctx.beginPath();
+      ctx.moveTo(sxThresh, padding);
+      ctx.lineTo(sxThresh, height - padding);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]); // Reset line dash
+
+    // 5. Draw Sigmoid Curve
+    ctx.strokeStyle = "#059669";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+
+    let minP = 1.0, maxP = 0.0;
+    const steps = 300;
+    for (let i = 0; i <= steps; i++) {
+      const xVal = -6 + (i / steps) * 12;
+      const z = w0 + w * xVal;
+      const pVal = sigmoid(z);
+
+      if (pVal < minP) minP = pVal;
+      if (pVal > maxP) maxP = pVal;
+
+      const sx = toScreenX(xVal);
+      const sy = toScreenY(pVal);
+
+      if (i === 0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+
+    // 6. Draw Key Sample Points (x = -2, 0, 2 and threshold)
+    const testPoints = [-2, 0, 2];
+    if (thresholdX !== null && thresholdX >= -6 && thresholdX <= 6) {
+      if (!testPoints.includes(thresholdX)) {
+        testPoints.push(thresholdX);
+      }
+    }
+
+    testPoints.forEach((xVal) => {
+      const pVal = sigmoid(w0 + w * xVal);
+      const sx = toScreenX(xVal);
+      const sy = toScreenY(pVal);
+
+      const isThresh = thresholdX !== null && Math.abs(xVal - thresholdX) < 0.01;
+
+      ctx.beginPath();
+      ctx.arc(sx, sy, isThresh ? 7 : 5, 0, 2 * Math.PI);
+      ctx.fillStyle = isThresh ? "#dc2626" : "#2563eb";
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+    });
+
+    // 7. Update Readout Text
+    const pNeg2 = sigmoid(w0 + w * (-2));
+    const pZero = sigmoid(w0 + w * 0);
+    const pPos2 = sigmoid(w0 + w * 2);
+
+    let threshText = thresholdX !== null
+      ? `x = ${thresholdX.toFixed(3)}`
+      : "無有限臨界點 (w = 0, 全空間機率恆定)";
+
+    readout.innerHTML = `
+      <strong>[當前參數設定]</strong><br>
+      • 截距 w₀ = ${w0.toFixed(2)},  權重 w = ${w.toFixed(2)}<br>
+      • 決策門檻 (P=0.5 處)：${threshText}<br><br>
+      <strong>[幾何/測試點事後機率算值]</strong><br>
+      • P(ω₁ | x = -2.0) = ${pNeg2.toFixed(4)}<br>
+      • P(ω₁ | x =  0.0) = ${pZero.toFixed(4)}<br>
+      • P(ω₁ | x = +2.0) = ${pPos2.toFixed(4)}<br><br>
+      <strong>[理論基準驗證]</strong><br>
+      • 極限值驗證：全全空間 P(ω₁|x) 的最小值 = ${minP.toFixed(5)}, 最大值 = ${maxP.toFixed(5)}<br>
+      • 結論：不管參數如何調動，機率恆嚴格限制在 (0, 1) 區間內。
+    `.trim();
+  }
+
+  // Event Listeners
+  w0Slider.addEventListener("input", render);
+  wSlider.addEventListener("input", render);
+  resetBtn.addEventListener("click", () => {
+    w0Slider.value = "0.0";
+    wSlider.value = "1.5";
+    render();
+  });
+
+  render();
+})();
+
+</script>
+
+<!-- Interactive Quiz Logic with MathJax Re-rendering -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const quizCards = document.querySelectorAll('.quiz-card');
+  quizCards.forEach(card => {
+    const ans = card.getAttribute('data-ans');
+    const buttons = card.querySelectorAll('.options button');
+    const fb = card.querySelector('.feedback');
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const selected = btn.getAttribute('data-opt');
+        buttons.forEach(b => {
+          b.disabled = true;
+          b.classList.remove('correct', 'wrong');
+        });
+
+        if (selected === ans) {
+          btn.classList.add('correct');
+          fb.className = 'feedback visible correct';
+          if (selected === 'B' && card.querySelector('h4').textContent.includes('Q1')) {
+            fb.innerHTML = '<strong>答對了！</strong> 邏輯斯迴歸的靈魂正是 Logit 變換：將有界的事後機率比值轉換為值域在 $(-\\infty, +\\infty)$ 的對數勝率，並直接用線性模型進行擬合。反解後自然匯出 S 型 Sigmoid 函數！';
+          } else if (selected === 'B' && card.querySelector('h4').textContent.includes('Q2')) {
+            fb.innerHTML = '<strong>答對了！</strong> $\\sigma\'(z) = \\sigma(z)(1 - \\sigma(z))$，這使得在反向傳播或梯度更新時，無需重新計算指數運算，直接利用前向傳播已算得的機率值即可迅速求導！';
+          } else if (selected === 'A' && card.querySelector('h4').textContent.includes('Q3')) {
+            fb.innerHTML = '<strong>答對了！</strong> 若將 Sigmoid 複合到 MSE 中，當預測極度錯誤時導數會因為飽和而趨於零（梯度消失），代價函數變成非凸的；而交叉熵負對數似然的 Hessian 矩陣恆為半正定矩陣（嚴格凸函數），保證能確定地抵達全域性最優解！';
+          } else if (selected === 'B' && card.querySelector('h4').textContent.includes('Q4')) {
+            fb.innerHTML = '<strong>答對了！</strong> 牛頓法利用二階泰勒展開，每次步長為 $H^{-1}\\nabla J$。由於交叉熵損失曲面光滑且凸性極佳，IRLS 能以幾何級數逼近最優參數，通常 5~10 步內即高度精確收斂！';
+          } else {
+            fb.innerHTML = '<strong>答對了！</strong> 概念理解完全正確！';
+          }
+        } else {
+          btn.classList.add('wrong');
+          const correctBtn = card.querySelector(`button[data-opt="${ans}"]`);
+          if (correctBtn) correctBtn.classList.add('correct');
+          fb.className = 'feedback visible wrong';
+          fb.innerHTML = `<strong>答錯了。</strong> 正確選項為 <strong>${ans}</strong>。請回顧上方 Logit 變換推導與交叉熵凸最佳化證明！`;
+        }
+
+        if (window.MathJax && window.MathJax.typesetPromise) {
+          window.MathJax.typesetPromise([fb]).catch(err => console.error(err));
+        }
+      });
+    });
+  });
+
+  // Top progress bar update
+  window.addEventListener('scroll', () => {
+    const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    const scrolled = (winScroll / height) * 100;
+    const bar = document.getElementById('progressTop');
+    if (bar) bar.style.width = scrolled + '%';
+  });
+});
+</script>
+
+</body>
+</html>
