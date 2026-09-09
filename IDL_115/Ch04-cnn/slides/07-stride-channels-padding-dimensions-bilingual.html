@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch04 · KP07 步幅、通道、填充與輸出尺寸 — Stride, Channels, Padding, and Output Dimensions</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(234,88,12,.24), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(9,132,227,.18), transparent 30%),
+              linear-gradient(135deg, #0a0e27 0%, #221510 50%, #172038 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(10, 14, 39, .25);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(36px, 4.4vw, 64px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(18px, 2.0vw, 28px);
+  color: #fdba74;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #f97316;
+  border-radius: 999px;
+  color: #fb923c;
+  background: rgba(249, 115, 22, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 900px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f97316, #38bdf8);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #7dd3fc !important; fill: #7dd3fc !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #cbd5e1; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  display: block;
+}
+.half-layout .visual > svg {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  display: block;
+}
+.half-layout .visual .svg-caption {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+  font-size: var(--t5);
+  color: var(--text-low);
+  letter-spacing: .05em;
+}
+@media (max-width: 1100px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+
+/* 高橋流置中修復：卡片居中於內容閱讀區 (831px 中心軸，左右邊距各 231px) */
+.section .takahashi {
+  text-align: center;
+  padding: 80px 36px;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+}
+
+/* 表格包裝層（防止橫向溢位） */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 24px 0;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  background: var(--bg-card);
+}
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin: 28px 0;
+}
+.lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  color: var(--ink);
+}
+.lab-ctrl select, .lab-ctrl input[type="range"] {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  font-size: 14px;
+}
+.lab-ctrl span.val {
+  min-width: 48px;
+  font-family: var(--mono);
+  color: var(--primary);
+  font-weight: bold;
+}
+.lab-btn {
+  background: #ea580c;
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all .2s;
+}
+.lab-btn:hover {
+  background: #c2410c;
+  transform: translateY(-1px);
+}
+.lab-display {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 950px) {
+  .lab-display { grid-template-columns: 1fr; }
+}
+.lab-canvas-container {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.lab-readout {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP07 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Core Question</a></li>
+    <li><a href="#four-knobs">四大旋鈕 · Four Knobs</a></li>
+    <li><a href="#formula-6">尺寸公式式 (6) · Dimension Formula</a></li>
+    <li><a href="#padding-types">五種填充策略 · Padding Strategies</a></li>
+    <li><a href="#multichannel-concept">多通道概念剖析 · Multichannel</a></li>
+    <li><a href="#svg-dimension">視覺化對比 · Visual Shrink vs Pad</a></li>
+    <li><a href="#lab">互動實驗室 · Interactive Lab</a></li>
+    <li><a href="#quiz">觀念測驗 · Checkpoint</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">IDL 115 · CHAPTER 4 · KP-07 · TEACHING DECK</span>
+    <h1>步幅、通道、填充與輸出尺寸
+      <span class="hero-title-en">Stride, Channels, Padding, and Output Dimensions</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      卷積運算的幾何輸出完全由四個超參數旋鈕決定：<strong>Stride（步幅）</strong>、<strong>Width（核寬）</strong>、<strong>Channels（通道深度）</strong> 與 <strong>Padding（填充邊界）</strong>。透過經典幾何公式 $\lfloor(d-f+2p)/s+1\rfloor$，精確預測每一層特徵圖的空間解析度，並釐清核深度與輸出特徵圖張數的本質差異。
+    </p>
+    <p class="bilingual-en" style="color: #cbd5e1; max-width: 880px; margin: 10px auto 0;">
+      Spatial output size is governed by four knobs: stride, kernel width, channels, and padding. The universal formula floor((d - f + 2p)/s) + 1 accurately predicts spatial resolution across complex architectures.
+    </p>
+  </div>
+</section>
+
+<!-- 2. 大問句（高橋流） -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="sec-tag inquiry">01 / 核心提問 · Core Question</div>
+    <div class="quote">
+      「不補邊輸出會縮一圈；padding 把那圈補回來！」
+      <small>核中心對不到最外圈畫素，valid 必然縮邊；邊界尺寸公式精確掌管空間解析度。<br/>
+        <span class="bilingual-en-inline">Unpadded convolution shrinks the feature map; padding restores spatial dimensions.</span>
+      </small>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 四大旋鈕 -->
+<section class="section" id="four-knobs">
+  <div class="sec-tag sustain">02 / 核心超參數 · Four Knobs</div>
+  <h2 class="section-title">四大控制旋鈕：stride、width、channels、padding
+    <span class="en">The Four Primary Control Knobs of Convolution</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3>👣 1. Stride（步幅）</h3>
+      <div class="sub-en">Step Size of Kernel Traversal</div>
+      <p>
+        濾波器在空間網格上滑動時每次移動的格數。$s=1$ 為逐畫素連續平移；$s=2$ 每次跳躍 2 格，相當於在卷積階段直接進行下取樣，輸出尺寸大致折半。
+      </p>
+      <span class="bilingual-en">Stride determines spatial step size. Stride > 1 aggressively downsizes the feature map.</span>
+    </div>
+
+    <div class="card">
+      <h3>📏 2. Width（核寬 / 空間尺寸）</h3>
+      <div class="sub-en">Kernel Spatial Dimension (f × f)</div>
+      <p>
+        濾波核的長寬尺寸 $f$（現代多為 $3\times 3$ 或 $5\times 5$）。小核專注微觀細節，大核一次涵蓋更寬廣的局部上下文。
+      </p>
+      <span class="bilingual-en">Spatial extent f. Modern CNNs favor small stacked 3×3 kernels over large ones.</span>
+    </div>
+
+    <div class="card">
+      <h3>🥞 3. Channels（通道深度）</h3>
+      <div class="sub-en">Kernel Depth vs Output Maps</div>
+      <p>
+        <strong>關鍵澄清</strong>：一顆濾波核的「深度」<strong>必須嚴格對齊輸入通道數 $C_{in}$</strong>！而「輸出特徵圖張數 $C_{out}$」則是由<strong>有幾顆獨立的濾波核</strong>所決定。兩者絕對不能混淆！
+      </p>
+      <span class="bilingual-en">A single kernel's depth equals C_in. The number of output maps equals the number of distinct kernels C_out.</span>
+    </div>
+
+    <div class="card">
+      <h3>🧱 4. Padding（邊界填充）</h3>
+      <div class="sub-en">Border Value Injection</div>
+      <p>
+        在輸入影像外圍擴充邊界畫素圈數 $p$。完全不補邊稱為 <strong>valid padding</strong>（$p=0$）；維持輸入與輸出長寬相同的設定稱為 <strong>same padding</strong>。
+      </p>
+      <span class="bilingual-en">Padding controls border behavior and prevents boundary information loss.</span>
+    </div>
+  </div>
+</section>
+
+<!-- 4. 尺寸公式式 (6) -->
+<section class="section" id="formula-6">
+  <div class="sec-tag sustain">03 / 數學定理 · Output Dimension Formula</div>
+  <h2 class="section-title">式 (6)：輸出特徵圖空間尺寸精確定理
+    <span class="en">Equation (6): Spatial Output Dimension Formulation</span>
+  </h2>
+
+  <div class="highlight-box">
+    <h4>尺寸公式式 (6)</h4>
+    <p>
+      設輸入長寬為 $d$、卷積核寬為 $f$、單側填充為 $p$、步幅為 $s$。輸出特徵圖的空間尺寸嚴格由下式決定：
+    </p>
+    <p style="text-align: center; font-size: 26px; font-weight: 700; color: #ea580c; margin: 16px 0;">
+      $$\text{Output Dimensions} = \left\lfloor\frac{d - f + 2p}{s} + 1\right\rfloor \times \left\lfloor\frac{d - f + 2p}{s} + 1\right\rfloor \tag{6}$$
+    </p>
+    <p>
+      其中 $\lfloor\cdot\rfloor$ 代表無條件向下取整（Floor 運算）。
+    </p>
+    <ul style="padding-left: 1.2em; margin: 8px 0;">
+      <li><strong>有效覆蓋跨度</strong>：$d + 2p - f$ 為濾波核可在輸入邊界內滑動的最大淨位移。</li>
+      <li><strong>段數計算</strong>：除以步幅 $s$ 後取整，再加上初始出發的第 1 格，即得輸出邊長。</li>
+    </ul>
+    <p style="margin-top: 8px; font-size: 15px; color: #475569;">
+      <strong>算例 1 (Valid)</strong>：$d=5, f=3, p=0, s=1 \implies \lfloor(5-3+0)/1 + 1\rfloor = 3$（$5\times 5 \to 3\times 3$，外圈被削掉一圈）。<br/>
+      <strong>算例 2 (Same)</strong>：$d=5, f=3, p=1, s=1 \implies \lfloor(5-3+2)/1 + 1\rfloor = 5$（$5\times 5 \to 5\times 5$，尺寸完美保全）。
+    </p>
+    <span class="bilingual-en">Floor((d - f + 2p)/s) + 1 accurately determines width and height independently for any convolution setup.</span>
+  </div>
+</section>
+
+<!-- 5. 五種填充策略 -->
+<section class="section" id="padding-types">
+  <div class="sec-tag sustain">04 / 填充策略 · Padding Strategies</div>
+  <h2 class="section-title">課本列出的五種主要填充策略
+    <span class="en">Five Principal Padding Methods Described in the Textbook</span>
+  </h2>
+
+  <div class="table-wrap">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>填充方法 Method</th>
+          <th>邊界數值來源 Implementation</th>
+          <th>典型適用場景 Typical Usage</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Zero Padding</strong></td>
+          <td>在周圍均勻補上數值 0（最普遍）</td>
+          <td>標準深度學習架構（ResNet、VGG 等預設值）</td>
+        </tr>
+        <tr>
+          <td><strong>Constant Padding</strong></td>
+          <td>在周圍補上使用者指定的固定常數 $c$</td>
+          <td>有特定背景基準值（如平均亮度）的影像任務</td>
+        </tr>
+        <tr>
+          <td><strong>Replicate Padding</strong></td>
+          <td>直接複製並向外延伸最邊緣一排的畫素值</td>
+          <td>邊緣紋理連續性要求高的影像修復或分割</td>
+        </tr>
+        <tr>
+          <td><strong>Reflect Padding</strong></td>
+          <td>沿著影像邊界做映象對稱翻折複製</td>
+          <td>風格遷移（Style Transfer）、超解析度（Super-Resolution）</td>
+        </tr>
+        <tr>
+          <td><strong>Circular Padding</strong></td>
+          <td>將影像頭尾相接、左右迴圈週期性環繞</td>
+          <td>全景圖（360° Panorama）、週期性晶格物理模擬</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 6. 多通道概念剖析 -->
+<section class="section" id="multichannel-concept">
+  <div class="sec-tag sustain">05 / 多通道張量 · Multichannel Tensors</div>
+  <h2 class="section-title">課本 Fig. 5 與 Fig. 6：從單通道平面到三維張量
+    <span class="en">From 2D Single-Channel to 3D Multichannel Tensor Convolutions</span>
+  </h2>
+
+  <div class="intuition-box">
+    <h4>立體張量卷積的正確心智模型</h4>
+    <ul style="padding-left: 1.2em; margin: 8px 0;">
+      <li><strong>單通道卷積（Fig. 5）</strong>：$1 \text{ 個平面輸入} \times 1 \text{ 個 2D 核} \implies 1 \text{ 張輸出特徵圖}$。</li>
+      <li><strong>多通道卷積（Fig. 6）</strong>：輸入有 3 個色彩通道（RGB）。此時<strong>每一顆濾波核本身就是一個 3D 張量（尺寸為 $f \times f \times 3$）</strong>！
+        它在 3 個通道上分別做 2D 乘加，並在通道維度求和，輸出<strong>依然是單張 2D 特徵圖</strong>。
+      </li>
+      <li><strong>產生多張特徵圖</strong>：如果你希望下一層擁有 16 個特徵通道，你必須準備 <strong>16 顆互不相干的 3D 濾波核</strong>！
+        總參數量即為：$f \times f \times C_{in} \times C_{out}$（加上 $C_{out}$ 個偏置項）。
+      </li>
+    </ul>
+    <span class="bilingual-en">A filter is a 3D tensor of shape f×f×C_in. To produce C_out output maps, we use C_out distinct 3D filters.</span>
+  </div>
+</section>
+
+<!-- 7. 視覺化對比 SVG -->
+<section class="section" id="svg-dimension">
+  <div class="sec-tag sustain">06 / 尺寸對比 · Visualizing Output Sizes</div>
+  <h2 class="section-title">不補邊（Valid）vs 補一圈（Same）視覺對照圖
+    <span class="en">Visual Comparison: Valid (p=0, Shrinking) vs Same (p=1, Preserving)</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg viewBox="0 0 740 360" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+        <defs>
+          <marker id="ar-o1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0 1 L9 5 L0 9 z" fill="#ea580c"/>
+          </marker>
+          <marker id="ar-g1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0 1 L9 5 L0 9 z" fill="#16a34a"/>
+          </marker>
+        </defs>
+
+        <rect x="0" y="0" width="740" height="360" fill="#f8fafc" rx="12" stroke="#e2e8f0"/>
+
+        <!-- 頂部公式橫幅 -->
+        <rect x="18" y="16" width="704" height="42" rx="6" fill="#ffedd5" stroke="#ea580c" stroke-width="1.4"/>
+        <text x="370" y="42" text-anchor="middle" font-size="13" font-weight="bold" fill="#c2410c">
+          輸出邊長公式：⌊(d − f + 2p) / s⌋ + 1   （正方形 H 與 W 同式）
+        </text>
+
+        <!-- 左側：Valid (p=0) -->
+        <g transform="translate(18, 70)">
+          <rect x="0" y="0" width="340" height="200" rx="8" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
+          <text x="170" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#991b1b">Valid Padding (p = 0) · 空間縮減</text>
+          <text x="170" y="42" text-anchor="middle" font-size="10" fill="#b91c1c">⌊(5 − 3 + 0)/1⌋ + 1 = 3  $\implies$ 輸出 3×3</text>
+
+          <!-- 5x5 輸入 -->
+          <g transform="translate(30, 60)">
+            <rect x="0" y="0" width="90" height="90" fill="#fff" stroke="#dc2626" stroke-width="1.2"/>
+            <g stroke="#fecaca" stroke-width="1">
+              <line x1="18" y1="0" x2="18" y2="90"/><line x1="36" y1="0" x2="36" y2="90"/><line x1="54" y1="0" x2="54" y2="90"/><line x1="72" y1="0" x2="72" y2="90"/>
+              <line x1="0" y1="18" x2="90" y2="18"/><line x1="0" y1="36" x2="90" y2="36"/><line x1="0" y1="54" x2="90" y2="54"/><line x1="0" y1="72" x2="90" y2="72"/>
+            </g>
+            <rect x="0" y="0" width="54" height="54" fill="none" stroke="#dc2626" stroke-width="2"/>
+            <text x="45" y="106" text-anchor="middle" font-size="9" fill="#991b1b">5×5 輸入 (3×3核)</text>
+          </g>
+
+          <path d="M140 105 H175" stroke="#dc2626" stroke-width="2.2" marker-end="url(#ar-o1)"/>
+
+          <!-- 3x3 輸出 -->
+          <g transform="translate(195, 78)">
+            <rect x="0" y="0" width="54" height="54" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+            <g stroke="#fca5a5" stroke-width="1">
+              <line x1="18" y1="0" x2="18" y2="54"/><line x1="36" y1="0" x2="36" y2="54"/>
+              <line x1="0" y1="18" x2="54" y2="18"/><line x1="0" y1="36" x2="54" y2="36"/>
+            </g>
+            <text x="27" y="70" text-anchor="middle" font-size="10" font-weight="bold" fill="#991b1b">3×3 輸出</text>
+          </g>
+
+          <text x="170" y="180" text-anchor="middle" font-size="9" fill="#7f1d1d">未填充導致邊界資訊遺失，深層網路會縮小至無</text>
+        </g>
+
+        <!-- 右側：Same (p=1) -->
+        <g transform="translate(382, 70)">
+          <rect x="0" y="0" width="340" height="200" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+          <text x="170" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#166534">Same Padding (p = 1) · 保持尺寸</text>
+          <text x="170" y="42" text-anchor="middle" font-size="10" fill="#15803d">⌊(5 − 3 + 2)/1⌋ + 1 = 5  $\implies$ 輸出 5×5</text>
+
+          <!-- 5x5 + pad=1 (7x7) -->
+          <g transform="translate(30, 52)">
+            <rect x="0" y="0" width="105" height="105" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+            <rect x="15" y="15" width="75" height="75" fill="#fff" stroke="#16a34a" stroke-width="1.2"/>
+            <g stroke="#bbf7d0" stroke-width="1">
+              <line x1="30" y1="15" x2="30" y2="90"/><line x1="45" y1="15" x2="45" y2="90"/><line x1="60" y1="15" x2="60" y2="90"/><line x1="75" y1="15" x2="75" y2="90"/>
+              <line x1="15" y1="30" x2="90" y2="30"/><line x1="15" y1="45" x2="90" y2="45"/><line x1="15" y1="60" x2="90" y2="60"/><line x1="15" y1="75" x2="90" y2="75"/>
+            </g>
+            <rect x="0" y="0" width="45" height="45" fill="none" stroke="#16a34a" stroke-width="2"/>
+            <text x="52" y="120" text-anchor="middle" font-size="8" fill="#64748b">灰圈為 Padding 圈</text>
+          </g>
+
+          <path d="M150 105 H180" stroke="#16a34a" stroke-width="2.2" marker-end="url(#ar-g1)"/>
+
+          <!-- 5x5 輸出 -->
+          <g transform="translate(195, 68)">
+            <rect x="0" y="0" width="75" height="75" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+            <g stroke="#86efac" stroke-width="1">
+              <line x1="15" y1="0" x2="15" y2="75"/><line x1="30" y1="0" x2="30" y2="75"/><line x1="45" y1="0" x2="45" y2="75"/><line x1="60" y1="0" x2="60" y2="75"/>
+              <line x1="0" y1="15" x2="75" y2="15"/><line x1="0" y1="30" x2="75" y2="30"/><line x1="0" y1="45" x2="75" y2="45"/><line x1="0" y1="60" x2="75" y2="60"/>
+            </g>
+            <text x="37" y="92" text-anchor="middle" font-size="10" font-weight="bold" fill="#166534">5×5 輸出</text>
+          </g>
+
+          <text x="170" y="180" text-anchor="middle" font-size="9" fill="#14532d">補 1 圈讓核中心可涵蓋原圖邊界，尺寸完美守恆</text>
+        </g>
+
+        <!-- 底部總結 -->
+        <rect x="18" y="282" width="704" height="66" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.3"/>
+        <text x="370" y="306" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">心算要訣：有效覆蓋跨度 (d − f + 2p) 代表濾波器滑動空間，除以步幅 s 即得步數！</text>
+        <text x="370" y="326" text-anchor="middle" font-size="10" fill="#2563eb">若出現非整數，Floor 運算會截斷無法完整對齊的右側邊界；在 PyTorch 中預設即遵循向下取整機制。</text>
+      </svg>
+      <span class="svg-caption">圖解 Valid Padding 與 Same Padding 空間尺寸演化對比</span>
+    </div>
+
+    <div>
+      <div class="intuition-box" style="margin-top:0;">
+        <h4>💡 Valid 不是「比較正確」</h4>
+        <p>
+          英文名詞「Valid」常被誤解為「合法的／正確的」。實際上，在訊號處理歷史中，Valid 只是指「完全不擴充邊界、只在純淨原訊號內部運算」。
+        </p>
+        <p>
+          在現代數十層乃至上百層的深層神經網路中，若每一層都用 Valid，特徵圖長寬會迅速縮減為 0。因此現代架構（如 ResNet）幾乎全數採用 $3\times 3$ 搭配 $p=1$ 的 <strong>Same Padding</strong> 保持空間尺寸！
+        </p>
+        <span class="bilingual-en">Valid simply means no padding. Deep CNNs heavily rely on Same padding (f=3, p=1) to prevent rapid spatial collapse.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. 互動實驗室 -->
+<section class="section" id="lab">
+  <div class="sec-tag activate">07 / 互動實驗室 · Interactive Lab</div>
+  <h2 class="section-title">互動實驗室：式 (6) 輸出尺寸四旋鈕即時演算器
+    <span class="en">Interactive Lab: Equation (6) Four-Knob Interactive Dimension Calculator</span>
+  </h2>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <div class="lab-ctrl">
+        <label>輸入邊長 $d$:</label>
+        <input type="range" id="kp7-d" min="8" max="32" step="1" value="8">
+        <span class="val" id="kp7-d-v">8</span>
+      </div>
+
+      <div class="lab-ctrl">
+        <label>核寬 $f$:</label>
+        <input type="range" id="kp7-f" min="1" max="9" step="1" value="3">
+        <span class="val" id="kp7-f-v">3</span>
+      </div>
+
+      <div class="lab-ctrl">
+        <label>填充 $p$:</label>
+        <input type="range" id="kp7-p" min="0" max="4" step="1" value="0">
+        <span class="val" id="kp7-p-v">0</span>
+      </div>
+
+      <div class="lab-ctrl">
+        <label>步幅 $s$:</label>
+        <input type="range" id="kp7-s" min="1" max="4" step="1" value="1">
+        <span class="val" id="kp7-s-v">1</span>
+      </div>
+
+      <button class="lab-btn" id="kp7-reset">重設預設 Reset</button>
+    </div>
+
+    <div class="lab-display">
+      <div>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 8px;">
+          視覺化畫布：依據四個旋鈕動態渲染輸入方框與輸出特徵圖幾何比例：
+        </p>
+        <div class="lab-canvas-container">
+          <canvas id="kp7-cv" width="560" height="300"></canvas>
+        </div>
+      </div>
+      <div class="lab-readout" id="kp7-ro">
+        <!-- Live readout injected by JS -->
+      </div>
+    </div>
+
+    <p style="font-size: 14px; color: #475569; margin-top: 14px; line-height: 1.6;">
+      🧪 <strong>實測大觀察：</strong><br/>
+      1. <strong>Same 條件實測</strong>：設定 $f=3, s=1$，將 $p$ 從 0 改為 1，觀察輸出特徵圖邊長是否恰好等於輸入邊長 $d$！<br/>
+      2. <strong>步幅跳躍效應</strong>：將步幅 $s$ 從 1 提升為 2，觀察輸出尺寸如何劇烈折半，感受跨步卷積的強大下取樣威力。
+    </p>
+  </div>
+</section>
+
+<!-- 9. 隨堂 Checkpoint -->
+<section class="section" id="quiz">
+  <div class="sec-tag activate">08 / 實戰檢驗 · Concept Checkpoint</div>
+  <h2 class="section-title">隨堂 Checkpoint：觀念即時反饋
+    <span class="en">Concept Checkpoint: Immediate Feedback Quiz</span>
+  </h2>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 1 · 核深度對齊 / Kernel Depth Alignment</div>
+    <div class="q-text">卷積神經網路中，單顆卷積核的「通道數／深度（Depth）」應嚴格對齊的是？</div>
+    <div class="options">
+      <button data-opt="A">A. 輸出特徵圖的張數（$C_{out}$）</button>
+      <button data-opt="B">B. 輸入資料的通道數（$C_{in}$）</button>
+      <button data-opt="C">C. 步幅 stride 的數值</button>
+      <button data-opt="D">D. padding 填充圈數</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 2 · 輸出尺寸公式 / Output Dimension Equation</div>
+    <div class="q-text">式 (6) 中，當輸入邊長為 $d$、kernel 寬為 $f$、padding 為 $p$、stride 為 $s$ 時，輸出特徵圖的邊長為？</div>
+    <div class="options">
+      <button data-opt="A">A. $d - f$</button>
+      <button data-opt="B">B. $\left\lfloor\frac{d - f + 2p}{s} + 1\right\rfloor$</button>
+      <button data-opt="C">C. $d + f + p + s$</button>
+      <button data-opt="D">D. $\lceil d / s \rceil$</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 3 · Valid Padding 定義 / Valid Padding Meaning</div>
+    <div class="q-text">在卷積神經網路術語中，所謂「Valid Padding」是指？</div>
+    <div class="options">
+      <button data-opt="A">A. 只補零值的填充</button>
+      <button data-opt="B">B. 完全不進行任何填充（$p = 0$）</button>
+      <button data-opt="C">C. 迴圈填充</button>
+      <button data-opt="D">D. 鏡射對稱填充</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-card" data-ans="D">
+    <div class="q-num">題目 4 · 填充方法辨析 / Padding Methods</div>
+    <div class="q-text">下列哪一項<strong>不是</strong>教材中列出的常規影像填充方法？</div>
+    <div class="options">
+      <button data-opt="A">A. Zero padding（補零）</button>
+      <button data-opt="B">B. Reflect padding（鏡射）</button>
+      <button data-opt="C">C. Circular padding（迴圈）</button>
+      <button data-opt="D">D. Random shuffle padding（隨機打亂）</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+</section>
+
+<script>
+// Quiz logic with dynamic MathJax re-render
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('selected', 'correct', 'wrong'));
+      const opt = btn.getAttribute('data-opt');
+      btn.classList.add('selected');
+      if (opt === ans) {
+        btn.classList.add('correct');
+        fb.style.display = 'block';
+        fb.className = 'feedback correct';
+        fb.innerHTML = '✅ <strong>答對了！</strong> ' + getExplanation(card, ans);
+      } else {
+        btn.classList.add('wrong');
+        fb.style.display = 'block';
+        fb.className = 'feedback wrong';
+        fb.innerHTML = '❌ <strong>再想想看！</strong> ' + getExplanation(card, opt);
+      }
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+function getExplanation(card, ans) {
+  const text = card.innerText;
+  if (text.includes('通道數／深度') || text.includes('題目 1')) {
+    return '單顆卷積核的深度必須嚴格等於輸入資料的通道數 $C_{in}$；輸出特徵圖張數是由「有幾顆獨立的卷積核」決定。';
+  } else if (text.includes('輸出特徵圖的邊長') || text.includes('題目 2')) {
+    return '式 (6) 正確公式為 $\\lfloor(d-f+2p)/s+1\\rfloor$，寬高各自依照此式進行向下取整。';
+  } else if (text.includes('Valid Padding') || text.includes('題目 3')) {
+    return 'Valid padding 代表完全不對邊界補任何值（$p=0$），卷積只在輸入影像內部有效覆蓋範圍內滑動。';
+  } else if (text.includes('填充方法') || text.includes('題目 4')) {
+    return '教材列出的五大填充為 zero、constant、replicate、reflect、circular，並無隨機打亂填充。';
+  }
+  return '';
+}
+
+// Progress Bar
+window.addEventListener('scroll', () => {
+  const top = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('progressTop').style.width = (top / docH * 100) + '%';
+});
+
+// Interactive Lab (kp7-cv & kp7-ro)
+(function() {
+  let d = 8, f = 3, p = 0, s = 1;
+  const cv = document.getElementById('kp7-cv');
+  const ctx = cv.getContext('2d');
+  const ro = document.getElementById('kp7-ro');
+
+  function outDim() {
+    s = Math.max(1, s);
+    const num = d - f + 2 * p;
+    const raw = Math.floor(num / s) + 1;
+    return { num: num, raw: raw, valid: raw >= 1 };
+  }
+
+  function draw(info) {
+    const W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    const ppu = 180 / 32;
+    const inPx = d * ppu;
+    const outPx = Math.max(info.raw, 0) * ppu;
+    const y0 = 50;
+
+    // Input Box
+    ctx.fillStyle = '#fed7aa';
+    ctx.fillRect(40, y0, inPx, inPx);
+    ctx.strokeStyle = '#c2410c';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(40, y0, inPx, inPx);
+    ctx.lineWidth = 1;
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`輸入邊長 ${d}×${d}`, 40, y0 - 12);
+
+    // Output Box
+    const ox = 280;
+    if (info.valid) {
+      ctx.fillStyle = '#bfdbfe';
+      ctx.fillRect(ox, y0, outPx, outPx);
+      ctx.strokeStyle = '#1d4ed8';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(ox, y0, outPx, outPx);
+      ctx.lineWidth = 1;
+      ctx.fillStyle = '#1e293b';
+      ctx.fillText(`輸出特徵圖 ${info.raw}×${info.raw}`, ox, y0 - 12);
+    } else {
+      ctx.fillStyle = '#fee2e2';
+      ctx.fillRect(ox, y0, 70, 70);
+      ctx.strokeStyle = '#b91c1c';
+      ctx.strokeRect(ox, y0, 70, 70);
+      ctx.fillStyle = '#b91c1c';
+      ctx.fillText('❌ 尺寸不合法（out < 1）', ox, y0 - 12);
+    }
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('畫布按等比例渲染空間尺寸；最大 d=32 對應 180 畫素寬度。', 30, H - 20);
+  }
+
+  function sync() {
+    document.getElementById('kp7-d-v').textContent = String(d);
+    document.getElementById('kp7-f-v').textContent = String(f);
+    document.getElementById('kp7-p-v').textContent = String(p);
+    document.getElementById('kp7-s-v').textContent = String(s);
+
+    const info = outDim();
+    ro.innerHTML = `
+      <div style="color:#ea580c; font-weight:700; font-size:15px; margin-bottom:8px;">
+        公式推導即時診斷報告
+      </div>
+      <div><strong>計算式：</strong> $\\lfloor(${d} - ${f} + 2\\times${p}) / ${s}\\rfloor + 1 = \\lfloor${info.num} / ${s}\\rfloor + 1$</div>
+      <div style="margin-top:6px;"><strong>輸出空間邊長：</strong> <span style="font-size:18px; font-weight:700; color:${info.valid ? '#1e40af' : '#dc2626'};">${info.valid ? info.raw + ' × ' + info.raw : '不合法 (≤0)'}</span></div>
+      <hr style="border:none; border-top:1px solid #cbd5e1; margin:8px 0;"/>
+      <div style="font-size:12px; color:#475569;">
+        ${!info.valid ? '⚠ 核尺寸大於填充後輸入，無法完成一次有效滑動！' : (info.raw === d ? '🎉 尺寸完全守恆（Same Padding 條件達成）' : (info.raw < d ? '📉 空間維度縮小（下取樣或削邊）' : '📈 空間維度擴大（Padding 較大）'))}
+      </div>
+    `;
+
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([ro]);
+    }
+
+    draw(info);
+  }
+
+  document.getElementById('kp7-d').addEventListener('input', function() { d = parseInt(this.value, 10); sync(); });
+  document.getElementById('kp7-f').addEventListener('input', function() { f = parseInt(this.value, 10); sync(); });
+  document.getElementById('kp7-p').addEventListener('input', function() { p = parseInt(this.value, 10); sync(); });
+  document.getElementById('kp7-s').addEventListener('input', function() { s = Math.max(1, parseInt(this.value, 10) || 1); sync(); });
+
+  document.getElementById('kp7-reset').addEventListener('click', function() {
+    d = 8; f = 3; p = 0; s = 1;
+    document.getElementById('kp7-d').value = d;
+    document.getElementById('kp7-f').value = f;
+    document.getElementById('kp7-p').value = p;
+    document.getElementById('kp7-s').value = s;
+    sync();
+  });
+
+  sync();
+})();
+</script>
+</body>
+</html>

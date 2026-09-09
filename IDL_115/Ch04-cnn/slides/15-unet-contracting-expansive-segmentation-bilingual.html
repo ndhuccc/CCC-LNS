@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch04 · KP15 U-Net：收縮–擴張路徑與醫學分割 — U-Net: Contracting-Expansive Paths & Biomedical Segmentation</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(14,165,233,.26), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(99,102,241,.24), transparent 30%),
+              linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, .3);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(36px, 4.4vw, 64px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(18px, 2.0vw, 28px);
+  color: #38bdf8;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #0284c7;
+  border-radius: 999px;
+  color: #38bdf8;
+  background: rgba(2, 132, 199, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 900px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #0284c7, #818cf8);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #38bdf8 !important; fill: #38bdf8 !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #cbd5e1; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+@media (max-width: 1024px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: var(--shadow);
+}
+.half-layout .visual > svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 坑 W 嚴格落實：Takahashi 置中與 rail-nav 留白保護 */
+.section .takahashi {
+  box-sizing: border-box;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  text-align: center;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px solid #0284c7;
+  border-radius: var(--radius);
+  padding: 40px 32px;
+  box-shadow: var(--shadow);
+}
+.section .takahashi .core-q {
+  font-size: clamp(26px, 3.2vw, 42px);
+  font-weight: 800;
+  color: #0369a1;
+  line-height: 1.3;
+  margin-bottom: 16px;
+}
+.section .takahashi .core-ans {
+  font-size: clamp(16px, 1.8vw, 22px);
+  color: #0f172a;
+  line-height: 1.6;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* 測驗 Checkpoint 樣式 */
+.quiz-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  margin: 20px 0;
+  box-shadow: var(--shadow);
+  transition: border-color 0.2s;
+}
+.quiz-card:hover { border-color: var(--accent); }
+.quiz-card .q-num {
+  font-size: var(--t5);
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.quiz-card .q-text {
+  font-size: var(--t3);
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.quiz-card .options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.quiz-card .options button {
+  text-align: left;
+  padding: 12px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  color: var(--ink);
+  font-size: var(--t4);
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1.4;
+}
+.quiz-card .options button:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+.quiz-card .options button.selected {
+  background: #e0f2fe;
+  border-color: #0284c7;
+}
+.quiz-card .options button.correct {
+  background: #dcfce7 !important;
+  border-color: #16a34a !important;
+  color: #166534 !important;
+  font-weight: 600;
+}
+.quiz-card .options button.wrong {
+  background: #fee2e2 !important;
+  border-color: #dc2626 !important;
+  color: #991b1b !important;
+}
+.quiz-card .feedback {
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: var(--t4);
+  line-height: 1.6;
+}
+.quiz-card .feedback.correct {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+.quiz-card .feedback.wrong {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+/* 內容卡片與表格美化 */
+.content-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin: 24px 0;
+  box-shadow: var(--shadow);
+}
+.feature-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18px 0;
+}
+.feature-table th, .feature-table td {
+  border: 1px solid var(--line);
+  padding: 12px 16px;
+  text-align: left;
+  font-size: var(--t4);
+}
+.feature-table th {
+  background: #f1f5f9;
+  font-weight: 700;
+  color: var(--ink);
+}
+.feature-table tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  box-shadow: var(--shadow);
+}
+.lab-toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  font-size: var(--t4);
+  color: var(--ink);
+}
+.lab-ctrl select {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  font-size: var(--t4);
+  background: #fff;
+  color: var(--ink);
+}
+.lab-btn {
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: none;
+  background: #0284c7;
+  color: #fff;
+  font-size: var(--t4);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.lab-btn:hover {
+  background: #0369a1;
+  transform: translateY(-1px);
+}
+.lab-display {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 950px) {
+  .lab-display { grid-template-columns: 1fr; }
+}
+.lab-canvas-container {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.lab-readout {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<!-- TOC RAIL (PITFALL W 必須) -->
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP15 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Core Question</a></li>
+    <li><a href="#sec-unet-arch">對稱 U 形架構與雙翼分工 · Architecture & Roles</a></li>
+    <li><a href="#svg-unet">U-Net 向量架構圖 · Visual Breakdown</a></li>
+    <li><a href="#sec-deconv-skip">轉置卷積與跳接裁切細節 · Deconvolution & Skip</a></li>
+    <li><a href="#lab">互動實驗室 · Interactive Lab</a></li>
+    <li><a href="#quiz">觀念測驗 · Checkpoint</a></li>
+    <li><a href="#summary">單元核心總結 · Key Takeaways</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 Cover -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">KP15 · CNN MILESTONES · 語境與精準定位</span>
+    <h1>5.5 U-Net：收縮–擴張路徑與醫學分割
+      <span class="hero-title-en">U-Net: Contracting-Expansive Paths & Biomedical Segmentation</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      分割任務既要掌握巨觀組織<strong>語境（Context）</strong>，又要鎖定微觀邊界<strong>定位（Localization）</strong>！U-Net 創立收縮–擴張對稱雙翼，透過<strong>跳躍連線（Skip Connection）</strong>將低階空間幾何細節直傳解碼器，奠定生醫分割不可動搖的黃金典範。
+    </p>
+  </div>
+</section>
+
+<!-- 2. 高橋流大問句 (PITFALL W) -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="core-q">
+      既然深層特徵丟失空間邊界，如何讓分割邊界精確到單一畫素？
+      <div style="font-size:0.55em; font-weight:normal; color:#0284c7; margin-top:8px;">
+        How to achieve pixel-level boundary precision when deep networks lose spatial resolution?
+      </div>
+    </div>
+    <div class="core-ans">
+      <strong>左翼收縮抓全域語境，右翼擴張逐步還原解析度！</strong><br>
+      中央橫越的<strong>跳躍連線（Skip Connection）</strong>將淺層高解析空間細節直接 Concat 接回擴張層，徹底解決下取樣造成的定位資訊流失！
+    </div>
+  </div>
+</section>
+
+<!-- 3. 對稱 U 形架構與雙翼分工 -->
+<section class="section" id="sec-unet-arch">
+  <div class="sec-tag activate">01 / 對稱雙翼分工 · Contracting vs Expansive</div>
+  <h2 class="section-title">U-Net 雙翼設計哲學：語境診斷與邊界重建
+    <span class="en">Design Philosophy of U-Net: Context Diagnosis & Boundary Reconstruction</span>
+  </h2>
+
+  <div class="content-card">
+    <p>
+      2015 年由 Olaf Ronneberger 等人提出的 <strong>U-Net</strong>，最初奪得 ISBI 電子顯微鏡神經結構分割挑戰賽冠軍。在<strong>語意分割（Semantic Segmentation）</strong>任務中，模型必須回答兩個互斥又相互依存的難題：
+    </p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 18px 0;">
+      <div style="background: #f0f9ff; border: 1.5px solid #0284c7; border-radius: 10px; padding: 18px;">
+        <h4 style="margin: 0 0 10px 0; color: #0369a1; font-size: 16px;">
+          📉 收縮路徑 Contracting Path（左翼 · 編碼器）
+        </h4>
+        <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.7; color: #334155;">
+          <li><strong>核心職能：</strong> 捕捉「語境與上下文（Context）」——識別這團區域到底是什麼組織或細胞。</li>
+          <li><strong>標準步階：</strong> 每次由兩次 $3\times 3$ 卷積（均接 ReLU）組成，隨後以 stride 2 的 $2\times 2$ max pooling 進行下取樣。</li>
+          <li><strong>維度轉換：</strong> 空間解析度減半（$\frac{H}{2} \times \frac{W}{2}$），特徵通道數<strong>翻倍</strong>（$64 \to 128 \to 256 \to 512$），保障語意表達容量。</li>
+        </ul>
+      </div>
+
+      <div style="background: #f0fdf4; border: 1.5px solid #16a34a; border-radius: 10px; padding: 18px;">
+        <h4 style="margin: 0 0 10px 0; color: #15803d; font-size: 16px;">
+          📈 擴張路徑 Expansive Path（右翼 · 解碼器）
+        </h4>
+        <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.7; color: #334155;">
+          <li><strong>核心職能：</strong> 實現「精準定位（Precise Localization）」——把組織與背景的邊界切齊在精確的畫素座標。</li>
+          <li><strong>標準步階：</strong> 不用 Pooling，改用 $2\times 2$ <strong>轉置卷積（Transposed Conv / Deconv）</strong>上取樣，通道數<strong>減半</strong>。</li>
+          <li><strong>跳躍融合：</strong> 與左翼對應層特徵圖進行<strong>通道串接（Filter Concatenation）</strong>，隨後再接兩次 $3\times 3$ 卷積 + ReLU。</li>
+        </ul>
+      </div>
+    </div>
+    <span class="bilingual-en">Contracting path captures high-level context via downsampling, while expansive path restores spatial resolution and precise localization via upsampling and skip concatenation.</span>
+  </div>
+</section>
+
+<!-- 4. 向量視覺化 (Fig 16 概念) -->
+<section class="section" id="svg-unet">
+  <div class="sec-tag sustain">02 / 幾何骨架視覺化 · U-Net Architecture</div>
+  <h2 class="section-title">U-Net 經典架構剖析：跳躍連線 Concat 與尺寸映象 (Fig. 16)
+    <span class="en">Classic U-Net Architecture: Skip Connection Concat & Symmetric Mirroring</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <!-- SVG DIAGRAM FIG 16 -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, Helvetica, sans-serif">
+        <defs>
+          <marker id="a15b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#0284c7"/>
+          </marker>
+          <marker id="a15g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/>
+          </marker>
+          <marker id="a15r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#ea580c"/>
+          </marker>
+        </defs>
+        <rect x="0" y="0" width="720" height="360" fill="#ffffff" rx="8"/>
+        <text x="360" y="18" text-anchor="middle" font-size="14" font-weight="bold" fill="#0369a1">U-Net：左邊收縮抓語境，右邊擴張還原位置；跳接把細節 concat 回來</text>
+
+        <!-- LEFT contracting -->
+        <text x="130" y="38" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">收縮路徑 · 語境 (Context)</text>
+        <rect x="48" y="46" width="164" height="34" rx="5" fill="#dbeafe" stroke="#0284c7" stroke-width="1.5"/>
+        <text x="130" y="68" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">64 通道 · 高解析空間細節</text>
+        <path d="M130 82 V92" stroke="#0284c7" stroke-width="2" marker-end="url(#a15b)"/>
+        <rect x="64" y="94" width="132" height="30" rx="5" fill="#bae6fd" stroke="#0284c7"/>
+        <text x="130" y="114" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">128 通道 · pool ÷2</text>
+        <path d="M130 126 V136" stroke="#0284c7" stroke-width="2" marker-end="url(#a15b)"/>
+        <rect x="80" y="138" width="100" height="30" rx="5" fill="#7dd3fc" stroke="#0369a1"/>
+        <text x="130" y="158" text-anchor="middle" font-size="10" font-weight="bold" fill="#0c4a6e">256 通道 · pool ÷2</text>
+        <path d="M130 170 V180" stroke="#0284c7" stroke-width="2" marker-end="url(#a15b)"/>
+        <rect x="96" y="182" width="68" height="30" rx="5" fill="#0284c7"/>
+        <text x="130" y="202" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">512 通道</text>
+
+        <!-- bottleneck -->
+        <rect x="280" y="190" width="160" height="36" rx="6" fill="#0c4a6e" stroke="#0369a1" stroke-width="1.6"/>
+        <text x="360" y="212" text-anchor="middle" font-size="11" font-weight="bold" fill="#e0f2fe">瓶頸 Bottleneck · 1024 通道</text>
+        <path d="M164 198 H276" stroke="#0284c7" stroke-width="2" marker-end="url(#a15b)"/>
+        <path d="M442 208 H496" stroke="#16a34a" stroke-width="2" marker-end="url(#a15g)"/>
+
+        <!-- RIGHT expanding -->
+        <text x="590" y="38" text-anchor="middle" font-size="11" font-weight="bold" fill="#15803d">擴張路徑 · 定位 (Localization)</text>
+        <rect x="508" y="46" width="164" height="34" rx="5" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+        <text x="590" y="68" text-anchor="middle" font-size="10" font-weight="bold" fill="#166534">64 通道 · 逐畫素輸出 (c 類)</text>
+        <path d="M590 92 V82" stroke="#16a34a" stroke-width="2" marker-end="url(#a15g)"/>
+        <rect x="524" y="94" width="132" height="30" rx="5" fill="#bbf7d0" stroke="#16a34a"/>
+        <text x="590" y="114" text-anchor="middle" font-size="10" font-weight="bold" fill="#166534">128 通道 · 上取樣 ×2</text>
+        <path d="M590 136 V126" stroke="#16a34a" stroke-width="2" marker-end="url(#a15g)"/>
+        <rect x="540" y="138" width="100" height="30" rx="5" fill="#86efac" stroke="#15803d"/>
+        <text x="590" y="158" text-anchor="middle" font-size="10" font-weight="bold" fill="#14532d">256 通道 · 上取樣 ×2</text>
+        <path d="M590 180 V170" stroke="#16a34a" stroke-width="2" marker-end="url(#a15g)"/>
+        <rect x="556" y="182" width="68" height="30" rx="5" fill="#16a34a"/>
+        <text x="590" y="202" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">512 通道</text>
+
+        <!-- skip concat arrows -->
+        <path d="M214 63 H504" fill="none" stroke="#ea580c" stroke-width="2.2" marker-end="url(#a15r)"/>
+        <rect x="318" y="50" width="84" height="20" rx="3" fill="#ffedd5" stroke="#ea580c"/>
+        <text x="360" y="64" text-anchor="middle" font-size="9" font-weight="bold" fill="#c2410c">concat 細節</text>
+
+        <path d="M198 109 H520" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-dasharray="5 3" marker-end="url(#a15r)"/>
+        <path d="M182 153 H536" fill="none" stroke="#ea580c" stroke-width="1.6" stroke-dasharray="5 3" marker-end="url(#a15r)"/>
+        <text x="360" y="128" text-anchor="middle" font-size="9" fill="#c2410c">跳躍連線：左邊的空間幾何細節直接接到右邊</text>
+        <text x="360" y="168" text-anchor="middle" font-size="8" fill="#9a3412">原始 unpadded 3×3 會縮邊 → 跳接前必須 crop 對齊</text>
+
+        <!-- upsample note -->
+        <rect x="500" y="222" width="180" height="26" rx="4" fill="#f0fdf4" stroke="#86efac"/>
+        <text x="590" y="239" text-anchor="middle" font-size="8" fill="#166534">放大靠 2×2 轉置卷積，不是池化</text>
+
+        <!-- BOTTOM summary -->
+        <rect x="10" y="254" width="700" height="96" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.4"/>
+        <text x="360" y="276" text-anchor="middle" font-size="12" font-weight="bold" fill="#0369a1">語意分割需要兩者：知道「大概是什麼組織」＋對齊「邊界在哪一畫素」</text>
+        <text x="360" y="296" text-anchor="middle" font-size="10" fill="#0284c7">每步：兩次 3×3+ReLU；下取樣通道翻倍、上取樣通道減半；輸出與輸入具相同空間維度、c 類 Softmax</text>
+        <text x="360" y="316" text-anchor="middle" font-size="10" fill="#b91c1c">反直覺先驗：深層網路把特徵圖縮太小會丟失邊界幾何——U 形不是美學裝飾，是把細節從左邊借回來！</text>
+        <text x="360" y="336" text-anchor="middle" font-size="9" fill="#64748b">生醫分割出身 · 損失 Cross-Entropy · 原作 Batch Size = 1 · 帶動量 Momentum = 0.9</text>
+      </svg>
+    </div>
+
+    <div class="desc">
+      <h3 style="margin-top:0; color:#0369a1;">跳躍連線的本質：空間邊界資訊傳遞</h3>
+      <p>
+        傳統全卷積網路在連續下取樣後，空間邊界資訊已經退化成粗糙的區塊。U-Net 的革命性創舉在於<strong>橫跨編碼與解碼兩端的跳躍連線（Skip Connection）</strong>：
+      </p>
+      <ul>
+        <li><strong>特徵拼接 Concat：</strong> 不是殘差網路的相加（Add），而是將左翼的淺層特徵圖與右翼的上取樣特徵圖在<strong>通道維度（Channel Axis）</strong>並聯拼接。</li>
+        <li><strong>尺寸對齊與裁切（Crop）：</strong> 原論文採用<strong>無填充卷積（Unpadded Conv）</strong>，每次 $3\times 3$ 卷積會使長寬各縮小 2 畫素。導致左側淺層空間尺寸大於右側，因此跳接時必須進行中央裁切（Crop）！</li>
+        <li><strong>現代實作演進：</strong> 現代 PyTorch 實作普遍採用 `padding=1` 的 Same Padding，直接讓長寬在卷積前後保持一致，省去了手動裁切的繁瑣。</li>
+      </ul>
+      <span class="bilingual-en">Skip connections concatenate early fine-grained spatial features directly with upsampled semantic features, recovering lost pixel locations.</span>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 轉置卷積與輸出細節 -->
+<section class="section" id="sec-deconv-skip">
+  <div class="sec-tag operate">03 / 運算剖析 · Deconvolution & Specs</div>
+  <h2 class="section-title">轉置卷積上取樣與訓練規範
+    <span class="en">Transposed Convolution Upsampling & Training Protocols</span>
+  </h2>
+
+  <div class="content-card">
+    <table class="feature-table">
+      <thead>
+        <tr>
+          <th>維度 / 模組</th>
+          <th>規格與實作細節 (Specifications)</th>
+          <th>工程設計目的 (Architectural Rationale)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>上取樣機制</strong></td>
+          <td>$2\times 2$ <strong>反摺積／轉置卷積（Transposed Conv）</strong>（Fig. 17）</td>
+          <td>步幅 2 的可學習擴張運算，空間解析度翻倍，通道數減半</td>
+        </tr>
+        <tr>
+          <td><strong>卷積模組</strong></td>
+          <td>每階段均為兩次連續 $3\times 3$ Conv + ReLU</td>
+          <td>加深非線性表達能力，維持有效局部感受野</td>
+        </tr>
+        <tr>
+          <td><strong>最後輸出層</strong></td>
+          <td>$1\times 1$ 卷積將通道數對映至 $c$（類別數）</td>
+          <td>逐畫素輸出 $c$ 維 logits，接 Softmax 進行分類</td>
+        </tr>
+        <tr>
+          <td><strong>損失函式</strong></td>
+          <td>逐畫素<strong>交叉熵損失（Pixel-wise Cross-Entropy）</strong></td>
+          <td>評估每個畫素點被正確分類為前景組織或背景的機率</td>
+        </tr>
+        <tr>
+          <td><strong>批次大小與動量</strong></td>
+          <td><strong>Batch Size = 1</strong>，動量 Momentum = 0.9</td>
+          <td>醫學影像尺寸巨大消耗記憶體，單張切片高動量平滑梯度震盪</td>
+        </tr>
+        <tr>
+          <td><strong>後續衍生</strong></td>
+          <td>雙路收縮的 <strong>Y-Net</strong>、加深跳接的 <strong>U-Net++</strong></td>
+          <td>將 U 型結構推廣至多工分割與多尺度深度監督</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 6. 互動實驗室 -->
+<section class="section" id="lab">
+  <div class="sec-tag activate">04 / 互動實驗室 · Interactive Lab</div>
+  <h2 class="section-title">互動實驗室：U-Net 跳躍連線尺寸與裁切模擬器
+    <span class="en">Interactive Lab: U-Net Skip Connection Dimensions & Crop Simulator</span>
+  </h2>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <div class="lab-ctrl">
+        <label>卷積填充策略:</label>
+        <select id="unet-pad-mode">
+          <option value="unpadded" selected>原始論文：Unpadded Conv (逐層吃邊，跳接需 Crop 裁切)</option>
+          <option value="padded">現代實作：Same Padding (保持尺寸，跳接免 Crop 完美對齊)</option>
+        </select>
+      </div>
+
+      <div class="lab-ctrl">
+        <label>檢視跳接層級:</label>
+        <select id="unet-level">
+          <option value="1" selected>Level 1 (淺層細節：64 通道)</option>
+          <option value="2">Level 2 (中淺層：128 通道)</option>
+          <option value="3">Level 3 (中深層：256 通道)</option>
+        </select>
+      </div>
+
+      <button class="lab-btn" id="unet-btn-run">▶ 模擬跳接與重建路徑 Simulate U-Net Path</button>
+    </div>
+
+    <div class="lab-display">
+      <div>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 8px;">
+          跳躍連線兩端特徵圖空間尺寸對比與裁切示意：
+        </p>
+        <div class="lab-canvas-container">
+          <canvas id="unet-canvas" width="560" height="300"></canvas>
+        </div>
+      </div>
+      <div class="lab-readout" id="unet-ro">
+        <!-- Live readout injected by JS -->
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. 隨堂 Checkpoint -->
+<section class="section" id="quiz">
+  <div class="sec-tag activate">05 / 實戰檢驗 · Concept Checkpoint</div>
+  <h2 class="section-title">隨堂 Checkpoint：觀念即時反饋
+    <span class="en">Concept Checkpoint: Immediate Feedback Quiz</span>
+  </h2>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 1 · 雙翼分工 / Contracting vs Expansive</div>
+    <div class="q-text">U-Net 收縮路徑與擴張路徑的分工是？</div>
+    <div class="options">
+      <button data-opt="A">A. 兩者都只做分類、不做定位</button>
+      <button data-opt="B">B. 收縮路徑抓上下文，擴張路徑做精準定位</button>
+      <button data-opt="C">C. 收縮路徑只做全連線，擴張路徑只做 LRN</button>
+      <button data-opt="D">D. 兩者功能完全相同、只是畫成 U 形好看</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-card" data-ans="A">
+    <div class="q-num">題目 2 · 跳接裁切動機 / Crop Mechanism in Skip</div>
+    <div class="q-text">原始 U-Net 在 skip connection 時要先 crop，原因是？</div>
+    <div class="options">
+      <button data-opt="A">A. 因為用了 unpadded 卷積，特徵圖逐步縮小，兩邊尺寸對不齊</button>
+      <button data-opt="B">B. 因為 softmax 會改變空間大小</button>
+      <button data-opt="C">C. 因為 max pooling 的 stride 必須是 3</button>
+      <button data-opt="D">D. 因為輸出通道數必須是 1000</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 3 · 擴張放大運算 / Upsampling Operation</div>
+    <div class="q-text">U-Net 擴張路徑用來放大特徵圖的運算是？（見 Fig. 17）</div>
+    <div class="options">
+      <button data-opt="A">A. 再做一次 stride 2 的 max pooling</button>
+      <button data-opt="B">B. 2×2 反摺積／轉置卷積（deconvolution / transpose conv）</button>
+      <button data-opt="C">C. 把影像複製四次</button>
+      <button data-opt="D">D. 只用 1×1 卷積升空間解析度</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 4 · 應用目標與輸出形式 / Target & Output Specs</div>
+    <div class="q-text">U-Net 最初主要應用與輸出形式是？</div>
+    <div class="options">
+      <button data-opt="A">A. 手寫數字 10 類分類，輸出 10 維向量</button>
+      <button data-opt="B">B. 生醫影像分割；輸出與輸入同空間尺寸、c 個類別通道 + softmax + cross-entropy</button>
+      <button data-opt="C">C. 機器翻譯</button>
+      <button data-opt="D">D. 只做超解析度、沒有類別通道</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+</section>
+
+<!-- 8. 總結框 -->
+<section class="section" id="summary">
+  <div class="summary-box" style="background:linear-gradient(135deg,#0c4a6e 0%,#0369a1 100%); border-radius:14px; padding:32px; color:#fff; border:1px solid #38bdf8; box-shadow:0 12px 30px rgba(2,132,199,0.25);">
+    <h4 style="font-size:22px; margin-top:0; color:#38bdf8; display:flex; align-items:center; gap:10px;">
+      <span>📌</span> 本單元核心總結：U-Net 對稱分割雙翼
+      <span class="bilingual-en-inline" style="font-size:14px; color:#bae6fd; font-weight:normal;">Key Takeaways: Symmetrical U-Net Architecture</span>
+    </h4>
+    <ul style="line-height:1.8; font-size:15px; margin-bottom:0;">
+      <li><strong>對稱雙翼各司其職：</strong> 左收縮路徑抓語境組織上下文，右擴張路徑還原高解析度空間定位。</li>
+      <li><strong>跳躍連線 Concat 細節：</strong> 淺層未被下取樣沖刷的高頻幾何邊緣，直接橫渡接回解碼器，解決深層定位模糊的宿命難題。</li>
+      <li><strong>轉置卷積上取樣（Fig. 17）：</strong> $2\times 2$ 反摺積將空間維度翻倍、通道數減半，搭配兩次 $3\times 3$ 卷積逐步重構目標邊界。</li>
+      <li><strong>醫學影像分割的基石：</strong> 逐畫素 Softmax 分類與交叉熵損失，配合單張切片（Batch Size = 1）高動量最佳化，至今仍是生醫 AI 的不可替代標準！</li>
+    </ul>
+  </div>
+</section>
+
+<script>
+// Checkpoint Quiz Interaction Logic
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('selected', 'correct', 'wrong'));
+      const opt = btn.getAttribute('data-opt');
+      btn.classList.add('selected');
+      fb.style.display = 'block';
+
+      const qNum = card.querySelector('.q-num').innerText;
+      let expText = "";
+      if (qNum.includes('題目 1')) expText = "原文明確指出：contracting path 捕捉 contextual information（語境），expansive path 負責 precise localization（精準定位）。";
+      else if (qNum.includes('題目 2')) expText = "不補邊（unpadded）的 3×3 卷積每做一次就會吃掉 2 個畫素邊界，導致左側編碼尺寸大於右側解碼尺寸，跳接前必須先進行 crop 裁切對齊；現代亦可用 padding 避免。";
+      else if (qNum.includes('題目 3')) expText = "上取樣以 2×2 deconvolution（轉置卷積 / up-convolution）完成，Fig. 17 即為此運算的具體示意。";
+      else if (qNum.includes('題目 4')) expText = "針對生醫分割任務（Biomedical Segmentation）；輸出特徵圖具有與輸入相同的空間尺寸、含 c 個類別通道，接逐畫素 Softmax 與交叉熵損失。";
+
+      if (opt === ans) {
+        btn.classList.add('correct');
+        fb.className = 'feedback correct';
+        fb.innerHTML = `<strong>答對了！</strong> ${expText}`;
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'feedback wrong';
+        fb.innerHTML = `<strong>答案不正確。</strong> 再想一下！${expText}`;
+      }
+
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+// Interactive Lab Logic
+(function() {
+  const canvas = document.getElementById('unet-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const selMode = document.getElementById('unet-pad-mode');
+  const selLevel = document.getElementById('unet-level');
+  const btnRun = document.getElementById('unet-btn-run');
+  const ro = document.getElementById('unet-ro');
+
+  const unpaddedData = {
+    '1': { leftRes: 568, rightRes: 392, cropPixels: 88, ch: 64, name: 'Level 1 (淺層空間邊界)' },
+    '2': { leftRes: 280, rightRes: 200, cropPixels: 40, ch: 128, name: 'Level 2 (中淺層紋理)' },
+    '3': { leftRes: 136, rightRes: 104, cropPixels: 16, ch: 256, name: 'Level 3 (中深層部件)' }
+  };
+
+  const paddedData = {
+    '1': { leftRes: 512, rightRes: 512, cropPixels: 0, ch: 64, name: 'Level 1 (淺層空間邊界)' },
+    '2': { leftRes: 256, rightRes: 256, cropPixels: 0, ch: 128, name: 'Level 2 (中淺層紋理)' },
+    '3': { leftRes: 128, rightRes: 128, cropPixels: 0, ch: 256, name: 'Level 3 (中深層部件)' }
+  };
+
+  function update() {
+    const isUnpadded = selMode.value === 'unpadded';
+    const lvl = selLevel.value;
+    const d = isUnpadded ? unpaddedData[lvl] : paddedData[lvl];
+
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    // Canvas Visualization
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${d.name} 跳躍連線兩側特徵圖尺寸與對齊視覺化：`, 30, 28);
+
+    // Left Box (Contracting feature map)
+    const leftX = 50, leftY = 60, boxMax = 180;
+    const leftScale = 1.0;
+    const leftW = boxMax * leftScale;
+    const leftH = boxMax * leftScale;
+
+    ctx.fillStyle = '#dbeafe';
+    ctx.fillRect(leftX, leftY, leftW, leftH);
+    ctx.strokeStyle = '#0284c7';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(leftX, leftY, leftW, leftH);
+
+    ctx.fillStyle = '#0369a1';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`左翼編碼特徵圖`, leftX + leftW/2, leftY + 24);
+    ctx.fillText(`${d.leftRes} × ${d.leftRes} (${d.ch}C)`, leftX + leftW/2, leftY + 44);
+
+    // Right Box (Expansive upsampled feature map)
+    const rightX = 330, rightY = 60;
+    const rightRatio = d.rightRes / d.leftRes;
+    const rightW = boxMax * rightRatio;
+    const rightH = boxMax * rightRatio;
+    const offsetRightY = leftY + (leftH - rightH) / 2;
+    const offsetRightX = rightX + (boxMax - rightW) / 2;
+
+    ctx.fillStyle = '#dcfce7';
+    ctx.fillRect(offsetRightX, offsetRightY, rightW, rightH);
+    ctx.strokeStyle = '#16a34a';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(offsetRightX, offsetRightY, rightW, rightH);
+
+    ctx.fillStyle = '#15803d';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`右翼解碼特徵圖`, offsetRightX + rightW/2, offsetRightY + 24);
+    ctx.fillText(`${d.rightRes} × ${d.rightRes} (${d.ch}C)`, offsetRightX + rightW/2, offsetRightY + 44);
+
+    // Crop Outline on Left Box if unpadded
+    if (isUnpadded) {
+      const cropW = leftW * rightRatio;
+      const cropH = leftH * rightRatio;
+      const cOffX = leftX + (leftW - cropW) / 2;
+      const cOffY = leftY + (leftH - cropH) / 2;
+
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = '#ea580c';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cOffX, cOffY, cropW, cropH);
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = '#ea580c';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(`✂ 裁切中心對齊區`, cOffX + cropW/2, cOffY + cropH/2 + 20);
+      ctx.fillText(`(單側截去 ${d.cropPixels/2} px)`, cOffX + cropW/2, cOffY + cropH/2 + 36);
+
+      // Skip arrow
+      ctx.strokeStyle = '#ea580c';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(leftX + leftW + 10, leftY + leftH/2);
+      ctx.lineTo(offsetRightX - 10, offsetRightY + rightH/2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#c2410c';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText(`Crop & Concat ➔`, (leftX + leftW + offsetRightX) / 2, leftY + leftH/2 - 10);
+    } else {
+      // Perfect alignment arrow
+      ctx.strokeStyle = '#16a34a';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(leftX + leftW + 10, leftY + leftH/2);
+      ctx.lineTo(offsetRightX - 10, offsetRightY + rightH/2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#15803d';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText(`完美對齊 Concat ➔`, (leftX + leftW + offsetRightX) / 2, leftY + leftH/2 - 10);
+    }
+
+    // Readout
+    ro.innerHTML = `
+      <div style="color:#0284c7; font-weight:700; font-size:15px; margin-bottom:8px;">
+        U-Net 語境-定位重建診斷報告 [${d.name}]
+      </div>
+      <div><strong>卷積模式：</strong> <span style="color:#0f172a; font-weight:700;">${isUnpadded ? '原始論文 Unpadded 卷積' : '現代 Same Padding 卷積'}</span></div>
+      <div><strong>左翼編碼特徵尺寸：</strong> ${d.leftRes} × ${d.leftRes} × ${d.ch} 通道</div>
+      <div><strong>右翼解碼特徵尺寸：</strong> ${d.rightRes} × ${d.rightRes} × ${d.ch} 通道</div>
+      <div><strong>尺寸差異狀態：</strong> <span style="color:${isUnpadded ? '#ea580c' : '#16a34a'}; font-weight:700;">${isUnpadded ? `左大右小 (邊界差 ${d.cropPixels} 畫素)` : '兩側空間解析度完全相等 (0 偏差)'}</span></div>
+      <div><strong>跳接對齊策略：</strong> ${isUnpadded ? `<span style="color:#ea580c; font-weight:700;">中心裁切 (Crop ${d.cropPixels/2}px/邊) 後 Concat</span>` : `<span style="color:#16a34a; font-weight:700;">直接串接 (Direct Concat，通道變為 ${d.ch * 2})</span>`}</div>
+      <hr style="border:none; border-top:1px solid #cbd5e1; margin:10px 0;"/>
+      <div style="font-size:12px; color:#475569;">
+        ${isUnpadded ? '💡 原始 U-Net 由於未填充，572×572 輸入經過 4 層下取樣與上取樣後，最終輸出分割圖為 388×388。' : '💡 現代改進版全程使用 Same Padding，512×512 輸入最終輸出恰為 512×512，無需邊界裁切。'}
+      </div>
+    `;
+
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([ro]);
+    }
+  }
+
+  selMode.addEventListener('change', update);
+  selLevel.addEventListener('change', update);
+  btnRun.addEventListener('click', update);
+
+  update();
+})();
+</script>
+</body>
+</html>

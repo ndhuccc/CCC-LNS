@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch04 · KP04 離散卷積與互相關 — Discrete Convolution and Cross-Correlation</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(108,92,231,.24), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(9,132,227,.18), transparent 30%),
+              linear-gradient(135deg, #0a0e27 0%, #131b3e 50%, #1e1338 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(10, 14, 39, .25);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(36px, 4.4vw, 64px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(18px, 2.0vw, 28px);
+  color: #a5b4fc;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #38bdf8;
+  border-radius: 999px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 900px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #38bdf8, #e84393);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #7dd3fc !important; fill: #7dd3fc !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #cbd5e1; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  display: block;
+}
+.half-layout .visual > svg {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  display: block;
+}
+.half-layout .visual .svg-caption {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+  font-size: var(--t5);
+  color: var(--text-low);
+  letter-spacing: .05em;
+}
+@media (max-width: 1100px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+
+/* 坑 W 高橋流置中修復：卡片居中於內容閱讀區 (831px 中心軸，左右邊距各 231px) */
+.section .takahashi {
+  text-align: center;
+  padding: 80px 36px;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+}
+
+/* 表格包裝層（防止橫向溢位） */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 24px 0;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  background: var(--bg-card);
+}
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin: 28px 0;
+}
+.lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  color: var(--ink);
+}
+.lab-ctrl select, .lab-ctrl input[type="range"] {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  font-size: 14px;
+}
+.lab-ctrl input[type="range"] {
+  width: 110px;
+}
+.lab-ctrl span.val {
+  min-width: 48px;
+  font-family: var(--mono);
+  color: var(--primary);
+  font-weight: bold;
+}
+.lab-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all .2s;
+}
+.lab-btn:hover {
+  background: hsl(248, 58%, 38%);
+  transform: translateY(-1px);
+}
+.lab-btn.secondary {
+  background: #64748b;
+}
+.lab-btn.secondary:hover {
+  background: #475569;
+}
+.lab-btn.accent {
+  background: #0ea5e9;
+}
+.lab-btn.accent:hover {
+  background: #0284c7;
+}
+
+/* Conv Lab styles */
+.conv-lab-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  margin-top: 18px;
+}
+@media (max-width: 900px) {
+  .conv-lab-grid { grid-template-columns: 1fr; }
+}
+.conv-panel {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+}
+.conv-panel h4 {
+  font-size: 16px;
+  margin-bottom: 12px;
+  color: var(--primary);
+}
+.grid-table {
+  border-collapse: collapse;
+  margin: 0 auto 10px auto;
+}
+.grid-table td {
+  width: 52px;
+  height: 52px;
+  border: 2px solid #94a3b8;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0;
+}
+.grid-table input[type=number] {
+  width: 44px;
+  height: 44px;
+  border: none;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+}
+.output-grid {
+  border-collapse: collapse;
+  margin: 0 auto 10px auto;
+}
+.output-grid td {
+  width: 62px;
+  height: 62px;
+  border: 2px solid #7c3aed;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary);
+  background: #ede9fe;
+}
+.conv-out-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 18px;
+}
+@media (max-width: 900px) {
+  .conv-out-section { grid-template-columns: 1fr; }
+}
+.conv-out-panel {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+}
+.conv-out-panel h4 {
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+.conv-out-panel h4.conv-title { color: #7c3aed; }
+.conv-out-panel h4.xcorr-title { color: #0284c7; }
+.output-xcorr td {
+  background: #e0f2fe;
+  border-color: #0284c7;
+  color: #0284c7;
+}
+.readout-box {
+  background: #1e293b;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.75;
+  margin-top: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP04 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Core Question</a></li>
+    <li><a href="#def-1d">一維卷積定義 · 1-D Convolution</a></li>
+    <li><a href="#def-2d">二維影像卷積 · 2-D Convolution</a></li>
+    <li><a href="#flip-vs-nflip">翻核 vs 不翻核 · Flip vs No-flip</a></li>
+    <li><a href="#cross-corr">互相關定義 · Cross-Correlation</a></li>
+    <li><a href="#training-equiv">訓練等效性 · Training Equivalence</a></li>
+    <li><a href="#comparison">對照表 · Comparison</a></li>
+    <li><a href="#lab">互動實驗室 · Interactive Lab</a></li>
+    <li><a href="#quiz">觀念測驗 · Checkpoint</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">IDL 115 · CHAPTER 4 · KP-04 · TEACHING DECK</span>
+    <h1>離散卷積與互相關
+      <span class="hero-title-en">Discrete Convolution and Cross-Correlation</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      卷積是深度學習影像處理的核心運算。理論定義要先翻轉核再滑動相乘；實務CNN則省略翻轉，改做互相關（cross-correlation）。兩者只差一個映象翻轉，訓練時梯度下降會自動適配，讓網路學到正確的特徵方向。
+    </p>
+    <p class="bilingual-en" style="color: #cbd5e1; max-width: 880px; margin: 10px auto 0;">
+      Convolution is the core operation in deep learning image processing. Theoretical convolution flips the kernel before sliding; practical CNNs skip the flip and use cross-correlation instead. The difference is just a mirror flip — gradient descent automatically adapts the kernel to learn correct features regardless of the convention used.
+    </p>
+  </div>
+</section>
+
+<!-- 2. 大問句 -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="sec-tag inquiry">01 / 核心提問 · Core Question</div>
+    <div class="quote">
+      「翻核再蓋印 vs 直接蓋印，結果會不同嗎？」
+      <small>理論卷積先把核沿軸翻過來、再做乘加；CNN框架通常直接蓋印（互相關）省略翻轉。<br/>
+        <span class="bilingual-en-inline">Convolution flips the kernel; cross-correlation doesn't — but training learns either way.</span>
+      </small>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 一維離散卷積 -->
+<section class="section" id="def-1d">
+  <div class="sec-tag sustain">02 / 定義 · 1-D Discrete Convolution</div>
+  <h2 class="section-title">一維離散卷積定義：式 (2)
+    <span class="en">1-D Discrete Convolution: Equation (2)</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>式 (2)：一維離散卷積</h4>
+    <p>
+      對一維訊號 $x[a]$ 與核 $w$，在時刻 $t$ 的卷積輸出定義為：
+    </p>
+    <p>$$ a[t]=(x*k)[t]=\sum_{a=-\infty}^{\infty}x[a]\,w[t-a]\tag{2} $$</p>
+    <p>
+      <strong>關鍵：下標 $t-a$ = 翻轉 + 平移</strong><br/>
+      $w[t-a]$ 中的 $t-a$，拆開來看：
+    </p>
+    <ul>
+      <li><strong>$-a$（翻轉）：</strong>把核沿時間軸鏡射，$w[a] \to w[-a]$。</li>
+      <li><strong>$+t$（平移）：</strong>再把翻過的核滑到位置 $t$，$w[-a] \to w[t-a]$。</li>
+    </ul>
+    <p class="bilingual-en">
+      In Eq.(2), the subscript $t-a$ encodes both a <em>flip</em> (the minus sign reverses the kernel) and a <em>shift</em> (the plus $t$ slides it to position $t$). This is the defining feature that distinguishes true convolution from cross-correlation.
+    </p>
+  </div>
+
+  <div class="intuition-box">
+    <h4>物理直覺：核先翻轉，再像印章一樣滑過訊號</h4>
+    <p>
+      想像核是一個「翻轉的模板」：先把模板對折（翻轉），再從左往右逐格蓋印（相乘累加），每個輸出格子等於「模板疊在那個位置時，各格乘積之和」。
+      <span class="bilingual-en">Think of the kernel as a flipped stamp: first mirror it, then slide it across the signal. Each output is the dot product of the (flipped) kernel with the overlapping input region.</span>
+    </p>
+  </div>
+</section>
+
+<!-- 4. 二維影像卷積 -->
+<section class="section" id="def-2d">
+  <div class="sec-tag sustain">03 / 定義 · 2-D Image Convolution</div>
+  <h2 class="section-title">二維影像卷積：式 (3) 與求和範圍
+    <span class="en">2-D Image Convolution: Equation (3) and Summation Range</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>式 (3)：二維離散卷積</h4>
+    <p>對影像 $I$ 與核 $K$，在位置 $(i, j)$ 的卷積輸出定義為：</p>
+    <p>$$ s[i,j]=(I*K)[i,j]=\sum_{m}\sum_{n}I[m,n]\,K[i-m,j-n]\tag{3} $$</p>
+    <p><strong>求和範圍：</strong>理論上是 $(-\infty, +\infty)$，實務上只加核蓋得到的那些格子（核邊長決定有效範圍）。</p>
+    <p class="bilingual-en">
+      Eq.(3) extends Eq.(2) to 2-D: both row ($m$) and column ($n$) are summed. In practice the summation is finite — only cells covered by the kernel contribute. The subscript $K[i-m, j-n]$ contains the 2-D flip in both spatial dimensions.
+    </p>
+  </div>
+
+  <div class="half-layout">
+    <div class="visual">
+      <svg viewBox="0 0 620 340" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+        <rect width="620" height="340" fill="#ffffff" rx="10"/>
+        <text x="310" y="26" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e3a8a">二維卷積示意：影像 I（左）與核 K（中）及輸出 s（右）</text>
+
+        <!-- Image I label -->
+        <text x="88" y="56" text-anchor="middle" font-size="13" font-weight="bold" fill="#7c3aed">影像 I (3×3)</text>
+        <!-- Grid for I -->
+        <g transform="translate(28, 64)">
+          <!-- Row labels -->
+          <text x="0" y="28" font-size="11" fill="#6b7280" text-anchor="middle">m=0</text>
+          <text x="0" y="88" font-size="11" fill="#6b7280" text-anchor="middle">m=1</text>
+          <text x="0" y="148" font-size="11" fill="#6b7280" text-anchor="middle">m=2</text>
+          <!-- Cells -->
+          <rect x="14" y="8" width="58" height="52" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+          <text x="43" y="40" font-size="18" font-weight="bold" text-anchor="middle" fill="#5b21b6">1</text>
+          <rect x="72" y="8" width="58" height="52" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+          <text x="101" y="40" font-size="18" font-weight="bold" text-anchor="middle" fill="#5b21b6">2</text>
+          <rect x="130" y="8" width="58" height="52" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+          <text x="159" y="40" font-size="18" font-weight="bold" text-anchor="middle" fill="#5b21b6">0</text>
+
+          <rect x="14" y="60" width="58" height="52" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+          <text x="43" y="92" font-size="18" font-weight="bold" text-anchor="middle" fill="#5b21b6">1</text>
+          <rect x="72" y="60" width="58" height="52" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+          <text x="101" y="92" font-size="18" font-weight="bold" text-anchor="middle" fill="#5b21b6">1</text>
+          <rect x="130" y="60" width="58" height="52" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+          <text x="159" y="92" font-size="18" font-weight="bold" text-anchor="middle" fill="#5b21b6">2</text>
+
+          <rect x="14" y="112" width="58" height="52" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+          <text x="43" y="144" font-size="18" font-weight="bold" text-anchor="middle" fill="#5b21b6">0</text>
+          <rect x="72" y="112" width="58" height="52" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+          <text x="101" y="144" font-size="18" font-weight="bold" text-anchor="middle" fill="#5b21b6">1</text>
+          <rect x="130" y="112" width="58" height="52" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+          <text x="159" y="144" font-size="18" font-weight="bold" text-anchor="middle" fill="#5b21b6">1</text>
+        </g>
+
+        <!-- Kernel K label -->
+        <text x="300" y="56" text-anchor="middle" font-size="13" font-weight="bold" fill="#dc2626">核 K (2×2)（理論卷積後翻）</text>
+        <!-- Kernel cells -->
+        <g transform="translate(234, 64)">
+          <rect x="14" y="8" width="58" height="52" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+          <text x="43" y="34" font-size="18" font-weight="bold" text-anchor="middle" fill="#991b1b">1</text>
+          <text x="43" y="52" font-size="11" text-anchor="middle" fill="#dc2626">K[0,0]</text>
+          <rect x="72" y="8" width="58" height="52" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+          <text x="101" y="34" font-size="18" font-weight="bold" text-anchor="middle" fill="#991b1b">0</text>
+          <text x="101" y="52" font-size="11" text-anchor="middle" fill="#dc2626">K[0,1]</text>
+          <rect x="14" y="60" width="58" height="52" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+          <text x="43" y="86" font-size="18" font-weight="bold" text-anchor="middle" fill="#991b1b">0</text>
+          <text x="43" y="104" font-size="11" text-anchor="middle" fill="#dc2626">K[1,0]</text>
+          <rect x="72" y="60" width="58" height="52" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+          <text x="101" y="86" font-size="18" font-weight="bold" text-anchor="middle" fill="#991b1b">1</text>
+          <text x="101" y="104" font-size="11" text-anchor="middle" fill="#dc2626">K[1,1]</text>
+        </g>
+
+        <!-- Arrow -->
+        <text x="430" y="110" text-anchor="middle" font-size="22" fill="#475569">→</text>
+        <text x="430" y="130" text-anchor="middle" font-size="11" fill="#475569">卷積</text>
+
+        <!-- Output s label -->
+        <text x="538" y="56" text-anchor="middle" font-size="13" font-weight="bold" fill="#16a34a">輸出 s (2×2)</text>
+        <g transform="translate(472, 64)">
+          <rect x="14" y="8" width="58" height="52" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+          <text x="43" y="36" font-size="18" font-weight="bold" text-anchor="middle" fill="#15803d">2</text>
+          <text x="43" y="52" font-size="11" text-anchor="middle" fill="#16a34a">s[1,1]</text>
+          <rect x="72" y="8" width="58" height="52" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+          <text x="101" y="36" font-size="18" font-weight="bold" text-anchor="middle" fill="#15803d">4</text>
+          <text x="101" y="52" font-size="11" text-anchor="middle" fill="#16a34a">s[1,2]</text>
+          <rect x="14" y="60" width="58" height="52" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+          <text x="43" y="88" font-size="18" font-weight="bold" text-anchor="middle" fill="#15803d">2</text>
+          <text x="43" y="104" font-size="11" text-anchor="middle" fill="#16a34a">s[2,1]</text>
+          <rect x="72" y="60" width="58" height="52" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+          <text x="101" y="88" font-size="18" font-weight="bold" text-anchor="middle" fill="#15803d">2</text>
+          <text x="101" y="104" font-size="11" text-anchor="middle" fill="#16a34a">s[2,2]</text>
+        </g>
+
+        <!-- Bottom explanation -->
+        <rect x="16" y="250" width="588" height="78" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2"/>
+        <text x="310" y="272" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e3a8a">
+          K[i-m, j-n] 中的減法 = 兩個維度都要翻轉！
+        </text>
+        <text x="310" y="296" text-anchor="middle" font-size="12" fill="#334155">
+          s[1,1] = I[0,0]·K[1,1] + I[0,1]·K[1,0] + I[1,0]·K[0,1] + I[1,1]·K[0,0]
+        </text>
+        <text x="310" y="316" text-anchor="middle" font-size="12" fill="#334155">
+          = 1·1 + 2·0 + 1·0 + 1·1 = 2 ✓
+        </text>
+      </svg>
+      <div class="svg-caption">圖 1：二維離散卷積示意（I=[[1,2,0],[1,1,2],[0,1,1]], K=[[1,0],[0,1]]，輸出 s=[[2,4],[2,2]]）</div>
+    </div>
+    <div>
+      <div class="method-box">
+        <h4>求和有效範圍</h4>
+        <ul>
+          <li><strong>理論求和範圍：</strong>$m, n \in (-\infty, +\infty)$，但影像邊界外的畫素視為 0（zero-padding）。</li>
+          <li><strong>實務有效格子：</strong>只有核能完整蓋住的區域才有有效輸出。核大小 $k \times k$，影像大小 $H \times W$，有效輸出大小 $(H-k+1) \times (W-k+1)$。</li>
+          <li><strong>示例：</strong>3×3 影像 + 2×2 核 → 2×2 輸出。</li>
+        </ul>
+        <p class="bilingual-en">The effective summation range is finite: only cells fully covered by the kernel contribute. A 3×3 image convolved with a 2×2 kernel produces a 2×2 output.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 翻核 vs 不翻核 -->
+<section class="section" id="flip-vs-nflip">
+  <div class="sec-tag sustain">04 / 關鍵差異 · Flip vs No-flip</div>
+  <h2 class="section-title">理論要翻核；實務CNN通常不翻
+    <span class="en">Theory Flips the Kernel; Practical CNNs Usually Don't</span>
+  </h2>
+
+  <div class="compare-layout">
+    <div class="col left">
+      <h3>🔄 理論離散卷積（有翻核）</h3>
+      <p>$$ s[i,j]=\sum_{m}\sum_{n}I[m,n]\,K[\mathbf{i-m},\mathbf{j-n}] $$</p>
+      <ul>
+        <li>下標 $K[i-m, j-n]$ 中的<strong>「減」</strong>代表翻轉。</li>
+        <li>滿足交換律：$f * g = g * f$（訊號處理的重要性質）。</li>
+        <li>理論上嚴謹，Fourier 域乘法對應真卷積。</li>
+        <li>符號：$I * K$，使用星號 $*$。</li>
+      </ul>
+      <p class="bilingual-en">The minus sign in $K[i-m, j-n]$ is the flip. True convolution is commutative: $f * g = g * f$, which matches multiplication in the Fourier domain.</p>
+    </div>
+    <div class="col right">
+      <h3>➡ 實務CNN互相關（不翻核）</h3>
+      <p>$$ s[i,j]=\sum_{m}\sum_{n}I[m,n]\,K[\mathbf{m-i},\mathbf{n-j}] $$</p>
+      <ul>
+        <li>下標 $K[m-i, n-j]$ 中的<strong>「正號」</strong>代表直接蓋上去，不翻轉。</li>
+        <li>不滿足交換律，但效能等同（只差映象）。</li>
+        <li>PyTorch <code>F.conv2d</code>、TensorFlow <code>tf.nn.conv2d</code> 實際上都做互相關。</li>
+        <li>符號：$I \star K$，使用星形符號 ⋆ (U+22C6)。</li>
+      </ul>
+      <p class="bilingual-en">The plus sign in $K[m-i, n-j]$ means no flip — just slide and multiply. PyTorch and TensorFlow's conv functions actually implement cross-correlation.</p>
+    </div>
+  </div>
+
+  <div class="warning-box">
+    <h4>⚠ 容易混淆的地方</h4>
+    <p>
+      雖然 PyTorch 的函式叫做 <code>F.conv2d</code>（卷積），但它<strong>實際執行的是互相關</strong>（cross-correlation），不翻核。這是歷史慣例造成的命名混淆。學術論文裡寫「卷積層」，程式裡幾乎都在做互相關。
+    </p>
+    <p class="bilingual-en">Despite being called <code>F.conv2d</code>, PyTorch actually performs cross-correlation (no kernel flip). This naming inconsistency is a historical artifact. When papers say "convolutional layer," the code is almost always doing cross-correlation.</p>
+  </div>
+</section>
+
+<!-- 6. 互相關定義 -->
+<section class="section" id="cross-corr">
+  <div class="sec-tag sustain">05 / 定義 · Cross-Correlation</div>
+  <h2 class="section-title">互相關正式定義：式 (4)
+    <span class="en">Cross-Correlation: Equation (4)</span>
+  </h2>
+
+  <div class="formula-box">
+    <h4>式 (4)：二維互相關（k 為核邊長）</h4>
+    <p>$$ s[i,j]=(I\star K)[i,j]=\sum_{m=1}^{k}\sum_{n=1}^{k}I[m,n]\,K[m-i,n-j]\tag{4} $$</p>
+    <p><strong>與式 (3) 的差異：</strong></p>
+    <ul>
+      <li>式 (3)（卷積）：$K[i-m, j-n]$，下標「$i-m$」，先翻轉再平移。</li>
+      <li>式 (4)（互相關）：$K[m-i, n-j]$，下標「$m-i$」，直接平移，無翻轉。</li>
+      <li>求和上限 $k$：代表核邊長（核大小 $k \times k$）。</li>
+    </ul>
+    <p class="bilingual-en">
+      Eq.(4) defines cross-correlation: the subscript is $K[m-i, n-j]$ (plus sign, no flip) vs. $K[i-m, j-n]$ (minus sign, flip) in Eq.(3). The ⋆ symbol (U+22C6) distinguishes it from convolution (*). The summation limit $k$ is the kernel side length.
+    </p>
+  </div>
+
+  <div class="card-grid">
+    <div class="card positive">
+      <h3>符號約定</h3>
+      <div class="sub-en">Notation Convention</div>
+      <p>卷積：$I * K$（星號 *）<br/>互相關：$I \star K$（⋆，U+22C6）<br/>兩者只差核的方向，不差運算的本質。</p>
+    </div>
+    <div class="card positive">
+      <h3>求和範圍</h3>
+      <div class="sub-en">Summation Range</div>
+      <p>式 (4) 顯式地用核邊長 $k$ 做上限，精確限定了滑動視窗的大小，比式 (3) 的「理論無限求和」更貼近實作。</p>
+    </div>
+    <div class="card positive">
+      <h3>等效計算</h3>
+      <div class="sub-en">Computational Equivalence</div>
+      <p>$I \star K = I * K'$，其中 $K'$ 是把 $K$ 翻轉 180° 的版本。翻個核，兩種運算就可以互換。</p>
+    </div>
+    <div class="card positive">
+      <h3>實務主流</h3>
+      <div class="sub-en">Industry Standard</div>
+      <p>幾乎所有深度學習框架（PyTorch、TF、JAX）的卷積函式，底層都實作互相關。記憶口訣：<em>「程式不翻核」</em>。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7. 訓練等效性 -->
+<section class="section" id="training-equiv">
+  <div class="sec-tag activate">06 / 訓練等效 · Training Equivalence</div>
+  <h2 class="section-title">為什麼訓練時翻不翻核幾乎沒差？
+    <span class="en">Why Flipping Doesn't Matter During Training</span>
+  </h2>
+
+  <div class="intuition-box">
+    <h4>梯度下降只在乎能不能把損失壓下去</h4>
+    <p>
+      訓練神經網路時，核的初始值是隨機的。無論你的框架做的是卷積（翻核）還是互相關（不翻核）：
+    </p>
+    <ul>
+      <li>若堅持<strong>翻核</strong>，網路就學會「翻過的那一版核」——梯度下降把核學成正確翻轉版本。</li>
+      <li>若<strong>不翻</strong>，網路就學會「沒翻的那一版核」——梯度下降把核學成正確未翻版本。</li>
+      <li>兩者學到的核是彼此的<strong>180° 旋轉版</strong>，但對損失函式的最終效果完全相同。</li>
+    </ul>
+    <p class="bilingual-en">Gradient descent doesn't care about your flip convention — it just minimizes loss. If you flip, the learned kernel is the flipped version; if you don't flip, the learned kernel adapts to the unflipped convention. Both converge to equivalent solutions.</p>
+  </div>
+
+  <div class="highlight-box">
+    <h4>口語復盤：三句話搞定</h4>
+    <ul>
+      <li>卷積 = <strong>翻核再滑著乘加</strong>（理論定義，訊號處理的嚴謹版）</li>
+      <li>CNN 框架多半省略翻轉、<strong>改做互相關</strong>（效能等同，命名混淆）</li>
+      <li>反正 <strong>backprop 會把核學成對的方向</strong>，翻不翻核不影響最終結果</li>
+    </ul>
+    <p class="bilingual-en">Three-sentence summary: (1) Convolution = flip then slide-and-sum; (2) CNN frameworks usually do cross-correlation instead; (3) Backprop learns the correct kernel direction regardless of the flip convention.</p>
+  </div>
+
+  <div class="method-box">
+    <h4>類比理解</h4>
+    <p>
+      這就像用左手還是右手寫字：習慣不同，但只要練習充分，最終都能寫出漂亮的字。梯度下降是那個「充分練習」的過程，無論慣例如何，都能找到正確的核。
+      <span class="bilingual-en">It's like writing with your left or right hand — different convention, same final result given enough practice. Gradient descent is that practice: it finds the correct kernel regardless of the flip convention.</span>
+    </p>
+  </div>
+</section>
+
+<!-- 8. 對照表 -->
+<section class="section" id="comparison">
+  <div class="sec-tag sustain">07 / 對照表 · Comparison Matrix</div>
+  <h2 class="section-title">理論卷積 vs 實務互相關對照表
+    <span class="en">Theory Convolution vs. Practical Cross-Correlation: Full Comparison</span>
+  </h2>
+
+  <div class="table-wrap">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>維度 / 特徵</th>
+          <th>理論離散卷積 Convolution $(I * K)$</th>
+          <th>互相關 Cross-Correlation $(I \star K)$</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>核的操作</strong></td>
+          <td>先翻轉 180°（$K[i-m, j-n]$，有減法）</td>
+          <td>直接蓋上去（$K[m-i, n-j]$，有加法）</td>
+        </tr>
+        <tr>
+          <td><strong>交換律</strong></td>
+          <td>✅ $I * K = K * I$（滿足）</td>
+          <td>❌ $I \star K \neq K \star I$（一般不滿足）</td>
+        </tr>
+        <tr>
+          <td><strong>Fourier 域對應</strong></td>
+          <td>✅ 點乘（精確對應）</td>
+          <td>需額外複共軛操作</td>
+        </tr>
+        <tr>
+          <td><strong>深度學習框架</strong></td>
+          <td>❌ 幾乎不使用</td>
+          <td>✅ PyTorch、TF、JAX 實際執行互相關</td>
+        </tr>
+        <tr>
+          <td><strong>訓練學習效果</strong></td>
+          <td>等效（核會自動學成翻轉版）</td>
+          <td>等效（核會自動學成未翻版）</td>
+        </tr>
+        <tr>
+          <td><strong>口語說法</strong></td>
+          <td>「卷積」（理論嚴謹叫法）</td>
+          <td>「卷積」（口語也這麼說，實際做互相關）</td>
+        </tr>
+        <tr>
+          <td><strong>符號</strong></td>
+          <td>$*$（星號）</td>
+          <td>$\star$（星形，U+22C6）</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="summary-box">
+    <h4>🎯 KP04 核心要點摘要</h4>
+    <ul>
+      <li>式 (2)：一維卷積 $a[t]=\sum x[a]\,w[t-a]$，$t-a$ = 翻轉 + 平移。</li>
+      <li>式 (3)：二維卷積 $s[i,j]=\sum\sum I[m,n]\,K[i-m,j-n]$，兩個維度都翻。</li>
+      <li>式 (4)：互相關 $s[i,j]=\sum\sum I[m,n]\,K[m-i,n-j]$，不翻核。</li>
+      <li>CNN 框架口語叫「卷積」，程式裡做互相關，梯度下降自動適配慣例。</li>
+    </ul>
+    <p class="bilingual-en">Eq.(2): 1-D convolution with flip. Eq.(3): 2-D convolution with 2-D flip. Eq.(4): cross-correlation without flip. CNN frameworks say "convolution" but do cross-correlation; backprop adapts either way.</p>
+  </div>
+</section>
+
+<!-- 9. 互動實驗室 -->
+<section class="section" id="lab">
+  <div class="sec-tag activate">08 / 實戰模擬 · Interactive Lab</div>
+  <h2 class="section-title">互動實驗室：卷積 vs 互相關即時對比
+    <span class="en">Interactive Lab: Convolution vs Cross-Correlation Real-Time Comparison</span>
+  </h2>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <span style="font-weight:700; color: var(--primary);">輸入影像 I (3×3)</span>
+      <span style="font-weight:700; color: #dc2626; margin-left: 24px;">核 K (2×2)</span>
+      <button class="lab-btn" id="conv-reset-btn" style="margin-left: auto;">重設 Reset (Textbook Default)</button>
+    </div>
+
+    <div class="conv-lab-grid">
+      <!-- Image I inputs -->
+      <div class="conv-panel">
+        <h4>影像 I (3×3) — 每格可調整 (-2 到 4)</h4>
+        <table class="grid-table" id="img-table">
+          <tr>
+            <td><input type="number" id="I00" min="-2" max="4" value="1"></td>
+            <td><input type="number" id="I01" min="-2" max="4" value="2"></td>
+            <td><input type="number" id="I02" min="-2" max="4" value="0"></td>
+          </tr>
+          <tr>
+            <td><input type="number" id="I10" min="-2" max="4" value="1"></td>
+            <td><input type="number" id="I11" min="-2" max="4" value="1"></td>
+            <td><input type="number" id="I12" min="-2" max="4" value="2"></td>
+          </tr>
+          <tr>
+            <td><input type="number" id="I20" min="-2" max="4" value="0"></td>
+            <td><input type="number" id="I21" min="-2" max="4" value="1"></td>
+            <td><input type="number" id="I22" min="-2" max="4" value="1"></td>
+          </tr>
+        </table>
+        <p style="font-size:13px; color: var(--text-low); margin-top: 6px;">預設值：I=[[1,2,0],[1,1,2],[0,1,1]]（教材範例）</p>
+      </div>
+
+      <!-- Kernel K inputs -->
+      <div class="conv-panel">
+        <h4>核 K (2×2) — 每格可調整 (-2 到 2)</h4>
+        <table class="grid-table" id="ker-table">
+          <tr>
+            <td><input type="number" id="K00" min="-2" max="2" value="1"></td>
+            <td><input type="number" id="K01" min="-2" max="2" value="0"></td>
+          </tr>
+          <tr>
+            <td><input type="number" id="K10" min="-2" max="2" value="0"></td>
+            <td><input type="number" id="K11" min="-2" max="2" value="1"></td>
+          </tr>
+        </table>
+        <p style="font-size:13px; color: var(--text-low); margin-top: 6px;">預設值：K=[[1,0],[0,1]]（教材範例）</p>
+      </div>
+    </div>
+
+    <!-- Output panels -->
+    <div class="conv-out-section">
+      <!-- Convolution output -->
+      <div class="conv-out-panel">
+        <h4 class="conv-title">🔄 卷積輸出 (Convolution — 翻核)</h4>
+        <p style="font-size:13px; color:#6b7280; margin-bottom:10px;">$s[i,j]=\sum\sum I[m,n]\,K[i-m,j-n]$</p>
+        <table class="output-grid" id="conv-out-table">
+          <tr>
+            <td id="c00">?</td>
+            <td id="c01">?</td>
+          </tr>
+          <tr>
+            <td id="c10">?</td>
+            <td id="c11">?</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Cross-correlation output -->
+      <div class="conv-out-panel">
+        <h4 class="xcorr-title">➡ 互相關輸出 (Cross-Correlation — 不翻核)</h4>
+        <p style="font-size:13px; color:#6b7280; margin-bottom:10px;">$s[i,j]=\sum\sum I[m,n]\,K[m-i,n-j]$</p>
+        <table class="output-grid output-xcorr" id="xcorr-out-table">
+          <tr>
+            <td id="x00">?</td>
+            <td id="x01">?</td>
+          </tr>
+          <tr>
+            <td id="x10">?</td>
+            <td id="x11">?</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Readout / step-by-step -->
+    <div class="readout-box" id="conv-readout">計算中...</div>
+
+    <p style="font-size: 14px; color: #475569; margin-top: 14px; line-height: 1.6;">
+      🧪 <strong>實測挑戰：</strong><br/>
+      1. 點選「重設 Reset」可還原教材預設值：I=[[1,2,0],[1,1,2],[0,1,1]], K=[[1,0],[0,1]]。<br/>
+      2. 觀察：教材例中卷積輸出 = 互相關輸出 = [[2,4],[2,2]]，因為這個 K 是對稱核（翻轉後等於自身）。<br/>
+      3. 嘗試改成非對稱核（如 K=[[1,2],[0,0]]），觀察兩種輸出的差異！
+    </p>
+  </div>
+</section>
+
+<!-- 10. 觀念測驗 -->
+<section class="section" id="quiz">
+  <div class="sec-tag activate">09 / 實戰檢驗 · Concept Checkpoint</div>
+  <h2 class="section-title">隨堂 Checkpoint：觀念即時反饋
+    <span class="en">Concept Checkpoint: Master-Level Assessment</span>
+  </h2>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-card" data-ans="B">
+    <h4>題目 1：式 (2) 中 $w[t-a]$ 相對於把核直接寫成 $w[t+a]$，凸顯的理論步驟是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 將核沿時間軸平移到位置 $t$</button>
+      <button data-opt="B">B. 將核沿軸翻轉再平移（$-a$ 代表翻轉，$t$ 代表平移）</button>
+      <button data-opt="C">C. 對核做正規化（normalize）使總和為 1</button>
+      <button data-opt="D">D. 將輸入訊號翻轉，讓核保持不動</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 2：二維影像卷積式 (3) 中 $K[i-m, j-n]$ 的下標為何有減法？</h4>
+    <div class="options">
+      <button data-opt="A">A. 代表從右到左、從下到上地遍歷影像畫素</button>
+      <button data-opt="B">B. 因為理論卷積要先翻核才做點積（$i-m$ 和 $j-n$ 分別在兩個維度做翻轉）</button>
+      <button data-opt="C">C. 下標的減法只是防止陣列越界的一種技巧</button>
+      <button data-opt="D">D. 是互相關的定義，不是卷積的定義</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-card" data-ans="B" style="margin-top: 24px;">
+    <h4>題目 3：實務 CNN 函式庫（如 PyTorch 的 <code>F.conv2d</code>）通常執行的是？</h4>
+    <div class="options">
+      <button data-opt="A">A. 真正的離散卷積（先翻核 180° 再做點積）</button>
+      <button data-opt="B">B. 互相關（核不翻，直接滑動做點積）</button>
+      <button data-opt="C">C. FFT 頻域卷積（每次都轉到頻域計算）</button>
+      <button data-opt="D">D. 完全自訂核方向，由使用者決定是否翻轉</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-card" data-ans="C" style="margin-top: 24px;">
+    <h4>題目 4：為什麼訓練時不翻核也能學到有效特徵？</h4>
+    <div class="options">
+      <button data-opt="A">A. 因為核的初始值已經預先翻轉過，所以訓練後結果相同</button>
+      <button data-opt="B">B. 因為影像處理中的核都是對稱的，翻轉後不會改變</button>
+      <button data-opt="C">C. 可學習核會自動適配慣例，梯度下降不在乎有沒有翻（只在乎損失下降）</button>
+      <button data-opt="D">D. 因為深度學習的損失函式對核的翻轉是不敏感的</button>
+    </div>
+    <div class="feedback"></div>
+  </div>
+</section>
+
+<script>
+// Quiz Interactive Logic with Dynamic MathJax Rendering
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('correct', 'wrong'));
+      const choice = btn.getAttribute('data-opt');
+      if (choice === ans) {
+        btn.classList.add('correct');
+        fb.className = 'feedback show ok';
+        fb.innerHTML = '<strong>✅ 答對了！</strong> ' + getExplanation(card, ans);
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'feedback show no';
+        fb.innerHTML = '<strong>❌ 答錯了！</strong> 請重新思考：' + getExplanation(card, ans);
+      }
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+function getExplanation(card, ans) {
+  const text = card.innerText;
+  if (text.includes('w[t-a]') || text.includes('題目 1')) {
+    return '式 (2) 中下標 $t-a$ 的「負號」正是翻轉（$-a$ 方向反轉），再加上 $t$ 做平移。若改成 $w[t+a]$ 則只是平移，不包含翻轉，那就變成互相關的一維版本了。';
+  } else if (text.includes('K[i-m, j-n]') || text.includes('題目 2')) {
+    return '式 (3) 中 $K[i-m, j-n]$ 的「$i-m$」和「$j-n$」分別在行和列兩個方向做翻轉，這是二維離散卷積的核心定義。若改成 $K[m-i, n-j]$ 則變成互相關（式 (4)）。';
+  } else if (text.includes('F.conv2d') || text.includes('題目 3')) {
+    return 'PyTorch 的 <code>F.conv2d</code> 名字叫「卷積」，但底層執行的是互相關（不翻核）。這是深度學習框架的歷史慣例，學術界已廣泛接受這個命名不一致的事實。';
+  } else if (text.includes('不翻核也能') || text.includes('題目 4')) {
+    return '可學習核在訓練開始時是隨機初始化的。梯度下降只關心如何讓損失函式下降，不關心慣例是卷積還是互相關。若用互相關訓練，核就自動學成「未翻版本的正確核」；若用卷積訓練，核就學成「翻轉版本的正確核」。最終效果等效。';
+  }
+  return '';
+}
+
+// Progress Bar
+window.addEventListener('scroll', () => {
+  const top = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('progressTop').style.width = (top / docH * 100) + '%';
+});
+
+// Interactive Convolution vs Cross-Correlation Lab
+(function() {
+  var IDS = ['I00','I01','I02','I10','I11','I12','I20','I21','I22'];
+  var KDS = ['K00','K01','K10','K11'];
+
+  function getImg() {
+    return [
+      [parseFloat(document.getElementById('I00').value)||0, parseFloat(document.getElementById('I01').value)||0, parseFloat(document.getElementById('I02').value)||0],
+      [parseFloat(document.getElementById('I10').value)||0, parseFloat(document.getElementById('I11').value)||0, parseFloat(document.getElementById('I12').value)||0],
+      [parseFloat(document.getElementById('I20').value)||0, parseFloat(document.getElementById('I21').value)||0, parseFloat(document.getElementById('I22').value)||0]
+    ];
+  }
+
+  function getKer() {
+    return [
+      [parseFloat(document.getElementById('K00').value)||0, parseFloat(document.getElementById('K01').value)||0],
+      [parseFloat(document.getElementById('K10').value)||0, parseFloat(document.getElementById('K11').value)||0]
+    ];
+  }
+
+  // True 2D convolution: s[i,j] = sum_m sum_n I[m,n] * K[i-m, j-n]
+  // For 3x3 image, 2x2 kernel, valid output is 2x2 at positions (1,1),(1,2),(2,1),(2,2)
+  function computeConv(I, K) {
+    // s[i,j] = sum_{m=0}^{2} sum_{n=0}^{2} I[m,n] * K[i-m, j-n]
+    // K is indexed 0..1 (2x2), so valid i-m must be 0 or 1 (i.e. i-1 to i), same for j-n
+    // For output position (oi, oj) -> corresponds to (i=oi+1, j=oj+1) in 1-based
+    // Let's use 0-based: output (oi,oj) = sum where 0 <= i-m <= 1 AND 0 <= j-n <= 1
+    // That means m in [i-1, i] and n in [j-1, j] for 0-based i,j with i,j in {1,2}
+    var out = [[0,0],[0,0]];
+    var steps = [];
+    for (var oi = 0; oi < 2; oi++) {
+      for (var oj = 0; oj < 2; oj++) {
+        var i = oi + 1; // 1-based (1 or 2)
+        var j = oj + 1;
+        var val = 0;
+        var parts = [];
+        for (var m = 0; m <= 2; m++) {
+          for (var n = 0; n <= 2; n++) {
+            var km = i - m; // kernel row index (0 or 1)
+            var kn = j - n; // kernel col index (0 or 1)
+            if (km >= 0 && km <= 1 && kn >= 0 && kn <= 1) {
+              var contrib = I[m][n] * K[km][kn];
+              val += contrib;
+              parts.push('I['+m+','+n+']('+I[m][n]+')*K['+(km)+','+(kn)+']('+K[km][kn]+')='+contrib);
+            }
+          }
+        }
+        out[oi][oj] = val;
+        steps.push({oi:oi, oj:oj, parts:parts, val:val});
+      }
+    }
+    return {out:out, steps:steps};
+  }
+
+  // Cross-correlation: s[i,j] = sum_m sum_n I[m,n] * K[m-i, n-j]
+  function computeXcorr(I, K) {
+    var out = [[0,0],[0,0]];
+    var steps = [];
+    for (var oi = 0; oi < 2; oi++) {
+      for (var oj = 0; oj < 2; oj++) {
+        var i = oi; // 0-based for cross-corr: kernel at position m-i, n-j; m in {i, i+1}
+        var j = oj;
+        var val = 0;
+        var parts = [];
+        for (var m = 0; m <= 1; m++) {
+          for (var n = 0; n <= 1; n++) {
+            var km = m; // K[m-i, n-j] when i=oi (0 or 1) and m goes from i to i+1
+            var kn = n;
+            var imgm = i + m; // image row
+            var imgn = j + n; // image col
+            if (imgm <= 2 && imgn <= 2) {
+              var contrib = I[imgm][imgn] * K[m][n];
+              val += contrib;
+              parts.push('I['+(imgm)+','+(imgn)+']('+I[imgm][imgn]+')*K['+m+','+n+']('+K[m][n]+')='+contrib);
+            }
+          }
+        }
+        out[oi][oj] = val;
+        steps.push({oi:oi, oj:oj, parts:parts, val:val});
+      }
+    }
+    return {out:out, steps:steps};
+  }
+
+  function update() {
+    var I = getImg();
+    var K = getKer();
+
+    var convResult = computeConv(I, K);
+    var xcorrResult = computeXcorr(I, K);
+
+    // Update convolution output cells
+    document.getElementById('c00').textContent = convResult.out[0][0];
+    document.getElementById('c01').textContent = convResult.out[0][1];
+    document.getElementById('c10').textContent = convResult.out[1][0];
+    document.getElementById('c11').textContent = convResult.out[1][1];
+
+    // Update cross-correlation output cells
+    document.getElementById('x00').textContent = xcorrResult.out[0][0];
+    document.getElementById('x01').textContent = xcorrResult.out[0][1];
+    document.getElementById('x10').textContent = xcorrResult.out[1][0];
+    document.getElementById('x11').textContent = xcorrResult.out[1][1];
+
+    // Build readout
+    var ro = '=== 卷積 (Convolution, 翻核) ===\n';
+    convResult.steps.forEach(function(s) {
+      ro += 's['+s.oi+','+s.oj+'] = ' + s.parts.join(' + ') + ' = ' + s.val + '\n';
+    });
+    ro += '\n=== 互相關 (Cross-Correlation, 不翻核) ===\n';
+    xcorrResult.steps.forEach(function(s) {
+      ro += 's['+s.oi+','+s.oj+'] = ' + s.parts.join(' + ') + ' = ' + s.val + '\n';
+    });
+
+    var convS = '[['+convResult.out[0][0]+','+convResult.out[0][1]+'],['+convResult.out[1][0]+','+convResult.out[1][1]+']]';
+    var xcorrS = '[['+xcorrResult.out[0][0]+','+xcorrResult.out[0][1]+'],['+xcorrResult.out[1][0]+','+xcorrResult.out[1][1]+']]';
+    ro += '\n卷積輸出矩陣：' + convS;
+    ro += '\n互相關輸出矩陣：' + xcorrS;
+
+    if (convS === xcorrS) {
+      ro += '\n\n✅ 兩者輸出相同！（核是對稱的，翻轉後等於自身）';
+    } else {
+      ro += '\n\n⚠ 兩者輸出不同！（非對稱核，翻轉後結果有差）';
+    }
+
+    document.getElementById('conv-readout').textContent = ro;
+  }
+
+  // Reset button
+  document.getElementById('conv-reset-btn').addEventListener('click', function() {
+    // Textbook defaults: I=[[1,2,0],[1,1,2],[0,1,1]], K=[[1,0],[0,1]]
+    document.getElementById('I00').value = 1; document.getElementById('I01').value = 2; document.getElementById('I02').value = 0;
+    document.getElementById('I10').value = 1; document.getElementById('I11').value = 1; document.getElementById('I12').value = 2;
+    document.getElementById('I20').value = 0; document.getElementById('I21').value = 1; document.getElementById('I22').value = 1;
+    document.getElementById('K00').value = 1; document.getElementById('K01').value = 0;
+    document.getElementById('K10').value = 0; document.getElementById('K11').value = 1;
+    update();
+  });
+
+  // Attach listeners
+  IDS.forEach(function(id) { document.getElementById(id).addEventListener('input', update); });
+  KDS.forEach(function(id) { document.getElementById(id).addEventListener('input', update); });
+
+  // Initial calculation
+  update();
+})();
+</script>
+</body>
+</html>

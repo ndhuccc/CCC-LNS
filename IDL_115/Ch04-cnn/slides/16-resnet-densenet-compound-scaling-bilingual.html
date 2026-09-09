@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch04 · KP16 ResNet、DenseNet 到結論：殘差、密集連線與複合縮放 — ResNet, DenseNet to Conclusion: Residuals, Dense Connections & Compound Scaling</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(225,29,72,.28), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(147,51,234,.22), transparent 30%),
+              linear-gradient(135deg, #18050e 0%, #2e081d 50%, #1c0515 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(24, 5, 14, .35);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(34px, 4.2vw, 62px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(17px, 1.9vw, 26px);
+  color: #fda4af;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #e11d48;
+  border-radius: 999px;
+  color: #f43f5e;
+  background: rgba(225, 29, 72, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 900px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #e11d48, #a855f7);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #fda4af !important; fill: #fda4af !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #fed7aa; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+@media (max-width: 1024px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: var(--shadow);
+}
+.half-layout .visual > svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 坑 W 嚴格落實：Takahashi 置中與 rail-nav 留白保護 */
+.section .takahashi {
+  box-sizing: border-box;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  text-align: center;
+  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+  border: 2px solid #e11d48;
+  border-radius: var(--radius);
+  padding: 40px 32px;
+  box-shadow: var(--shadow);
+}
+.section .takahashi .core-q {
+  font-size: clamp(26px, 3.2vw, 42px);
+  font-weight: 800;
+  color: #9f1239;
+  line-height: 1.3;
+  margin-bottom: 16px;
+}
+.section .takahashi .core-ans {
+  font-size: clamp(16px, 1.8vw, 22px);
+  color: #0f172a;
+  line-height: 1.6;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* 測驗 Checkpoint 樣式 */
+.quiz-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  margin: 20px 0;
+  box-shadow: var(--shadow);
+  transition: border-color 0.2s;
+}
+.quiz-card:hover { border-color: var(--accent); }
+.quiz-card .q-num {
+  font-size: var(--t5);
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.quiz-card .q-text {
+  font-size: var(--t3);
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.quiz-card .options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.quiz-card .options button {
+  text-align: left;
+  padding: 12px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  color: var(--ink);
+  font-size: var(--t4);
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1.4;
+}
+.quiz-card .options button:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+.quiz-card .options button.selected {
+  background: #ffe4e6;
+  border-color: #e11d48;
+}
+.quiz-card .options button.correct {
+  background: #dcfce7 !important;
+  border-color: #16a34a !important;
+  color: #166534 !important;
+  font-weight: 600;
+}
+.quiz-card .options button.wrong {
+  background: #fee2e2 !important;
+  border-color: #dc2626 !important;
+  color: #991b1b !important;
+}
+.quiz-card .feedback {
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: var(--t4);
+  line-height: 1.6;
+}
+.quiz-card .feedback.correct {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+.quiz-card .feedback.wrong {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+/* 內容卡片與表格美化 */
+.content-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin: 24px 0;
+  box-shadow: var(--shadow);
+}
+.feature-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18px 0;
+}
+.feature-table th, .feature-table td {
+  border: 1px solid var(--line);
+  padding: 12px 16px;
+  text-align: left;
+  font-size: var(--t4);
+}
+.feature-table th {
+  background: #f1f5f9;
+  font-weight: 700;
+  color: var(--ink);
+}
+.feature-table tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  box-shadow: var(--shadow);
+}
+.lab-toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  font-size: var(--t4);
+  color: var(--ink);
+}
+.lab-ctrl input[type="range"] {
+  width: 130px;
+}
+.lab-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: none;
+  background: #e11d48;
+  color: #fff;
+  font-size: var(--t4);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.lab-btn:hover {
+  background: #be123c;
+  transform: translateY(-1px);
+}
+.lab-btn.btn-sec {
+  background: #475569;
+}
+.lab-btn.btn-sec:hover {
+  background: #334155;
+}
+.lab-display {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 950px) {
+  .lab-display { grid-template-columns: 1fr; }
+}
+.lab-canvas-container {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.lab-readout {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<!-- TOC RAIL (PITFALL W 必須) -->
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP16 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Core Question</a></li>
+    <li><a href="#sec-degradation-resnet">退化問題與殘差學習 · Degradation & ResNet</a></li>
+    <li><a href="#svg-resnet">架構三方對比圖 · Visual Breakdown</a></li>
+    <li><a href="#sec-densenet-modern">DenseNet 密集串接與現代演進 · DenseNet & Beyond</a></li>
+    <li><a href="#lab">互動實驗室 · Interactive Lab</a></li>
+    <li><a href="#quiz">觀念測驗 · Checkpoint</a></li>
+    <li><a href="#summary">全章大一統總結 · Grand Summary</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 Cover -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">KP16 · CNN MILESTONES · 殘差捷徑與全章結論</span>
+    <h1>5.6–6 ResNet、DenseNet 到結論：殘差、密集連線與複合縮放
+      <span class="hero-title-en">ResNet, DenseNet to Conclusion: Residuals, Dense Connections & Compound Scaling</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      加深網路竟然會導致訓練誤差不降反升（<strong>退化問題</strong>）！ResNet 提出 $\mathcal{H}=\mathcal{F}+x$ 恆等捷徑打破深度瓶頸，DenseNet 以 $\frac{l(l+1)}{2}$ 密集串接實現極致特徵重用。從經典卷積、偵測器、池化三大積木，到現代 EfficientNet 與 ConvNeXt，CNN 始終是深度學習的宏偉地基！
+    </p>
+  </div>
+</section>
+
+<!-- 2. 高橋流大問句 (PITFALL W) -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="core-q">
+      既然深層模型理論上能學成恆等對映，為何加深反而讓訓練誤差變差？
+      <div style="font-size:0.55em; font-weight:normal; color:#e11d48; margin-top:8px;">
+        Why does network degradation occur when deeper networks should easily mimic identity mappings?
+      </div>
+    </div>
+    <div class="core-ans">
+      <strong>直筒網路沒有參考基準點，難以透過多層非線性逼近恆等對映！</strong><br>
+      ResNet 旁路架設<strong>恆等捷徑（Shortcut $x$）</strong>，主路專心學殘差 $\mathcal{F}=\mathcal{H}-x$。多出的層只需學成 0，梯度直接暢通無阻流回淺層！
+    </div>
+  </div>
+</section>
+
+<!-- 3. 退化問題與殘差學習 -->
+<section class="section" id="sec-degradation-resnet">
+  <div class="sec-tag activate">01 / 退化與殘差架構 · Degradation & ResNet</div>
+  <h2 class="section-title">退化問題的本質與殘差學習數學形式
+    <span class="en">The Degradation Problem & The Mathematics of Residual Learning</span>
+  </h2>
+
+  <div class="content-card">
+    <p>
+      2015 年何愷明等人指出：當直筒網路（Plain Network / VGG 式架構）深度<strong>超過約 20 層</strong>時，訓練準確率會先達到飽和，隨後<strong>不升反降（訓練誤差上升）</strong>。這並非過擬合（Overfitting，過擬合時訓練誤差應為零），而是<strong>退化問題（Degradation Problem）</strong>！
+    </p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 18px 0;">
+      <div style="background: #fff1f2; border: 1.5px solid #e11d48; border-radius: 10px; padding: 18px;">
+        <h4 style="margin: 0 0 10px 0; color: #9f1239; font-size: 16px;">
+          ❌ 直筒網路的困境 Plain Network
+        </h4>
+        <p style="margin: 0; font-size: 14px; line-height: 1.7; color: #334155;">
+          理論上，深層網路至少不該比淺層更差——只要多出來的層全部學成<strong>恆等對映（$\mathcal{H}(x)=x$）</strong>，表現就能精確複製淺模型。但在實務上，多層疊加的非線性權重極難最佳化出恆等函式，導致深層訓練陷入停滯與梯度阻斷。
+        </p>
+      </div>
+
+      <div style="background: #f0fdf4; border: 1.5px solid #16a34a; border-radius: 10px; padding: 18px;">
+        <h4 style="margin: 0 0 10px 0; color: #15803d; font-size: 16px;">
+          ✅ ResNet 的殘差哲學 Residual Learning
+        </h4>
+        <p style="margin: 0; font-size: 14px; line-height: 1.7; color: #334155;">
+          不再讓層直接學習無參考點的目標對映 $\mathcal{H}(x)$，改讓主路學習相對於輸入的<strong>殘差函式</strong>：
+          $$\mathcal{F}(x) := \mathcal{H}(x) - x \tag{9}$$
+          因此原本的目標對映被重組為：
+          $$\mathcal{H}(x) = \mathcal{F}(x) + x \tag{10}$$
+        </p>
+      </div>
+    </div>
+    <p>
+      <strong>殘差塊（Residual Block，Fig. 18）：</strong> 主路計算 $\mathcal{F}(x)$，旁路透過 <strong>恆等捷徑（Shortcut Connection）</strong> 將 $x$ 原樣傳遞並直接<strong>逐元素相加（Element-wise Addition）</strong>。若某層不需要學新特徵，只需把權重壓向 0（$\mathcal{F}(x) \to 0$），輸出立刻還原為輸入 $x$！更重要的是，反向傳播時梯度可藉由捷徑中的 $+1$ 直通淺層，徹底攻克梯度消失。
+    </p>
+    <span class="bilingual-en">Optimizing residual F(x)=H(x)-x is far easier than directly learning unreferenced H(x). Shortcuts provide identity mappings and highway-like gradient propagation.</span>
+  </div>
+</section>
+
+<!-- 4. 向量視覺化 (Fig 19, 20 對比) -->
+<section class="section" id="svg-resnet">
+  <div class="sec-tag sustain">02 / 拓撲架構對比 · Structural Comparison</div>
+  <h2 class="section-title">直筒退化 vs 殘差加法 vs 密集串接 (Fig. 19, 20)
+    <span class="en">Plain Degradation vs Residual Addition vs Dense Concatenation</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <!-- SVG DIAGRAM FIG 19/20 -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, Helvetica, sans-serif">
+        <defs>
+          <marker id="a16b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/>
+          </marker>
+          <marker id="a16r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#e11d48"/>
+          </marker>
+          <marker id="a16g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/>
+          </marker>
+        </defs>
+        <rect x="0" y="0" width="720" height="360" fill="#ffffff" rx="8"/>
+        <text x="360" y="18" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e40af">直筒加深會退化；ResNet 學 F(x)+x，DenseNet 改把前面全部 concat</text>
+
+        <!-- LEFT: plain degradation -->
+        <rect x="8" y="26" width="228" height="200" rx="10" fill="#fef2f2" stroke="#e11d48" stroke-width="1.5"/>
+        <text x="122" y="46" text-anchor="middle" font-size="12" font-weight="bold" fill="#b91c1c">PLAIN · 直筒堆疊</text>
+        <text x="122" y="62" text-anchor="middle" font-size="9" fill="#991b1b">直接學 H(x) · 無參考基準點</text>
+        <rect x="40" y="72" width="164" height="22" rx="4" fill="#fee2e2" stroke="#fca5a5"/>
+        <text x="122" y="87" text-anchor="middle" font-size="9" fill="#b91c1c">卷積層 1</text>
+        <rect x="48" y="98" width="148" height="22" rx="4" fill="#fecaca" stroke="#fca5a5"/>
+        <text x="122" y="113" text-anchor="middle" font-size="9" fill="#b91c1c">卷積層 2</text>
+        <rect x="56" y="124" width="132" height="22" rx="4" fill="#fca5a5" stroke="#e11d48"/>
+        <text x="122" y="139" text-anchor="middle" font-size="9" fill="#fff">卷積層 20+ (極深)</text>
+        <path d="M122 148 V160" stroke="#e11d48" stroke-width="2" marker-end="url(#a16r)"/>
+        <!-- error going up -->
+        <polyline points="40,192 80,186 120,176 160,162 200,148" fill="none" stroke="#e11d48" stroke-width="2.4"/>
+        <text x="122" y="210" text-anchor="middle" font-size="10" font-weight="bold" fill="#b91c1c">訓練誤差不降反升 (≈20層起退化)</text>
+
+        <!-- MID: residual -->
+        <rect x="244" y="26" width="228" height="200" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1.6"/>
+        <text x="358" y="46" text-anchor="middle" font-size="12" font-weight="bold" fill="#15803d">ResNet · 殘差塊</text>
+        <text x="358" y="62" text-anchor="middle" font-size="9" fill="#166534">改學 F(x)=H(x)−x → H=F+x</text>
+        <rect x="268" y="74" width="72" height="88" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+        <text x="304" y="102" text-anchor="middle" font-size="11" font-weight="bold" fill="#166534">F(x)</text>
+        <text x="304" y="120" text-anchor="middle" font-size="8" fill="#15803d">主路卷積層</text>
+        <text x="304" y="136" text-anchor="middle" font-size="8" fill="#15803d">專注學殘差</text>
+        <path d="M340 118 H368" stroke="#16a34a" stroke-width="2.2"/>
+        <circle cx="384" cy="118" r="14" fill="#16a34a"/>
+        <text x="384" y="122" text-anchor="middle" font-size="12" font-weight="bold" fill="#fff">+</text>
+        <path d="M304 74 V58 H400 V104" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#a16b)"/>
+        <text x="400" y="54" font-size="9" font-weight="bold" fill="#1e40af">捷徑 x</text>
+        <path d="M398 118 H430" stroke="#16a34a" stroke-width="2.2" marker-end="url(#a16g)"/>
+        <text x="358" y="184" text-anchor="middle" font-size="10" fill="#166534">恆等捷徑讓梯度直達淺層</text>
+        <text x="358" y="202" text-anchor="middle" font-size="10" fill="#166534">多出的層可直接學成 0 殘差</text>
+        <text x="358" y="218" text-anchor="middle" font-size="9" fill="#15803d">最佳化 F 比直接最佳化 H 容易得多</text>
+
+        <!-- RIGHT: dense concat -->
+        <rect x="480" y="26" width="232" height="200" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+        <text x="596" y="46" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">DenseNet · 全部串接</text>
+        <text x="596" y="62" text-anchor="middle" font-size="9" fill="#2563eb">加法改 Concat · 連線數 l(l+1)/2</text>
+        <rect x="500" y="72" width="40" height="20" rx="3" fill="#dbeafe" stroke="#2563eb"/>
+        <text x="520" y="86" text-anchor="middle" font-size="8" fill="#1e40af">x0</text>
+        <rect x="500" y="100" width="40" height="20" rx="3" fill="#bfdbfe" stroke="#2563eb"/>
+        <text x="520" y="114" text-anchor="middle" font-size="8" fill="#1e40af">x1</text>
+        <rect x="500" y="128" width="40" height="20" rx="3" fill="#93c5fd" stroke="#1e40af"/>
+        <text x="520" y="142" text-anchor="middle" font-size="8" fill="#1e3a8a">x2</text>
+        <path d="M540 82 H560" stroke="#2563eb" stroke-width="1.5"/>
+        <path d="M540 110 H560" stroke="#2563eb" stroke-width="1.5"/>
+        <path d="M540 138 H560" stroke="#2563eb" stroke-width="1.5"/>
+        <rect x="560" y="80" width="56" height="70" rx="4" fill="#fff" stroke="#1e40af" stroke-width="1.5"/>
+        <text x="588" y="102" text-anchor="middle" font-size="8" fill="#1e40af">[x0</text>
+        <text x="588" y="116" text-anchor="middle" font-size="8" fill="#1e40af">x1</text>
+        <text x="588" y="130" text-anchor="middle" font-size="8" fill="#1e40af">x2]</text>
+        <path d="M616 115 H636" stroke="#2563eb" stroke-width="2" marker-end="url(#a16b)"/>
+        <rect x="640" y="98" width="52" height="36" rx="4" fill="#1e40af"/>
+        <text x="666" y="120" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">Fℓ</text>
+        <text x="596" y="170" text-anchor="middle" font-size="9" fill="#1e40af">成長率 k：每層產出 k 張特徵圖</text>
+        <text x="596" y="188" text-anchor="middle" font-size="9" fill="#2563eb">第 ℓ 層接收 k0+k(ℓ−1) 張輸入</text>
+        <text x="596" y="208" text-anchor="middle" font-size="9" fill="#1e40af">過渡層 Transition：1×1 + avg pool</text>
+
+        <!-- BOTTOM summary banner -->
+        <rect x="8" y="236" width="704" height="112" rx="10" fill="#fff7ed" stroke="#ea580c" stroke-width="1.4"/>
+        <text x="360" y="258" text-anchor="middle" font-size="12" font-weight="bold" fill="#c2410c">對照一句：ResNet 把 x 加回去；DenseNet 把歷史特徵疊成更厚的通道</text>
+        <text x="360" y="278" text-anchor="middle" font-size="10" fill="#9a3412">更深理論上可學恆等、不該更差——實務直筒卻退化；捷徑讓「多出來的層」有一條不傷害淺模型的路</text>
+        <text x="360" y="298" text-anchor="middle" font-size="10" fill="#2563eb">之後 EfficientNet 對深／寬／解析度做複合縮放；ConvNeXt 讓 CNN 跟 Transformer 打 —— CNN 沒過氣</text>
+        <text x="360" y="320" text-anchor="middle" font-size="10" fill="#b91c1c">反直覺：不是層數愈多愈好；沒有捷徑時，多出來的層常常學不會恆等，訓練誤差先飽和再變差。</text>
+        <text x="360" y="338" text-anchor="middle" font-size="9" fill="#64748b">積木仍是 conv → detector → pool；架構差在怎麼接、怎麼重用特徵</text>
+      </svg>
+    </div>
+
+    <div class="desc">
+      <h3 style="margin-top:0; color:#e11d48;">加法（Addition）與串接（Concat）的本質差異</h3>
+      <p>
+        ResNet 與 DenseNet 分別代表了跳接技術的兩大極致分支：
+      </p>
+      <ul>
+        <li><strong>ResNet 殘差加法（式 11）：</strong> $x_{\ell} = \mathcal{F}_{\ell}(x_{\ell-1}) + x_{\ell-1}$。特徵通道數不變，維持資訊的原位更新與梯度高速公路。</li>
+        <li><strong>DenseNet 密集串接（式 12）：</strong> $x_{\ell} = \mathcal{F}_{\ell}([x_0, x_1, \dots, x_{\ell-1}])$。將前面所有層的輸出在通道維度堆疊，連線數高達 $\frac{l(l+1)}{2}$，實現特徵極致重用。</li>
+        <li><strong>過渡層 Transition Layer：</strong> DenseNet 透過 <strong>$1\times 1$ Conv + $2\times 2$ Average Pooling</strong> 在 Dense Block 之間壓縮肥厚的通道數與尺寸。</li>
+      </ul>
+      <span class="bilingual-en">ResNet adds feature vectors keeping channels fixed, while DenseNet concatenates all preceding outputs creating l(l+1)/2 cross-layer pathways.</span>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 現代演進與全章結論 -->
+<section class="section" id="sec-densenet-modern">
+  <div class="sec-tag operate">03 / 現代演進與結論 · Modern Advances & Recap</div>
+  <h2 class="section-title">現代 CNN 縮放與全章大一統總結
+    <span class="en">Modern CNN Scaling & Grand Summary of CNN Foundations</span>
+  </h2>
+
+  <div class="content-card">
+    <table class="feature-table">
+      <thead>
+        <tr>
+          <th>里程碑模型 / 架構</th>
+          <th>核心突破機制 (Key Innovation)</th>
+          <th>歷史深遠影響 (Legacy & Status)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>ResNet (2015)</strong></td>
+          <td>學習殘差 $\mathcal{F}(x)=\mathcal{H}(x)-x$，旁路恆等捷徑加法</td>
+          <td>打破深層退化天花板，152 層奪冠，現代視覺模型的通用骨幹</td>
+        </tr>
+        <tr>
+          <td><strong>DenseNet (2017)</strong></td>
+          <td>Dense Block 密集串接，連線數 $\frac{l(l+1)}{2}$，成長率 $k$</td>
+          <td>特徵極致重用，深淺特徵融合，參數利用率極高</td>
+        </tr>
+        <tr>
+          <td><strong>EfficientNet (2019)</strong></td>
+          <td>深度（Depth）、寬度（Width）、解析度（Resolution）<strong>複合縮放（Compound Scaling）</strong></td>
+          <td>告別單維度盲目堆疊，以最少 FLOPs 取得當時最高準確率</td>
+        </tr>
+        <tr>
+          <td><strong>ConvNeXt (2022)</strong></td>
+          <td>採用 7×7 大核、倒殘差、LayerNorm 現代化純 CNN 設計</td>
+          <td>證明純 CNN 依然能與 Vision Transformer（ViT）正面抗衡，CNN 永不過氣</td>
+        </tr>
+        <tr>
+          <td><strong>全章三大基本積木</strong></td>
+          <td><strong>卷積（Conv）$\to$ 偵測器（ReLU）$\to$ 池化（Pooling）</strong></td>
+          <td>局部連線、權重共享、平移等變；為高維網格資料提供強大歸納偏置</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 6. 互動實驗室 -->
+<section class="section" id="lab">
+  <div class="sec-tag activate">04 / 互動實驗室 · Interactive Lab</div>
+  <h2 class="section-title">互動實驗室：殘差塊與恆等捷徑運算模擬器
+    <span class="en">Interactive Lab: Residual Block & Identity Shortcut Simulator</span>
+  </h2>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <div class="lab-ctrl">
+        <label>輸入特徵 $x$:</label>
+        <input type="range" id="kp16-x" min="-2" max="2" step="0.1" value="1.0">
+        <span id="kp16-x-v" style="font-weight:700; color:#2563eb; width:34px;">1.0</span>
+      </div>
+
+      <div class="lab-ctrl">
+        <label>主路殘差 $\mathcal{F}$:</label>
+        <input type="range" id="kp16-F" min="-2" max="2" step="0.1" value="0.5">
+        <span id="kp16-F-v" style="font-weight:700; color:#e11d48; width:34px;">0.5</span>
+      </div>
+
+      <button class="lab-btn" id="kp16-id">F＝0（驗證恆等對映）</button>
+      <button class="lab-btn btn-sec" id="kp16-reset">重設數值</button>
+    </div>
+
+    <div class="lab-display">
+      <div>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 8px;">
+          向量加法數線圖示（捷徑 $x$ ＋ 殘差 $\mathcal{F}$ ＝ 輸出 $\mathcal{H}$）：
+        </p>
+        <div class="lab-canvas-container">
+          <canvas id="kp16-cv" width="560" height="300"></canvas>
+        </div>
+      </div>
+      <div class="lab-readout" id="kp16-ro">
+        <!-- Live readout injected by JS -->
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. 隨堂 Checkpoint -->
+<section class="section" id="quiz">
+  <div class="sec-tag activate">05 / 實戰檢驗 · Concept Checkpoint</div>
+  <h2 class="section-title">隨堂 Checkpoint：觀念即時反饋
+    <span class="en">Concept Checkpoint: Immediate Feedback Quiz</span>
+  </h2>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 1 · 退化問題現象 / Degradation Phenomenon</div>
+    <div class="q-text">「退化問題」（degradation）指的是？</div>
+    <div class="options">
+      <button data-opt="A">A. 只要超過 3 層就一定無法訓練</button>
+      <button data-opt="B">B. 大約超過 20 層後，再加深可能使訓練準確率飽和甚至下降</button>
+      <button data-opt="C">C. pooling 會讓所有梯度變為零</button>
+      <button data-opt="D">D. 只有 U-Net 會發生、分類網路不會</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 2 · 殘差學習本質 / Residual Formulations</div>
+    <div class="q-text">殘差學習式 (9)(10) 的含義是？</div>
+    <div class="options">
+      <button data-opt="A">A. 直接規定 $\mathcal{H}(x)=0$</button>
+      <button data-opt="B">B. 層去學 $\mathcal{F}(x):=\mathcal{H}(x)-x$，因此目標對映寫成 $\mathcal{H}(x)=\mathcal{F}(x)+x$（shortcut 把 $x$ 加回）</button>
+      <button data-opt="C">C. 把卷積全部換成全連線</button>
+      <button data-opt="D">D. 禁止使用 ReLU</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 3 · DenseNet 拓撲特性 / DenseNet Topology</div>
+    <div class="q-text">DenseNet 相對 ResNet 的連線方式，下列何者正確？</div>
+    <div class="options">
+      <button data-opt="A">A. DenseNet 仍用式 (11) 的加法，只是把層數加倍</button>
+      <button data-opt="B">B. DenseNet 用式 (12) 把前面各層輸出 concat； $l$ 層約有 $l(l+1)/2$ 條連線</button>
+      <button data-opt="C">C. DenseNet 刪除所有 skip connection</button>
+      <button data-opt="D">D. growth rate $k$ 必須等於 1000</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-card" data-ans="A">
+    <div class="q-num">題目 4 · 現代演進認知 / EfficientNet & ConvNeXt</div>
+    <div class="q-text">EfficientNet 的複合縮放（compound scaling）與 ConvNeXt 的訊息，正確的是？</div>
+    <div class="options">
+      <button data-opt="A">A. EfficientNet 同時縮放深度、寬度與解析度；ConvNeXt 顯示現代化 CNN 仍可與 Transformer 競爭</button>
+      <button data-opt="B">B. EfficientNet 只加深、不改寬度與解析度</button>
+      <button data-opt="C">C. ConvNeXt 證明 CNN 已完全被淘汰</button>
+      <button data-opt="D">D. 兩者都禁止使用卷積</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+</section>
+
+<!-- 8. 全章大一統總結框 -->
+<section class="section" id="summary">
+  <div class="summary-box" style="background:linear-gradient(135deg,#831843 0%,#9f1239 100%); border-radius:14px; padding:32px; color:#fff; border:1px solid #fda4af; box-shadow:0 12px 30px rgba(225,29,72,0.25);">
+    <h4 style="font-size:22px; margin-top:0; color:#fda4af; display:flex; align-items:center; gap:10px;">
+      <span>🏆</span> 第四章《卷積神經網路》大一統終局總結
+      <span class="bilingual-en-inline" style="font-size:14px; color:#fecdd3; font-weight:normal;">Grand Summary: Foundations & Evolution of CNNs</span>
+    </h4>
+    <ul style="line-height:1.8; font-size:15px; margin-bottom:0;">
+      <li><strong>核心三大基石：</strong> 卷積層三階段（卷積 $\to$ 偵測器 $\to$ 池化）。稀疏連線與權重共享把全連線的 $\mathcal{O}(mn)$ 砍成 $\mathcal{O}(kn)$，帶來平移等變性與空間先驗。</li>
+      <li><strong>感受野與深度進化：</strong> 從 LeNet 的 $5\times 5$、AlexNet 的 $11\times 11$，到 VGG 確立「兩層 $3\times 3$ 等效 $5\times 5$，參數量少 28%」，小核堆疊成為現代幾何標準。</li>
+      <li><strong>拓撲突破與捷徑革命：</strong> Inception 引入 $1\times 1$ 瓶頸層實現多尺度；U-Net 對稱跳接解救醫學定位；ResNet 殘差加法攻克退化問題；DenseNet 密集串接重用特徵。</li>
+      <li><strong>時代地位屹立不搖：</strong> 即使在注意力模型與 Transformer 席捲的當下，EfficientNet 複合縮放與 ConvNeXt 證明 CNN 仍具非凡的高效性與邊緣落地優勢，是深度學習永遠的基石！</li>
+    </ul>
+  </div>
+</section>
+
+<script>
+// Checkpoint Quiz Interaction Logic
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('selected', 'correct', 'wrong'));
+      const opt = btn.getAttribute('data-opt');
+      btn.classList.add('selected');
+      fb.style.display = 'block';
+
+      const qNum = card.querySelector('.q-num').innerText;
+      let expText = "";
+      if (qNum.includes('題目 1')) expText = "原文明確指出：very deep networks（通常超過約 20 層）加深後訓練準確率先飽和再變差；理論上多層可學恆等，實務直筒卻常讓訓練誤差上升。";
+      else if (qNum.includes('題目 2')) expText = "不直接學 H，改學殘差 F=H-x，主路與恆等捷徑相加得到 H=F+x；恆等捷徑亦大幅改善反向傳播時的梯度回傳。";
+      else if (qNum.includes('題目 3')) expText = "ResNet 採用加法 x_l = F(x_{l-1}) + x_{l-1}；DenseNet 改為對前面所有層進行 concat 串接。密集連線數為 l(l+1)/2；過渡層由 1×1 Conv + 2×2 avg pool 組成。";
+      else if (qNum.includes('題目 4')) expText = "EfficientNet（2019）對深度、寬度、解析度做複合縮放（Compound Scaling）；ConvNeXt（2022）將 CNN 設計現代化，證明在注意力模型時代 CNN 依然具備極強競爭力。";
+
+      if (opt === ans) {
+        btn.classList.add('correct');
+        fb.className = 'feedback correct';
+        fb.innerHTML = `<strong>答對了！</strong> ${expText}`;
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'feedback wrong';
+        fb.innerHTML = `<strong>答案不正確。</strong> 再想一下！${expText}`;
+      }
+
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+// Interactive Lab Logic
+(function() {
+  var xi = 10, Fi = 5;
+  var cv = document.getElementById('kp16-cv');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var ro = document.getElementById('kp16-ro');
+
+  function tstr(t) { return (t/10).toFixed(1); }
+  function real(t) { return t/10; }
+
+  function draw() {
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+
+    var xVal = real(xi);
+    var fVal = real(Fi);
+    var hVal = xVal + fVal;
+
+    // Title
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('殘差加法數線與梯度流對照 (H = F + x)：', 25, 25);
+
+    // Number line config
+    var originX = 280, scale = 50;
+    var axisY = 75;
+
+    // Draw Axis
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(30, axisY);
+    ctx.lineTo(530, axisY);
+    ctx.stroke();
+
+    // Axis ticks
+    for (var v = -4; v <= 4; v++) {
+      var tx = originX + v * scale;
+      if (tx >= 30 && tx <= 530) {
+        ctx.beginPath();
+        ctx.moveTo(tx, axisY - 5);
+        ctx.lineTo(tx, axisY + 5);
+        ctx.stroke();
+        ctx.fillStyle = '#64748b';
+        ctx.font = '11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(v, tx, axisY + 18);
+      }
+    }
+
+    // Segment 1: Shortcut x (Blue)
+    var p0 = originX;
+    var px = originX + xVal * scale;
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(p0, axisY - 14);
+    ctx.lineTo(px, axisY - 14);
+    ctx.stroke();
+
+    ctx.fillStyle = '#2563eb';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`捷徑 x = ${tstr(xi)}`, (p0 + px) / 2, axisY - 22);
+
+    // Segment 2: Residual F (Rose)
+    var ph = originX + hVal * scale;
+    ctx.strokeStyle = '#e11d48';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(px, axisY - 36);
+    ctx.lineTo(ph, axisY - 36);
+    ctx.stroke();
+
+    ctx.fillStyle = '#e11d48';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`殘差 F = ${tstr(Fi)}`, (px + ph) / 2, axisY - 44);
+
+    // Marker H: Green Dot
+    ctx.fillStyle = '#16a34a';
+    ctx.beginPath();
+    ctx.arc(ph, axisY, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#15803d';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`H = ${hVal.toFixed(1)}`, ph, axisY + 38);
+
+    // Bottom Box: Gradient Flow Analysis
+    ctx.fillStyle = '#f1f5f9';
+    ctx.fillRect(25, 140, 510, 140);
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(25, 140, 510, 140);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('反向傳播梯度流解析：', 40, 165);
+
+    ctx.fillStyle = '#334155';
+    ctx.font = '13px monospace';
+    ctx.fillText('∂Loss / ∂x = (∂Loss / ∂H) × [ 1 + ∂F / ∂x ]', 40, 192);
+
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = '#16a34a';
+    ctx.fillText('↑ 恆等捷徑提供「+1」暢通通道，即便深層 ∂F/∂x 衰減，梯度永不為 0！', 40, 218);
+
+    ctx.fillStyle = Fi === 0 ? '#b91c1c' : '#475569';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText(Fi === 0 ? '★ 當前 F = 0：完美實現恆等對映 H(x) = x，多餘層不損害淺模型！' : `★ 當前主路承擔殘差量：${Math.abs(fVal).toFixed(1)}，捷徑承擔基準量：${Math.abs(xVal).toFixed(1)}`, 40, 245);
+  }
+
+  function sync() {
+    document.getElementById('kp16-x-v').textContent = tstr(xi);
+    document.getElementById('kp16-F-v').textContent = tstr(Fi);
+    var Hi = Fi + xi;
+    var idNote = (Fi === 0) ? '★ F = 0 → 達成精準恆等對映 H = x！' : '主路正在調整特徵殘差偏置。';
+
+    ro.innerHTML = `
+      <div style="color:#e11d48; font-weight:700; font-size:15px; margin-bottom:8px;">
+        殘差塊運算與梯度流診斷報告
+      </div>
+      <div><strong>輸入訊號 x：</strong> <span style="color:#2563eb; font-weight:700;">${tstr(xi)}</span></div>
+      <div><strong>主路殘差 F(x)：</strong> <span style="color:#e11d48; font-weight:700;">${tstr(Fi)}</span></div>
+      <div><strong>模組總輸出 H(x)：</strong> <span style="color:#16a34a; font-weight:700;">${(Hi/10).toFixed(1)}</span> (F + x)</div>
+      <hr style="border:none; border-top:1px solid #cbd5e1; margin:10px 0;"/>
+      <div><strong>捷徑貢獻比例：</strong> ${Hi !== 0 ? Math.abs((xi / Hi) * 100).toFixed(1) : 0}%</div>
+      <div style="font-size:12px; color:#475569; margin-top:4px;">${idNote}</div>
+    `;
+
+    draw();
+
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([ro]);
+    }
+  }
+
+  document.getElementById('kp16-x').addEventListener('input', function() {
+    xi = Math.round(parseFloat(this.value) * 10);
+    sync();
+  });
+  document.getElementById('kp16-F').addEventListener('input', function() {
+    Fi = Math.round(parseFloat(this.value) * 10);
+    sync();
+  });
+  document.getElementById('kp16-id').addEventListener('click', function() {
+    Fi = 0;
+    document.getElementById('kp16-F').value = '0';
+    sync();
+  });
+  document.getElementById('kp16-reset').addEventListener('click', function() {
+    xi = 10;
+    Fi = 5;
+    document.getElementById('kp16-x').value = '1.0';
+    document.getElementById('kp16-F').value = '0.5';
+    sync();
+  });
+
+  sync();
+})();
+</script>
+</body>
+</html>

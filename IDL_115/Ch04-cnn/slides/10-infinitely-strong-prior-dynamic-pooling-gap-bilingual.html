@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch04 · KP10 無限強先驗、動態池化與 GAP — Infinitely Strong Prior, Dynamic Pooling, and GAP</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+/* ===========================================================================
+   SlidePro · 冰晶簡約亮色主題 CSS Tokens
+   直接複製此檔至 <style> 區塊頂部即可套用完整配色
+   =========================================================================== */
+
+:root {
+  /* 背景三層 */
+  --bg:        hsl(222, 45%, 98%);   /* 極淺藍灰主背景 */
+  --bg-card:   #ffffff;              /* 卡片白底 */
+  --bg-deep:   #0a0e27;              /* 僅用於封面與 SVG stage */
+
+  /* 墨色三層 */
+  --ink:       #2d3436;              /* 主墨色（深灰近黑） */
+  --ink-soft:  #4a5568;              /* 次要文字 */
+  --text-low:  #6c7a89;              /* 提示文 */
+  --line:      #d6dde6;              /* 邊框灰 */
+
+  /* 主色 + 強調 */
+  --primary:   hsl(248, 58%, 46%);   /* 紫羅蘭主色 */
+  --primary-soft: hsl(248, 58%, 92%);
+  --accent:    #0984e3;              /* 藍：物理 */
+  --warm:      #fdcb6e;              /* 琥珀：能量/公式 */
+  --magenta:   #e84393;              /* 品紅：AI/強調 */
+  --success:   #00b894;
+  --warning:   #e17055;
+  --info:      #6c5ce7;
+
+  /* 字級系統（高橋流規格） */
+  --t1: 55px;  /* 主標題（封面） */
+  --t2: 34px;  /* 次標題（章節） */
+  --t3: 22px;  /* 小標題（卡片名稱、box 標題） */
+  --t4: 22px;  /* ⚠ 內容主文最小值 */
+  --t5: 13px;  /* UI 鍍鉻（限 hint / counter / badge） */
+
+  /* 間距 + 圓角 + 陰影 — 全頁寬度（2026-09-04 修：6vw→2.2vw、1600px→96vw，實測 1920 淨寬 1501px） */
+  --pad-section: 64px 2.2vw;
+  --max-w: 96vw;                /* 1920→1843px、1400→1344px；原 1600px 在 1920 僅淨寬 1130px */
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(60, 80, 140, .08);
+}
+
+/* ===========================================================================
+   基礎重置 + 全域元素
+   =========================================================================== */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei",
+               "Segoe UI", "Noto Sans TC", Roboto, sans-serif;
+  font-size: var(--t4);
+  line-height: 1.65;
+  scroll-behavior: smooth;
+}
+
+h1,h2,h3,h4 { margin: 0 0 .4em 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: var(--t1); line-height: 1.15; }
+h2 { font-size: var(--t2); line-height: 1.2; }
+h3 { font-size: var(--t3); line-height: 1.25; }
+
+p  { margin: 0 0 .8em 0; font-size: var(--t4); color: var(--ink-soft); }
+small, .ui-text { font-size: var(--t5); color: var(--text-low); letter-spacing: .04em; }
+code, .mono { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+
+a { color: var(--primary); text-decoration: none; border-bottom: 1px dashed rgba(112,86,235,.4); }
+a:hover { color: var(--magenta); border-bottom-color: var(--magenta); }
+
+/* ============================================================
+   雙語內容樣式 — 每段「中文（簡潔英文）」
+   英文字型略小、淺墨色，視覺層級低於主文，避免干擾閱讀
+   ============================================================ */
+.bilingual-en {
+  display: block;            /* 預設換行（每段中文一行後英文另起一行） */
+  margin-top: 6px;
+  font-size: 18px;           /* 比中文 --t4: 22px 小，避免視覺干擾 */
+  font-weight: 400;          /* 不加粗，避免搶主文注意力 */
+  color: var(--ink-soft);    /* #4a5568 淺墨色，視覺層級低 */
+  line-height: 1.55;
+  letter-spacing: .01em;
+  font-style: normal;
+}
+
+/* 行內短版（同一行內的英文括號） */
+.bilingual-en-inline {
+  font-size: 17px;           /* 比 block 版略小 */
+  font-weight: 400;
+  color: var(--ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ===========================================================================
+   Section wrapper + 章節分隔線
+   =========================================================================== */
+
+.section {
+  padding: var(--pad-section);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  border-bottom: 1px dashed var(--line);
+}
+.section:last-of-type { border-bottom: none; }
+
+/* TOC rail 佔 240px → 內容右側 padding 補償（2026-09-04 修：6vw→2.2vw，258=240+18 間隙） */
+.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .section { padding-right: 2.2vw; } }
+
+/* ===========================================================================
+   Hero / Cover — 保留深底漸層當視覺焦點
+   =========================================================================== */
+
+.hero {
+  padding: 96px 2.2vw;
+  text-align: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #2d1b4e 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  margin: 24px auto;
+  box-shadow: var(--shadow);
+}
+/* 坑 V（2026-09-06）：hero 與一般 section 中心線對齊——同加 TOC 右補償，否則 cover 偏右 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+.hero h1 { color: #fff; }
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #00d4ff;
+  border-radius: 999px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, .15);
+  font-size: var(--t5);
+  letter-spacing: .25em;
+  margin-bottom: 28px;
+}
+.hero .zh-sub { font-size: var(--t3); color: #fff; margin-bottom: 6px; }
+.hero .en-sub { font-size: var(--t4); color: #b0c4de; font-style: italic; }
+
+.takahashi {
+  text-align: center;
+  padding: 80px 2.2vw;
+  max-width: min(1400px, calc(96vw - 300px));
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 1100px) { .takahashi { max-width: 900px; } }
+.takahashi .quote {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  line-height: 1.25;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--magenta));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.takahashi .quote small {
+  display: block;
+  font-size: var(--t3);
+  margin-top: 16px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ===========================================================================
+   內容盒 — 七種配色漸層
+   =========================================================================== */
+
+.formula-box, .highlight-box, .intuition-box,
+.method-box, .warning-box, .summary-box, .quote-block {
+  margin: 22px 0;
+  padding: 22px 26px;
+  border-radius: var(--radius);
+  border-left: 6px solid;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+
+.formula-box {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%);
+  border-left-color: var(--warm);
+}
+.formula-box h4 { color: #b7791f; }
+
+.highlight-box {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e8d5ff 100%);
+  border-left-color: var(--primary);
+}
+.highlight-box h4 { color: var(--primary); }
+
+.intuition-box {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  border-left-color: var(--info);
+}
+.intuition-box h4 { color: #00695c; }
+
+.method-box {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left-color: var(--success);
+}
+.method-box h4 { color: #2e7d32; }
+
+.warning-box {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left-color: var(--warning);
+}
+.warning-box h4 { color: #c62828; }
+
+.summary-box {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  border-left-color: var(--primary);
+}
+.summary-box h4, .summary-box p, .summary-box ul li { color: #fff; }
+/* 坑 U（2026-09-06）：深底上的公式與英文小字強制淺色，否則被全域深墨規則吃掉 */
+.summary-box mjx-container, .summary-box .MathJax { color: #fff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #c3cfe6; }
+
+.quote-block {
+  background: linear-gradient(135deg, #fff5f7 0%, #ffe8ee 100%);
+  border-left-color: var(--magenta);
+  font-style: italic;
+}
+
+.formula-box h4, .highlight-box h4, .intuition-box h4,
+.warning-box h4, .summary-box h4, .quote-block h4 {
+  margin-top: 0;
+  font-size: var(--t3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+/* ===========================================================================
+   版式元件
+   =========================================================================== */
+
+/* 對比版式 */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0;
+}
+.compare-layout .col {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-top: 6px solid;
+}
+.compare-layout .col.left  { border-top-color: var(--info); }
+.compare-layout .col.right { border-top-color: var(--magenta); }
+.compare-layout .col h3 { font-size: var(--t3); margin-bottom: 12px; color: var(--ink); }
+.compare-layout .col ul { padding-left: 1.2em; margin: 0; }
+.compare-layout .col li { font-size: var(--t4); margin-bottom: 10px; color: var(--ink-soft); }
+@media (max-width: 768px) { .compare-layout { grid-template-columns: 1fr; } }
+
+/* 半版配置 — 左圖右文：視覺欄放大為主（修 2026-09-04：1fr 1.2fr → 1.42fr 1fr，圖過小） */
+.half-layout {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: block;
+  min-height: auto;
+}
+/* 視覺欄：svg 正上方、caption 正下方垂直堆疊，互不並排（坑 J，2026-09-04：caption 不與 svg 同為 flex 子項；坑 H，使用 > svg 避免 MathJax SVG 字元拉伸） */
+.half-layout .visual > svg { width: 100%; height: auto; max-height: none; display: block; }
+.half-layout .visual .svg-caption { display: block; width: 100%; margin-top: 12px; text-align: center; }
+@media (max-width: 1100px) { .half-layout { grid-template-columns: 1.25fr 1fr; } }
+@media (max-width: 768px) { .half-layout { grid-template-columns: 1fr; } }
+.steps .step:nth-child(1) { border-top-color: var(--accent); }
+.steps .step:nth-child(2) { border-top-color: var(--primary); }
+.steps .step:nth-child(3) { border-top-color: var(--success); }
+.steps .step .num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.steps .step:nth-child(1) .num { background: var(--accent); }
+.steps .step:nth-child(3) .num { background: var(--success); }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr; } }
+
+/* 卡片網格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 24px 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(60, 80, 140, .15); }
+.card h3 { color: var(--primary); margin-bottom: 6px; }
+.card .sub-en { font-size: 16px; color: var(--ink-soft); font-style: italic; margin-bottom: 10px; }
+.card p { font-size: var(--t4); }
+.card.positive { border-top: 4px solid var(--success); }
+.card.negative { border-top: 4px solid var(--warning); }
+@media (max-width: 720px) { .card-grid { grid-template-columns: 1fr; } }
+
+/* 時間軸 */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  margin: 28px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 22px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--magenta));
+}
+.timeline .event {
+  position: relative;
+  padding: 18px 0 18px 60px;
+  margin-bottom: 18px;
+}
+.timeline .event::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 28px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(112,86,235,.15);
+}
+.timeline .event h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 6px 0; }
+.timeline .event .when { font-size: var(--t5); color: var(--magenta); font-weight: 700; letter-spacing: .15em; margin-bottom: 6px; }
+.timeline .event p { margin: 0; font-size: var(--t4); color: var(--ink-soft); }
+
+/* ===========================================================================
+   比較表格
+   =========================================================================== */
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: var(--t4);
+}
+.comparison-table thead { background: var(--primary); }
+.comparison-table thead th { color: #fff !important; font-weight: 700; }
+.comparison-table th, .comparison-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t4);
+}
+.comparison-table th { font-size: var(--t5); }
+.comparison-table td { color: var(--ink-soft); }
+.comparison-table .bad { color: var(--warning); font-weight: 700; }
+.comparison-table .mono { color: var(--info); font-family: "JetBrains Mono", monospace; }
+
+/* ===========================================================================
+   Quiz 互動卡
+   =========================================================================== */
+
+.quiz-card {
+  margin: 24px 0;
+  padding: 26px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+.quiz-card .q { font-size: var(--t3); color: var(--ink); margin-bottom: 16px; font-weight: 700; }
+.quiz-card .options { display: grid; gap: 10px; }
+.quiz-card .options button {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: var(--t4);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+.quiz-card .options button:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateX(4px);
+}
+.quiz-card .options button.correct { background: #d4edda; border-color: var(--success); color: #155724; }
+.quiz-card .options button.wrong   { background: #f8d7da; border-color: var(--warning); color: #721c24; }
+.quiz-card .feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: var(--t4); display: none; color: var(--ink); }
+.quiz-card .feedback.show { display: block; }
+.quiz-card .feedback.ok  { background: #d4edda; color: #155724; }
+.quiz-card .feedback.no  { background: #f8d7da; color: #721c24; }
+
+/* ===========================================================================
+   SVG stage — 深底容器用於向量圖
+   =========================================================================== */
+
+.svg-stage {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.svg-stage svg { width: 100%; height: auto; display: block; }
+.svg-caption { text-align: center; font-size: var(--t5); color: var(--text-low); margin-top: 10px; letter-spacing: .08em; }
+
+/* ===========================================================================
+   Chart.js 容器（淺色軸線）
+   =========================================================================== */
+
+.chart-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.chart-wrap h4 { font-size: var(--t3); color: var(--primary); margin: 0 0 14px 0; }
+.chart-wrap canvas { width: 100% !important; max-height: 360px; }
+
+/* ===========================================================================
+   TOC rail（右側導覽，淺色背景）
+   =========================================================================== */
+
+.toc-rail {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid var(--line);
+  padding: 28px 18px;
+  overflow-y: auto;
+  z-index: 100;
+  font-size: var(--t5);
+}
+.toc-rail .label { color: var(--primary); letter-spacing: .2em; margin-bottom: 14px; font-weight: 700; font-size: 16px; }
+.toc-rail ol { padding-left: 0; list-style: none; counter-reset: nav; margin: 0; }
+.toc-rail li {
+  counter-increment: nav;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  padding-left: 10px;
+  transition: all .2s;
+}
+.toc-rail li a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.toc-rail li a::before {
+  content: counter(nav, decimal-leading-zero) " ";
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.toc-rail li:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+@media (max-width: 1100px) { .toc-rail { display: none; } }
+
+/* ===========================================================================
+   進度條 + 章節標籤
+   =========================================================================== */
+
+.progress-top {
+  position: fixed;
+  top: 0; left: 0;
+  height: 4px;
+  width: 0%;
+  background: var(--primary);
+  z-index: 200;
+  transition: width .12s ease;
+}
+
+.sec-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--t5);
+  letter-spacing: .12em;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.sec-tag.motivate { background: rgba(225,112,85,.12); color: var(--warning); }
+.sec-tag.sustain  { background: var(--primary-soft);     color: var(--primary); }
+.sec-tag.activate { background: rgba(0,184,148,.12);     color: var(--success); }
+
+h2.section-title { margin-bottom: 12px; }
+h2.section-title .en {
+  display: block;
+  font-size: var(--t4);
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ===========================================================================
+   Utility
+   =========================================================================== */
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.muted { color: var(--text-low); }
+.center { text-align: center; }
+.MathJax { color: var(--ink) !important; }
+
+/* 專案專屬微調與深底 MathJax 覆蓋 */
+.hero.section { padding-right: calc(2.2vw + 258px); }
+@media (max-width: 1100px) { .hero.section { padding-right: 2.2vw; } }
+
+.hero {
+  background: radial-gradient(circle at 85% 15%, rgba(139,92,246,.28), transparent 32%),
+              radial-gradient(circle at 15% 85%, rgba(14,165,233,.22), transparent 30%),
+              linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #172554 100%);
+  color: #fff;
+  min-height: 86vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: var(--radius);
+  margin: 20px auto;
+  box-shadow: 0 16px 40px rgba(10, 14, 39, .25);
+}
+.hero h1 {
+  color: #fff;
+  font-size: clamp(36px, 4.4vw, 64px);
+  line-height: 1.18;
+  margin-bottom: 24px;
+}
+.hero .hero-title-en {
+  display: block;
+  font-size: clamp(18px, 2.0vw, 28px);
+  color: #c4b5fd;
+  font-weight: 500;
+  letter-spacing: .02em;
+  margin-top: 10px;
+}
+.hero .badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border: 1px solid #a855f7;
+  border-radius: 999px;
+  color: #c084fc;
+  background: rgba(168, 85, 247, .15);
+  font-size: var(--t5);
+  letter-spacing: .15em;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero .hero-desc {
+  max-width: 900px;
+  margin: 0 auto;
+  font-size: var(--t3);
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+.hero .hero-line {
+  width: 140px;
+  height: 5px;
+  margin: 28px auto 20px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #a855f7, #38bdf8);
+}
+
+/* 坑 U：深底容器文字與 MathJax 公式強制淺色 */
+.hero mjx-container, .hero mjx-container * { color: #f8fafc !important; fill: #f8fafc !important; }
+.hero .hero-desc mjx-container, .hero .hero-desc mjx-container * { color: #c4b5fd !important; fill: #c4b5fd !important; }
+.summary-box mjx-container, .summary-box .MathJax, .summary-box mjx-container * { color: #ffffff !important; fill: #ffffff !important; }
+.summary-box .bilingual-en, .summary-box .bilingual-en-inline { color: #cbd5e1; }
+.summary-box h4, .summary-box p, .summary-box li { color: #ffffff; }
+
+/* 坑 H 關鍵保護：防止任何 MathJax SVG 被當作圖形拉伸 */
+.visual mjx-container svg { width: auto !important; height: auto !important; display: inline !important; }
+
+/* 坑 H/I/J：half-layout 視覺保護 */
+.half-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  margin: 28px 0;
+}
+.half-layout .visual {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  display: block;
+}
+.half-layout .visual > svg {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  display: block;
+}
+.half-layout .visual .svg-caption {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+  font-size: var(--t5);
+  color: var(--text-low);
+  letter-spacing: .05em;
+}
+@media (max-width: 1100px) {
+  .half-layout { grid-template-columns: 1fr; }
+}
+
+/* 高橋流置中修復：卡片居中於內容閱讀區 (831px 中心軸，左右邊距各 231px) */
+.section .takahashi {
+  text-align: center;
+  padding: 80px 36px;
+  max-width: min(1200px, 100%);
+  margin: 32px auto;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+}
+
+/* 表格包裝層（防止橫向溢位） */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 24px 0;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  background: var(--bg-card);
+}
+
+/* 互動實驗室樣式 */
+.lab-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  box-shadow: var(--shadow);
+}
+.lab-toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+.lab-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lab-ctrl label {
+  font-weight: 600;
+  font-size: var(--t4);
+  color: var(--ink);
+}
+.lab-ctrl select {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  font-size: var(--t4);
+  background: #fff;
+  color: var(--ink);
+}
+.lab-btn {
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: none;
+  background: #7c3aed;
+  color: #fff;
+  font-size: var(--t4);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.lab-btn:hover {
+  background: #6d28d9;
+  transform: translateY(-1px);
+}
+.lab-display {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 950px) {
+  .lab-display { grid-template-columns: 1fr; }
+}
+.lab-canvas-container {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+}
+.lab-readout {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+</style>
+</head>
+<body>
+
+<div class="progress-top" id="progressTop"></div>
+
+<!-- TOC RAIL (PITFALL W 必須) -->
+<nav class="toc-rail" aria-label="章節目錄導覽">
+  <div class="label">KP10 · 索引</div>
+  <ol>
+    <li><a href="#cover">封面 · Cover</a></li>
+    <li><a href="#q1">大問句 · Core Question</a></li>
+    <li><a href="#sec-prior">無限強先驗 · Infinitely Strong Prior</a></li>
+    <li><a href="#svg-prior">三級先驗矩陣視覺化 · Fig 10</a></li>
+    <li><a href="#sec-spp-gap">動態池化、SPP 與 GAP · Modern Pooling</a></li>
+    <li><a href="#lab">互動實驗室 · Interactive Lab</a></li>
+    <li><a href="#quiz">觀念測驗 · Checkpoint</a></li>
+  </ol>
+</nav>
+
+<!-- 1. 封面 -->
+<section class="section hero" id="cover">
+  <div>
+    <span class="badge">IDL 115 · CHAPTER 4 · KP-10 · TEACHING DECK</span>
+    <h1>無限強先驗、動態池化與 GAP
+      <span class="hero-title-en">Infinitely Strong Prior, Dynamic Pooling, and GAP</span>
+    </h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      卷積與池化並非只是單純的特徵萃取工具，從貝氏先驗視角審視，它們是對權重施加了「無限強先驗（Infinitely Strong Prior）」——直接將絕大多數遠距連線硬性焊死為 0！伴隨著動態池化、空間金字塔池化（SPP）以及全域平均池化（GAP），現代 CNN 擺脫了固定輸入尺寸的桎梏，並徹底淘汰了末端冗餘龐大的全連線層。
+    </p>
+    <p class="bilingual-en" style="color: #cbd5e1; max-width: 880px; margin: 10px auto 0;">
+      Convolution and pooling represent infinitely strong priors by forcing distant connections to zero. Dynamic pooling and GAP eliminate fixed dimension limits and replace massive fully connected layers.
+    </p>
+  </div>
+</section>
+
+<!-- 2. 大問句（高橋流） -->
+<section class="section" id="q1">
+  <div class="takahashi">
+    <div class="sec-tag inquiry">01 / 核心提問 · Core Question</div>
+    <div class="quote">
+      「與其處處可學，為何把絕大多數連線直接釘死成 0，模型反而學得更好？」
+      <small>押注稀疏與奧卡姆剃刀：高維無約束必遭過擬合；結構硬約束才是泛化真諦！<br/>
+        <span class="bilingual-en-inline">Betting on sparsity & Occam's razor: unconstrained models overfit; architectural hard constraints yield superior generalization!</span>
+      </small>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 無限強先驗理論 -->
+<section class="section" id="sec-prior">
+  <div class="sec-tag sustain">02 / 貝氏先驗視角 · Bayesian Prior Perspective</div>
+  <h2 class="section-title">無限強先驗：直接宣告遠距連線「根本不存在」
+    <span class="en">Infinitely Strong Prior: Hard-Coding Remote Connections to Zero</span>
+  </h2>
+
+  <div class="intuition-box">
+    <h4>權重約束的三種境界 (Fig. 10)</h4>
+    <p>
+      在機器學習中，先驗（Prior）代表我們在看到訓練資料前對權重分佈的信念。原書 <strong>Fig. 10</strong> 將約束強度分為三級：
+    </p>
+    <ul style="padding-left:1.2em; margin:8px 0;">
+      <li><strong>弱先驗（Weak Prior）：</strong> 全連線層，權重矩陣處處有值，梯度可自由調動，模型容量巨大但極易過擬合。</li>
+      <li><strong>較強先驗（Strong Prior）：</strong> L1 正則化或權重衰減，將權重向 0 推擠，但梯度仍有能力將其拉回。</li>
+      <li><strong>無限強先驗（Infinitely Strong Prior）：</strong> <strong>卷積與池化的本質</strong>——非局部感受野的連線權重直接被硬性釘死為 0，梯度永遠改不到它們！</li>
+    </ul>
+    <p>
+      這呼應統計學<strong>「押注稀疏（Betting on Sparsity）」</strong>法則與奧卡姆剃刀：高維世界中沒有模型能處處表現完美，不如押注在空間局部相關的稀疏規律上。
+    </p>
+    <span class="bilingual-en">CNNs enforce infinitely strong priors by zeroing out non-local weights via fixed architecture.</span>
+  </div>
+</section>
+
+<!-- 4. 三級先驗與 GAP 視覺化 -->
+<section class="section" id="svg-prior">
+  <div class="sec-tag sustain">03 / 矩陣拓撲視覺化 · Prior Matrix Topology</div>
+  <h2 class="section-title">三級先驗矩陣與全域平均池化 (GAP) 架構
+    <span class="en">Visual Comparison of Three Prior Matrices & The GAP Paradigm</span>
+  </h2>
+
+  <div class="half-layout">
+    <div class="visual">
+      <!-- SVG DIAGRAM FIG 10 -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="Arial, Helvetica, sans-serif">
+        <defs>
+          <marker id="a10b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/>
+          </marker>
+          <marker id="a10r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#e11d48"/>
+          </marker>
+          <marker id="a10g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/>
+          </marker>
+        </defs>
+        <rect x="0" y="0" width="720" height="360" fill="#ffffff" rx="8"/>
+        <text x="360" y="18" text-anchor="middle" font-size="14" font-weight="bold" fill="#4338ca">無限強先驗：不是「希望權重小」，而是直接把許多權重釘成 0 (Fig. 10)</text>
+
+        <!-- THREE PRIOR PANELS -->
+        <!-- Panel 1: Weak -->
+        <rect x="10" y="26" width="228" height="196" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.4"/>
+        <text x="124" y="46" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">弱先驗 (Weak Prior)</text>
+        <text x="124" y="62" text-anchor="middle" font-size="9" fill="#2563eb">權重幾乎都能自由學習</text>
+        <g transform="translate(52,74)">
+          <rect x="0" y="0" width="144" height="96" fill="#dbeafe" stroke="#2563eb"/>
+          <g stroke="#93c5fd">
+            <line x1="24" y1="0" x2="24" y2="96"/><line x1="48" y1="0" x2="48" y2="96"/><line x1="72" y1="0" x2="72" y2="96"/><line x1="96" y1="0" x2="96" y2="96"/><line x1="120" y1="0" x2="120" y2="96"/>
+            <line x1="0" y1="24" x2="144" y2="24"/><line x1="0" y1="48" x2="144" y2="48"/><line x1="0" y1="72" x2="144" y2="72"/>
+          </g>
+          <rect x="0" y="0" width="144" height="96" fill="#93c5fd" opacity="0.35"/>
+        </g>
+        <text x="124" y="188" text-anchor="middle" font-size="10" fill="#1e40af">全連線網路：矩陣處處有值</text>
+        <text x="124" y="206" text-anchor="middle" font-size="9" fill="#64748b">模型自行決定遠近連線強弱</text>
+
+        <!-- Panel 2: Strong -->
+        <rect x="246" y="26" width="228" height="196" rx="10" fill="#fff7ed" stroke="#fdba74" stroke-width="1.4"/>
+        <text x="360" y="46" text-anchor="middle" font-size="12" font-weight="bold" fill="#c2410c">較強先驗 (Strong Prior)</text>
+        <text x="360" y="62" text-anchor="middle" font-size="9" fill="#9a3412">鼓勵稀疏，但仍可被梯度救回</text>
+        <g transform="translate(288,74)">
+          <rect x="0" y="0" width="144" height="96" fill="#fff" stroke="#ea580c"/>
+          <g stroke="#fed7aa">
+            <line x1="24" y1="0" x2="24" y2="96"/><line x1="48" y1="0" x2="48" y2="96"/><line x1="72" y1="0" x2="72" y2="96"/><line x1="96" y1="0" x2="96" y2="96"/><line x1="120" y1="0" x2="120" y2="96"/>
+            <line x1="0" y1="24" x2="144" y2="24"/><line x1="0" y1="48" x2="144" y2="48"/><line x1="0" y1="72" x2="144" y2="72"/>
+          </g>
+          <rect x="48" y="24" width="48" height="48" fill="#fdba74" opacity="0.7"/>
+          <text x="20" y="20" font-size="9" fill="#c2410c">小</text>
+          <text x="128" y="90" font-size="9" fill="#c2410c">小</text>
+        </g>
+        <text x="360" y="188" text-anchor="middle" font-size="10" fill="#c2410c">L1 正則／權重衰減：往 0 推</text>
+        <text x="360" y="206" text-anchor="middle" font-size="9" fill="#9a3412">若資料訊號夠強，仍可學回來</text>
+
+        <!-- Panel 3: Infinitely Strong -->
+        <rect x="482" y="26" width="228" height="196" rx="10" fill="#fdf4ff" stroke="#a855f7" stroke-width="2"/>
+        <text x="596" y="46" text-anchor="middle" font-size="12" font-weight="bold" fill="#7e22ce">無限強先驗 (Infinitely Strong)</text>
+        <text x="596" y="62" text-anchor="middle" font-size="9" fill="#9333ea">連線根本不存在＝權重就是 0</text>
+        <g transform="translate(524,74)">
+          <rect x="0" y="0" width="144" height="96" fill="#fff" stroke="#9333ea" stroke-width="1.5"/>
+          <g stroke="#f3e8ff">
+            <line x1="24" y1="0" x2="24" y2="96"/><line x1="48" y1="0" x2="48" y2="96"/><line x1="72" y1="0" x2="72" y2="96"/><line x1="96" y1="0" x2="96" y2="96"/><line x1="120" y1="0" x2="120" y2="96"/>
+            <line x1="0" y1="24" x2="144" y2="24"/><line x1="0" y1="48" x2="144" y2="48"/><line x1="0" y1="72" x2="144" y2="72"/>
+          </g>
+          <!-- local band -->
+          <rect x="0" y="0" width="24" height="24" fill="#ede9fe"/>
+          <rect x="24" y="24" width="24" height="24" fill="#ede9fe"/>
+          <rect x="48" y="48" width="24" height="24" fill="#ede9fe"/>
+          <rect x="72" y="48" width="24" height="24" fill="#ede9fe"/>
+          <rect x="96" y="72" width="24" height="24" fill="#ede9fe"/>
+          <rect x="72" y="72" width="24" height="24" fill="#ede9fe"/>
+          <text x="12" y="16" font-size="8" fill="#6d28d9">w</text>
+          <text x="84" y="20" font-size="9" font-weight="bold" fill="#e11d48">0</text>
+          <text x="36" y="88" font-size="9" font-weight="bold" fill="#e11d48">0</text>
+          <text x="132" y="40" font-size="9" font-weight="bold" fill="#e11d48">0</text>
+        </g>
+        <text x="596" y="188" text-anchor="middle" font-size="10" fill="#7e22ce">CNN／池化：遠距權重強制為 0</text>
+        <text x="596" y="206" text-anchor="middle" font-size="9" fill="#9333ea">梯度絕對改不到 · 拓撲結構決定</text>
+
+        <!-- BOTTOM GAP + SPP -->
+        <rect x="10" y="232" width="430" height="114" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1.4"/>
+        <text x="225" y="254" text-anchor="middle" font-size="12" font-weight="bold" fill="#15803d">同一先驗哲學的極致：GAP 取代巨型全連線層</text>
+        <rect x="28" y="266" width="70" height="48" rx="4" fill="#dbeafe" stroke="#2563eb"/>
+        <text x="63" y="286" text-anchor="middle" font-size="9" fill="#1e40af">H×W×C</text>
+        <text x="63" y="302" text-anchor="middle" font-size="8" fill="#2563eb">特徵圖</text>
+        <path d="M102 290 H122" stroke="#16a34a" stroke-width="2" marker-end="url(#a10g)"/>
+        <rect x="126" y="266" width="86" height="48" rx="4" fill="#dcfce7" stroke="#16a34a"/>
+        <text x="169" y="286" text-anchor="middle" font-size="9" font-weight="bold" fill="#166534">GAP</text>
+        <text x="169" y="302" text-anchor="middle" font-size="8" fill="#15803d">每張圖縮為 1 數</text>
+        <path d="M216 290 H236" stroke="#16a34a" stroke-width="2" marker-end="url(#a10g)"/>
+        <rect x="240" y="266" width="86" height="48" rx="4" fill="#16a34a"/>
+        <text x="283" y="286" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff">C 維向量</text>
+        <text x="283" y="302" text-anchor="middle" font-size="8" fill="#dcfce7">直達分類器</text>
+        <text x="340" y="294" font-size="9" fill="#166534">參數量直降 90%+</text>
+        <text x="225" y="332" text-anchor="middle" font-size="9" fill="#166534">SPP / 調核寬：用摘要遷就任意輸入尺寸，免裁切 (Fig. 11)</text>
+
+        <rect x="450" y="232" width="260" height="114" rx="10" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.4"/>
+        <text x="580" y="256" text-anchor="middle" font-size="12" font-weight="bold" fill="#b91c1c">大師反直覺洞察</text>
+        <text x="580" y="278" text-anchor="middle" font-size="10" fill="#7f1d1d">「限制不能學」有時比「都能學」更強</text>
+        <text x="580" y="298" text-anchor="middle" font-size="10" fill="#b91c1c">押注稀疏：非鄰域畫素本不應連線</text>
+        <text x="580" y="318" text-anchor="middle" font-size="10" fill="#b91c1c">奧卡姆剃刀：簡單模型泛化更高</text>
+        <text x="580" y="336" text-anchor="middle" font-size="9" fill="#7f1d1d">無限強＝硬性拓撲約束，非正則懲罰</text>
+      </svg>
+      <span class="svg-caption">圖 10.1：三級先驗矩陣與全域平均池化（GAP）架構演進對比</span>
+    </div>
+
+    <div>
+      <div class="card positive">
+        <h3>💡 押注稀疏 (Betting on Sparsity)</h3>
+        <p>
+          在超高維度影像下，全連線網路的自由參數過多，必然深陷維度災難。CNN 將絕大多數連線「強制設為 0」，使模型在稀疏假說下達到極高泛化水準。
+        </p>
+        <span class="bilingual-en">Sparsity priors drastically reduce the hypothesis search space.</span>
+      </div>
+
+      <div class="card" style="margin-top: 16px;">
+        <h3>✂️ 奧卡姆剃刀 (Occam's Razor)</h3>
+        <p>
+          若兩個模型均能解釋資料，結構更精簡者泛化能力通常更勝一籌。無限強先驗正是奧卡姆剃刀在神經網路架構中的具體化現。
+        </p>
+        <span class="bilingual-en">Simpler, structurally constrained hypotheses generalize far better.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 動態池化、SPP 與 GAP -->
+<section class="section" id="sec-spp-gap">
+  <div class="sec-tag sustain">04 / 現代池化演進 · Modern Pooling Innovations</div>
+  <h2 class="section-title">動態池化、空間金字塔 (SPP) 與全域平均池化 (GAP)
+    <span class="en">Dynamic Pooling, Spatial Pyramid Pooling, and GAP</span>
+  </h2>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3>🧬 動態池化 (Dynamic Pooling)</h3>
+      <div class="sub-en">Content-Adaptive Aggregation</div>
+      <p>
+        不侷限於相鄰格子。先對影像特徵點進行 <strong>K-means 分群</strong>，再對<strong>同一聚類群體進行池化</strong>。每個輸入樣本可擁有動態量身打造的摘要區域。
+      </p>
+      <span class="bilingual-en">Aggregates content-based clusters rather than fixed geometric patches.</span>
+    </div>
+
+    <div class="card">
+      <h3>📐 空間金字塔池化 (SPP)</h3>
+      <div class="sub-en">Arbitrary Input Dimensions</div>
+      <p>
+        <strong>Fig. 11</strong>：以多尺度固定數量 bins（如 $4\times 4, 2\times 2, 1\times 1$）自適應劃分特徵圖。允許 CNN <strong>消化任意尺寸輸入圖片</strong>，免除粗暴裁切。
+      </p>
+      <span class="bilingual-en">Generates fixed-length representations from arbitrary input aspect ratios.</span>
+    </div>
+
+    <div class="card positive">
+      <h3>🚀 全域平均池化 (GAP)</h3>
+      <div class="sub-en">Eliminating Giant FC Layers</div>
+      <p>
+        現代深網（ResNet）在尾端將每張特徵圖直接取全域均值，壓為單一數值。<strong>徹底消滅數千萬全連線參數</strong>，直接對應輸出類別語意。
+      </p>
+      <span class="bilingual-en">Collapses spatial dimensions to 1x1, slashing 90%+ parameters.</span>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 互動實驗室 -->
+<section class="section" id="lab">
+  <div class="sec-tag activate">05 / 互動實驗室 · Interactive Lab</div>
+  <h2 class="section-title">互動實驗室：先驗拓撲矩陣與 GAP 降維模擬器
+    <span class="en">Interactive Lab: Prior Matrix Topology & GAP Dimension Reducer</span>
+  </h2>
+
+  <div class="lab-card">
+    <div class="lab-toolbar">
+      <div class="lab-ctrl">
+        <label>先驗模式 Prior Mode:</label>
+        <select id="prior-mode">
+          <option value="infinite" selected>無限強先驗 (CNN 帶狀局部稀疏)</option>
+          <option value="strong">較強先驗 (L1 軟性正則懲罰)</option>
+          <option value="weak">弱先驗 (全連線 密集稠密)</option>
+        </select>
+      </div>
+
+      <button class="lab-btn" id="prior-btn-run">▶ 重新抽樣權重與計算 GAP</button>
+    </div>
+
+    <div class="lab-display">
+      <div>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 8px;">
+          左側 8×8 權重矩陣稀疏拓撲與右側 4 通道 GAP 均值特徵壓縮展示：
+        </p>
+        <div class="lab-canvas-container">
+          <canvas id="prior-canvas" width="560" height="300"></canvas>
+        </div>
+      </div>
+      <div class="lab-readout" id="prior-ro">
+        <!-- Live readout injected by JS -->
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. 隨堂 Checkpoint -->
+<section class="section" id="quiz">
+  <div class="sec-tag activate">06 / 實戰檢驗 · Concept Checkpoint</div>
+  <h2 class="section-title">隨堂 Checkpoint：觀念即時反饋
+    <span class="en">Concept Checkpoint: Immediate Feedback Quiz</span>
+  </h2>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 1 · 無限強先驗本質 / Infinitely Strong Prior</div>
+    <div class="q-text">「無限強先驗（Fig. 10）」在卷積與池化結構中，實際執行的物理操作是什麼？</div>
+    <div class="options">
+      <button data-opt="A">A. 將網路中所有權重初始值統一設定為 1.0</button>
+      <button data-opt="B">B. 直接將非局部鄰域的權重硬性設定為 0（內建稀疏連線，梯度不可變更）</button>
+      <button data-opt="C">C. 禁止網路使用任何 ReLU 啟用函式</button>
+      <button data-opt="D">D. 強制反向傳播的學習率必須固定為 0</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-card" data-ans="A">
+    <div class="q-num">題目 2 · 動態池化特性 / Dynamic Pooling</div>
+    <div class="q-text">動態池化（Dynamic Pooling）與傳統固定幾何鄰域池化的核心差異是？</div>
+    <div class="options">
+      <button data-opt="A">A. 動態池化能依輸入內容或拓撲結構決定池化區域，例如對顯著特徵點執行 K-means 分群再同群池化</button>
+      <button data-opt="B">B. 動態池化完全禁止特徵圖進行下取樣</button>
+      <button data-opt="C">C. 動態池化只能被應用於全連線層</button>
+      <button data-opt="D">D. 二者在運算邏輯上完全相同，純粹是學術名詞稱呼不同</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 3 · 可變輸入尺寸解套 / Variable Dimensions</div>
+    <div class="q-text">原書 Fig. 11 與空間金字塔池化（SPP）分別採用什麼策略來解套可變輸入尺寸？</div>
+    <div class="options">
+      <button data-opt="A">A. 二者皆只能強制透過零填充 (Zero Padding) 補齊到 224×224</button>
+      <button data-opt="B">B. Fig. 11 動態調整池化核寬；SPP 採用隨輸入縮放的固定數量箱子 (Bins)</button>
+      <button data-opt="C">C. 二者皆把池化層完全拿掉，改回使用全連線層</button>
+      <button data-opt="D">D. 只能裁切影像中心，不能對池化做任何動態更動</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-card" data-ans="B">
+    <div class="q-num">題目 4 · 全域平均池化使命 / GAP Role</div>
+    <div class="q-text">全域平均池化（GAP）置於現代 CNN 尾端，主要取代了什麼傳統元件？</div>
+    <div class="options">
+      <button data-opt="A">A. 取代了資料增強模組</button>
+      <button data-opt="B">B. 取代了末端龐大的全連線層，大幅削減參數量並建立特徵圖與類別的直接對應</button>
+      <button data-opt="C">C. 取代了反向傳播演算法</button>
+      <button data-opt="D">D. 取代了卷積核的 Xavier 初始化程式</button>
+    </div>
+    <div class="feedback" style="display:none;"></div>
+  </div>
+</section>
+
+<!-- 8. 總結框 -->
+<section class="section" id="summary">
+  <div class="summary-box" style="background:linear-gradient(135deg,#1e1b4b 0%,#2e1065 100%); border-radius:14px; padding:32px; color:#fff; border:1px solid #c084fc; box-shadow:0 12px 30px rgba(124,58,237,0.2);">
+    <h4 style="font-size:22px; margin-top:0; color:#c084fc; display:flex; align-items:center; gap:10px;">
+      <span>📌</span> 本單元核心總結：先驗約束與現代池化拓撲
+      <span class="bilingual-en-inline" style="font-size:14px; color:#e9d5ff; font-weight:normal;">Key Takeaways: Strong Priors & Modern Pooling Topologies</span>
+    </h4>
+    <ul style="line-height:1.8; font-size:15px; margin-bottom:0;">
+      <li><strong>無限強先驗（Fig. 10）：</strong> 卷積與池化是硬性拓撲約束，直接宣告遠距連線權重為 0，梯度改不到。限制模型自由度換來非凡的泛化表現。</li>
+      <li><strong>押注稀疏與奧卡姆剃刀：</strong> 高維空間處處可學只會導致過擬合；押注在符合物理空間鄰近的稀疏連線上，是深度學習成功的數學根本。</li>
+      <li><strong>擺脫固定維度桎梏（Fig. 11 & SPP）：</strong> 動態調整核寬或採用 SPP 空間金字塔池化，讓卷積骨架能夠直接消化任意長寬比例的真實照片。</li>
+      <li><strong>GAP 終結巨型全連線層：</strong> 全域平均池化將空間維度均值壓縮，參數量暴減 90% 以上，為現代深網（如 ResNet）奠定精簡高效的經典正規化！</li>
+    </ul>
+  </div>
+</section>
+
+<script>
+// Checkpoint Quiz Interaction Logic
+document.querySelectorAll('.quiz-card').forEach(card => {
+  const ans = card.getAttribute('data-ans');
+  const fb = card.querySelector('.feedback');
+
+  card.querySelectorAll('.options button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      card.querySelectorAll('.options button').forEach(b => b.classList.remove('selected', 'correct', 'wrong'));
+      const opt = btn.getAttribute('data-opt');
+      btn.classList.add('selected');
+      fb.style.display = 'block';
+
+      const qNum = card.querySelector('.q-num').innerText;
+      let expText = "";
+      if (qNum.includes('題目 1')) expText = "無限強先驗等於硬約束：不存在的連線權重就是 0，對應卷積與池化的稀疏結構。";
+      else if (qNum.includes('題目 2')) expText = "動態池化不以固定空間鄰域為限；也可用訓練學得、之後共用的固定池化結構。";
+      else if (qNum.includes('題目 3')) expText = "核寬可隨圖大小調整；SPP 以固定 bins 取代最後池化，讓網路接受任意尺寸。";
+      else if (qNum.includes('題目 4')) expText = "GAP 把每張特徵圖收成一個值，省掉巨大 FC，並建立特徵圖與輸出類別的直接連結。";
+
+      if (opt === ans) {
+        btn.classList.add('correct');
+        fb.className = 'feedback correct';
+        fb.innerHTML = `<strong>答對了！</strong> ${expText}`;
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'feedback wrong';
+        fb.innerHTML = `<strong>答案不正確。</strong> 再想一下！${expText}`;
+      }
+
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([fb]);
+      }
+    });
+  });
+});
+
+// Interactive Lab Logic
+(function() {
+  const canvas = document.getElementById('prior-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const selMode = document.getElementById('prior-mode');
+  const btnRun = document.getElementById('prior-btn-run');
+  const ro = document.getElementById('prior-ro');
+
+  const N = 8;
+  function generateMatrix(mode) {
+    const mat = [];
+    for (let i = 0; i < N; i++) {
+      mat[i] = [];
+      for (let j = 0; j < N; j++) {
+        if (mode === 'infinite') {
+          if (Math.abs(i - j) <= 1) {
+            mat[i][j] = Math.round((Math.random() * 0.8 + 0.2) * 100) / 100;
+          } else {
+            mat[i][j] = 0;
+          }
+        } else if (mode === 'strong') {
+          if (Math.abs(i - j) <= 1) {
+            mat[i][j] = Math.round((Math.random() * 0.8 + 0.2) * 100) / 100;
+          } else {
+            mat[i][j] = Math.random() < 0.3 ? Math.round(Math.random() * 0.15 * 100) / 100 : 0;
+          }
+        } else {
+          mat[i][j] = Math.round((Math.random() * 0.9 + 0.1) * 100) / 100;
+        }
+      }
+    }
+    return mat;
+  }
+
+  function update() {
+    const mode = selMode.value;
+    const mat = generateMatrix(mode);
+
+    let zeroCount = 0;
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < N; j++) {
+        if (mat[i][j] === 0) zeroCount++;
+      }
+    }
+    const nonZero = 64 - zeroCount;
+    const sparsity = Math.round((zeroCount / 64) * 100);
+
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    // Draw 8x8 Matrix
+    const ox = 25, oy = 45, cs = 26;
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`權重矩陣 8×8 [${selMode.options[selMode.selectedIndex].text.split(' ')[0]}]`, ox, oy - 12);
+
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < N; j++) {
+        const v = mat[i][j];
+        if (v === 0) {
+          ctx.fillStyle = '#f8fafc';
+        } else {
+          const alpha = Math.min(1, v + 0.2);
+          ctx.fillStyle = (mode === 'infinite') ? `rgba(124, 58, 237, ${alpha})` : (mode === 'strong' ? `rgba(234, 88, 12, ${alpha})` : `rgba(37, 99, 235, ${alpha})`);
+        }
+        ctx.fillRect(ox + j * cs, oy + i * cs, cs - 2, cs - 2);
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.strokeRect(ox + j * cs, oy + i * cs, cs - 2, cs - 2);
+
+        if (v === 0) {
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '10px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('0', ox + j * cs + cs / 2, oy + i * cs + cs / 2 + 3);
+        }
+      }
+    }
+
+    // Draw GAP demo beside
+    const gx = 270, gy = 55;
+    ctx.fillStyle = '#1e1b4b';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('GAP (全域平均池化) 運算示範：', gx, oy - 12);
+
+    const means = [5.0, 4.0, 7.0, 2.0];
+    const colors = ['#38bdf8', '#818cf8', '#c084fc', '#34d399'];
+
+    for (let k = 0; k < 4; k++) {
+      const px = gx + k * 64;
+      ctx.fillStyle = colors[k];
+      ctx.globalAlpha = 0.25;
+      ctx.fillRect(px, gy, 52, 50);
+      ctx.globalAlpha = 1.0;
+      ctx.strokeStyle = colors[k];
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(px, gy, 52, 50);
+
+      ctx.fillStyle = '#1e293b';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`FM ${k+1}`, px + 26, gy + 22);
+      ctx.fillText('4×4', px + 26, gy + 36);
+    }
+
+    // Down arrow
+    ctx.fillStyle = '#64748b';
+    ctx.font = '18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⬇ GAP (全域平均)', gx + 128, gy + 88);
+
+    // 1x4 vector
+    for (let k = 0; k < 4; k++) {
+      const px = gx + k * 64;
+      ctx.fillStyle = colors[k];
+      ctx.fillRect(px, gy + 110, 52, 38);
+      ctx.strokeStyle = '#1e1b4b';
+      ctx.strokeRect(px, gy + 110, 52, 38);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(means[k].toFixed(1), px + 26, gy + 134);
+    }
+
+    ctx.fillStyle = '#1e1b4b';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('輸出特徵向量：[5.0, 4.0, 7.0, 2.0] (C=4)', gx, gy + 175);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('直接淘汰數千萬 FC 權重，直連分類 Softmax！', gx, gy + 195);
+
+    // Readout
+    ro.innerHTML = `
+      <div style="color:#7c3aed; font-weight:700; font-size:15px; margin-bottom:8px;">
+        先驗矩陣診斷報告 [${selMode.options[selMode.selectedIndex].text.split(' ')[0]}]
+      </div>
+      <div><strong>權重矩陣規格：</strong> 8×8 (共 64 條連線)</div>
+      <div><strong>硬性鎖定為 0 連線數：</strong> <span style="font-weight:700; color:#e11d48;">${zeroCount} 條</span></div>
+      <div><strong>有效可學習權重數：</strong> <span style="font-weight:700; color:#16a34a;">${nonZero} 個</span></div>
+      <div><strong>矩陣稀疏度 (Sparsity)：</strong> <span style="font-size:16px; font-weight:700; color:#7c3aed;">${sparsity}%</span></div>
+      <hr style="border:none; border-top:1px solid #cbd5e1; margin:10px 0;"/>
+      <div style="font-size:13px; color:#475569;">
+        ${mode === 'infinite' ? '✅ <strong>無限強先驗成立：</strong> 遠距連線被硬性阻斷，梯度不可穿透。模型具備強烈空間局域歸納偏置！' : (mode === 'strong' ? '⚡ <strong>較強先驗 (L1)：</strong> 權重被向 0 懲罰，但若訊號強烈，梯度仍能喚醒連線。' : '⚠️ <strong>弱先驗 (Dense MLP)：</strong> 處處可學，自由度過大，極易在影像邊界產生高頻噪聲過擬合。')}
+      </div>
+    `;
+
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([ro]);
+    }
+  }
+
+  selMode.addEventListener('change', update);
+  btnRun.addEventListener('click', update);
+
+  update();
+})();
+</script>
+</body>
+</html>
